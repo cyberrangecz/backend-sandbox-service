@@ -36,6 +36,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'drf_yasg',
+    'corsheaders',
     'kypo_sandbox_definitions.apps.KypoSandboxDefinitionsConfig',
     'kypo_sandbox_instances.apps.KypoSandboxInstancesConfig',
 ]
