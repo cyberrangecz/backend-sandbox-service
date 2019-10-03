@@ -19,5 +19,9 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    url(r'^api-auth/', include('rest_framework.urls'))
+    url(r'^api-auth/', include('rest_framework.urls')),
+
+    # Include Apps' URLs
+    url('', include('kypo_sandbox_definitions.urls')),
+    url('', include('kypo_sandbox_instances.urls')),
 ]
