@@ -6,8 +6,17 @@ verify_ssl = true
 [dev-packages]
 
 [packages]
+# tox
+tox = "~=3.7.0"
+tox-pipenv = "*"
+# pytest
+pytest = "*"
+pytest-mock = "*"
+pytest-django = "*"
+# django
 djangorestframework = "*"
 django = "*"
+# others
 
 [requires]
 python_version = "3.6"
