@@ -22,6 +22,7 @@ urlpatterns = [
     url(r'^api-auth/', include('rest_framework.urls')),
 
     # Include Apps' URLs
+    url('', include('kypo_sandbox_ansible_runs.urls')),
     url('', include('kypo_sandbox_definitions.urls')),
     url('', include('kypo_sandbox_instances.urls')),
 ]

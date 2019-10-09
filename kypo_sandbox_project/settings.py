@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'corsheaders',
+    'kypo_sandbox_ansible_runs.apps.KypoSandboxAnsibleRunsConfig'
     'kypo_sandbox_definitions.apps.KypoSandboxDefinitionsConfig',
     'kypo_sandbox_instances.apps.KypoSandboxInstancesConfig',
 ]
