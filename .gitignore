@@ -126,7 +126,7 @@ dmypy.json
 .pyre/
 
 # Pipenv
-Pipfile.lock
+#Pipfile.lock
 
 .idea
 *.iml
