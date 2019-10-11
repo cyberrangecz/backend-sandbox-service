@@ -4,8 +4,6 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-
-[packages]
 # tox
 tox = "~=3.7.0"
 tox-pipenv = "*"
@@ -14,6 +12,8 @@ pytest = "*"
 pytest-cov = "*"
 pytest-mock = "*"
 pytest-django = "*"
+
+[packages]
 # django
 djangorestframework = "*"
 django = "*"
