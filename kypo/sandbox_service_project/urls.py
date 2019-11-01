@@ -1,4 +1,4 @@
-"""kypo_sandbox_project URL Configuration
+"""kypo.sandbox_service_project URL Configuration
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/2.2/topics/http/urls/
@@ -22,7 +22,7 @@ urlpatterns = [
     url(r'^api-auth/', include('rest_framework.urls')),
 
     # Include Apps' URLs
-    url('', include('kypo_sandbox_ansible_runs.urls')),
-    url('', include('kypo_sandbox_definitions.urls')),
-    url('', include('kypo_sandbox_instances.urls')),
+    url('', include('kypo.sandbox_ansible_runs.urls')),
+    url('', include('kypo.sandbox_definitions.urls')),
+    url('', include('kypo.sandbox_instances.urls')),
 ]
