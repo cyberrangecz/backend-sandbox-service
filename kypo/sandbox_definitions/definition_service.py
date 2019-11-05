@@ -4,10 +4,10 @@ Definition Service module for Definition management.
 import yaml
 from git.exc import GitCommandError
 
-from . import utils
-from .. import exceptions, serializers
-from ..models import Definition
-from ..config import config
+from ..common import utils, exceptions
+from ..common.config import config
+from . import serializers
+from .models import Definition
 
 
 def create_definition(url: str, rev: str = None) -> Definition:
