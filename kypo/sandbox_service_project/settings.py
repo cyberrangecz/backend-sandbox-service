@@ -125,3 +125,5 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
     ]
 }
+
+KYPO_DJANGO_OPENSTACK_CONFIG = os.path.join(BASE_DIR, 'config.yml')
