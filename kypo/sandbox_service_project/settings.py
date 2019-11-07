@@ -24,9 +24,13 @@ SECRET_KEY = '-^mu0=6s@*x4jdbrz5yr!++p*02#%m$_4&0uw8h1)&r5u!v=12'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']  # Allow everyone
+
+AUTHENTICATED_REST_API = False
 
 # Application definition
+
+CORS_ORIGIN_ALLOW_ALL = True
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -38,12 +42,16 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'corsheaders',
+    'django_rq',
+
     'kypo.sandbox_ansible_runs.apps.KypoSandboxAnsibleRunsConfig',
     'kypo.sandbox_definitions.apps.KypoSandboxDefinitionsConfig',
     'kypo.sandbox_instances.apps.KypoSandboxInstancesConfig',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -106,7 +114,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Prague'
 
 USE_I18N = True
 
@@ -120,10 +128,118 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 REST_FRAMEWORK = {
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
-    ]
+    'EXCEPTION_HANDLER': 'kypo.common.exceptions.custom_exception_handler',
+    'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.AllowAny', ),
+
+    'DEFAULT_PAGINATION_CLASS': 'kypo.common.pagination.PageNumberWithPageSizePagination',
+    'PAGE_SIZE': 50,
+}
+
+SWAGGER_SETTINGS = {
+    'DEFAULT_PAGINATOR_INSPECTORS': [
+        'kypo.common.inspectors.PageNumberWithPageSizePaginationInspector',
+        'drf_yasg.inspectors.DjangoRestResponsePagination',
+        'drf_yasg.inspectors.CoreAPICompatInspector',
+    ],
+}
+
+if AUTHENTICATED_REST_API:
+    REST_FRAMEWORK.update({
+        'DEFAULT_PERMISSION_CLASSES': (
+            'kypo.common.permissions.ModelPermissions',
+        ),
+        'DEFAULT_AUTHENTICATION_CLASSES': (
+            # For testing purposes, uncomment BasicAuthentication.
+            # It allows login using name & password (nice for permission testing).
+            # 'rest_framework.authentication.BasicAuthentication',
+            'csirtmu.oidc_client.authentication.JWTAccessTokenAuthentication',
+        ),
+    })
+
+    OIDC_AUTH = {
+        # (Optional) Function that resolves id_token into user.
+        # This function receives a request and an id_token dict and expects to
+        # return a User object. The default implementation tries to find the user
+        # based on username (natural key) taken from the 'sub'-claim of the
+        # id_token.
+        'OIDC_RESOLVE_USER_FUNCTION': 'csirtmu.uag_auth.auth.get_or_create_user',
+    }
+
+    CSIRTMU_OIDC_CLIENT = {
+        # Need to be set when using JWTAccessTokenAuthentication,
+        # which supports multiple OIDC providers (parsing them from the token).
+        # Only those listed here will be allowed.
+        'ALLOWED_OIDC_PROVIDERS': ('https://oidc.example.cz/oidc', ),
+    }
+
+    CSIRTMU_UAG_AUTH = {
+        # User and Group roles registration endpoint URL
+        'ROLES_REGISTRATION_URL': 'https://example.com/kypo2-rest-user-and-group/api/v1/microservices',
+        # User and Group roles acquisition endpoint URL
+        'ROLES_ACQUISITION_URL': 'https://example.com/kypo2-rest-user-and-group/api/v1/users/info',
+        # Path to roles definition file
+        'ROLES_DEFINITION_PATH': "kypo2_django_openstack_project/roles.yml",
+
+        # User and Group information configuration
+        'MICROSERVICE_NAME': __package__,
+        'ROLE_PREFIX': "ROLE",
+        'ENDPOINT': __package__,
+    }
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'call_cache',
+        'TIMEOUT': None,  # Expire never
+        'OPTIONS': {
+            'MAX_ENTRIES': 300  # Django default value is 300 (2 kB per item = 0.6 MB)
+        }
+    }
 }
 
 KYPO_DJANGO_OPENSTACK_CONFIG = os.path.join(BASE_DIR, 'config.yml')
+
+RQ_QUEUES = {
+    'default': {
+        'HOST': 'localhost',
+        'PORT': 6379,
+        'DB': 0,
+    },
+    'openstack': {
+        'HOST': 'localhost',
+        'PORT': 6379,
+        'DB': 0,
+    },
+    'ansible': {
+        'HOST': 'localhost',
+        'PORT': 6379,
+        'DB': 0,
+    }
+}
+
+RQ_SHOW_ADMIN_LINK = True
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "rq_console": {
+            'format': '%(asctime)s %(levelname)s %(message)s',
+            "datefmt": "%H:%M:%S",
+        },
+    },
+    "handlers": {
+        "rq_console": {
+            "level": "DEBUG",
+            "class": "rq.utils.ColorizingStreamHandler",
+            "formatter": "rq_console",
+            "exclude": ["%(asctime)s"],
+        },
+    },
+    'loggers': {
+        "rq.worker": {
+            "handlers": ["rq_console"],
+            "level": "DEBUG"
+        },
+    }
+}
