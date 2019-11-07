@@ -1,9 +1,9 @@
 from django.db import models
 
-from ..sandbox_instances.models import ExternalDependency, Stage
+from ..sandbox_instances.models import ExternalDependency, AllocationStage
 
 
-class AnsibleAllocationStage(Stage):
+class AnsibleAllocationStage(AllocationStage):
     repo_url = models.TextField()
     rev = models.TextField()
 

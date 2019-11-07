@@ -21,6 +21,6 @@ class AnsibleAllocationStageSerializer(AllocationStageSerializer):
 
 
 class AnsibleOutputSerializer(serializers.BaseSerializer):
-    """Custom serializer to return definition as a string"""
+    """Custom serializer to return data as a string"""
     def to_representation(self, instance) -> str:
         return instance.content
