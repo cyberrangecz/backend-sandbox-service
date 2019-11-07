@@ -41,3 +41,138 @@ class SandboxAllocationUnit(serializers.ModelSerializer):
         model = models.SandboxAllocationUnit
         fields = ('id', 'pool',)
         read_only_fields = ('id', 'pool')
+
+
+class AllocationRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.AllocationRequest
+        fields = ('id', 'allocation_unit', 'created')
+        read_only_fields = fields
+
+
+class CleanupRequestSerializer(AllocationRequestSerializer):
+    pass
+
+
+class AllocationStageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.AllocationStage
+        fields = ('id', 'request', 'start', 'end', 'failed', 'error_message')
+        read_only_fields = fields
+
+
+class OpenstackStageSerializer(AllocationStageSerializer):
+    class Meta:
+        model = models.StackAllocationStage
+        fields = AllocationStageSerializer.Meta.fields + ('status', 'status_reason')
+        read_only_fields = fields
+
+
+class SandboxSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Sandbox
+        fields = ('id', 'lock',)
+        read_only_fields = ('id', 'lock',)
+
+
+class NodeActionSerializer(serializers.Serializer):
+    ACTION_CHOICES = ("suspend",
+                      "resume",
+                      "reboot")
+    action = serializers.ChoiceField(choices=ACTION_CHOICES)
+
+
+class PoolKeypairSerializer(serializers.ModelSerializer):
+    private = serializers.CharField(source='private_management_key')
+    public = serializers.CharField(source='public_management_key')
+
+    class Meta:
+        model = models.Pool
+        fields = ('private', 'public')
+
+
+class SandboxKeypairSerializer(serializers.ModelSerializer):
+    private = serializers.CharField(source='private_user_key')
+    public = serializers.CharField(source='public_user_key')
+
+    class Meta:
+        model = models.Sandbox
+        fields = ('private', 'public')
+
+
+##########################################
+# KYPO OpenStack lib classes serializers #
+##########################################
+
+class LibHostSerializer(serializers.Serializer):
+    """KYPO OS lib Host topology serializer"""
+    name = serializers.CharField()
+
+
+class LibRouterSerializer(serializers.Serializer):
+    """KYPO OS lib Router topology serializer"""
+    name = serializers.CharField()
+    cidr = serializers.CharField()
+
+
+class LibNetworkSerializer(serializers.Serializer):
+    """KYPO OS lib Network topology serializer"""
+    name = serializers.CharField()
+    cidr = serializers.CharField()
+
+
+class LinkSerializer(serializers.Serializer):
+    port_a = serializers.SerializerMethodField()
+    port_b = serializers.SerializerMethodField()
+
+    @staticmethod
+    def get_port_a(obj) -> str:
+        return obj.real_port.name
+
+    @staticmethod
+    def get_port_b(obj) -> str:
+        return obj.dummy_port.name
+
+
+class PortSerializer(serializers.Serializer):
+    ip = serializers.CharField()
+    mac = serializers.CharField()
+    parent = serializers.CharField()
+    name = serializers.CharField()
+
+
+class TopologySerializer(serializers.Serializer):
+    """Serializer for topology"""
+    hosts = LibHostSerializer(many=True)
+    routers = LibRouterSerializer(many=True)
+    switches = LibNetworkSerializer(many=True)
+    links = LinkSerializer(many=True)
+    ports = PortSerializer(many=True)
+
+
+class NodeSerializer(serializers.Serializer):
+    """KYPO OS lib Instance serializer"""
+    name = serializers.CharField()
+    id = serializers.CharField()
+    status = serializers.CharField()
+    creation_time = serializers.DateTimeField()
+    update_time = serializers.DateTimeField()
+    image_id = serializers.CharField()
+    flavor_id = serializers.CharField()
+
+
+class NodeConsoleSerializer(serializers.Serializer):
+    url = serializers.CharField()
+
+
+class SandboxEventSerializer(serializers.Serializer):
+    time = serializers.CharField(source='e_time')
+    name = serializers.CharField(source='r_name')
+    status = serializers.CharField(source='r_status')
+    status_reason = serializers.CharField(source='r_status_reason')
+
+
+class SandboxResourceSerializer(serializers.Serializer):
+    name = serializers.CharField(source='r_name')
+    type = serializers.CharField(source='r_type')
+    status = serializers.CharField(source='r_status')
