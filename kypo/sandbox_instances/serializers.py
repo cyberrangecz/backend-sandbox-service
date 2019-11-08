@@ -36,7 +36,7 @@ class PoolSerializer(serializers.ModelSerializer):
         return obj.sandboxcreaterequests.count()
 
 
-class SandboxAllocationUnit(serializers.ModelSerializer):
+class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.SandboxAllocationUnit
         fields = ('id', 'pool',)
