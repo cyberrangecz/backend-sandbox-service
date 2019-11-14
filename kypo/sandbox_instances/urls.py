@@ -29,9 +29,11 @@ urlpatterns = [
     path('sandbox-allocation-units/<int:unit_id>/resources/',
          views.SandboxResourceList.as_view(), name='sandbox-resources'),
 
-    # Allocation stages
+    # Stages
     path('stages/allocation/<int:stage_id>/openstack/',
-         views.OpenstackStageDetail.as_view(), name='openstack-allocation-stage'),
+         views.OpenstackAllocationStageDetail.as_view(), name='openstack-allocation-stage'),
+    path('stages/cleanup/<int:stage_id>/openstack/',
+         views.OpenstackCleanupStageDetail.as_view(), name='ansible-cleanup-stage'),
 
     # Pool manipulation
     path('pools/<int:pool_id>/sandboxes/', views.PoolSandboxList.as_view(),

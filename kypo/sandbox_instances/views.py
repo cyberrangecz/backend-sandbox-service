@@ -39,7 +39,7 @@ from . import serializers
 from .services import pool_service, sandbox_service, node_service,\
     sandbox_creator, sandbox_destructor
 from .models import Pool, Sandbox, SandboxAllocationUnit, AllocationRequest, AllocationStage, \
-    StackAllocationStage, CleanupRequest
+    StackAllocationStage, CleanupRequest, StackCleanupStage
 
 # Create logger and configure logging
 LOG = structlog.get_logger()
@@ -180,7 +180,7 @@ class SandboxCleanupRequestDetail(generics.RetrieveAPIView):
     lookup_url_kwarg = "request_id"
 
 
-class OpenstackStageDetail(generics.GenericAPIView):
+class OpenstackAllocationStageDetail(generics.GenericAPIView):
     serializer_class = serializers.OpenstackAllocationStageSerializer
     queryset = StackAllocationStage.objects.all()
     lookup_url_kwarg = "stage_id"
@@ -192,6 +192,12 @@ class OpenstackStageDetail(generics.GenericAPIView):
         updated = sandbox_creator.StackCreateStageManager().update_stage(stage)
         serializer = self.get_serializer(updated)
         return Response(serializer.data)
+
+
+class OpenstackCleanupStageDetail(generics.RetrieveAPIView):
+    serializer_class = serializers.OpenstackCleanupStageSerializer
+    queryset = StackCleanupStage.objects.all()
+    lookup_url_kwarg = "stage_id"
 
 
 class SandboxEventList(generics.GenericAPIView):
