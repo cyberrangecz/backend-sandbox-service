@@ -195,7 +195,12 @@ class ExternalDependency(models.Model):
 
 
 class HeatStack(ExternalDependency):
-    pass
+    stage = models.OneToOneField(
+        StackAllocationStage,
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name='heatstack',
+    )
 
 
 class SystemProcesses(ExternalDependency):
