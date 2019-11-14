@@ -11,17 +11,16 @@ import yaml
 from django.db import transaction
 from django.http import Http404
 from rest_framework.generics import get_object_or_404
-import django.core.exceptions
 
 from kypo2_openstack_lib.sandbox import Sandbox as Stack, Host, Router, Link, MAN
-from . import utils
-from .definition_service import get_sandbox_definition
+from ...common import utils, exceptions
+from ...common.config import config
+
+from ...sandbox_definitions.definition_service import get_sandbox_definition
+
 from . import ssh_config
 
-from .. import exceptions, tasks
-from ..config import config
-from ..models import Sandbox, SandboxDeleteRequest
-from .. import models
+from ..models import Sandbox
 
 UAN_NETWORK_NAME = "uan-network"
 BR_NETWORK_NAME = "br-network"
@@ -50,10 +49,10 @@ def delete_sandboxes(sandboxes: Iterable[Sandbox], hard=False) -> None:
     On soft delete raises ValidationError if any sandbox is locked."""
     if hard:
         for sandbox in sandboxes:
-            tasks.hard_delete_sandbox(sandbox)
+            _delete_sandbox_hard(sandbox)
         return
 
-    if any((sb.locked for sb in sandboxes)):
+    if any((sb.lock for sb in sandboxes)):
         raise exceptions.ValidationError("Some of the sandboxes are locked.")
 
     client = utils.get_ostack_client()
@@ -287,61 +286,3 @@ class SandboxSSHConfigCreator:
         router_links.sort(key=lambda l: l.node.name)
         host_links.sort(key=lambda l: l.node.name)
         return mng_host_links + router_links + host_links
-
-
-def get_sandbox_info(request: models.SandboxCreateRequest) -> models.SandboxInfo:
-    try:
-        sandbox_locked = request.sandbox.locked
-        sandbox_private_user_key = request.sandbox.private_user_key
-        sandbox_public_user_key = request.sandbox.public_user_key
-    except django.core.exceptions.ObjectDoesNotExist:
-        sandbox_locked = False
-        sandbox_private_user_key = ''
-        sandbox_public_user_key = ''
-
-    def _get_sandbox_info(_stage, _action):
-        sandbox_info = models.SandboxInfo(id=request.id, pool=request.pool.id, locked=sandbox_locked,
-                                          status_reason=_stage.error_message,
-                                          private_user_key=sandbox_private_user_key,
-                                          public_user_key=sandbox_public_user_key)
-        if _stage.failed:
-            sandbox_info.status = '{0}_FAILED'.format(_action)
-        elif not _stage.end:
-            sandbox_info.status = '{0}_IN_PROGRESS'.format(_action)
-        else:
-            sandbox_info.status = '{0}_COMPLETE'.format(_action)
-        return sandbox_info
-
-    try:
-        _del_req = SandboxDeleteRequest.objects.get(sandbox_create_request=request)
-        return models.SandboxInfo(id=request.id, pool=request.pool.id, locked=sandbox_locked,
-                                  status='DELETE_IN_PROGRESS',
-                                  status_reason='Deleting sandbox',
-                                  private_user_key=sandbox_private_user_key,
-                                  public_user_key=sandbox_public_user_key)
-    except django.core.exceptions.ObjectDoesNotExist:
-        pass
-
-    stages = request.stages.all().select_subclasses()
-
-    current_stage = None
-    for stage in stages:
-        if stage.start:
-            current_stage = stage
-
-    if not current_stage:
-        return models.SandboxInfo(id=request.id, pool=request.pool.id, locked=sandbox_locked, status='INIT',
-                                  status_reason='Sandbox is waiting to be created',
-                                  private_user_key=sandbox_private_user_key,
-                                  public_user_key=sandbox_public_user_key)
-    elif current_stage == stages.latest('id') and current_stage.end and not current_stage.failed:
-        return _get_sandbox_info(current_stage, 'FULL_BUILD')
-
-    if isinstance(current_stage, models.StackCreateStage):
-        return _get_sandbox_info(current_stage, 'CREATE')
-    elif isinstance(current_stage, models.BootstrapStage):
-        return _get_sandbox_info(current_stage, 'BOOTSTRAP')
-    elif isinstance(current_stage, models.AnsibleStage):
-        return _get_sandbox_info(current_stage, 'ANSIBLE')
-
-    raise exceptions.ApiException('Unknown stage: {0}'.format(current_stage))

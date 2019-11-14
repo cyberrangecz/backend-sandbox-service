@@ -10,17 +10,24 @@ import docker.errors
 import requests.exceptions as requests_exceptions
 
 from kypo2_openstack_lib.stack import Event, Resource
-from . import utils, ansible_service, definition_service, sandbox_service
-from ..config import config
-from .. import exceptions
-from ..models import Sandbox, Pool, SandboxCreateRequest, StackCreateStage, AnsibleStage, AnsibleOutput
+
+from ...common import utils, exceptions
+from ...common.config import config
+
+from ...sandbox_definitions import definition_service
+from ...sandbox_ansible_runs import ansible_service
+from ...sandbox_ansible_runs.models import AnsibleAllocationStage, AnsibleOutput
+
+from . import sandbox_service
+
+from ..models import Sandbox, Pool, AllocationRequest, StackAllocationStage
 
 STACK_STATUS_CREATE_COMPLETE = "CREATE_COMPLETE"
 
 LOG = structlog.get_logger()
 
 
-def create_sandbox_requests(pool: Pool, count: int) -> List[SandboxCreateRequest]:
+def create_sandbox_requests(pool: Pool, count: int) -> List[AllocationRequest]:
     """
     Creates Sandbox Requests.
     Also creates sandboxes, but does not save them to the database until successfully created.
@@ -28,7 +35,7 @@ def create_sandbox_requests(pool: Pool, count: int) -> List[SandboxCreateRequest
     requests = []
     sandboxes = []
     for _ in range(count):
-        request = SandboxCreateRequest.objects.create(pool=pool)
+        request = AllocationRequest.objects.create(pool=pool)
         requests.append(request)
 
         pri_key, pub_key = utils.generate_ssh_keypair()
@@ -39,22 +46,22 @@ def create_sandbox_requests(pool: Pool, count: int) -> List[SandboxCreateRequest
     return requests
 
 
-def enqueue_requests(requests: List[SandboxCreateRequest], sandboxes) -> None:
+def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
     for request, sandbox in zip(requests, sandboxes):
 
-        stage_openstack = StackCreateStage.objects.create(request=request)
+        stage_openstack = StackAllocationStage.objects.create(request=request)
         queue_openstack = django_rq.get_queue(config.OPENSTACK_QUEUE, default_timeout=config.SANDBOX_BUILD_TIMEOUT)
         result_openstack = queue_openstack.enqueue(StackCreateStageManager().run,
                                                    stage=stage_openstack, sandbox=sandbox)
 
-        stage_networking = AnsibleStage.objects.create(request=request,
+        stage_networking = AnsibleAllocationStage.objects.create(request=request,
                                                        repo_url=config.ANSIBLE_NETWORKING_URL,
                                                        rev=config.ANSIBLE_NETWORKING_REV)
         queue_ansible = django_rq.get_queue(config.ANSIBLE_QUEUE, default_timeout=config.SANDBOX_ANSIBLE_TIMEOUT)
         result_networking = queue_ansible.enqueue(AnsibleStageManager(stage=stage_networking, sandbox=sandbox).run,
                                                   name='networking', depends_on=result_openstack)
 
-        stage_user_ansible = AnsibleStage.objects.create(request=request,
+        stage_user_ansible = AnsibleAllocationStage.objects.create(request=request,
                                                          repo_url=request.pool.definition.url,
                                                          rev=request.pool.definition.rev)
         result_user_ansible = queue_ansible.enqueue(AnsibleStageManager(stage=stage_user_ansible, sandbox=sandbox).run,
@@ -74,7 +81,7 @@ class StackCreateStageManager:
             self._client = utils.get_ostack_client()
         return self._client
 
-    def run(self, stage: StackCreateStage, sandbox: Sandbox) -> None:
+    def run(self, stage: StackAllocationStage, sandbox: Sandbox) -> None:
         """Run the stage."""
         try:
             LOG.info("Stage 1 (StackCreationStage) started", stage=stage)
@@ -89,7 +96,7 @@ class StackCreateStageManager:
             stage.end = timezone.now()
             stage.save()
 
-    def build_sandbox(self, stage: StackCreateStage, sandbox: Sandbox) -> None:
+    def build_sandbox(self, stage: StackAllocationStage, sandbox: Sandbox) -> None:
         """Build sandbox in OpenStack."""
         LOG.debug("Building sandbox", sandbox=stage)
         definition = definition_service.get_sandbox_definition(
@@ -100,7 +107,7 @@ class StackCreateStageManager:
                                    SSH_KEY_NAME=stage.request.pool.get_keypair_name(),
                                    **config.SANDBOX_CONFIGURATION)
 
-    def wait_for_stack_creation(self, stage: StackCreateStage) -> None:
+    def wait_for_stack_creation(self, stage: StackAllocationStage) -> None:
         """Wait for stack creation."""
         def sandbox_create_check():
             stacks = self.client.list_sandboxes()
@@ -120,7 +127,7 @@ class StackCreateStageManager:
         """Check whether the status indicates, that stack create failed."""
         return status == "ROLLBACK_COMPLETE" or status == "ROLLBACK_FAILED"
 
-    def update_stage(self, stage: StackCreateStage) -> StackCreateStage:
+    def update_stage(self, stage: StackAllocationStage) -> StackAllocationStage:
         """Update stage with current stack status from OpenStack."""
         sandboxes = self.client.list_sandboxes()
         sb = sandboxes[stage.request.get_stack_name()]
@@ -129,17 +136,17 @@ class StackCreateStageManager:
         stage.save()
         return stage
 
-    def get_events(self, stage: StackCreateStage) -> List[Event]:
+    def get_events(self, stage: StackAllocationStage) -> List[Event]:
         """List all events in sandbox as Events objects."""
         return self.client.list_sandbox_events(stage.request.get_stack_name())
 
-    def get_resources(self, stage: StackCreateStage) -> List[Resource]:
+    def get_resources(self, stage: StackAllocationStage) -> List[Resource]:
         """List all resources in sandbox as Resource objects."""
         return self.client.list_sandbox_resources(stage.request.get_stack_name())
 
 
 class AnsibleStageManager:
-    def __init__(self, stage: AnsibleStage, sandbox: Sandbox) -> None:
+    def __init__(self, stage: AnsibleAllocationStage, sandbox: Sandbox) -> None:
         self.stage = stage
         self.sandbox = sandbox
         self.directory = os.path.join(config.ANSIBLE_DOCKER_VOLUMES,

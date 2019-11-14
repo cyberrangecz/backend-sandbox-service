@@ -7,9 +7,11 @@ from django.db.models import QuerySet
 from typing import List, Dict
 from django.shortcuts import get_object_or_404
 
-from . import sandbox_service, utils, sandbox_creator
-from ..models import Pool, Sandbox, SandboxCreateRequest
-from .. import exceptions, serializers
+from ...common import utils, exceptions
+
+from . import sandbox_service, sandbox_creator
+from ..models import Pool, Sandbox, AllocationRequest
+from .. import serializers
 
 LOG = structlog.get_logger()
 
@@ -65,16 +67,16 @@ def delete_pool(pool: Pool) -> None:
 
 def get_current_size(pool: Pool) -> int:
     """Updates sandboxes in given pool and returns current size of pool."""
-    return pool.sandboxcreaterequests.count()
+    return pool.allocation_units.count()
 
 
 def get_sandboxes_in_pool(pool: Pool) -> QuerySet:
     """Returns DB QuerySet of sandboxes from given pool."""
-    request_ids = [req.id for req in pool.sandboxcreaterequests.all()]
-    return Sandbox.objects.all().filter(request_id__in=request_ids)
+    alloc_unit_ids = [unit.id for unit in pool.allocation_units.all()]
+    return Sandbox.objects.all().filter(allocation_unit_id__in=alloc_unit_ids)
 
 
-def create_sandboxes_in_pool(pool: Pool, count: int = None) -> List[SandboxCreateRequest]:
+def create_sandboxes_in_pool(pool: Pool, count: int = None) -> List[AllocationRequest]:
     """
     Creates count sandboxes in given pool.
 
@@ -98,19 +100,14 @@ def create_sandboxes_in_pool(pool: Pool, count: int = None) -> List[SandboxCreat
         return sandbox_creator.create_sandbox_requests(pool, count)
 
 
-def delete_sandboxes_in_pool(pool: Pool) -> None:
-    """Delete all sandboxes in given pool."""
-    sandboxes = get_sandboxes_in_pool(pool)
-    sandbox_service.delete_sandboxes(sandboxes)
+# TODO: fix
+# def delete_sandboxes_in_pool(pool: Pool) -> None:
+#     """Delete all sandboxes in given pool."""
+#     sandboxes = get_sandboxes_in_pool(pool)
+#     sandbox_service.delete_sandboxes(sandboxes)
 
 
 def create_snaphots(pool: Pool) -> list:
     """Create snapshot of all sandboxes in pool."""
     sandboxes = get_sandboxes_in_pool(pool)
     return sandbox_service.create_snapshot(sandboxes)
-
-
-def get_sandboxes_info_in_pool(pool: Pool) -> list:
-    """Returns DB QuerySet of sandboxes from given pool."""
-    return [sandbox_service.get_sandbox_info(sandbox_create_request)
-            for sandbox_create_request in pool.sandboxcreaterequests.all()]

@@ -5,15 +5,19 @@ import structlog
 from django.utils import timezone
 import django.core.exceptions
 
-from . import utils
-from .. import exceptions
-from ..config import config
-from ..models import Sandbox, SandboxDeleteRequest, DeleteStage, SandboxCreateRequest
+from ...common import utils, exceptions
+from ...common.config import config
+
+from ..models import Sandbox, CleanupRequest, SandboxAllocationUnit
 
 LOG = structlog.get_logger()
 
+# FIXME:
+from unittest import mock
+DeleteStage = mock.MagicMock
 
-def delete_sandbox_request(create_request: SandboxCreateRequest) -> SandboxDeleteRequest:
+
+def delete_sandbox_request(create_request: SandboxAllocationUnit) -> CleanupRequest:
     """
     Create delete request and attempt to delete a sandbox.
     """
@@ -28,16 +32,16 @@ def delete_sandbox_request(create_request: SandboxCreateRequest) -> SandboxDelet
     if any([stage.is_running for stage in create_request.stages.all()]):
         raise exceptions.ValidationError('Create sandbox request ID={} has not finished yet.'.format(create_request.id))
 
-    request = SandboxDeleteRequest.objects.create(pool=create_request.pool, sandbox_create_request=create_request)
-    LOG.info("SandboxDeleteRequest created", request=request, sandbox=sandbox)
+    request = CleanupRequest.objects.create(pool=create_request.pool, sandbox_create_request=create_request)
+    LOG.info("CleanupRequest created", request=request, sandbox=sandbox)
 
     enqueue_request(request, sandbox, create_request)
 
     return request
 
 
-def enqueue_request(request: SandboxDeleteRequest, sandbox: Optional[Sandbox],
-                    create_request: SandboxCreateRequest) -> None:
+def enqueue_request(request: CleanupRequest, sandbox: Optional[Sandbox],
+                    create_request: SandboxAllocationUnit) -> None:
     stg1 = DeleteStage.objects.create(request=request)
 
     queue = django_rq.get_queue(config.OPENSTACK_QUEUE,
@@ -56,7 +60,7 @@ class StackDeleteStageManager:
             self._client = utils.get_ostack_client()
         return self._client
 
-    def run(self, stage: DeleteStage, sandbox: Sandbox, create_request: SandboxCreateRequest) -> None:
+    def run(self, stage: DeleteStage, sandbox: Sandbox, create_request: SandboxAllocationUnit) -> None:
         """Run the stage."""
         try:
             stage.start = timezone.now()
@@ -70,7 +74,7 @@ class StackDeleteStageManager:
             stage.end = timezone.now()
             stage.save()
 
-    def delete_sandbox(self, sandbox: Sandbox, create_request: SandboxCreateRequest,
+    def delete_sandbox(self, sandbox: Sandbox, create_request: SandboxAllocationUnit,
                        hard=False) -> None:
         """Deletes given sandbox. Hard specifies whether to use hard delete.
         On soft delete raises ValidationError if any sandbox is locked."""
