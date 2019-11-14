@@ -119,11 +119,11 @@ class SandboxAllocationUnitList(mixins.ListModelMixin, generics.GenericAPIView):
 
 
 # TODO: implement in services
-class SandboxAllocationUnitDetail(generics.DestroyAPIView, generics.GenericAPIView):
+class SandboxAllocationUnitDetail(generics.RetrieveAPIView, generics.GenericAPIView):
     """Class for create-request management"""
     serializer_class = serializers.SandboxAllocationUnitSerializer
     queryset = SandboxAllocationUnit.objects.all()
-    lookup_url_kwarg = "allocation_unit_id"
+    lookup_url_kwarg = "unit_id"
 
 
 # TODO: viewset?
@@ -166,7 +166,7 @@ class SandboxCleanupRequestDetail(generics.RetrieveAPIView):
     lookup_url_kwarg = "request_id"
 
 
-class PoolCreateRequestStageList(generics.ListAPIView):
+class SandboxCreateRequestStageList(generics.ListAPIView):
     """
     Class for managing create stages.
 
