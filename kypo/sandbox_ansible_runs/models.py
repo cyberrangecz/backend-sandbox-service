@@ -1,6 +1,7 @@
 from django.db import models
 
-from ..sandbox_instances.models import ExternalDependency, AllocationStage
+from ..sandbox_instances.models import ExternalDependency, AllocationStage,\
+    CleanupStage
 
 
 class AnsibleAllocationStage(AllocationStage):
@@ -11,6 +12,10 @@ class AnsibleAllocationStage(AllocationStage):
 
         return super().__str__() + \
                ", REPO_URL: {0.repo_url}, REV: {0.rev}".format(self)
+
+
+class AnsibleCleanupStage(CleanupStage):
+    pass
 
 
 class AnsibleOutput(models.Model):

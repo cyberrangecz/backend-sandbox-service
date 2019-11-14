@@ -9,7 +9,9 @@ Swagger can utilise type hints to determine type, so use them in your own method
 """
 from rest_framework import serializers
 
-from ..sandbox_instances.serializers import AllocationStageSerializer
+from ..sandbox_instances.serializers import AllocationStageSerializer,\
+    CleanupStageSerializer
+
 from . import models
 
 
@@ -18,6 +20,10 @@ class AnsibleAllocationStageSerializer(AllocationStageSerializer):
         model = models.AnsibleAllocationStage
         fields = AllocationStageSerializer.Meta.fields + ('repo_url', 'rev')
         read_only_fields = fields
+
+
+class AnsibleCleanupStageSerializer(CleanupStageSerializer):
+    pass
 
 
 class AnsibleOutputSerializer(serializers.BaseSerializer):

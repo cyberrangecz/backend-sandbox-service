@@ -181,7 +181,7 @@ class PoolCreateRequestStageList(generics.ListAPIView):
 
 
 class OpenstackStageDetail(generics.GenericAPIView):
-    serializer_class = serializers.OpenstackStageSerializer
+    serializer_class = serializers.OpenstackAllocationStageSerializer
     queryset = StackAllocationStage.objects.all()
     lookup_url_kwarg = "stage_id"
 

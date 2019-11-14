@@ -153,6 +153,31 @@ class StackAllocationStage(AllocationStage):
                ", STATUS: {0.status}, STATUS_REASON: {0.status_reason}".format(self)
 
 
+class CleanupStage(Stage):
+    request = models.ForeignKey(
+        CleanupRequest,
+        on_delete=models.CASCADE,
+        related_name='stages',
+    )
+
+    objects = InheritanceManager()
+
+    class Meta:
+        ordering = ['id']
+
+    def __str__(self):
+        return "{0.id}, ".format(self) + super().__str__()
+
+
+class StackCleanupStage(CleanupStage):
+    status = models.CharField(null=True, max_length=30)
+    status_reason = models.TextField(null=True)
+
+    def __str__(self):
+        return super().__str__() + \
+               ", STATUS: {0.status}, STATUS_REASON: {0.status_reason}".format(self)
+
+
 class ExternalDependency(models.Model):
     class Meta:
         abstract = True
