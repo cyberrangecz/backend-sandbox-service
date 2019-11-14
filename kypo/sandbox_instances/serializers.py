@@ -64,7 +64,7 @@ class AllocationStageSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_type(obj) -> str:
-        return obj.__class__
+        return obj.type
 
 
 class OpenstackAllocationStageSerializer(AllocationStageSerializer):

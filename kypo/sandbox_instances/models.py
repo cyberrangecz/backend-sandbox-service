@@ -129,6 +129,8 @@ class Stage(models.Model):
 
 
 class AllocationStage(Stage):
+    type = 'unknown'
+
     request = models.ForeignKey(
         AllocationRequest,
         on_delete=models.CASCADE,
@@ -145,6 +147,8 @@ class AllocationStage(Stage):
 
 
 class StackAllocationStage(AllocationStage):
+    type = 'openstack'
+
     status = models.CharField(null=True, max_length=30)
     status_reason = models.TextField(null=True)
 
@@ -154,6 +158,8 @@ class StackAllocationStage(AllocationStage):
 
 
 class CleanupStage(Stage):
+    type = 'unknown'
+
     request = models.ForeignKey(
         CleanupRequest,
         on_delete=models.CASCADE,
@@ -170,6 +176,8 @@ class CleanupStage(Stage):
 
 
 class StackCleanupStage(CleanupStage):
+    type = 'openstack'
+    
     status = models.CharField(null=True, max_length=30)
     status_reason = models.TextField(null=True)
 

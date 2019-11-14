@@ -133,6 +133,20 @@ class SandboxAllocationRequestDetail(generics.RetrieveAPIView):
     lookup_url_kwarg = "request_id"
 
 
+class SandboxCreateRequestStageList(generics.ListAPIView):
+    """
+    Class for managing create stages.
+
+    get: List sandbox create stages.
+    """
+    serializer_class = serializers.AllocationStageSerializer
+
+    def get_queryset(self):
+        request_id = self.kwargs.get('request_id')
+        get_object_or_404(AllocationRequest, pk=request_id)  # check that given request exists
+        return AllocationStage.objects.filter(request_id=request_id).select_subclasses()
+
+
 class SandboxCleanupRequestList(mixins.ListModelMixin, generics.GenericAPIView):
     """Class for delete-request management"""
     serializer_class = serializers.CleanupRequestSerializer
@@ -166,20 +180,6 @@ class SandboxCleanupRequestDetail(generics.RetrieveAPIView):
     lookup_url_kwarg = "request_id"
 
 
-class SandboxCreateRequestStageList(generics.ListAPIView):
-    """
-    Class for managing create stages.
-
-    get: List sandbox create stages.
-    """
-    serializer_class = serializers.AllocationStageSerializer
-
-    def get_queryset(self):
-        request_id = self.kwargs.get('request_id')
-        get_object_or_404(AllocationRequest, pk=request_id)  # check that given request exists
-        return AllocationStage.objects.filter(request_id=request_id).select_subclasses()
-
-
 class OpenstackStageDetail(generics.GenericAPIView):
     serializer_class = serializers.OpenstackAllocationStageSerializer
     queryset = StackAllocationStage.objects.all()
@@ -194,7 +194,7 @@ class OpenstackStageDetail(generics.GenericAPIView):
         return Response(serializer.data)
 
 
-class OpenstackStageEventList(generics.GenericAPIView):
+class SandboxEventList(generics.GenericAPIView):
     """Class for managing Sandbox events"""
     queryset = StackAllocationStage.objects.all()
     lookup_url_kwarg = "stage_id"
@@ -210,7 +210,7 @@ class OpenstackStageEventList(generics.GenericAPIView):
         return Response(self.serializer_class(events, many=True).data)
 
 
-class OpenstackStageResourceList(generics.GenericAPIView):
+class SandboxResourceList(generics.GenericAPIView):
     """Class for managing Sandbox resources"""
     queryset = StackAllocationStage.objects.all()
     lookup_url_kwarg = "stage_id"

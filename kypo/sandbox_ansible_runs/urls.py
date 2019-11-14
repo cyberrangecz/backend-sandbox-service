@@ -4,8 +4,8 @@ from . import views
 
 
 urlpatterns = [
-    path('stages/<int:stage_id>/ansible/',
+    path('stages/allocation/<int:stage_id>/ansible/',
          views.AnsibleStageDetail.as_view(), name='ansible-stage'),
-    path('stages/<int:stage_id>/ansible/outputs/',
+    path('stages/allocation/<int:stage_id>/ansible/outputs/',
          views.AnsibleStageOutputList.as_view(), name='ansible-stage-output'),
 ]

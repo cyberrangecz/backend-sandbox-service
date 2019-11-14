@@ -5,6 +5,8 @@ from ..sandbox_instances.models import ExternalDependency, AllocationStage,\
 
 
 class AnsibleAllocationStage(AllocationStage):
+    type = 'ansible'
+
     repo_url = models.TextField()
     rev = models.TextField()
 
@@ -15,7 +17,7 @@ class AnsibleAllocationStage(AllocationStage):
 
 
 class AnsibleCleanupStage(CleanupStage):
-    pass
+    type = 'ansible'
 
 
 class AnsibleOutput(models.Model):
