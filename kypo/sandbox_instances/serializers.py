@@ -57,8 +57,12 @@ class CleanupRequestSerializer(AllocationRequestSerializer):
 class AllocationStageSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.AllocationStage
-        fields = ('id', 'request', 'start', 'end', 'failed', 'error_message')
+        fields = ('id', 'request', 'type', 'start', 'end', 'failed', 'error_message')
         read_only_fields = fields
+
+    @staticmethod
+    def get_type(obj) -> str:
+        return obj.__class__
 
 
 class OpenstackStageSerializer(AllocationStageSerializer):

@@ -38,7 +38,8 @@ from ..common.permissions import AllowReadOnViewSandbox
 from . import serializers
 from .services import pool_service, sandbox_service, node_service,\
     sandbox_creator, sandbox_destructor
-from .models import Pool, Sandbox, SandboxAllocationUnit, AllocationRequest
+from .models import Pool, Sandbox, SandboxAllocationUnit, AllocationRequest, AllocationStage, \
+    StackAllocationStage, CleanupRequest
 
 # Create logger and configure logging
 LOG = structlog.get_logger()
@@ -129,30 +130,40 @@ class SandboxAllocationUnitDetail(generics.DestroyAPIView, generics.GenericAPIVi
 class SandboxAllocationRequestDetail(generics.RetrieveAPIView):
     serializer_class = serializers.AllocationRequestSerializer
     queryset = SandboxAllocationUnit.objects.all()
-    lookup_url_kwarg = "allocation_unit_id"
+    lookup_url_kwarg = "request_id"
 
-#
-# class SandboxDeleteRequestList(mixins.ListModelMixin, generics.GenericAPIView):
-#     """Class for delete-request management"""
-#     serializer_class = serializers.SandboxDeleteRequestSerializer
-#
-#     def get_queryset(self):
-#         return SandboxDeleteRequest.objects.filter(pool_id=self.kwargs.get('pool_id'))
-#
-#     # noinspection PyUnusedLocal
-#     @swagger_auto_schema(
-#         responses={status.HTTP_201_CREATED: serializers.SandboxDeleteRequestSerializer()})
-#     def post(self, request, sandbox_id):
-#         """ Delete given Sandbox."""
-#         create_request = SandboxCreateRequest.objects.get(pk=sandbox_id)
-#
-#         del_request = sandbox_destructor.delete_sandbox_request(create_request)
-#         serializer = self.serializer_class(del_request)
-#         return Response(serializer.data, status=status.HTTP_201_CREATED)
-#
-#     def get(self, request, *args, **kwargs):
-#         """Get a list of Sandbox Delete Requests."""
-#         return self.list(request, *args, **kwargs)
+
+class SandboxCleanupRequestList(mixins.ListModelMixin, generics.GenericAPIView):
+    """Class for delete-request management"""
+    serializer_class = serializers.CleanupRequestSerializer
+
+    def get_queryset(self):
+        return CleanupRequest.objects.filter(pool_id=self.kwargs.get('pool_id'))
+
+    # FIXME: destructor needs update to new model
+    # noinspection PyUnusedLocal
+    # @swagger_auto_schema(
+    #     responses={status.HTTP_201_CREATED: serializers.SandboxDeleteRequestSerializer()})
+    def post(self, request, sandbox_id):
+        """ Delete given Sandbox."""
+        # create_request = SandboxCreateRequest.objects.get(pk=sandbox_id)
+        #
+        # del_request = sandbox_destructor.delete_sandbox_request(create_request)
+        # serializer = self.serializer_class(del_request)
+        # return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response({}, status=status.HTTP_201_CREATED)
+
+    def get(self, request, *args, **kwargs):
+        """Get a list of Sandbox Cleanup Requests."""
+        return self.list(request, *args, **kwargs)
+
+
+# TODO: viewset?
+class SandboxCleanupRequestDetail(generics.RetrieveAPIView):
+    """Class for cleanup-request management"""
+    serializer_class = serializers.CleanupRequestSerializer
+    queryset = CleanupRequest.objects.all()
+    lookup_url_kwarg = "request_id"
 
 
 class PoolCreateRequestStageList(generics.ListAPIView):
@@ -161,17 +172,17 @@ class PoolCreateRequestStageList(generics.ListAPIView):
 
     get: List sandbox create stages.
     """
-    serializer_class = serializers.SandboxStageSerializer
+    serializer_class = serializers.AllocationStageSerializer
 
     def get_queryset(self):
         request_id = self.kwargs.get('request_id')
-        get_object_or_404(SandboxCreateRequest, pk=request_id)  # check that given request exists
-        return Stage.objects.filter(request_id=request_id).select_subclasses()
+        get_object_or_404(AllocationRequest, pk=request_id)  # check that given request exists
+        return AllocationStage.objects.filter(request_id=request_id).select_subclasses()
 
 
 class OpenstackStageDetail(generics.GenericAPIView):
     serializer_class = serializers.OpenstackStageSerializer
-    queryset = StackCreateStage.objects.all()
+    queryset = StackAllocationStage.objects.all()
     lookup_url_kwarg = "stage_id"
 
     # noinspection PyUnusedLocal
@@ -183,18 +194,9 @@ class OpenstackStageDetail(generics.GenericAPIView):
         return Response(serializer.data)
 
 
-class BootstrapStageDetail(generics.RetrieveAPIView):
-    """
-    get: Retrieve a bootstrap stage.
-    """
-    serializer_class = serializers.BootstrapStageSerializer
-    queryset = BootstrapStage.objects.all()
-    lookup_url_kwarg = "stage_id"
-
-
 class OpenstackStageEventList(generics.GenericAPIView):
     """Class for managing Sandbox events"""
-    queryset = StackCreateStage.objects.all()
+    queryset = StackAllocationStage.objects.all()
     lookup_url_kwarg = "stage_id"
     serializer_class = serializers.SandboxEventSerializer
     pagination_class = None
@@ -210,7 +212,7 @@ class OpenstackStageEventList(generics.GenericAPIView):
 
 class OpenstackStageResourceList(generics.GenericAPIView):
     """Class for managing Sandbox resources"""
-    queryset = StackCreateStage.objects.all()
+    queryset = StackAllocationStage.objects.all()
     lookup_url_kwarg = "stage_id"
     serializer_class = serializers.SandboxResourceSerializer
     pagination_class = None
@@ -398,4 +400,3 @@ class SandboxManagementSSHConfig(APIView):
         response = HttpResponse(FileWrapper(io.StringIO(str(ssh_config))), content_type='application/txt')
         response['Content-Disposition'] = "attachment; filename=config"
         return response
-
