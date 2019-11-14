@@ -177,13 +177,16 @@ class CleanupStage(Stage):
 
 class StackCleanupStage(CleanupStage):
     type = 'openstack'
-    
-    status = models.CharField(null=True, max_length=30)
-    status_reason = models.TextField(null=True)
+
+    allocation_stage = models.OneToOneField(
+        StackAllocationStage,
+        on_delete=models.CASCADE,
+        related_name='cleanup_stage',
+    )
 
     def __str__(self):
         return super().__str__() + \
-               ", STATUS: {0.status}, STATUS_REASON: {0.status_reason}".format(self)
+               ", ALLOCATION_STAGE: {0.allocation_stage}".format(self)
 
 
 class ExternalDependency(models.Model):

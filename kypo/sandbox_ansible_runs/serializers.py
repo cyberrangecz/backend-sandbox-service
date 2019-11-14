@@ -23,7 +23,10 @@ class AnsibleAllocationStageSerializer(AllocationStageSerializer):
 
 
 class AnsibleCleanupStageSerializer(CleanupStageSerializer):
-    pass
+    class Meta:
+        model = models.AnsibleCleanupStage
+        fields = CleanupStageSerializer.Meta.fields + ('allocation_stage',)
+        read_only_fields = fields
 
 
 class AnsibleOutputSerializer(serializers.BaseSerializer):

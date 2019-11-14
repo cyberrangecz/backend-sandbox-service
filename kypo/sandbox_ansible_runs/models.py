@@ -19,6 +19,16 @@ class AnsibleAllocationStage(AllocationStage):
 class AnsibleCleanupStage(CleanupStage):
     type = 'ansible'
 
+    allocation_stage = models.OneToOneField(
+        AnsibleAllocationStage,
+        on_delete=models.CASCADE,
+        related_name='cleanup_stage',
+    )
+
+    def __str__(self):
+        return super().__str__() + \
+               ", ALLOCATION_STAGE: {0.allocation_stage}".format(self)
+
 
 class AnsibleOutput(models.Model):
     stage = models.ForeignKey(
@@ -36,4 +46,10 @@ class AnsibleOutput(models.Model):
 
 
 class DockerContainer(ExternalDependency):
+    stage = models.OneToOneField(
+        AnsibleAllocationStage,
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name='container',
+    )
     container_id = models.TextField()

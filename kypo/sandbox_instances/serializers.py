@@ -90,7 +90,7 @@ class CleanupStageSerializer(serializers.ModelSerializer):
 class OpenstackCleanupStageSerializer(CleanupStageSerializer):
     class Meta:
         model = models.StackCleanupStage
-        fields = AllocationStageSerializer.Meta.fields + ('status', 'status_reason')
+        fields = AllocationStageSerializer.Meta.fields + ('allocation_stage',)
         read_only_fields = fields
 
 

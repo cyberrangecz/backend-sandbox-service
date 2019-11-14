@@ -5,7 +5,10 @@ from . import views
 
 urlpatterns = [
     path('stages/allocation/<int:stage_id>/ansible/',
-         views.AnsibleStageDetail.as_view(), name='ansible-stage'),
+         views.AnsibleAllocationStageDetail.as_view(), name='ansible-allocation-stage'),
     path('stages/allocation/<int:stage_id>/ansible/outputs/',
          views.AnsibleStageOutputList.as_view(), name='ansible-stage-output'),
+
+    path('stages/cleanup/<int:stage_id>/ansible/',
+         views.AnsibleCleanupStageDetail.as_view(), name='ansible-cleanup-stage'),
 ]

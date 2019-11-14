@@ -9,11 +9,20 @@ from .models import AnsibleAllocationStage
 LOG = structlog.get_logger()
 
 
-class AnsibleStageDetail(generics.RetrieveAPIView):
+class AnsibleAllocationStageDetail(generics.RetrieveAPIView):
     """
     get: Retrieve an ansible stage.
     """
     serializer_class = serializers.AnsibleAllocationStageSerializer
+    queryset = AnsibleAllocationStage.objects.all()
+    lookup_url_kwarg = "stage_id"
+
+
+class AnsibleCleanupStageDetail(generics.RetrieveAPIView):
+    """
+    get: Retrieve an ansible stage.
+    """
+    serializer_class = serializers.AnsibleCleanupStageSerializer
     queryset = AnsibleAllocationStage.objects.all()
     lookup_url_kwarg = "stage_id"
 
