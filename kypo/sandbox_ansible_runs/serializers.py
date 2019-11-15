@@ -29,7 +29,8 @@ class AnsibleCleanupStageSerializer(CleanupStageSerializer):
         read_only_fields = fields
 
 
-class AnsibleOutputSerializer(serializers.BaseSerializer):
-    """Custom serializer to return data as a string"""
-    def to_representation(self, instance) -> str:
-        return instance.content
+class AnsibleOutputSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.AnsibleOutput
+        fields = ('content',)
+        read_only_fields = fields

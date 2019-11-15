@@ -9,11 +9,6 @@ from ..models import AnsibleAllocationStage
 LOG = structlog.get_logger()
 
 
-def asseble_output(ansible_run: AnsibleAllocationStage) -> Generator[str, None, None]:
-    """Assemble Ansible output for given run and return it as generator."""
-    return (output.content for output in ansible_run.outputs.all())
-
-
 class AnsibleRunDockerContainer:
     container = None
     killed = False

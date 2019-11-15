@@ -36,13 +36,6 @@ class PoolSerializer(serializers.ModelSerializer):
         return obj.sandboxcreaterequests.count()
 
 
-class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.SandboxAllocationUnit
-        fields = ('id', 'pool',)
-        read_only_fields = ('id', 'pool')
-
-
 class AllocationRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.AllocationRequest
@@ -52,6 +45,15 @@ class AllocationRequestSerializer(serializers.ModelSerializer):
 
 class CleanupRequestSerializer(AllocationRequestSerializer):
     pass
+
+
+class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
+    allocation_request = AllocationRequestSerializer(source='allocationrequests', read_only=True)
+
+    class Meta:
+        model = models.SandboxAllocationUnit
+        fields = ('id', 'pool', 'allocation_request')
+        read_only_fields = ('id', 'pool', 'allocation_request')
 
 
 class AllocationStageSerializer(serializers.ModelSerializer):
@@ -99,6 +101,13 @@ class SandboxSerializer(serializers.ModelSerializer):
         model = models.Sandbox
         fields = ('id', 'lock',)
         read_only_fields = ('id', 'lock',)
+
+
+class LockSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Lock
+        fields = ('id', 'sandbox',)
+        read_only_fields = ('id', 'sandbox',)
 
 
 class NodeActionSerializer(serializers.Serializer):
