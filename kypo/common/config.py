@@ -44,6 +44,9 @@ class Settings:
         }
     }
 
+    UAN_NETWORK_NAME = "uan-network"
+    BR_NETWORK_NAME = "br-network"
+
     def _get_required_attribute(self, configuration, key):
         """
         Retrieve value from configuration dict and raise exception if it does not exist.

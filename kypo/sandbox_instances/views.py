@@ -37,7 +37,7 @@ from ..common.permissions import AllowReadOnViewSandbox
 
 from . import serializers
 from .services import pool_service, sandbox_service, node_service,\
-    sandbox_creator, sandbox_destructor
+    sandbox_creator
 from .models import Pool, Sandbox, SandboxAllocationUnit, AllocationRequest, AllocationStage, \
     StackAllocationStage, CleanupRequest, StackCleanupStage, CleanupStage
 
