@@ -39,7 +39,7 @@ from . import serializers
 from .services import pool_service, sandbox_service, node_service,\
     sandbox_creator, sandbox_destructor
 from .models import Pool, Sandbox, SandboxAllocationUnit, AllocationRequest, AllocationStage, \
-    StackAllocationStage, CleanupRequest, StackCleanupStage
+    StackAllocationStage, CleanupRequest, StackCleanupStage, CleanupStage
 
 # Create logger and configure logging
 LOG = structlog.get_logger()
@@ -133,7 +133,7 @@ class SandboxAllocationRequestDetail(generics.RetrieveAPIView):
     lookup_url_kwarg = "request_id"
 
 
-class SandboxCreateRequestStageList(generics.ListAPIView):
+class SandboxAllocationRequestStageList(generics.ListAPIView):
     """
     get: List sandbox Allocation stages.
     """
@@ -170,12 +170,23 @@ class SandboxCleanupRequestList(mixins.ListModelMixin, generics.GenericAPIView):
         return self.list(request, *args, **kwargs)
 
 
-# TODO: viewset?
 class SandboxCleanupRequestDetail(generics.RetrieveAPIView):
     """Class for cleanup-request management"""
     serializer_class = serializers.CleanupRequestSerializer
     queryset = CleanupRequest.objects.all()
     lookup_url_kwarg = "request_id"
+
+
+class SandboxCleanupRequestStageList(generics.ListAPIView):
+    """
+    get: List sandbox Cleanup stages.
+    """
+    serializer_class = serializers.CleanupStageSerializer
+
+    def get_queryset(self):
+        request_id = self.kwargs.get('request_id')
+        get_object_or_404(CleanupRequest, pk=request_id)  # check that given request exists
+        return CleanupStage.objects.filter(request_id=request_id)
 
 
 class OpenstackAllocationStageDetail(generics.GenericAPIView):

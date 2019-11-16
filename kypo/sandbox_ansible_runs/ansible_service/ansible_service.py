@@ -4,7 +4,6 @@ import docker
 import structlog
 
 from ...common.config import config
-from ..models import AnsibleAllocationStage
 
 LOG = structlog.get_logger()
 

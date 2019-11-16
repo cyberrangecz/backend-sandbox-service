@@ -15,14 +15,18 @@ urlpatterns = [
     # Sandbox allocation units
     path('sandbox-allocation-units/<int:unit_id>/',
          views.SandboxAllocationUnitDetail.as_view(), name='sandbox-allocation-unit-detail'),
-
+    # Allocation request
     path('sandbox-allocation-units/<int:unit_id>/allocation-requests/<int:request_id>/',
          views.SandboxAllocationRequestDetail.as_view(), name='allocation-request-detail'),
     path('sandbox-allocation-units/<int:unit_id>/allocation-requests/<int:request_id>/stages/',
-         views.SandboxCreateRequestStageList.as_view(), name='allocation-request-stage-list'),
-
+         views.SandboxAllocationRequestStageList.as_view(), name='allocation-request-stage-list'),
+    # Cleanup request
     path('sandbox-allocation-units/<int:unit_id>/cleanup-requests/',
-         views.SandboxCleanupRequestList.as_view(), name='sandbox-delete-request'),
+         views.SandboxCleanupRequestList.as_view(), name='sandbox-cleanup-request-list'),
+    path('sandbox-allocation-units/<int:unit_id>/cleanup-requests/<int:request_id>/',
+         views.SandboxCleanupRequestDetail.as_view(), name='sandbox-cleanup-request-detail'),
+    path('sandbox-allocation-units/<int:unit_id>/cleanup-requests/<int:request_id>/stages/',
+         views.SandboxCleanupRequestStageList.as_view(), name='allocation-request-stage-list'),
 
     path('sandbox-allocation-units/<int:unit_id>/events/',
          views.SandboxEventList.as_view(), name='sandbox-events'),
