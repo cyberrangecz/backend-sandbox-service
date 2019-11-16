@@ -210,36 +210,24 @@ class OpenstackCleanupStageDetail(generics.RetrieveAPIView):
     lookup_url_kwarg = "stage_id"
 
 
-class SandboxEventList(generics.ListAPIView, generics.GenericAPIView,):
+class SandboxEventList(generics.ListAPIView):
     """Class for managing Sandbox events"""
-    queryset = StackAllocationStage.objects.all()
-    lookup_url_kwarg = "stage_id"
     serializer_class = serializers.SandboxEventSerializer
 
-    # FIXME: use unmanaged model
-    # # noinspection PyUnusedLocal
-    # @swagger_auto_schema(responses={status.HTTP_200_OK: serializers.SandboxEventSerializer(many=True)})
-    # def get(self, request, stage_id):
-    #     """Retrieve list of sandbox events."""
-    #     manager = sandbox_creator.StackCreateStageManager()
-    #     events = manager.get_events(self.get_object())
-    #     return Response(self.serializer_class(events, many=True).data)
+    def get_queryset(self):
+        unit_id = self.kwargs.get('unit_id')
+        unit = get_object_or_404(SandboxAllocationUnit, pk=unit_id)
+        return allocation_unit_service.get_stack_events()  # TODO: implement service
 
 
-class SandboxResourceList(generics.ListAPIView, generics.GenericAPIView):
+class SandboxResourceList(generics.ListAPIView):
     """Class for managing Sandbox resources"""
-    queryset = StackAllocationStage.objects.all()
-    lookup_url_kwarg = "stage_id"
     serializer_class = serializers.SandboxResourceSerializer
 
-    # FIXME: use unmanaged model
-    # # noinspection PyUnusedLocal
-    # @swagger_auto_schema(responses={status.HTTP_200_OK: serializers.SandboxResourceSerializer(many=True)})
-    # def get(self, request, stage_id):
-    #     """Retrieve list of sandbox resources."""
-    #     manager = sandbox_creator.StackCreateStageManager()
-    #     resources = manager.get_resources(self.get_object())
-    #     return Response(self.serializer_class(resources, many=True).data)
+    def get_queryset(self):
+        unit_id = self.kwargs.get('unit_id')
+        unit = get_object_or_404(SandboxAllocationUnit, pk=unit_id)
+        return allocation_unit_service.get_stack_events()  # TODO: implement service
 
 
 #########################################
