@@ -40,9 +40,7 @@ urlpatterns = [
     re_path(r'^doc(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0),
             name='schema-json'),
 
-    # path('django-rq/', include('django_rq.urls')),
-
-    re_path(r'^api-auth/', include('rest_framework.urls')),
+    path('django-rq/', include('django_rq.urls')),
 
     # Include Apps' URLs
     path('', include('kypo.sandbox_ansible_runs.urls')),

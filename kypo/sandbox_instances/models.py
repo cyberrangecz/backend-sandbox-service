@@ -119,6 +119,7 @@ class Stage(models.Model):
         return self.start is not None and self.end is None
 
     class Meta:
+        abstract = True
         ordering = ['id']
 
     def __str__(self):
@@ -141,9 +142,6 @@ class AllocationStage(Stage):
     )
 
     objects = InheritanceManager()
-
-    class Meta:
-        ordering = ['id']
 
     def __str__(self):
         return "{0.id}, ".format(self) + super().__str__()

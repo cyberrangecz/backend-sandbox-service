@@ -53,3 +53,6 @@ class DockerContainer(ExternalDependency):
         related_name='container',
     )
     container_id = models.TextField()
+
+    def __str__(self):
+        return "ID: {0.id}, STAGE: {0.stage.id}, CONTAINER: {0.container_id}".format(self)
