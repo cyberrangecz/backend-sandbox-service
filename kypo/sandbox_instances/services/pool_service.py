@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404
 from ...common import utils, exceptions
 
 from . import sandbox_service, sandbox_creator
-from ..models import Pool, Sandbox, AllocationRequest
+from ..models import Pool, Sandbox, SandboxAllocationUnit
 from .. import serializers
 
 LOG = structlog.get_logger()
@@ -53,7 +53,7 @@ def create_pool(data: Dict) -> Pool:
     except Exception:
         pool.delete()
         raise
-    
+
     return pool
 
 
@@ -76,7 +76,7 @@ def get_sandboxes_in_pool(pool: Pool) -> QuerySet:
     return Sandbox.objects.all().filter(allocation_unit_id__in=alloc_unit_ids)
 
 
-def create_sandboxes_in_pool(pool: Pool, count: int = None) -> List[AllocationRequest]:
+def create_sandboxes_in_pool(pool: Pool, count: int = None) -> List[SandboxAllocationUnit]:
     """
     Creates count sandboxes in given pool.
 

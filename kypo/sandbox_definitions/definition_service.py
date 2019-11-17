@@ -23,7 +23,6 @@ def create_definition(url: str, rev: str = None) -> Definition:
     client.validate_sandbox_definition(sandbox_definition)
 
     parsed_sandbox_definition = yaml.full_load(sandbox_definition)
-    validate_definition(parsed_sandbox_definition)
 
     serializer = serializers.DefinitionSerializer(
         data=dict(name=parsed_sandbox_definition['name'], url=url, rev=rev))
@@ -48,30 +47,3 @@ def get_sandbox_definition(url: str, rev: str) -> str:
         raise exceptions.GitError("Failed to get sandbox definition file {}.\n"
                                   .format(config.SANDBOX_DEFINITION_FILENAME) + str(ex))
     return definition
-
-
-# FIXME: moved to lib
-def validate_definition(definition: dict) -> None:
-    """Validates Definition from point of Django app, raises Exception on error."""
-
-    hosts = {host.get('name'): host for host in definition.get('hosts', [])}
-
-    # Name is present and non-empty
-    name = definition.get('name')
-    if not name:
-        raise exceptions.ValidationError("Sandbox definition is invalid: "
-                                         "You need to add a non-empty name!")
-    # Validate hidden hosts
-    if 'hidden_hosts' in definition:
-        for host in definition['hidden_hosts']:
-            if host not in hosts:
-                raise exceptions.ValidationError("Sandbox definition is invalid: "
-                                                 "Hidden host '%s' not found between hosts!"
-                                                 % host)
-    # Validate suspended hosts
-    if 'suspended_hosts' in definition:
-        for host in definition['suspended_hosts']:
-            if host not in hosts:
-                raise exceptions.ValidationError("Sandbox definition is invalid: "
-                                                 "Suspended host '%s' not found between hosts!"
-                                                 % host)

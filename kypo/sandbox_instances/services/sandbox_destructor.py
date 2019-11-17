@@ -10,10 +10,6 @@ from ...common.config import config
 from ..models import Sandbox, CleanupRequest, SandboxAllocationUnit, CleanupStage
 
 LOG = structlog.get_logger()
-#
-# # FIXME:
-# from unittest import mock
-# DeleteStage = mock.MagicMock
 
 
 def delete_sandbox_request(allocation_unit: SandboxAllocationUnit) -> CleanupRequest:
