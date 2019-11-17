@@ -9,8 +9,6 @@ import shutil
 import docker.errors
 import requests.exceptions as requests_exceptions
 
-from kypo2_openstack_lib.stack import Event, Resource
-
 from ...common import utils, exceptions
 from ...common.config import config
 
@@ -20,55 +18,66 @@ from ...sandbox_ansible_runs.models import AnsibleAllocationStage, AnsibleOutput
 
 from . import sandbox_service
 
-from ..models import Sandbox, Pool, AllocationRequest, StackAllocationStage
+from ..models import Sandbox, Pool, SandboxAllocationUnit, \
+    AllocationRequest, StackAllocationStage
 
 STACK_STATUS_CREATE_COMPLETE = "CREATE_COMPLETE"
 
 LOG = structlog.get_logger()
 
 
-def create_sandbox_requests(pool: Pool, count: int) -> List[AllocationRequest]:
+def create_sandbox_requests(pool: Pool, count: int) -> List[SandboxAllocationUnit]:
     """
     Creates Sandbox Requests.
     Also creates sandboxes, but does not save them to the database until successfully created.
     """
+    units = []
     requests = []
     sandboxes = []
     for _ in range(count):
-        request = AllocationRequest.objects.create(pool=pool)
+        unit = SandboxAllocationUnit.objects.create(pool=pool)
+        request = AllocationRequest.objects.create(allocation_unit=unit)
+        units.append(unit)
         requests.append(request)
 
         pri_key, pub_key = utils.generate_ssh_keypair()
-        sandbox = Sandbox(id=request.id, request=request, private_user_key=pri_key,
+        sandbox = Sandbox(id=request.id, allocation_unit=unit, private_user_key=pri_key,
                           public_user_key=pub_key)
         sandboxes.append(sandbox)
     enqueue_requests(requests, sandboxes)
-    return requests
+    return units
 
 
 def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
     for request, sandbox in zip(requests, sandboxes):
-
         stage_openstack = StackAllocationStage.objects.create(request=request)
-        queue_openstack = django_rq.get_queue(config.OPENSTACK_QUEUE, default_timeout=config.SANDBOX_BUILD_TIMEOUT)
+        queue_openstack = django_rq.get_queue(config.OPENSTACK_QUEUE,
+                                              default_timeout=config.SANDBOX_BUILD_TIMEOUT)
         result_openstack = queue_openstack.enqueue(StackCreateStageManager().run,
                                                    stage=stage_openstack, sandbox=sandbox)
 
-        stage_networking = AnsibleAllocationStage.objects.create(request=request,
-                                                       repo_url=config.ANSIBLE_NETWORKING_URL,
-                                                       rev=config.ANSIBLE_NETWORKING_REV)
-        queue_ansible = django_rq.get_queue(config.ANSIBLE_QUEUE, default_timeout=config.SANDBOX_ANSIBLE_TIMEOUT)
-        result_networking = queue_ansible.enqueue(AnsibleStageManager(stage=stage_networking, sandbox=sandbox).run,
-                                                  name='networking', depends_on=result_openstack)
+        stage_networking = AnsibleAllocationStage.objects.create(
+            request=request, repo_url=config.ANSIBLE_NETWORKING_URL,
+            rev=config.ANSIBLE_NETWORKING_REV
+        )
+        queue_ansible = django_rq.get_queue(config.ANSIBLE_QUEUE,
+                                            default_timeout=config.SANDBOX_ANSIBLE_TIMEOUT)
+        result_networking = queue_ansible.enqueue(
+            AnsibleStageManager(stage=stage_networking, sandbox=sandbox).run,
+            name='networking', depends_on=result_openstack
+        )
 
-        stage_user_ansible = AnsibleAllocationStage.objects.create(request=request,
-                                                         repo_url=request.pool.definition.url,
-                                                         rev=request.pool.definition.rev)
-        result_user_ansible = queue_ansible.enqueue(AnsibleStageManager(stage=stage_user_ansible, sandbox=sandbox).run,
-                                                    name='user-ansible', depends_on=result_networking)
+        stage_user_ansible = AnsibleAllocationStage.objects.create(
+            request=request, repo_url=request.allocation_unit.pool.definition.url,
+            rev=request.allocation_unit.pool.definition.rev
+        )
+        result_user_ansible = queue_ansible.enqueue(
+            AnsibleStageManager(stage=stage_user_ansible, sandbox=sandbox).run,
+            name='user-ansible', depends_on=result_networking)
 
         queue_default = django_rq.get_queue()
-        queue_default.enqueue(save_sandbox_to_database, sandbox=sandbox, depends_on=result_user_ansible)
+        queue_default.enqueue(save_sandbox_to_database, sandbox=sandbox,
+                              depends_on=result_user_ansible)
 
 
 class StackCreateStageManager:
@@ -100,11 +109,11 @@ class StackCreateStageManager:
         """Build sandbox in OpenStack."""
         LOG.debug("Building sandbox", sandbox=stage)
         definition = definition_service.get_sandbox_definition(
-            url=sandbox.request.pool.definition.url,
-            rev=sandbox.request.pool.definition.rev
+            url=sandbox.allocation_unit.pool.definition.url,
+            rev=sandbox.allocation_unit.pool.definition.rev
         )
         self.client.create_sandbox(io.StringIO(definition), sandbox.get_stack_name(),
-                                   SSH_KEY_NAME=stage.request.pool.get_keypair_name(),
+                                   SSH_KEY_NAME=stage.request.allocation_unit.pool.get_keypair_name(),
                                    **config.SANDBOX_CONFIGURATION)
 
     def wait_for_stack_creation(self, stage: StackAllocationStage) -> None:
@@ -184,7 +193,7 @@ class AnsibleStageManager:
         self.save_file(os.path.join(ssh_directory, config.USER_PRIVATE_KEY_FILENAME), self.sandbox.private_user_key)
         self.save_file(os.path.join(ssh_directory, config.USER_PUBLIC_KEY_FILENAME), self.sandbox.public_user_key)
         self.save_file(os.path.join(ssh_directory, config.MNG_PRIVATE_KEY_FILENAME),
-                       self.stage.request.pool.private_management_key)
+                       self.stage.request.allocation_unit.pool.private_management_key)
 
         shutil.copy(config.GIT_PRIVATE_KEY, os.path.join(ssh_directory, os.path.basename(config.GIT_PRIVATE_KEY)))
 
@@ -215,7 +224,7 @@ class AnsibleStageManager:
         return ssh_directory
 
     def prepare_inventory_file(self) -> str:
-        definition = self.stage.request.pool.definition
+        definition = self.stage.request.allocation_unit.pool.definition
         sandbox_definition = yaml.full_load(definition_service.get_sandbox_definition(definition.url, definition.rev))
 
         client = utils.get_ostack_client()
