@@ -71,11 +71,6 @@ class Sandbox(models.Model):
 
 class SandboxRequest(models.Model):
     """Abstract base class for Sandbox Requests."""
-    allocation_unit = models.ForeignKey(
-        SandboxAllocationUnit,
-        on_delete=models.CASCADE,
-        related_name='%(class)ss',
-    )
     created = models.DateTimeField(default=timezone.now)
 
     class Meta:
@@ -92,11 +87,19 @@ class SandboxRequest(models.Model):
 
 
 class AllocationRequest(SandboxRequest):
-    pass
+    allocation_unit = models.OneToOneField(
+        SandboxAllocationUnit,
+        on_delete=models.CASCADE,
+        related_name='allocation_request',
+    )
 
 
 class CleanupRequest(SandboxRequest):
-    pass
+    allocation_unit = models.ForeignKey(
+        SandboxAllocationUnit,
+        on_delete=models.CASCADE,
+        related_name='cleanup_requests',
+    )
 
 
 class Stage(models.Model):

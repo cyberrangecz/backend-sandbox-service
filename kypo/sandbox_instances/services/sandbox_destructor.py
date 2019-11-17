@@ -1,9 +1,8 @@
 from typing import Optional
-import django
 import django_rq
 import structlog
 from django.utils import timezone
-import django.core.exceptions
+from django.core.exceptions import ObjectDoesNotExist
 
 from ...common import utils, exceptions
 from ...common.config import config
@@ -11,26 +10,27 @@ from ...common.config import config
 from ..models import Sandbox, CleanupRequest, SandboxAllocationUnit
 
 LOG = structlog.get_logger()
+#
+# # FIXME:
+# from unittest import mock
+# DeleteStage = mock.MagicMock
 
-# FIXME:
-from unittest import mock
-DeleteStage = mock.MagicMock
 
-
-def delete_sandbox_request(create_request: SandboxAllocationUnit) -> CleanupRequest:
+def delete_sandbox_request(allocation_unit: SandboxAllocationUnit) -> CleanupRequest:
     """
     Create delete request and attempt to delete a sandbox.
     """
     try:
-        sandbox = create_request.sandbox
-    except django.core.exceptions.ObjectDoesNotExist:
+        sandbox = allocation_unit.sandbox
+    except ObjectDoesNotExist:
         sandbox = None
 
     if sandbox and sandbox.locked:
         raise exceptions.ValidationError("Sandbox ID={} is locked.".format(sandbox.id))
 
-    if any([stage.is_running for stage in create_request.stages.all()]):
-        raise exceptions.ValidationError('Create sandbox request ID={} has not finished yet.'.format(create_request.id))
+    if any([stage.is_running for stage in allocation_unit.allocationrequests.stages.all()]):
+        raise exceptions.ValidationError('Create sandbox request ID={} has not finished yet.'.
+                                         format(allocation_unit.allocationrequests.id))
 
     request = CleanupRequest.objects.create(pool=create_request.pool, sandbox_create_request=create_request)
     LOG.info("CleanupRequest created", request=request, sandbox=sandbox)
