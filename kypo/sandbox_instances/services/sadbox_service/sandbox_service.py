@@ -12,12 +12,11 @@ from django.http import Http404
 from rest_framework.generics import get_object_or_404
 
 from ....common import utils, exceptions
-from ....common.config import config
+from ....common.sshconfig import Config
 
 from ...models import Sandbox
 from .topology import Topology
 from .sshconfig import SandboxSSHConfigCreator
-from ..ssh_config import Config
 
 UAN_NETWORK_NAME = "uan-network"
 BR_NETWORK_NAME = "br-network"
@@ -146,8 +145,9 @@ def get_sandbox_topology(sandbox: Sandbox) -> Topology:
 
 def get_user_sshconfig(sandbox: Sandbox) -> Config:
     """Get user SSH config."""
-    pass
+    return SandboxSSHConfigCreator(sandbox).create_user_config()
+
 
 def get_management_sshconfig(sandbox: Sandbox) -> Config:
     """Get management SSH config."""
-    pass
+    return SandboxSSHConfigCreator(sandbox).create_management_config()

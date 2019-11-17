@@ -4,8 +4,7 @@ import structlog
 from kypo2_openstack_lib.sandbox import Host, Router, Link, MAN
 from ....common import utils
 from ....common.config import config
-
-from .. import ssh_config
+from ....common import sshconfig
 
 from ...models import Sandbox
 
@@ -20,11 +19,11 @@ class SandboxSSHConfigCreator:
         client = utils.get_ostack_client()
         self.stack = client.get_sandbox(stack_name)
 
-    def create_user_config(self) -> ssh_config.Config:
+    def create_user_config(self) -> sshconfig.Config:
         """Generates user ssh config string for sandbox. If router has multiple networks,
         then config contains one router entry for each of the networks."""
 
-        user_ssh_config = ssh_config.Config()
+        user_ssh_config = sshconfig.Config()
         user_ssh_config.add_entry(Host='{0} {1}'.format(self.stack.man.name, self.stack.ip),
                                   User=config.SSH_PROXY_USERNAME, HostName=self.stack.ip,
                                   IdentityFile='<path_to_sandbox_private_key>',
@@ -40,9 +39,9 @@ class SandboxSSHConfigCreator:
                                       ProxyJump=self.stack.uan.name)
         return user_ssh_config
 
-    def create_management_config(self) -> ssh_config.Config:
+    def create_management_config(self) -> sshconfig.Config:
         """Generates management ssh config string for sandbox. It uses MNG network for access."""
-        management_ssh_config = ssh_config.Config()
+        management_ssh_config = sshconfig.Config()
         management_ssh_config.add_entry(Host='{0} {1}'.format(self.stack.man.name, self.stack.ip),
                                         User=self.stack.man.user, HostName=self.stack.ip,
                                         IdentityFile='<path_to_pool_private_key>',
