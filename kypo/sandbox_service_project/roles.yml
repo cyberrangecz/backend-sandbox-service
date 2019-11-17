@@ -1,0 +1,64 @@
+- name: admin
+  default: false
+  permissions:
+    - view_definition
+    - add_definition
+    - change_definition
+    - delete_definition
+
+    - view_pool
+    - add_pool
+    - change_pool
+    - delete_pool
+
+    - view_sandboxcreaterequest
+    - add_sandboxcreaterequest
+    - change_sandboxcreaterequest
+    - delete_sandboxcreaterequest
+
+    - view_sandboxdeleterequest
+    - add_sandboxdeleterequest
+    - change_sandboxdeleterequest
+    - delete_sandboxdeleterequest
+
+    - view_sandbox
+    - add_sandbox
+    - change_sandbox
+    - delete_sandbox
+
+- name: designer
+  default: false
+  permissions:
+    - view_definition
+    - add_definition
+    - change_definition
+    - delete_definition
+
+- name: organizer
+  default: false
+  permissions:
+    - view_pool
+    - add_pool
+    - change_pool
+    - delete_pool
+
+    - view_sandboxcreaterequest
+    - add_sandboxcreaterequest
+    - change_sandboxcreaterequest
+    - delete_sandboxcreaterequest
+
+    - view_sandboxdeleterequest
+    - add_sandboxdeleterequest
+    - change_sandboxdeleterequest
+    - delete_sandboxdeleterequest
+
+    - view_sandbox
+    - add_sandbox
+    - change_sandbox
+    - delete_sandbox
+
+- name: trainee
+  default: true
+  permissions:
+    - view_sandbox
+    - change_sandbox

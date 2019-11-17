@@ -15,8 +15,7 @@ class Settings:
     config_filename = None
     config_file_variable_name = 'KYPO_DJANGO_OPENSTACK_CONFIG'
 
-    # PROJECT_NAME = 'kypo-sandbox-service'
-    PROJECT_NAME = 'kypo2-django-openstack'
+    PROJECT_NAME = 'kypo-sandbox-service'
 
     VERSION = "v1"
     MAX_SANDBOXES_PER_POOL = 64
