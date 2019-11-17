@@ -11,6 +11,7 @@ from django.db import transaction
 from django.http import Http404
 from rest_framework.generics import get_object_or_404
 
+from kypo2_openstack_lib.stack import Event, Resource
 from ....common import utils, exceptions
 from ....common.sshconfig import Config
 
@@ -151,3 +152,17 @@ def get_user_sshconfig(sandbox: Sandbox) -> Config:
 def get_management_sshconfig(sandbox: Sandbox) -> Config:
     """Get management SSH config."""
     return SandboxSSHConfigCreator(sandbox).create_management_config()
+
+
+#######
+
+def get_stack_events(stack_name: str) -> List[Event]:
+    """List all events in sandbox as Events objects."""
+    client = utils.get_ostack_client()
+    return client.list_sandbox_events(stack_name)
+
+
+def get_stack_resources(stack_name: str) -> List[Resource]:
+    """List all resources in sandbox as Resource objects."""
+    client = utils.get_ostack_client()
+    return client.list_sandbox_resources(stack_name)

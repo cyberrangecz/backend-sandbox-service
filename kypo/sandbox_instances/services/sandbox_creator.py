@@ -136,14 +136,6 @@ class StackCreateStageManager:
         stage.save()
         return stage
 
-    def get_events(self, stage: StackAllocationStage) -> List[Event]:
-        """List all events in sandbox as Events objects."""
-        return self.client.list_sandbox_events(stage.request.get_stack_name())
-
-    def get_resources(self, stage: StackAllocationStage) -> List[Resource]:
-        """List all resources in sandbox as Resource objects."""
-        return self.client.list_sandbox_resources(stage.request.get_stack_name())
-
 
 class AnsibleStageManager:
     def __init__(self, stage: AnsibleAllocationStage, sandbox: Sandbox) -> None:

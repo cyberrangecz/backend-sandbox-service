@@ -217,7 +217,7 @@ class SandboxEventList(generics.ListAPIView):
     def get_queryset(self):
         unit_id = self.kwargs.get('unit_id')
         unit = get_object_or_404(SandboxAllocationUnit, pk=unit_id)
-        return allocation_unit_service.get_stack_events()  # TODO: implement service
+        return sandbox_service.get_stack_events(unit.get_stack_name())
 
 
 class SandboxResourceList(generics.ListAPIView):
@@ -227,7 +227,7 @@ class SandboxResourceList(generics.ListAPIView):
     def get_queryset(self):
         unit_id = self.kwargs.get('unit_id')
         unit = get_object_or_404(SandboxAllocationUnit, pk=unit_id)
-        return allocation_unit_service.get_stack_events()  # TODO: implement service
+        return sandbox_service.get_stack_resources(unit.get_stack_name())
 
 
 #########################################
