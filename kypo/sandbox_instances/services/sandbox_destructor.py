@@ -24,7 +24,7 @@ def delete_sandbox_request(allocation_unit: SandboxAllocationUnit) -> CleanupReq
     if sandbox and sandbox.locked:
         raise exceptions.ValidationError("Sandbox ID={} is locked.".format(sandbox.id))
 
-    if any([stage.is_running for stage in allocation_unit.allocation_request.stages]):
+    if any([stage.is_running for stage in allocation_unit.allocation_request.stages.all()]):
         raise exceptions.ValidationError(
             'Create sandbox allocation request ID={} has not finished yet.'.
             format(allocation_unit.allocation_request.id)
