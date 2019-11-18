@@ -1,12 +1,19 @@
 [[source]]
-name = "pypi"
 url = "https://pypi.org/simple"
+name = "pypi"
 verify_ssl = true
 
 [[source]]
 url = "http://kypo-storage.ics.muni.cz:8081/repository/pypi-group/simple"
 name = "kypo"
 verify_ssl = false
+
+[requires]
+python_version = "3.5"
+
+[scripts]
+configure = "bash -c 'cp $(pipenv --where)/pip.conf $(pipenv --venv)'"
+"manage.py" = "python manage.py"
 
 [dev-packages]
 tox = "*"
@@ -16,8 +23,8 @@ pytest-django = "*"
 pytest-cov = "*"
 
 [packages]
-kypo2_openstack_lib = { index = "kypo", version = "*" }
-csirtmu-uag-auth = { index = "kypo", version = "*" }
+kypo2-openstack-lib = { index = "kypo", version = "*" }
+kypo2-django-openstack = { index = "kypo", version = "*" }
 django = ">=2"
 djangorestframework = "*"
 coreapi = "*"  # Generating REST api documentation (swagger dependency)
@@ -32,9 +39,11 @@ pycryptodome = "*"
 gitpython = "*"
 requests = "*"
 django-model-utils = "*"
+rq = "*"
 django-rq = "*"
 redis = "*"
 docker = "*"
-
-[requires]
-python_version = "3.5"
+# Project dependencies
+django-cors-headers = "*"
+psycopg2 = "*"
+packaging = "*"
