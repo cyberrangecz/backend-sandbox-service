@@ -17,7 +17,7 @@ OS_APPLICATION_CREDENTIAL_SECRET: ""
 #MAN_USERNAME: root
 
 # The SSH private key that kypo2-django-openstack uses to communicate with Git repository.
-GIT_PRIVATE_KEY: ~/.ssh/git_rsa_key
+#GIT_PRIVATE_KEY: ~/.ssh/git_rsa_key
 
 # The address of Git repository.
 #GIT_SERVER: gitlab.ics.muni.cz
@@ -47,36 +47,37 @@ ANSIBLE_NETWORKING_URL: ""
 #ANSIBLE_NETWORKING_REV: master
 
 # The name or ID of network in OpenStack where all sandboxes will be deployed.
-BASE_NETWORK: ""
+#BASE_NETWORK: base_network
 
-# The name of image in OpenStack that will be used for management nodes.
+# The name of the image in OpenStack that will be used for management nodes (MAN, UAN, BR).
 MNG_IMAGE: ""
 
 # The name of user in MNG_IMAGE virtual machine.
 MNG_USER: ""
 
-# The name of flavor in OpenStack that will be used for management nodes.
+# The name of the flavor in OpenStack that will be used for management nodes.
 MNG_FLAVOR: ""
 
-# The name of image in OpenStack that will be used for virtual router if none has been specified
-#   otherwise MNG_IMAGE will be used.
+# The name of the image in OpenStack that will be used for routers.
+# If not specified, MNG_IMAGE will be used.
 #ROUTER_IMAGE:
 
-# The name of user in ROUTER_IMAGE virtual machine default MNG_USER.
+# The user for the ROUTER_IMAGE.
+# If not specified, MNG_USER will be used.
 #ROUTER_USER:
 
-# The name of flavor in OpenStack that will be used for virtual router if none has been specified.
-#   otherwise MNG_FLAVOR will be used.
+# The name of the flavor in OpenStack that will be used for routers.
+# If not specified, MNG_FLAVOR will be used.
 #ROUTER_FLAVOR:
 
 # The cidr notation of network between MAN and every other node in sandbox.
-SANDBOX_MNG_CIDR: 192.168.128.0/17
+#SANDBOX_MNG_CIDR: 192.168.128.0/17
 
 # The cidr notation of network between UAN and MAN node.
-SANDBOX_UAN_CIDR: 192.168.0.0/28
+#SANDBOX_UAN_CIDR: 192.168.0.0/28
 
 # The cidr notation of network between BR and MAN node.
-SANDBOX_BR_CIDR: 192.168.0.16/28
+#SANDBOX_BR_CIDR: 192.168.0.16/28
 
 # The list of IP addresses to custom DNS servers.
 #DNS_NAMESERVERS: []
@@ -104,6 +105,8 @@ SANDBOX_BR_CIDR: 192.168.0.16/28
 #PROXY_JUMP_TO_MAN_SSH_OPTIONS:
 #    Host: kypo.example.com
 #    User: kypo
+#    IdentityFile: ~/.ssh/id_rsa
+#    Port: 22
 
 # The SSH private key that kypo2-django-openstack will use to communicate with proxy jump host.
 #PROXY_JUMP_TO_MAN_PRIVATE_KEY: ~/.ssh/id_rsa
