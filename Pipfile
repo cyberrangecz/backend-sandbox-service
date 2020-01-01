@@ -9,23 +9,29 @@ name = "kypo"
 verify_ssl = false
 
 [requires]
-python_version = "3.5"
+python_version = "3.6"
 
 [scripts]
 configure = "bash -c 'cp $(pipenv --where)/pip.conf $(pipenv --venv)'"
 "manage.py" = "python manage.py"
 
 [dev-packages]
-tox = "*"
+# tox
+tox = "~=3.7.0"
+tox-pipenv = "*"
+# pytest
 pytest = "*"
+pytest-cov = "*"
 pytest-mock = "*"
 pytest-django = "*"
-pytest-cov = "*"
+jsonpickle = "*"
 
 [packages]
+drf-oidc-auth = { index = "kypo", version = ">=2.0.1" }
 kypo2-openstack-lib = { index = "kypo", version = "*" }
-kypo2-django-openstack = { index = "kypo", version = "*" }
-django = ">=2"
+csirtmu-oidc-client = { index = "kypo", version = ">=0.1.4" }
+csirtmu-uag-auth = { index = "kypo", version = "*" }
+django = ">=2,<3"
 djangorestframework = "*"
 coreapi = "*"  # Generating REST api documentation (swagger dependency)
 structlog = "*"
@@ -47,3 +53,4 @@ docker = "*"
 django-cors-headers = "*"
 psycopg2 = "*"
 packaging = "*"
+six = "*"
