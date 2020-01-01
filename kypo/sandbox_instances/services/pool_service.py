@@ -7,7 +7,7 @@ from django.db.models import QuerySet
 from typing import List, Dict
 from django.shortcuts import get_object_or_404
 
-from ...common import utils, exceptions
+from ...sandbox_common import utils, exceptions
 
 from . import sandbox_service, sandbox_creator
 from ..models import Pool, Sandbox, SandboxAllocationUnit

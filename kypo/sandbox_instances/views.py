@@ -32,8 +32,8 @@ from django.conf import settings
 from wsgiref.util import FileWrapper
 from rest_framework.generics import get_object_or_404
 
-from ..common import exceptions
-from ..common.permissions import AllowReadOnViewSandbox
+from ..sandbox_common import exceptions
+from ..sandbox_common.permissions import AllowReadOnViewSandbox
 
 from . import serializers
 from .services import pool_service, sandbox_service, node_service,\

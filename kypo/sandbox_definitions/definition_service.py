@@ -4,8 +4,8 @@ Definition Service module for Definition management.
 import yaml
 from git.exc import GitCommandError
 
-from ..common import utils, exceptions
-from ..common.config import config
+from ..sandbox_common import utils, exceptions
+from ..sandbox_common.config import config
 from . import serializers
 from .models import Definition
 

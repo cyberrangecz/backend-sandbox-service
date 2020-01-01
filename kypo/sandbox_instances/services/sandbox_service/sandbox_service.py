@@ -12,8 +12,8 @@ from django.http import Http404
 from rest_framework.generics import get_object_or_404
 
 from kypo2_openstack_lib.stack import Event, Resource
-from ....common import utils, exceptions
-from ....common.sshconfig import Config
+from ....sandbox_common import utils, exceptions
+from ....sandbox_common.sshconfig import Config
 
 from ...models import Sandbox
 from .topology import Topology

@@ -2,7 +2,7 @@ import docker
 
 import structlog
 
-from ...common.config import config
+from ...sandbox_common.config import config
 
 LOG = structlog.get_logger()
 

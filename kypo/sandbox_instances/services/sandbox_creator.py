@@ -9,8 +9,8 @@ import shutil
 import docker.errors
 import requests.exceptions as requests_exceptions
 
-from ...common import utils, exceptions
-from ...common.config import config
+from ...sandbox_common import utils, exceptions
+from ...sandbox_common.config import config
 
 from ...sandbox_definitions import definition_service
 from ...sandbox_ansible_runs import ansible_service

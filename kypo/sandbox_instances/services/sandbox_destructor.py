@@ -4,8 +4,8 @@ import structlog
 from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
 
-from ...common import utils, exceptions
-from ...common.config import config
+from ...sandbox_common import utils, exceptions
+from ...sandbox_common.config import config
 
 from ..models import Sandbox, CleanupRequest, SandboxAllocationUnit, CleanupStage
 

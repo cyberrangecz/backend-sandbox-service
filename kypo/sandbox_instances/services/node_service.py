@@ -1,7 +1,7 @@
 """
 VM Service module for VM management.
 """
-from ...common import utils, exceptions
+from ...sandbox_common import utils, exceptions
 from ..models import Sandbox
 from kypo2_openstack_lib.instance import Instance
 

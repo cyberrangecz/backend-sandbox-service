@@ -2,8 +2,8 @@ import structlog
 import yaml
 
 from kypo2_openstack_lib.sandbox import Sandbox as Stack
-from ....common import utils
-from ....common.config import config
+from ....sandbox_common import utils
+from ....sandbox_common.config import config
 
 from ....sandbox_definitions.definition_service import get_sandbox_definition
 from ...models import Sandbox

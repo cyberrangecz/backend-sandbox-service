@@ -9,7 +9,7 @@ Swagger can utilise type hints to determine type, so use them in your own method
 """
 from rest_framework import serializers
 
-from ..common.config import config
+from ..sandbox_common.config import config
 from . import models
 
 
