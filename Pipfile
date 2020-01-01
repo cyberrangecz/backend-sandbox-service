@@ -31,7 +31,7 @@ drf-oidc-auth = { index = "kypo", version = ">=2.0.1" }
 kypo2-openstack-lib = { index = "kypo", version = "*" }
 csirtmu-oidc-client = { index = "kypo", version = ">=0.1.4" }
 csirtmu-uag-auth = { index = "kypo", version = "*" }
-django = ">=2,<3"
+django = "*"
 djangorestframework = "*"
 coreapi = "*"  # Generating REST api documentation (swagger dependency)
 structlog = "*"
