@@ -11,7 +11,7 @@ import git
 import os
 import structlog
 from Crypto.PublicKey import RSA
-from typing import Tuple, Callable
+from typing import Tuple, Callable, Optional
 
 from kypo2_openstack_lib.ostack_client import KypoOstackClient
 from . import exceptions
@@ -110,18 +110,19 @@ class GitRepo:
     lock = multiprocessing.Lock()
 
     @classmethod
-    def get_git_repo(cls, url: str, rev: str) -> git.Repo:
+    def get_git_repo(cls, url: str, rev: str, name: Optional[str] = None) -> git.Repo:
         """
         Clone remote repository or retrieve its local copy and checkout revision.
 
         :param url: URL of remote Git repository
         :param rev: Revision of the repository
+        :param name: The optional name of local repository
         :return: Git Repo object
         :raise: git.exc.GitCommandError if the revision is unknown to Git
         """
         with cls.lock:
             git_ssh_cmd = 'ssh -o StrictHostKeyChecking=no -i {0}'.format(config.GIT_PRIVATE_KEY)
-            local_repository = os.path.join(config.GIT_REPOSITORIES, url, rev).replace(":", "")
+            local_repository = os.path.join(config.GIT_REPOSITORIES, url, name if name else rev).replace(":", "")
 
             if os.path.isdir(local_repository):
                 repo = git.Repo(local_repository)
@@ -133,7 +134,8 @@ class GitRepo:
                 # check if revision is branch
                 repo.git.show_ref('--verify', 'refs/heads/{0}'.format(rev))
                 repo.remote().pull(env={'GIT_SSH_COMMAND': git_ssh_cmd})
-            except git.exc.GitCommandError:
+            except git.exc.GitCommandError as ex:
+                LOG.warning("Git pull failed", exception=str(ex))
                 pass
 
             return repo
