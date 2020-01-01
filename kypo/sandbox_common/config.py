@@ -23,7 +23,6 @@ class Settings:
     SSH_PROXY_USERNAME = "user-access"
 
     OPENSTACK_QUEUE = "openstack"
-    BOOTSTRAP_QUEUE = "bootstrap"
     ANSIBLE_QUEUE = "ansible"
 
     ANSIBLE_INVENTORY_FILENAME = 'inventory.yml'
@@ -117,9 +116,9 @@ class Settings:
 
         self.SANDBOX_CONFIGURATION = {
             'BASE_NETWORK': configuration.get('BASE_NETWORK', 'base_network'),
-            'SB_MNG_CIDR': configuration.get('SANDBOX_MNG_CIDR', '172.16.0.0/16'),
-            'SB_UAN_CIDR': configuration.get('SANDBOX_UAN_CIDR', '202.202.202.0/24'),
-            'SB_BR_CIDR': configuration.get('SANDBOX_BR_CIDR', '203.203.203.0/24'),
+            'SB_MNG_CIDR': configuration.get('SANDBOX_MNG_CIDR', '192.168.128.0/17'),
+            'SB_UAN_CIDR': configuration.get('SANDBOX_UAN_CIDR', '192.168.0.0/28'),
+            'SB_BR_CIDR': configuration.get('SANDBOX_BR_CIDR', '192.168.0.16/28'),
             'DNS_NAMESERVERS': configuration.get('DNS_NAMESERVERS', []),
 
             'MNG_IMAGE': self._get_required_attribute(configuration, 'MNG_IMAGE'),
