@@ -40,8 +40,8 @@ def get_sandbox_definition(url: str, rev: str) -> str:
     :raise: git.exc.GitCommandError if revision is unknown to Git
         or sandbox definition does not exist under this revision
     """
-    repo = utils.GitRepo.get_git_repo(url, rev)
     try:
+        repo = utils.GitRepo.get_git_repo(url, rev)
         definition = repo.git.show('{0}:{1}'.format(rev, config.SANDBOX_DEFINITION_FILENAME))
     except GitCommandError as ex:
         raise exceptions.GitError("Failed to get sandbox definition file {}.\n"

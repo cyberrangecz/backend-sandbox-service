@@ -4,7 +4,7 @@ Pool Service module for Pool management.
 import structlog
 from django.db import transaction
 from django.db.models import QuerySet
-from typing import List, Dict
+from typing import List, Dict, Optional
 from django.shortcuts import get_object_or_404
 
 from ...sandbox_common import utils, exceptions
@@ -107,7 +107,22 @@ def create_sandboxes_in_pool(pool: Pool, count: int = None) -> List[SandboxAlloc
 #     sandbox_service.delete_sandboxes(sandboxes)
 
 
-def create_snaphots(pool: Pool) -> list:
-    """Create snapshot of all sandboxes in pool."""
-    sandboxes = get_sandboxes_in_pool(pool)
-    return sandbox_service.create_snapshot(sandboxes)
+#FIXME: use new model
+def get_unlocked_sandbox(pool: Pool) -> Optional[Sandbox]:
+    """Return unlocked sandbox."""
+    with transaction.atomic():
+        create_req_ids = [req.id for req in pool.sandboxcreaterequests.all()]
+        delete_create_req_ids = [req.sandbox_create_request.id
+                                 for req in pool.sandboxdeleterequests.all()]
+
+        sandbox = Sandbox.objects\
+            .select_for_update()\
+            .order_by('id')\
+            .filter(request_id__in=create_req_ids, locked=False)\
+            .exclude(request_id__in=delete_create_req_ids)\
+            .first()
+        if not sandbox:
+            return None
+        sandbox.locked = True
+        sandbox.save()
+        return sandbox
