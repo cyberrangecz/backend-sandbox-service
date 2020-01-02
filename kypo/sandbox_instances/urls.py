@@ -44,6 +44,8 @@ urlpatterns = [
          name='sandbox-list'),
     path('pools/<int:pool_id>/key-pairs/management/', views.PoolKeypairManagement.as_view(),
          name='pool-mng-key-pair'),
+    path('pools/<int:pool_id>/sandboxes/get-and-lock/', views.SandboxGetAndLock.as_view(),
+         name='pool-sandbox-get-and-lock'),
 
     # Sandboxes
     path('sandboxes/<int:sandbox_id>/', views.SandboxDetail.as_view(), name='sandbox-detail'),
@@ -60,7 +62,8 @@ urlpatterns = [
          views.SandboxVMConsole.as_view(), name='sandbox-vm-console'),
 
     path('sandboxes/<int:sandbox_id>/user-ssh-config/',
-         cache_page(WEEK)(views.SandboxUserSSHConfig.as_view()), name='sandbox-user-ssh-config'),
+         cache_page(WEEK)(views.SandboxUserSSHConfig.as_view()),
+         name='sandbox-user-ssh-config'),
     path('sandboxes/<int:sandbox_id>/management-ssh-config/',
          cache_page(WEEK)(views.SandboxManagementSSHConfig.as_view()),
          name='sandbox-management-ssh-config'),

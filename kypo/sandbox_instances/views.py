@@ -1,24 +1,3 @@
-"""
-<h2>Specification of REST responses</h2>
-
-<b>Success JSON</b>
-<pre>
-{
-    Requested data or empty if no data requested.
-}
-</pre>
-
-<b>Error JSON</b>
-<pre>
-{
-    detail: error message,
-    parameters: {
-        Dictionary of call parameters
-        name: value
-    }
-}
-</pre>
-"""
 import structlog
 import io
 from django.http import HttpResponse
@@ -46,8 +25,7 @@ LOG = structlog.get_logger()
 
 
 class PoolList(generics.ListAPIView):
-    """Class for pools management.
-
+    """
     get: Get a list of pools.
     """
     queryset = Pool.objects.all()
@@ -55,7 +33,11 @@ class PoolList(generics.ListAPIView):
 
     @staticmethod
     def post(request):
-        """Creates new pool."""
+        """Creates new pool.
+        Also creates a new keypair in OpenStack for this pool.
+        It is then used as management key for this pool. That means that
+        the management keypair is the same for each sandbox in the pool.
+        """
         pool = pool_service.create_pool(request.data)
         serializer = serializers.PoolSerializer(pool)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -64,7 +46,6 @@ class PoolList(generics.ListAPIView):
 class PoolDetail(mixins.RetrieveModelMixin,
                  mixins.DestroyModelMixin,
                  generics.GenericAPIView):
-    """Class for managing single pool"""
     queryset = Pool.objects.all()
     serializer_class = serializers.PoolSerializer
     lookup_url_kwarg = "pool_id"
@@ -74,7 +55,8 @@ class PoolDetail(mixins.RetrieveModelMixin,
         return self.retrieve(request, *args, **kwargs)
 
     def delete(self, request, pool_id):
-        """Delete pool. The pool must be empty. First delete all sandboxes in given Pool.
+        """Delete pool. The pool must be empty.
+        First delete all sandboxes in given Pool.
         """
         pool = self.get_object()
         pool_service.delete_pool(pool)
@@ -95,9 +77,9 @@ class SandboxAllocationUnitList(mixins.ListModelMixin, generics.GenericAPIView):
         ],
         responses={status.HTTP_201_CREATED: serializers.SandboxAllocationUnitSerializer(many=True)})
     def post(self, request, pool_id):
-        """
-        Create Sandbox Allocation Unit. For each Allocation Unit the Allocation Request
-        is created in given pool. If count is not specified, builds *max_size - current size*.
+        """Create Sandbox Allocation Unit.
+        For each Allocation Unit the Allocation Request is created in given pool.
+        If count is not specified, builds *max_size - current size*.
         Query Parameters:
         - *count:* How many sandboxes to build. Optional (defaults to max_size - current size).
         """
@@ -120,23 +102,21 @@ class SandboxAllocationUnitList(mixins.ListModelMixin, generics.GenericAPIView):
 
 # TODO: implement in services
 class SandboxAllocationUnitDetail(generics.RetrieveAPIView, generics.GenericAPIView):
-    """get: Retrieve a Sandbox allocation unit."""
+    """get: Retrieve a Sandbox Allocation Unit."""
     serializer_class = serializers.SandboxAllocationUnitSerializer
     queryset = SandboxAllocationUnit.objects.all()
     lookup_url_kwarg = "unit_id"
 
 
 class SandboxAllocationRequestDetail(generics.RetrieveAPIView):
-    """get: Retrieve a Sandbox allocation request."""
+    """get: Retrieve a Sandbox Allocation Request."""
     serializer_class = serializers.AllocationRequestSerializer
     queryset = SandboxAllocationUnit.objects.all()
     lookup_url_kwarg = "request_id"
 
 
 class SandboxAllocationRequestStageList(generics.ListAPIView):
-    """
-    get: List sandbox Allocation stages.
-    """
+    """get: List sandbox Allocation stages."""
     serializer_class = serializers.AllocationStageSerializer
 
     def get_queryset(self):
@@ -146,7 +126,6 @@ class SandboxAllocationRequestStageList(generics.ListAPIView):
 
 
 class SandboxCleanupRequestList(mixins.ListModelMixin, generics.GenericAPIView):
-    """Class for delete-request management"""
     serializer_class = serializers.CleanupRequestSerializer
 
     def get_queryset(self):
@@ -171,16 +150,14 @@ class SandboxCleanupRequestList(mixins.ListModelMixin, generics.GenericAPIView):
 
 
 class SandboxCleanupRequestDetail(generics.RetrieveAPIView):
-    """Class for cleanup-request management"""
+    """get: Retrieve a Sandbox Cleanup Request."""
     serializer_class = serializers.CleanupRequestSerializer
     queryset = CleanupRequest.objects.all()
     lookup_url_kwarg = "request_id"
 
 
 class SandboxCleanupRequestStageList(generics.ListAPIView):
-    """
-    get: List sandbox Cleanup stages.
-    """
+    """get: List sandbox Cleanup stages."""
     serializer_class = serializers.CleanupStageSerializer
 
     def get_queryset(self):
@@ -197,7 +174,7 @@ class OpenstackAllocationStageDetail(generics.GenericAPIView):
 
     # noinspection PyUnusedLocal
     def get(self, request, stage_id):
-        """Retrieve an openstack stage."""
+        """Retrieve an `openstack` stage."""
         stage = self.get_object()
         updated = sandbox_creator.StackCreateStageManager().update_stage(stage)
         serializer = self.get_serializer(updated)
@@ -205,13 +182,14 @@ class OpenstackAllocationStageDetail(generics.GenericAPIView):
 
 
 class OpenstackCleanupStageDetail(generics.RetrieveAPIView):
+    """get: Retrieve an `openstack` Cleanup stage."""
     serializer_class = serializers.OpenstackCleanupStageSerializer
     queryset = StackCleanupStage.objects.all()
     lookup_url_kwarg = "stage_id"
 
 
 class SandboxEventList(generics.ListAPIView):
-    """Class for managing Sandbox events"""
+    """get: List sandbox Events."""
     serializer_class = serializers.SandboxEventSerializer
 
     def get_queryset(self):
@@ -221,7 +199,7 @@ class SandboxEventList(generics.ListAPIView):
 
 
 class SandboxResourceList(generics.ListAPIView):
-    """Class for managing Sandbox resources"""
+    """get: List sandbox Resources."""
     serializer_class = serializers.SandboxResourceSerializer
 
     def get_queryset(self):
@@ -235,7 +213,6 @@ class SandboxResourceList(generics.ListAPIView):
 #########################################
 
 class PoolSandboxList(generics.GenericAPIView):
-    """Class for sandboxes management"""
     queryset = Pool.objects.all()
     serializer_class = serializers.SandboxSerializer
     lookup_url_kwarg = "pool_id"
@@ -257,13 +234,29 @@ class PoolSandboxList(generics.GenericAPIView):
 
 
 class PoolKeypairManagement(generics.RetrieveAPIView):
-    """Class for managing management key-pairs
-
+    """
     get: Retrieve management key-pair.
+    Management keypair is the same for each sandbox in the pool.
     """
     queryset = Pool.objects.all()
     lookup_url_kwarg = "pool_id"
     serializer_class = serializers.PoolKeypairSerializer
+
+
+class SandboxGetAndLock(generics.GenericAPIView):
+    serializer_class = serializers.SandboxSerializer
+    queryset = Sandbox.objects.all()
+    lookup_url_kwarg = "pool_id"
+    pagination_class = None
+
+    def get(self, request, pool_id):
+        """Get unlocked sandbox in given pool and lock it. Return 409 if all are locked."""
+        pool = pool_service.get_pool(pool_id)
+        sandbox = pool_service.get_unlocked_sandbox(pool)
+        if not sandbox:
+            return Response({'detail': 'All sandboxes are already locked.'},
+                            status=status.HTTP_409_CONFLICT)
+        return Response(self.serializer_class(sandbox).data)
 
 
 #######################################
@@ -271,70 +264,62 @@ class PoolKeypairManagement(generics.RetrieveAPIView):
 #######################################
 
 class SandboxDetail(generics.GenericAPIView):
-    """Class for managing single sandbox"""
+    """get: Retrieve a sandbox."""
     serializer_class = serializers.SandboxSerializer
-    queryset = Sandbox.objects.none()  # Required for DjangoModelPermissions
-
-    @staticmethod
-    def get(request, sandbox_id):
-        """Retrieve sandbox."""
-        sb = sandbox_service.get_sandbox(sandbox_id)
-        serializer = serializers.SandboxSerializer(sb)
-        return Response(serializer.data)
+    lookup_url_kwarg = "sandbox_id"
+    queryset = Sandbox.objects.all()
 
 
 class SandboxLock(generics.GenericAPIView):
-    """Sandbox locking management."""
+    # TODO: This class is weird, probably can be done differently
+    queryset = Sandbox.objects.all()
+    lookup_url_kwarg = "sandbox_id"
     serializer_class = serializers.LockSerializer
-    queryset = Sandbox.objects.none()  # Required for DjangoModelPermissions
 
     def post(self, _request, sandbox_id):
         """Lock given sandbox."""
         # FIXME: return lock instance
-        sandbox = sandbox_service.get_sandbox(sandbox_id)
-        lock = sandbox_service.lock_sandbox(sandbox)
+        lock = sandbox_service.lock_sandbox(self.get_object())
         return Response(self.serializer_class(lock).data)
 
     def delete(self, _request, sandbox_id):
         """Unlock given sandbox."""
         # FIXME: return lock instance
-        sandbox = sandbox_service.get_sandbox(sandbox_id)
-        sandbox_service.unlock_sandbox(sandbox)
+        sandbox_service.unlock_sandbox(self.get_object())
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class SandboxKeypairUser(generics.RetrieveAPIView):
-    """Class for managing user key-pairs
-
-    get: Retrieve user key-pair.
-    """
+    """get: Retrieve user key-pair. It is unique for each sandbox."""
     queryset = Sandbox.objects.all()
     lookup_url_kwarg = "sandbox_id"
     serializer_class = serializers.SandboxKeypairSerializer
 
 
-class SandboxTopology(APIView):
-    """Class for managing topology"""
-    queryset = Sandbox.objects.none()  # Required for DjangoModelPermissions
+class SandboxTopology(generics.GenericAPIView):
+    queryset = Sandbox.objects.all()
+    lookup_url_kwarg = "sandbox_id"
+    serializer_class = serializers.TopologySerializer
+    pagination_class = None
 
-    @staticmethod
-    @swagger_auto_schema(responses={status.HTTP_200_OK: serializers.TopologySerializer()})
-    def get(request, sandbox_id):
+    # @swagger_auto_schema(responses={status.HTTP_200_OK: serializers.TopologySerializer()})
+    def get(self, request, sandbox_id):
         """Get topology data for given sandbox.
-        Hosts specified as hidden are filtered out, but the network is still visible."""
-        sandbox = sandbox_service.get_sandbox(sandbox_id)
-        topology = sandbox_service.Topology(sandbox)
+        Hosts specified as hidden are filtered out, but the network is still visible.
+        __NOTE:__ this endpoint is cached indefinitely.
+        So the topology can be accessed even when the sandbox is long deleted.
+        """
+        topology = sandbox_service.Topology(self.get_object())
         topology.create()
-        return Response(serializers.TopologySerializer(topology).data)
+        return Response(self.serializer_class(topology).data)
 
 
-class SandboxVMDetail(APIView):
-    """Class for VM manipulation"""
-    queryset = Sandbox.objects.none()  # Required for DjangoModelPermissions
+class SandboxVMDetail(generics.GenericAPIView):
+    queryset = Sandbox.objects.all()
+    lookup_url_kwarg = "sandbox_id"
+    serializer_class = serializers.NodeSerializer
 
-    @staticmethod
-    @swagger_auto_schema(responses={status.HTTP_200_OK: serializers.NodeSerializer()})
-    def get(request, sandbox_id, vm_name):
+    def get(self, request, sandbox_id, vm_name):
         """Retrieve a VM info.
         Important Statuses:
         - ACTIVE (vm is active and running)
@@ -342,21 +327,20 @@ class SandboxVMDetail(APIView):
         - SUSPENDED (vm suspended)
         - ... https://developer.openstack.org/api-guide/compute/server_concepts.html#server-status
         """
-        sandbox = sandbox_service.get_sandbox(sandbox_id)
+        sandbox = self.get_object()
         node = node_service.get_node(sandbox, vm_name)
         return Response(serializers.NodeSerializer(node).data)
 
-    @staticmethod
     @swagger_auto_schema(request_body=serializers.NodeActionSerializer(),
                          responses={status.HTTP_200_OK: serializers.serializers.Serializer()})
-    def patch(request, sandbox_id, vm_name):
+    def patch(self, request, sandbox_id, vm_name):
         """Perform specified action on given VM.
         Available actions are:
         - suspend
         - resume
         - reboot
         """
-        sandbox = sandbox_service.get_sandbox(sandbox_id)
+        sandbox = self.get_object()
         try:
             action = request.data['action']
         except KeyError:
@@ -365,44 +349,48 @@ class SandboxVMDetail(APIView):
         return Response()
 
 
-class SandboxVMConsole(APIView):
-    """Class for VM manipulation"""
-    queryset = Sandbox.objects.none()  # Required for DjangoModelPermissions
+class SandboxVMConsole(generics.GenericAPIView):
+    queryset = Sandbox.objects.all()
+    lookup_url_kwarg = "sandbox_id"
+    serializer_class = serializers.NodeConsoleSerializer
+    pagination_class = None
 
-    @staticmethod
-    @swagger_auto_schema(responses={status.HTTP_200_OK: serializers.NodeConsoleSerializer()})
-    def get(request, sandbox_id, vm_name):
-        """Get a console for given machine."""
-        sandbox = sandbox_service.get_sandbox(sandbox_id)
+    def get(self, request, sandbox_id, vm_name):
+        """Get a console for given machine. It is active for 2 hours.
+        But when the connection is active, it does not disconnect.
+        """
+        sandbox = self.get_object()
         console = node_service.get_console_url(sandbox, vm_name)
         return Response({'url': console})
 
 
-class SandboxUserSSHConfig(APIView):
-    """Class for managing SSH config"""
-    queryset = Sandbox.objects.none()  # Required for DjangoModelPermissions
+class SandboxUserSSHConfig(generics.GenericAPIView):
+    queryset = Sandbox.objects.all()
+    lookup_url_kwarg = "sandbox_id"
 
-    @staticmethod
-    def get(request, sandbox_id):
+    def get(self, request, sandbox_id):
         """Generate SSH config for User access to this sandbox.
         Some values are user specific, the config contains placeholders for them."""
-        sandbox = sandbox_service.get_sandbox(sandbox_id)
+        sandbox = self.get_object()
         ssh_config = sandbox_service.SandboxSSHConfigCreator(sandbox).create_user_config()
-        response = HttpResponse(FileWrapper(io.StringIO(str(ssh_config))), content_type='application/txt')
+        response = HttpResponse(FileWrapper(io.StringIO(str(ssh_config))),
+                                content_type='application/txt')
         response['Content-Disposition'] = "attachment; filename=config"
         return response
 
 
-class SandboxManagementSSHConfig(APIView):
-    """Class for managing SSH config"""
-    queryset = Sandbox.objects.none()  # Required for DjangoModelPermissions
+class SandboxManagementSSHConfig(generics.GenericAPIView):
+    queryset = Sandbox.objects.all()
+    lookup_url_kwarg = "sandbox_id"
 
-    @staticmethod
-    def get(request, sandbox_id):
+    def get(self, request, sandbox_id):
         """Generate SSH config for Management access to this sandbox.
-        Some values are user specific and should replaced (host usernames, …)."""
-        sandbox = sandbox_service.get_sandbox(sandbox_id)
+        Some values are user specific, the config contains placeholders for them."""
+        sandbox = self.get_object()
         ssh_config = sandbox_service.SandboxSSHConfigCreator(sandbox).create_management_config()
-        response = HttpResponse(FileWrapper(io.StringIO(str(ssh_config))), content_type='application/txt')
+        response = HttpResponse(FileWrapper(io.StringIO(str(ssh_config))),
+                                content_type='application/txt')
         response['Content-Disposition'] = "attachment; filename=config"
         return response
+
+

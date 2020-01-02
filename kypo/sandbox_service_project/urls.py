@@ -21,12 +21,33 @@ from drf_yasg import openapi
 
 from ..sandbox_common.config import config
 
+HEADER = """
+## Specification of REST responses
+
+__Success JSON__
+```json
+{
+    Requested data or empty if no data requested.
+}
+```
+
+__Error JSON__
+```json
+{
+    detail: error message,
+    parameters: {
+        Dictionary of call parameters
+        name: value
+    }
+}
+```
+"""
 
 schema_view = get_schema_view(
     openapi.Info(
         title="KYPO2 OpenStack REST API documentation",
         default_version=config.VERSION,
-        description='',
+        description=HEADER,
     ),
     validators=[],
     public=True,

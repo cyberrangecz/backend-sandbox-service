@@ -7,7 +7,6 @@ from . import serializers, definition_service
 
 class DefinitionList(mixins.ListModelMixin,
                      generics.GenericAPIView):
-    """Class for definitions management"""
     queryset = Definition.objects.all()
     serializer_class = serializers.DefinitionSerializer
 
@@ -28,8 +27,6 @@ class DefinitionList(mixins.ListModelMixin,
 
 class DefinitionDetail(generics.RetrieveDestroyAPIView):
     """
-    Class for managing single definition.
-
     get: Retrieve the definition.
 
     delete: Delete the definition.
