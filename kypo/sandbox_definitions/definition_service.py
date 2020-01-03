@@ -3,6 +3,7 @@ Definition Service module for Definition management.
 """
 import yaml
 from git.exc import GitCommandError
+from typing import Optional
 
 from ..sandbox_common import utils, exceptions
 from ..sandbox_common.config import config
@@ -30,18 +31,19 @@ def create_definition(url: str, rev: str = None) -> Definition:
     return serializer.save()
 
 
-def get_sandbox_definition(url: str, rev: str) -> str:
+def get_sandbox_definition(url: str, rev: str, name: Optional[str] = None) -> str:
     """
     Get sandbox definition file content
 
     :param url: URL of sandbox definition Git repository
     :param rev: Revision of the repository
+    :param name: The optional name of local repository
     :return: Content of sandbox definition
     :raise: git.exc.GitCommandError if revision is unknown to Git
         or sandbox definition does not exist under this revision
     """
     try:
-        repo = utils.GitRepo.get_git_repo(url, rev)
+        repo = utils.GitRepo.get_git_repo(url, rev, name)
         definition = repo.git.show('{0}:{1}'.format(rev, config.SANDBOX_DEFINITION_FILENAME))
     except GitCommandError as ex:
         raise exceptions.GitError("Failed to get sandbox definition file {}.\n"

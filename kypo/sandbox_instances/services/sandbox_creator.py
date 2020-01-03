@@ -1,13 +1,18 @@
 import io
+import time
+from functools import partial
 from typing import List
 import django_rq
+import rq
 import structlog
+from django.db import transaction
 from django.utils import timezone
 import yaml
 import os
 import shutil
 import docker.errors
 import requests.exceptions as requests_exceptions
+from rq.job import Job
 
 from ...sandbox_common import utils, exceptions
 from ...sandbox_common.config import config
@@ -50,34 +55,60 @@ def create_sandbox_requests(pool: Pool, count: int) -> List[SandboxAllocationUni
 
 def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
     for request, sandbox in zip(requests, sandboxes):
-        stage_openstack = StackAllocationStage.objects.create(request=request)
-        queue_openstack = django_rq.get_queue(config.OPENSTACK_QUEUE,
-                                              default_timeout=config.SANDBOX_BUILD_TIMEOUT)
-        result_openstack = queue_openstack.enqueue(StackCreateStageManager().run,
-                                                   stage=stage_openstack, sandbox=sandbox)
+        with transaction.atomic():
+            stage_openstack = StackAllocationStage.objects.create(request=request)
+            queue_openstack = django_rq.get_queue(config.OPENSTACK_QUEUE,
+                                                  default_timeout=config.SANDBOX_BUILD_TIMEOUT)
+            result_openstack = queue_openstack.enqueue(StackCreateStageManager().run,
+                                                       stage=stage_openstack, sandbox=sandbox, meta=dict(locked=True))
 
-        stage_networking = AnsibleAllocationStage.objects.create(
-            request=request, repo_url=config.ANSIBLE_NETWORKING_URL,
-            rev=config.ANSIBLE_NETWORKING_REV
-        )
-        queue_ansible = django_rq.get_queue(config.ANSIBLE_QUEUE,
-                                            default_timeout=config.SANDBOX_ANSIBLE_TIMEOUT)
-        result_networking = queue_ansible.enqueue(
-            AnsibleStageManager(stage=stage_networking, sandbox=sandbox).run,
-            name='networking', depends_on=result_openstack
-        )
+            stage_networking = AnsibleAllocationStage.objects.create(
+                request=request, repo_url=config.ANSIBLE_NETWORKING_URL,
+                rev=config.ANSIBLE_NETWORKING_REV
+            )
+            queue_ansible = django_rq.get_queue(config.ANSIBLE_QUEUE,
+                                                default_timeout=config.SANDBOX_ANSIBLE_TIMEOUT)
+            result_networking = queue_ansible.enqueue(
+                AnsibleStageManager(stage=stage_networking, sandbox=sandbox).run,
+                name='networking', depends_on=result_openstack
+            )
 
-        stage_user_ansible = AnsibleAllocationStage.objects.create(
-            request=request, repo_url=request.allocation_unit.pool.definition.url,
-            rev=request.allocation_unit.pool.definition.rev
-        )
-        result_user_ansible = queue_ansible.enqueue(
-            AnsibleStageManager(stage=stage_user_ansible, sandbox=sandbox).run,
-            name='user-ansible', depends_on=result_networking)
+            stage_user_ansible = AnsibleAllocationStage.objects.create(
+                request=request, repo_url=request.allocation_unit.pool.definition.url,
+                rev=request.allocation_unit.pool.definition.rev
+            )
+            result_user_ansible = queue_ansible.enqueue(
+                AnsibleStageManager(stage=stage_user_ansible, sandbox=sandbox).run,
+                name='user-ansible', depends_on=result_networking)
 
-        queue_default = django_rq.get_queue()
-        queue_default.enqueue(save_sandbox_to_database, sandbox=sandbox,
-                              depends_on=result_user_ansible)
+            queue_default = django_rq.get_queue()
+            queue_default.enqueue(save_sandbox_to_database, sandbox=sandbox,
+                                  depends_on=result_user_ansible)
+            transaction.on_commit(partial(unlock_job, result_openstack))
+
+
+# TODO: why is it needed and why is it better?
+def lock_job():
+    job = rq.get_current_job()
+    stage = job.kwargs.get('stage')
+
+    while True:
+        job.refresh()
+        locked = job.meta.get('locked', True)
+        if not locked:
+            LOG.debug('Stage unlocked.', stage=stage)
+            break
+        else:
+            LOG.debug('Wait until the stage is unlocked.', stage=stage)
+            time.sleep(10)
+
+
+def unlock_job(job: Job):
+    stage = job.kwargs.get('stage')
+    if job.meta.get('locked', True):
+        LOG.debug('Unlocking stage.', stage=stage)
+    job.meta['locked'] = False
+    job.save_meta()
 
 
 class StackCreateStageManager:
@@ -93,6 +124,7 @@ class StackCreateStageManager:
     def run(self, stage: StackAllocationStage, sandbox: Sandbox) -> None:
         """Run the stage."""
         try:
+            lock_job()
             LOG.info("Stage 1 (StackCreationStage) started", stage=stage)
             stage.start = timezone.now()
             stage.save()
@@ -108,12 +140,12 @@ class StackCreateStageManager:
     def build_sandbox(self, stage: StackAllocationStage, sandbox: Sandbox) -> None:
         """Build sandbox in OpenStack."""
         LOG.debug("Building sandbox", sandbox=stage)
-        definition = definition_service.get_sandbox_definition(
-            url=sandbox.allocation_unit.pool.definition.url,
-            rev=sandbox.allocation_unit.pool.definition.rev
-        )
-        self.client.create_sandbox(io.StringIO(definition), sandbox.get_stack_name(),
-                                   SSH_KEY_NAME=stage.request.allocation_unit.pool.get_keypair_name(),
+        definition = sandbox.allocation_unit.pool.definition
+        sandbox_definition =\
+            definition_service.get_sandbox_definition(definition.url, definition.rev,
+                                                      'rev-{0}_stage-{1}'.format(definition.rev, stage.id))
+        self.client.create_sandbox(io.StringIO(sandbox_definition), sandbox.get_stack_name(),
+                                   SSH_KEY_NAME=stage.request.pool.get_keypair_name(),
                                    **config.SANDBOX_CONFIGURATION)
 
     def wait_for_stack_creation(self, stage: StackAllocationStage) -> None:
@@ -144,6 +176,15 @@ class StackCreateStageManager:
         stage.status_reason = sb.stack_status_reason
         stage.save()
         return stage
+
+    # TODO: probably move to sandbox service
+    # def get_events(self, stage: StackCreateStage) -> List[Event]:
+    #     """List all events in sandbox as Events objects."""
+    #     return self.client.list_sandbox_events(stage.request.get_stack_name())
+    #
+    # def get_resources(self, stage: StackCreateStage) -> List[Resource]:
+    #     """List all resources in sandbox as Resource objects."""
+    #     return self.client.list_sandbox_resources(stage.request.get_stack_name())
 
 
 class AnsibleStageManager:
@@ -214,18 +255,23 @@ class AnsibleStageManager:
             proxy_jump_to_man_private_key = os.path.join(config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
                                                          os.path.basename(config.PROXY_JUMP_TO_MAN_PRIVATE_KEY))
             management_ssh_config.add_entry(**config.PROXY_JUMP_TO_MAN_SSH_OPTIONS)
-            management_ssh_config.update_entry(config.PROXY_JUMP_TO_MAN_SSH_OPTIONS['Host'],
+            entry_proxy_jump_host = config.PROXY_JUMP_TO_MAN_SSH_OPTIONS['Host']
+            entry_proxy_jump_user = config.PROXY_JUMP_TO_MAN_SSH_OPTIONS['User']
+            management_ssh_config.update_entry(entry_proxy_jump_host,
                                                IdentityFile=proxy_jump_to_man_private_key,
                                                UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no')
             management_ssh_config.update_entry(stack.man.name,
-                                               ProxyJump=config.PROXY_JUMP_TO_MAN_SSH_OPTIONS['Host'])
+                                               ProxyJump=entry_proxy_jump_user + '@' + entry_proxy_jump_host)
         self.save_file(os.path.join(ssh_directory, 'config'), str(management_ssh_config))
 
         return ssh_directory
 
     def prepare_inventory_file(self) -> str:
         definition = self.stage.request.allocation_unit.pool.definition
-        sandbox_definition = yaml.full_load(definition_service.get_sandbox_definition(definition.url, definition.rev))
+        sandbox_definition = \
+            definition_service.get_sandbox_definition(definition.url, definition.rev,
+                                                      'rev-{0}_stage-{1}'.format(definition.rev, self.stage.id))
+        sandbox_definition = yaml.full_load(sandbox_definition)
 
         client = utils.get_ostack_client()
         stack = client.get_sandbox(self.sandbox.get_stack_name())
