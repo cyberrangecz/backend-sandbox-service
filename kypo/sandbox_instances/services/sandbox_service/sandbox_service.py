@@ -8,7 +8,6 @@ of Sandboxes as an argument, not just one instance of Sandbox.
 from typing import Iterable, List
 import structlog
 from django.db import transaction
-from django.http import Http404
 from rest_framework.generics import get_object_or_404
 
 from kypo2_openstack_lib.stack import Event, Resource
@@ -18,9 +17,6 @@ from ....sandbox_common.sshconfig import Config
 from ...models import Sandbox
 from .topology import Topology
 from .sshconfig import SandboxSSHConfigCreator
-
-UAN_NETWORK_NAME = "uan-network"
-BR_NETWORK_NAME = "br-network"
 
 LOG = structlog.getLogger()
 
@@ -36,6 +32,10 @@ def get_sandbox(sb_pk: int) -> Sandbox:
     """
     return get_object_or_404(Sandbox, pk=sb_pk)
 
+
+#######################################
+# Batched Calls #
+#######################################
 
 def delete_sandboxes(sandboxes: Iterable[Sandbox], hard=False) -> None:
     """Deletes given sandbox. Hard specifies whether to use hard delete.
@@ -60,32 +60,6 @@ def _delete_sandbox_hard(sandbox: Sandbox):
     client = utils.get_ostack_client()
     client.delete_sandbox_hard(sandbox.get_stack_name())
     sandbox.delete()
-
-
-def list_snapshots(sandboxes: List[Sandbox]) -> List[list]:
-    """
-    Retrieves list of snapshot lists for given sandboxes.
-
-    :return: List of snapshot lists
-    """
-    client = utils.get_ostack_client()
-    snapshots = []
-    for sandbox in sandboxes:
-        snapshots.append(client.list_sandbox_snapshots(sandbox.get_stack_name()))
-    return snapshots
-
-
-def create_snapshot(sandboxes: Iterable[Sandbox]) -> List:
-    """
-    Creates snapshot of given sandboxes.
-
-    :return: List of snapshots
-    """
-    client = utils.get_ostack_client()
-    snapshots = []
-    for sandbox in sandboxes:
-        snapshots.append(client.create_sandbox_snapshot(sandbox.get_stack_name()))
-    return snapshots
 
 
 #######################################
@@ -116,27 +90,6 @@ def unlock_sandbox(sandbox: Sandbox):
         return sandbox
 
 
-def get_snapshot(sandbox: Sandbox, snap_id: int) -> dict:
-    """Retrieves given snapshot."""
-    snapshots = list_snapshots([sandbox])[0]
-    for snap in snapshots:
-        if snap['id'] == snap_id:
-            return snap
-    raise Http404
-
-
-def restore_snapshot(sandbox: Sandbox, snap_id: int) -> None:
-    """Restores given snapshot."""
-    client = utils.get_ostack_client()
-    client.restore_sandbox_snapshot(sandbox.get_stack_name(), snap_id)
-
-
-def delete_snapshot(sandbox: Sandbox, snap_id: int) -> None:
-    """Deletes given snapshot."""
-    client = utils.get_ostack_client()
-    client.delete_sandbox_snapshot(sandbox.get_stack_name(), snap_id)
-
-
 def get_sandbox_topology(sandbox: Sandbox) -> Topology:
     """Get sandbox topology."""
     topology = Topology(sandbox)
@@ -154,6 +107,7 @@ def get_management_sshconfig(sandbox: Sandbox) -> Config:
     return SandboxSSHConfigCreator(sandbox).create_management_config()
 
 
+# TODO: Sandbox existence should be not required for the following calls
 #######
 
 def get_stack_events(stack_name: str) -> List[Event]:

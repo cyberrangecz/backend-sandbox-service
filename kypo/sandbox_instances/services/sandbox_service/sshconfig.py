@@ -31,12 +31,12 @@ class SandboxSSHConfigCreator:
         uan_ip = self._get_uan_ip()
         user_ssh_config.add_entry(Host='{0} {1}'.format(self.stack.uan.name, uan_ip),
                                   User=config.SSH_PROXY_USERNAME, HostName=uan_ip,
-                                  ProxyJump=self.stack.man.name)
+                                  ProxyJump=config.SSH_PROXY_USERNAME + '@' + self.stack.man.name)
 
         for link in self._get_uan_accessible_node_links():
             user_ssh_config.add_entry(Host='{0} {1}'.format(link.node.name, link.ip),
                                       User=config.SSH_PROXY_USERNAME, HostName=link.ip,
-                                      ProxyJump=self.stack.uan.name)
+                                      ProxyJump=config.SSH_PROXY_USERNAME + '@' + self.stack.uan.name)
         return user_ssh_config
 
     def create_management_config(self) -> sshconfig.Config:
@@ -50,7 +50,7 @@ class SandboxSSHConfigCreator:
         for link in self._get_man_accessible_node_links():
             management_ssh_config.add_entry(Host='{0} {1}'.format(link.node.name, link.ip),
                                             User=link.node.user, HostName=link.ip,
-                                            ProxyJump=self.stack.man.name)
+                                            ProxyJump=self.stack.man.user + '@' + self.stack.man.name)
         return management_ssh_config
 
     def _get_uan_ip(self) -> str:
