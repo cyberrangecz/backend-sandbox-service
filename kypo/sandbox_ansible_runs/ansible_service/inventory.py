@@ -27,8 +27,9 @@ class Inventory:
 
         :return: Dict representation of Ansible inventory file
         """
-        routers_routing, smn_routes, br_interfaces = cls.create_routers_group(stack)
-        mng_routing = cls.create_management_group(stack, br_interfaces, smn_routes,
+        net_to_router = cls.get_net_to_router(definition)
+        routers_routing, man_routes, br_interfaces = cls.create_routers_group(stack, net_to_router)
+        mng_routing = cls.create_management_group(stack, br_interfaces, man_routes,
                                                   user_private_key_path, user_public_key_path)
         host_routing = cls.create_host_group(stack)
 
@@ -62,22 +63,22 @@ class Inventory:
                 node['ansible_host'] = mng_ips[name]
 
     @classmethod
-    def create_management_group(cls, stack: Stack, br_interfaces: List, smn_routes: List,
+    def create_management_group(cls, stack: Stack, br_interfaces: List, man_routes: List,
                                 user_private_key_path: str, user_public_key_path: str) -> Dict:
         """Get routing information for management nodes."""
         routing = {}
-        smn_uan_link, uan_smn_link = \
+        man_uan_link, uan_man_link = \
             [link_tuple for link_tuple in
              stack.get_links_to_network_between_nodes(stack.man, stack.uan)
              if link_tuple[0].network.name == stack.get_uan_network().name][0]
-        smn_br_link, _ = \
+        man_br_link, _ = \
             [link_tuple for link_tuple in
              stack.get_links_to_network_between_nodes(stack.man, stack.br)
              if link_tuple[0].network.name == stack.get_br_network().name][0]
 
         routing[stack.uan.name] = {
             "ip_forward": False,
-            "interfaces": [cls.interface_dict(uan_smn_link.mac, smn_uan_link.ip, [])],
+            "interfaces": [cls.interface_dict(uan_man_link.mac, man_uan_link.ip, [])],
             "ansible_user": stack.uan.user,
         }
         routing[stack.br.name] = {
@@ -88,7 +89,7 @@ class Inventory:
         routing[stack.man.name] = {
             'ip_forward': True,
             'interfaces': [
-                cls.interface_dict(smn_br_link.mac, None, smn_routes)],
+                cls.interface_dict(man_br_link.mac, None, man_routes)],
             "ansible_user": stack.man.user,
             'user_private_key_path': user_private_key_path,
             'user_public_key_path': user_public_key_path
@@ -96,45 +97,59 @@ class Inventory:
         return routing
 
     @classmethod
-    def create_routers_group(cls, stack: Stack) -> Tuple[Dict, List, List]:
+    def create_routers_group(cls, stack: Stack, net_to_router: Dict[str, str]) -> Tuple[Dict, List, List]:
         """Get routing information for routers
-        and SMN routes and BR interfaces."""
+        and MAN routes and BR interfaces."""
         routing = dict()
-        smn_br_link, br_smn_link = \
+        man_br_link, br_man_link = \
             [link_tuple for link_tuple in
              stack.get_links_to_network_between_nodes(stack.man, stack.br)
              if link_tuple[0].network.name == stack.get_br_network().name][0]
-        smn_routes = []
-        br_interfaces = [cls.interface_dict(br_smn_link.mac, smn_br_link.ip, [])]
+        man_routes = []
+        br_interfaces = [cls.interface_dict(br_man_link.mac, man_br_link.ip, [])]
 
         br_links_to_routers = [link for link in stack.get_node_links(stack.br)
                                if link.network is not stack.mng_net
-                               and link is not br_smn_link]
-
+                               and link is not br_man_link]
         for br_link in br_links_to_routers:
             for r_link in stack.get_network_links(br_link.network):
-                if r_link.node.name not in stack.routers:  # link back to SMN
+                if r_link.node.name not in stack.routers:  # link back to MAN
                     continue
                 routing[r_link.node.name] = {
                     'ip_forward': True,
                     'interfaces': [cls.interface_dict(r_link.mac, br_link.ip, [])],
                     "ansible_user": r_link.node.user,
                 }
-                # Update SMN routes and BR interfaces
+                # Update MAN routes and BR interfaces
                 br_routes = []
-                smn_routes.append(
-                    cls.route_dict(r_link.network.cidr, r_link.network.mask, br_smn_link.ip))
+                man_routes.append(
+                    cls.route_dict(r_link.network.cidr, r_link.network.mask, br_man_link.ip))
                 for net_link in stack.get_node_links(r_link.node):
-                    if net_link.network is not stack.mng_net and net_link.network is not r_link.network:
+                    if net_link.network is not stack.mng_net and net_link.network is not r_link.network\
+                            and net_to_router[net_link.network.name] == r_link.node.name:
                         br_routes.append(
+                            cls.route_dict(net_link.network.cidr, net_link.network.mask, r_link.ip)
+                        )
+                        man_routes.append(
                             cls.route_dict(net_link.network.cidr, net_link.network.mask,
-                                           r_link.ip))
-                        smn_routes.append(
-                            cls.route_dict(net_link.network.cidr, net_link.network.mask,
-                                           br_smn_link.ip))
+                                           br_man_link.ip)
+                        )
                 br_interfaces.append(cls.interface_dict(br_link.mac, None, br_routes))
 
-        return routing, smn_routes, br_interfaces
+        return routing, man_routes, br_interfaces
+
+    @staticmethod
+    def get_net_to_router(definition: Dict) -> Dict[str, str]:
+        """
+        Return Dict[net_name, router_name].
+        Prefers router which is first in alphabetical order.
+        """
+        net_to_router = {}
+        if 'router_mappings' in definition:
+            definition['router_mappings'].sort(key=lambda x: x['router'], reverse=True)
+            for mapping in definition['router_mappings']:
+                net_to_router[mapping['network']] = mapping['router']
+        return net_to_router
 
     @staticmethod
     def create_host_group(stack: Stack) -> Dict[str, dict]:
