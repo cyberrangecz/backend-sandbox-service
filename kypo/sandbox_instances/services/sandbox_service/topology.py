@@ -13,6 +13,7 @@ LOG = structlog.getLogger()
 
 class Topology:
     """Represents a topology of a sandbox."""
+
     class Port:
         def __init__(self, ip, mac, parent, name):
             self.ip = ip
@@ -61,14 +62,15 @@ class Topology:
         """Removes data about management and hidden nodes from stack"""
 
         # Delete hidden host
-        definition = yaml.full_load(get_sandbox_definition(
-            url=sandbox.allocation_unit.pool.definition.url,
-            rev=sandbox.allocation_unit.pool.definition.rev)
+        definition = sandbox.allocation_unit.pool.definition
+        sandbox_definition = yaml.full_load(get_sandbox_definition(
+            url=definition.url,
+            rev=definition.rev)
         )
 
         hidden_hosts = []
-        if 'hidden_hosts' in definition:
-            hidden_hosts = definition['hidden_hosts']
+        if 'hidden_hosts' in sandbox_definition:
+            hidden_hosts = sandbox_definition['hidden_hosts']
         for hostname in hidden_hosts:
             del stack.hosts[hostname]
 
