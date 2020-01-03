@@ -1,6 +1,7 @@
 """
 Definition Service module for Definition management.
 """
+import structlog
 import yaml
 from git.exc import GitCommandError
 from typing import Optional
@@ -9,6 +10,8 @@ from ..sandbox_common import utils, exceptions
 from ..sandbox_common.config import config
 from . import serializers
 from .models import Definition
+
+LOG = structlog.get_logger()
 
 
 def create_definition(url: str, rev: str = None) -> Definition:
@@ -24,8 +27,7 @@ def create_definition(url: str, rev: str = None) -> Definition:
     client.validate_sandbox_definition(sandbox_definition)
 
     parsed_sandbox_definition = yaml.full_load(sandbox_definition)
-
-    serializer = serializers.DefinitionSerializer(
+    serializer = serializers.DefinitionSerializerCreate(
         data=dict(name=parsed_sandbox_definition['name'], url=url, rev=rev))
     serializer.is_valid(raise_exception=True)
     return serializer.save()

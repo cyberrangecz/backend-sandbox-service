@@ -65,7 +65,7 @@ def delete_pool(pool: Pool) -> None:
     client.delete_keypair(keypair_name)
 
 
-def get_current_size(pool: Pool) -> int:
+def get_pool_size(pool: Pool) -> int:
     """Updates sandboxes in given pool and returns current size of pool."""
     return pool.allocation_units.count()
 
@@ -87,7 +87,7 @@ def create_sandboxes_in_pool(pool: Pool, count: int = None) -> List[SandboxAlloc
     with transaction.atomic():
         pool = Pool.objects.select_for_update().get(pk=pool.id)
 
-        current_size = get_current_size(pool)
+        current_size = get_pool_size(pool)
         if count is None:
             count = pool.max_size - current_size
 

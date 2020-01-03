@@ -6,7 +6,6 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.response import Response
 from rest_framework import status, generics, mixins
-from rest_framework.views import APIView
 from django.conf import settings
 from wsgiref.util import FileWrapper
 from rest_framework.generics import get_object_or_404
@@ -24,19 +23,21 @@ from .models import Pool, Sandbox, SandboxAllocationUnit, AllocationRequest, All
 LOG = structlog.get_logger()
 
 
-class PoolList(generics.ListAPIView):
-    """
-    get: Get a list of pools.
-    """
+class PoolList(mixins.ListModelMixin,
+               generics.GenericAPIView):
     queryset = Pool.objects.all()
     serializer_class = serializers.PoolSerializer
+
+    def get(self, request, *args, **kwargs):
+        """Get a list of pools."""
+        return self.list(request, *args, **kwargs)
 
     @staticmethod
     def post(request):
         """Creates new pool.
-        Also creates a new keypair in OpenStack for this pool.
+        Also creates a new key-pair in OpenStack for this pool.
         It is then used as management key for this pool. That means that
-        the management keypair is the same for each sandbox in the pool.
+        the management key-pair is the same for each sandbox in the pool.
         """
         pool = pool_service.create_pool(request.data)
         serializer = serializers.PoolSerializer(pool)

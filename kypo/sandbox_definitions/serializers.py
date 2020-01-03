@@ -25,3 +25,9 @@ class DefinitionSerializer(serializers.ModelSerializer):
                 fields=['url', 'rev']
             )
         ]
+
+
+class DefinitionSerializerCreate(DefinitionSerializer):
+    """The name needs to be a readable field, otherwise it is ignored."""
+    class Meta(DefinitionSerializer.Meta):
+        read_only_fields = ('id',)

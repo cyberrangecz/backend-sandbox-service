@@ -10,6 +10,7 @@ Swagger can utilise type hints to determine type, so use them in your own method
 from rest_framework import serializers
 
 from ..sandbox_common.config import config
+from .services import pool_service
 from . import models
 
 
@@ -30,10 +31,9 @@ class PoolSerializer(serializers.ModelSerializer):
                                               % (config.MAX_SANDBOXES_PER_POOL, value))
         return value
 
-    # FIXME
     @staticmethod
-    def get_size(obj) -> int:
-        return obj.sandboxcreaterequests.count()
+    def get_size(obj: models.Pool) -> int:
+        return pool_service.get_pool_size(obj)
 
 
 class AllocationRequestSerializer(serializers.ModelSerializer):
