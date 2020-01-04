@@ -141,12 +141,15 @@ class StackCreateStageManager:
         """Build sandbox in OpenStack."""
         LOG.debug("Building sandbox", sandbox=stage)
         definition = sandbox.allocation_unit.pool.definition
-        sandbox_definition =\
-            definition_service.get_sandbox_definition(definition.url, definition.rev,
-                                                      'rev-{0}_stage-{1}'.format(definition.rev, stage.id))
-        self.client.create_sandbox(io.StringIO(sandbox_definition), sandbox.get_stack_name(),
-                                   SSH_KEY_NAME=stage.request.pool.get_keypair_name(),
-                                   **config.SANDBOX_CONFIGURATION)
+        sandbox_definition = definition_service.get_sandbox_definition(
+                definition.url, definition.rev,
+                'rev-{0}_stage-{1}'.format(definition.rev, stage.id)
+        )
+        self.client.create_sandbox(
+            io.StringIO(sandbox_definition), sandbox.get_stack_name(),
+            SSH_KEY_NAME=stage.request.allocation_unit.pool.get_keypair_name(),
+            **config.SANDBOX_CONFIGURATION
+        )
 
     def wait_for_stack_creation(self, stage: StackAllocationStage) -> None:
         """Wait for stack creation."""

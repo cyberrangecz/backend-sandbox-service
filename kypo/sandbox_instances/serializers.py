@@ -48,7 +48,7 @@ class CleanupRequestSerializer(AllocationRequestSerializer):
 
 
 class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
-    allocation_request = AllocationRequestSerializer(source='allocationrequests', read_only=True)
+    allocation_request = AllocationRequestSerializer(read_only=True)
 
     class Meta:
         model = models.SandboxAllocationUnit
