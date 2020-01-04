@@ -103,7 +103,6 @@ class SandboxAllocationUnitList(mixins.ListModelMixin, generics.GenericAPIView):
         return self.list(request, *args, **kwargs)
 
 
-# TODO: implement in services
 class SandboxAllocationUnitDetail(generics.RetrieveAPIView, generics.GenericAPIView):
     """get: Retrieve a Sandbox Allocation Unit."""
     serializer_class = serializers.SandboxAllocationUnitSerializer
@@ -111,6 +110,18 @@ class SandboxAllocationUnitDetail(generics.RetrieveAPIView, generics.GenericAPIV
     lookup_url_kwarg = "unit_id"
 
 
+class SandboxAllocationRequestList(generics.ListAPIView):
+    """get: List a Sandbox Allocation Requests.
+    Each Allocation Unit has at most one Allocation Request."""
+    serializer_class = serializers.AllocationRequestSerializer
+
+    def get_queryset(self):
+        unit_id = self.kwargs.get('unit_id')
+        get_object_or_404(SandboxAllocationUnit, pk=unit_id)  # check that given request exists
+        return AllocationRequest.objects.filter(allocation_unit=unit_id)
+
+
+# FIXME: why does it return `id` only?
 class SandboxAllocationRequestDetail(generics.RetrieveAPIView):
     """get: Retrieve a Sandbox Allocation Request."""
     serializer_class = serializers.AllocationRequestSerializer
@@ -132,7 +143,7 @@ class SandboxCleanupRequestList(mixins.ListModelMixin, generics.GenericAPIView):
     serializer_class = serializers.CleanupRequestSerializer
 
     def get_queryset(self):
-        return CleanupRequest.objects.filter(pool_id=self.kwargs.get('pool_id'))
+        return CleanupRequest.objects.filter(allocation_unit=self.kwargs.get('unit_id'))
 
     # FIXME: destructor needs update to new model
     # noinspection PyUnusedLocal
