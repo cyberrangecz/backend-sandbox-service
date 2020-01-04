@@ -62,7 +62,7 @@ class Sandbox(models.Model):
 
     def __str__(self):
         return "ID: {0.id}, ALLOCATION_UNIT: {0.allocation_unit.id}, " \
-               "LOCK: {0.lock.id}".format(self)
+               "LOCK: {0.lock}".format(self)
 
     def get_stack_name(self) -> str:
         """Returns a name of the stack for this sandbox"""

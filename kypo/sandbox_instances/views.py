@@ -9,6 +9,7 @@ from rest_framework import status, generics, mixins
 from django.conf import settings
 from wsgiref.util import FileWrapper
 from rest_framework.generics import get_object_or_404
+from rest_framework.views import APIView
 
 from ..sandbox_common import exceptions
 from ..sandbox_common.permissions import AllowReadOnViewSandbox
@@ -55,6 +56,7 @@ class PoolDetail(mixins.RetrieveModelMixin,
         """Retrieve a pool."""
         return self.retrieve(request, *args, **kwargs)
 
+    # noinspection PyUnusedLocal
     def delete(self, request, pool_id):
         """Delete pool. The pool must be empty.
         First delete all sandboxes in given Pool.
@@ -365,14 +367,13 @@ class SandboxVMConsole(generics.GenericAPIView):
         return Response({'url': console})
 
 
-class SandboxUserSSHConfig(generics.GenericAPIView):
-    queryset = Sandbox.objects.all()
-    lookup_url_kwarg = "sandbox_id"
+class SandboxUserSSHConfig(APIView):
+    queryset = Sandbox.objects.none()  # Required for DjangoModelPermissions
 
     def get(self, request, sandbox_id):
         """Generate SSH config for User access to this sandbox.
         Some values are user specific, the config contains placeholders for them."""
-        sandbox = self.get_object()
+        sandbox = sandbox_service.get_sandbox(sandbox_id)
         ssh_config = sandbox_service.SandboxSSHConfigCreator(sandbox).create_user_config()
         response = HttpResponse(FileWrapper(io.StringIO(str(ssh_config))),
                                 content_type='application/txt')
@@ -380,14 +381,13 @@ class SandboxUserSSHConfig(generics.GenericAPIView):
         return response
 
 
-class SandboxManagementSSHConfig(generics.GenericAPIView):
-    queryset = Sandbox.objects.all()
-    lookup_url_kwarg = "sandbox_id"
+class SandboxManagementSSHConfig(APIView):
+    queryset = Sandbox.objects.none()  # Required for DjangoModelPermissions
 
     def get(self, request, sandbox_id):
         """Generate SSH config for Management access to this sandbox.
         Some values are user specific, the config contains placeholders for them."""
-        sandbox = self.get_object()
+        sandbox = sandbox_service.get_sandbox(sandbox_id)
         ssh_config = sandbox_service.SandboxSSHConfigCreator(sandbox).create_management_config()
         response = HttpResponse(FileWrapper(io.StringIO(str(ssh_config))),
                                 content_type='application/txt')
