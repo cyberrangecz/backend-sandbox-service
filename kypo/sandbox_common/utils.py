@@ -5,6 +5,8 @@ import json
 import logging
 import time
 import multiprocessing
+import uuid
+
 import paramiko
 import scp
 import git
@@ -104,6 +106,11 @@ def wait_for(cond: Callable, timeout: int, freq: int, factor: float = 1.1, initi
             raise exceptions.LimitExceededError(errmsg)
         time.sleep(int(freq))
         freq *= factor
+
+
+def get_simple_uuid() -> str:
+    """First four bytes of UUID as string."""
+    return str(uuid.uuid4()).split('-')[0]
 
 
 class GitRepo:

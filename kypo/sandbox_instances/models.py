@@ -2,6 +2,7 @@ from django.db import models
 from django.utils import timezone
 from model_utils.managers import InheritanceManager
 
+from ..sandbox_common import utils
 from ..sandbox_definitions.models import Definition
 
 
@@ -13,6 +14,7 @@ class Pool(models.Model):
     max_size = models.IntegerField()
     private_management_key = models.TextField()
     public_management_key = models.TextField()
+    uuid = models.TextField(default=utils.get_simple_uuid)
 
     class Meta:
         ordering = ['id']
@@ -22,7 +24,7 @@ class Pool(models.Model):
 
     def get_keypair_name(self) -> str:
         """Returns a name of the management key-pair for this pool."""
-        return self.definition.name + '-' + str(self.id)
+        return self.definition.name + '-' + str(self.id) + '-' + str(self.uuid)
 
 
 class SandboxAllocationUnit(models.Model):
