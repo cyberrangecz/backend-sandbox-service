@@ -300,7 +300,7 @@ class AnsibleStageManager:
             for output in container.logs(stream=True):
                 output = output.decode('utf-8')
                 output = output[:-1] if output[-1] == '\n' else output
-                AnsibleOutput.objects.create(ansible_run=self.stage, content=output)
+                AnsibleOutput.objects.create(stage=self.stage, content=output)
 
             status = container.wait(timeout=60)
         except (docker.errors.APIError,

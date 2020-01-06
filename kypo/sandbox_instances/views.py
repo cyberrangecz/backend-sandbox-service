@@ -16,7 +16,7 @@ from ..sandbox_common.permissions import AllowReadOnViewSandbox
 
 from . import serializers
 from .services import pool_service, sandbox_service, node_service,\
-    sandbox_creator
+    sandbox_creator, sandbox_destructor
 from .models import Pool, Sandbox, SandboxAllocationUnit, AllocationRequest, AllocationStage, \
     StackAllocationStage, CleanupRequest, StackCleanupStage, CleanupStage
 
@@ -121,11 +121,10 @@ class SandboxAllocationRequestList(generics.ListAPIView):
         return AllocationRequest.objects.filter(allocation_unit=unit_id)
 
 
-# FIXME: why does it return `id` only?
 class SandboxAllocationRequestDetail(generics.RetrieveAPIView):
     """get: Retrieve a Sandbox Allocation Request."""
     serializer_class = serializers.AllocationRequestSerializer
-    queryset = SandboxAllocationUnit.objects.all()
+    queryset = AllocationRequest.objects.all()
     lookup_url_kwarg = "request_id"
 
 
@@ -145,18 +144,12 @@ class SandboxCleanupRequestList(mixins.ListModelMixin, generics.GenericAPIView):
     def get_queryset(self):
         return CleanupRequest.objects.filter(allocation_unit=self.kwargs.get('unit_id'))
 
-    # FIXME: destructor needs update to new model
-    # noinspection PyUnusedLocal
-    # @swagger_auto_schema(
-    #     responses={status.HTTP_201_CREATED: serializers.SandboxDeleteRequestSerializer()})
-    def post(self, request, sandbox_id):
+    def post(self, request, unit_id):
         """ Create cleanup request.."""
-        # create_request = SandboxCreateRequest.objects.get(pk=sandbox_id)
-        #
-        # del_request = sandbox_destructor.delete_sandbox_request(create_request)
-        # serializer = self.serializer_class(del_request)
-        # return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response({}, status=status.HTTP_201_CREATED)
+        unit = SandboxAllocationUnit.objects.get(pk=unit_id)
+        cleanup_req = sandbox_destructor.cleanup_sandbox_request(unit)
+        serializer = self.serializer_class(cleanup_req)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def get(self, request, *args, **kwargs):
         """Get a list of Sandbox Cleanup Requests."""

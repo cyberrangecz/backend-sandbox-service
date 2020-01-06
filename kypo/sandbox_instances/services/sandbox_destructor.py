@@ -12,7 +12,7 @@ from ..models import Sandbox, CleanupRequest, SandboxAllocationUnit, CleanupStag
 LOG = structlog.get_logger()
 
 
-def delete_sandbox_request(allocation_unit: SandboxAllocationUnit) -> CleanupRequest:
+def cleanup_sandbox_request(allocation_unit: SandboxAllocationUnit) -> CleanupRequest:
     """
     Create delete request and attempt to delete a sandbox.
     """
