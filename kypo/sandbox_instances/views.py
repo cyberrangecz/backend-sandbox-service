@@ -309,7 +309,6 @@ class SandboxTopology(generics.GenericAPIView):
     serializer_class = serializers.TopologySerializer
     pagination_class = None
 
-    # @swagger_auto_schema(responses={status.HTTP_200_OK: serializers.TopologySerializer()})
     def get(self, request, sandbox_id):
         """Get topology data for given sandbox.
         Hosts specified as hidden are filtered out, but the network is still visible.
