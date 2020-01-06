@@ -14,6 +14,7 @@ import docker.errors
 import requests.exceptions as requests_exceptions
 from rq.job import Job
 
+from kypo2_openstack_lib.stack import Event, Resource
 from ...sandbox_common import utils, exceptions
 from ...sandbox_common.config import config
 
@@ -316,3 +317,19 @@ class AnsibleStageManager:
 
 def save_sandbox_to_database(sandbox):
     sandbox.save()
+
+
+def get_stack_events(stack_name: str) -> List[Event]:
+    """List all events in sandbox as Events objects."""
+    client = utils.get_ostack_client()
+    if stack_name in client.list_sandboxes():
+        return client.list_sandbox_events(stack_name)
+    return []
+
+
+def get_stack_resources(stack_name: str) -> List[Resource]:
+    """List all resources in sandbox as Resource objects."""
+    client = utils.get_ostack_client()
+    if stack_name in client.list_sandboxes():
+        return client.list_sandbox_resources(stack_name)
+    return []
