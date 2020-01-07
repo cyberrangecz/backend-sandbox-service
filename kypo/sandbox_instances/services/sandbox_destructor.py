@@ -1,4 +1,3 @@
-from typing import Optional
 import django_rq
 import structlog
 from django.utils import timezone
@@ -7,7 +6,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from ...sandbox_common import utils, exceptions
 from ...sandbox_common.config import config
 
-from ..models import Sandbox, CleanupRequest, SandboxAllocationUnit, CleanupStage
+from ..models import CleanupRequest, SandboxAllocationUnit, CleanupStage
 
 LOG = structlog.get_logger()
 
@@ -30,17 +29,20 @@ def cleanup_sandbox_request(allocation_unit: SandboxAllocationUnit) -> CleanupRe
         )
 
     request = CleanupRequest.objects.create(allocation_unit=allocation_unit)
-    LOG.info('CleanupRequest created', request=request, sandbox=sandbox)
-    enqueue_request(request, sandbox)
+    LOG.info('CleanupRequest created', request=request,
+             allocation_unit=allocation_unit, sandbox=sandbox)
+    enqueue_request(request, allocation_unit)
     return request
 
 
-def enqueue_request(request: CleanupRequest, sandbox: Optional[Sandbox]) -> None:
+def enqueue_request(request: CleanupRequest,
+                    allocation_unit: SandboxAllocationUnit) -> None:
     """Enqueue given request."""
     stg1 = CleanupStage.objects.create(request=request)
     queue = django_rq.get_queue(config.OPENSTACK_QUEUE,
                                 default_timeout=config.SANDBOX_DELETE_TIMEOUT)
-    queue.enqueue(StackDeleteStageManager().run, stage=stg1, sandbox=sandbox)
+    queue.enqueue(StackDeleteStageManager().run, stage=stg1,
+                  allocation_unit=allocation_unit)
 
 
 class StackDeleteStageManager:
@@ -53,13 +55,13 @@ class StackDeleteStageManager:
             self._client = utils.get_ostack_client()
         return self._client
 
-    def run(self, stage: CleanupStage, sandbox: Sandbox) -> None:
+    def run(self, stage: CleanupStage, allocation_unit: SandboxAllocationUnit) -> None:
         """Run the stage."""
         try:
             stage.start = timezone.now()
             stage.save()
-            LOG.info('DeleteStage started', stage=stage, sandbox=sandbox)
-            self.delete_sandbox(sandbox, stage.request.allocation_unit)
+            LOG.info('DeleteStage started', stage=stage, allocation_unit=allocation_unit)
+            self.delete_sandbox(allocation_unit)
         except Exception as ex:
             stage.mark_failed(ex)
             raise
@@ -67,26 +69,26 @@ class StackDeleteStageManager:
             stage.end = timezone.now()
             stage.save()
 
-    def delete_sandbox(self, sandbox: Sandbox, alloc_unit: SandboxAllocationUnit,
-                       hard=False) -> None:
+    def delete_sandbox(self, allocation_unit: SandboxAllocationUnit) -> None:
         """Deletes given sandbox. Hard specifies whether to use hard delete.
         On soft delete raises ValidationError if any sandbox is locked."""
-        stack_name = alloc_unit.get_stack_name()
+        stack_name = allocation_unit.get_stack_name()
 
-        if sandbox:
-            sandbox.delete()
-        alloc_unit.delete()
-
-        LOG.info('Sandbox deleted from DB', sandbox=sandbox, alloc_unit=alloc_unit)
-
-        if hard:
-            self.client.delete_sandbox_hard(stack_name)
+        try:
+            sandbox = allocation_unit.sandbox
+        except ObjectDoesNotExist:
+            pass
         else:
-            self.client.delete_sandbox(stack_name)
+            sandbox.delete()
 
+        LOG.info('Starting Stack delete in OpenStack',
+                 stack_name=stack_name, allocation_unit=allocation_unit)
+
+        self.client.delete_sandbox(stack_name)
         self.wait_for_stack_deletion(stack_name)
 
-        LOG.info('Sandbox deleted successfully from OpenStack', sandbox_stack_name=stack_name)
+        LOG.info('Stack deleted successfully from OpenStack',
+                 stack_name=stack_name, allocation_unit=allocation_unit)
 
     def wait_for_stack_deletion(self, stack_name: str) -> None:
         """Wait for stack deletion."""
@@ -100,3 +102,8 @@ class StackDeleteStageManager:
         utils.wait_for(sandbox_delete_check, config.SANDBOX_DELETE_TIMEOUT, freq=10, initial_wait=3,
                        errmsg='Sandbox deletion exceeded timeout of {} sec. Sandbox: {}'
                        .format(config.SANDBOX_BUILD_TIMEOUT, str(stack_name)))
+
+
+def delete_allocation_unit(allocation_unit: SandboxAllocationUnit) -> None:
+    allocation_unit.delete()
+    LOG.info('Allocation Unit deleted from DB', allocation_unit=allocation_unit)
