@@ -183,7 +183,7 @@ class OpenstackAllocationStageDetail(generics.GenericAPIView):
     def get(self, request, stage_id):
         """Retrieve an `openstack` stage."""
         stage = self.get_object()
-        updated = sandbox_creator.StackCreateStageManager().update_stage(stage)
+        updated = sandbox_creator.StackAllocationStageManager().update_stage(stage)
         serializer = self.get_serializer(updated)
         return Response(serializer.data)
 

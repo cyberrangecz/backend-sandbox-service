@@ -1,9 +1,15 @@
+from enum import Enum
 from django.db import models
 from django.utils import timezone
 from model_utils.managers import InheritanceManager
 
 from ..sandbox_common import utils
 from ..sandbox_definitions.models import Definition
+
+
+class StageType(Enum):
+    OPENSTACK = 'openstack'
+    ANSIBLE = 'ansible'
 
 
 class Pool(models.Model):
@@ -150,7 +156,7 @@ class AllocationStage(Stage):
 
 
 class StackAllocationStage(AllocationStage):
-    type = 'openstack'
+    type = StageType.OPENSTACK
 
     status = models.CharField(null=True, max_length=30)
     status_reason = models.TextField(null=True)
@@ -179,7 +185,7 @@ class CleanupStage(Stage):
 
 
 class StackCleanupStage(CleanupStage):
-    type = 'openstack'
+    type = StageType.OPENSTACK
 
     allocation_stage = models.OneToOneField(
         StackAllocationStage,

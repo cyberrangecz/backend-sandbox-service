@@ -31,3 +31,8 @@ class AnsibleRunDockerContainer:
 
     def wait(self, **kwargs):
         return self.container.wait(**kwargs)
+
+
+def delete_docker_container(container_id):
+    client = docker.from_env()
+    client.de

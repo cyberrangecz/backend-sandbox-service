@@ -6,7 +6,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from ...sandbox_common import utils, exceptions
 from ...sandbox_common.config import config
 
-from ..models import CleanupRequest, SandboxAllocationUnit, CleanupStage
+from ..models import CleanupRequest, SandboxAllocationUnit, StackCleanupStage
+from ...sandbox_ansible_runs.models import AnsibleCleanupStage
 
 LOG = structlog.get_logger()
 
@@ -38,14 +39,14 @@ def cleanup_sandbox_request(allocation_unit: SandboxAllocationUnit) -> CleanupRe
 def enqueue_request(request: CleanupRequest,
                     allocation_unit: SandboxAllocationUnit) -> None:
     """Enqueue given request."""
-    stg1 = CleanupStage.objects.create(request=request)
+    stg1 = StackCleanupStage.objects.create(request=request)
     queue = django_rq.get_queue(config.OPENSTACK_QUEUE,
                                 default_timeout=config.SANDBOX_DELETE_TIMEOUT)
-    queue.enqueue(StackDeleteStageManager().run, stage=stg1,
+    queue.enqueue(StackCleanupStageManager().run, stage=stg1,
                   allocation_unit=allocation_unit)
 
 
-class StackDeleteStageManager:
+class StackCleanupStageManager:
     def __init__(self):
         self._client = None
 
@@ -55,12 +56,12 @@ class StackDeleteStageManager:
             self._client = utils.get_ostack_client()
         return self._client
 
-    def run(self, stage: CleanupStage, allocation_unit: SandboxAllocationUnit) -> None:
+    def run(self, stage: StackCleanupStage, allocation_unit: SandboxAllocationUnit) -> None:
         """Run the stage."""
         try:
             stage.start = timezone.now()
             stage.save()
-            LOG.info('DeleteStage started', stage=stage, allocation_unit=allocation_unit)
+            LOG.info('StackCleanupStage started', stage=stage, allocation_unit=allocation_unit)
             self.delete_sandbox(allocation_unit)
         except Exception as ex:
             stage.mark_failed(ex)
@@ -102,6 +103,26 @@ class StackDeleteStageManager:
         utils.wait_for(sandbox_delete_check, config.SANDBOX_DELETE_TIMEOUT, freq=10, initial_wait=3,
                        errmsg='Sandbox deletion exceeded timeout of {} sec. Sandbox: {}'
                        .format(config.SANDBOX_BUILD_TIMEOUT, str(stack_name)))
+
+
+class AnsibleCleanupStageManager:
+    def run(self, stage: AnsibleCleanupStage, allocation_unit: SandboxAllocationUnit) -> None:
+        """Run the stage."""
+        try:
+            stage.start = timezone.now()
+            stage.save()
+            LOG.info('AnsibleCleanupStage started', stage=stage, allocation_unit=allocation_unit)
+            self.delete_ansible(allocation_unit)
+        except Exception as ex:
+            stage.mark_failed(ex)
+            raise
+        finally:
+            stage.end = timezone.now()
+            stage.save()
+
+    def delete_ansible(allocation_unit):
+        """Delete Ansible container."""
+        pass
 
 
 def delete_allocation_unit(allocation_unit: SandboxAllocationUnit) -> None:

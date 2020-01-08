@@ -20,12 +20,13 @@ from ...sandbox_common.config import config
 
 from ...sandbox_definitions import definition_service
 from ...sandbox_ansible_runs import ansible_service
-from ...sandbox_ansible_runs.models import AnsibleAllocationStage, AnsibleOutput
+from ...sandbox_ansible_runs.models import AnsibleAllocationStage,\
+    AnsibleOutput, DockerContainer
 
 from . import sandbox_service
 
 from ..models import Sandbox, Pool, SandboxAllocationUnit, \
-    AllocationRequest, StackAllocationStage
+    AllocationRequest, StackAllocationStage, Stage, AllocationStage
 
 STACK_STATUS_CREATE_COMPLETE = "CREATE_COMPLETE"
 
@@ -62,7 +63,7 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
             queue_openstack = django_rq.get_queue(
                 config.OPENSTACK_QUEUE, default_timeout=config.SANDBOX_BUILD_TIMEOUT)
             result_openstack = queue_openstack.enqueue(
-                StackCreateStageManager().run, stage=stage_openstack,
+                StackAllocationStageManager().run, stage=stage_openstack,
                 sandbox=sandbox, meta=dict(locked=True))
 
             stage_networking = AnsibleAllocationStage.objects.create(
@@ -72,7 +73,7 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
             queue_ansible = django_rq.get_queue(
                 config.ANSIBLE_QUEUE, default_timeout=config.SANDBOX_ANSIBLE_TIMEOUT)
             result_networking = queue_ansible.enqueue(
-                AnsibleStageManager(stage=stage_networking, sandbox=sandbox).run,
+                AnsibleAllocationStageManager(stage=stage_networking, sandbox=sandbox).run,
                 name='networking', depends_on=result_openstack
             )
 
@@ -81,7 +82,7 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
                 rev=request.allocation_unit.pool.definition.rev
             )
             result_user_ansible = queue_ansible.enqueue(
-                AnsibleStageManager(stage=stage_user_ansible, sandbox=sandbox).run,
+                AnsibleAllocationStageManager(stage=stage_user_ansible, sandbox=sandbox).run,
                 name='user-ansible', depends_on=result_networking)
 
             queue_default = django_rq.get_queue()
@@ -114,7 +115,7 @@ def unlock_job(job: Job):
     job.save_meta()
 
 
-class StackCreateStageManager:
+class StackAllocationStageManager:
     def __init__(self):
         self._client = None
 
@@ -128,9 +129,9 @@ class StackCreateStageManager:
         """Run the stage."""
         try:
             lock_job()
-            LOG.info("Stage 1 (StackCreationStage) started", stage=stage)
             stage.start = timezone.now()
             stage.save()
+            LOG.info("Stage 1 (StackCreationStage) started", stage=stage)
             self.build_sandbox(stage, sandbox)
             self.wait_for_stack_creation(stage)
         except Exception as ex:
@@ -184,7 +185,7 @@ class StackCreateStageManager:
         return stage
 
 
-class AnsibleStageManager:
+class AnsibleAllocationStageManager:
     def __init__(self, stage: AnsibleAllocationStage, sandbox: Sandbox) -> None:
         self.stage = stage
         self.sandbox = sandbox
@@ -195,9 +196,9 @@ class AnsibleStageManager:
     def run(self, name: str) -> None:
         """Run the stage."""
         try:
-            LOG.info("Stage {} (AnsibleRunStage) started".format(name), stage=self.stage)
             self.stage.start = timezone.now()
             self.stage.save()
+            LOG.info("Stage {} (AnsibleRunStage) started".format(name), stage=self.stage)
             self.run_docker_container()
         except Exception as ex:
             self.stage.mark_failed(ex)
@@ -243,26 +244,31 @@ class AnsibleStageManager:
                                        config.MNG_PRIVATE_KEY_FILENAME)
         git_private_key = os.path.join(config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
                                        os.path.basename(config.GIT_PRIVATE_KEY))
-        management_ssh_config = sandbox_service.SandboxSSHConfigCreator(self.sandbox).create_management_config()
-        for pattern in management_ssh_config.get_hosts():
-            management_ssh_config.update_entry(pattern, UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no',
-                                               IdentityFile=mng_private_key)
-        management_ssh_config.add_entry(Host=config.GIT_SERVER, User=config.GIT_USER, IdentityFile=git_private_key,
-                                        UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no')
+        mng_ssh_config = sandbox_service.SandboxSSHConfigCreator(
+            self.sandbox).create_management_config()
+        for pattern in mng_ssh_config.get_hosts():
+            mng_ssh_config.update_entry(pattern, UserKnownHostsFile='/dev/null',
+                                        StrictHostKeyChecking='no',
+                                        IdentityFile=mng_private_key)
+        mng_ssh_config.add_entry(Host=config.GIT_SERVER, User=config.GIT_USER,
+                                 IdentityFile=git_private_key,
+                                 UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no')
         if config.PROXY_JUMP_TO_MAN_SSH_OPTIONS:
             shutil.copy(config.PROXY_JUMP_TO_MAN_PRIVATE_KEY,
-                        os.path.join(ssh_directory, os.path.basename(config.PROXY_JUMP_TO_MAN_PRIVATE_KEY)))
-            proxy_jump_to_man_private_key = os.path.join(config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
-                                                         os.path.basename(config.PROXY_JUMP_TO_MAN_PRIVATE_KEY))
-            management_ssh_config.add_entry(**config.PROXY_JUMP_TO_MAN_SSH_OPTIONS)
+                        os.path.join(ssh_directory,
+                                     os.path.basename(config.PROXY_JUMP_TO_MAN_PRIVATE_KEY)))
+            proxy_jump_to_man_private_key = os.path.join(
+                config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
+                os.path.basename(config.PROXY_JUMP_TO_MAN_PRIVATE_KEY))
+            mng_ssh_config.add_entry(**config.PROXY_JUMP_TO_MAN_SSH_OPTIONS)
             entry_proxy_jump_host = config.PROXY_JUMP_TO_MAN_SSH_OPTIONS['Host']
             entry_proxy_jump_user = config.PROXY_JUMP_TO_MAN_SSH_OPTIONS['User']
-            management_ssh_config.update_entry(entry_proxy_jump_host,
-                                               IdentityFile=proxy_jump_to_man_private_key,
-                                               UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no')
-            management_ssh_config.update_entry(stack.man.name,
-                                               ProxyJump=entry_proxy_jump_user + '@' + entry_proxy_jump_host)
-        self.save_file(os.path.join(ssh_directory, 'config'), str(management_ssh_config))
+            mng_ssh_config.update_entry(entry_proxy_jump_host,
+                                        IdentityFile=proxy_jump_to_man_private_key,
+                                        UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no')
+            mng_ssh_config.update_entry(stack.man.name,
+                                        ProxyJump=entry_proxy_jump_user + '@' + entry_proxy_jump_host)
+        self.save_file(os.path.join(ssh_directory, 'config'), str(mng_ssh_config))
 
         return ssh_directory
 
@@ -296,6 +302,8 @@ class AnsibleStageManager:
                 config.ANSIBLE_DOCKER_IMAGE, self.stage.repo_url,
                 self.stage.rev, ssh_directory, inventory_path
             )
+            DockerContainer.objects.create(stage=self.stage, container_id=container.id)
+
             for output in container.logs(stream=True):
                 output = output.decode('utf-8')
                 output = output[:-1] if output[-1] == '\n' else output

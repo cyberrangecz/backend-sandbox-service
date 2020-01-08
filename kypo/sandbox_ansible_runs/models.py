@@ -1,11 +1,11 @@
 from django.db import models
 
 from ..sandbox_instances.models import ExternalDependency, AllocationStage,\
-    CleanupStage
+    CleanupStage, StageType
 
 
 class AnsibleAllocationStage(AllocationStage):
-    type = 'ansible'
+    type = StageType.ANSIBLE
 
     repo_url = models.TextField()
     rev = models.TextField()
@@ -17,7 +17,7 @@ class AnsibleAllocationStage(AllocationStage):
 
 
 class AnsibleCleanupStage(CleanupStage):
-    type = 'ansible'
+    type = StageType.ANSIBLE
 
     allocation_stage = models.OneToOneField(
         AnsibleAllocationStage,
