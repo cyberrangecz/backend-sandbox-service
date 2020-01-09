@@ -8,11 +8,10 @@ LOG = structlog.get_logger()
 
 
 class AnsibleRunDockerContainer:
-    container = None
-    killed = False
-
     def __init__(self, image, url, rev, ssh_dir, inventory_path):
         self.client = docker.from_env()
+        self.killed = False
+
         command = ['-u', url, '-r', rev, '-i',
                    config.ANSIBLE_DOCKER_VOLUMES_MAPPING['INVENTORY_PATH']['bind']]
         volumes = {
@@ -23,7 +22,7 @@ class AnsibleRunDockerContainer:
                                                     command=command, volumes=volumes)
 
     @property
-    def id(self):
+    def id(self) -> str:
         return self.container.id
 
     def logs(self, **kwargs):
@@ -33,6 +32,7 @@ class AnsibleRunDockerContainer:
         return self.container.wait(**kwargs)
 
 
-def delete_docker_container(container_id):
+def delete_docker_container(container_id: str) -> None:
     client = docker.from_env()
-    client.de
+    container = client.get(container_id)
+    container.remove(force=True)  # kill running container

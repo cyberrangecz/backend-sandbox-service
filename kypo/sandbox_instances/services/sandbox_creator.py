@@ -26,7 +26,7 @@ from ...sandbox_ansible_runs.models import AnsibleAllocationStage,\
 from . import sandbox_service
 
 from ..models import Sandbox, Pool, SandboxAllocationUnit, \
-    AllocationRequest, StackAllocationStage, Stage, AllocationStage
+    AllocationRequest, StackAllocationStage
 
 STACK_STATUS_CREATE_COMPLETE = "CREATE_COMPLETE"
 
@@ -143,6 +143,7 @@ class StackAllocationStageManager:
 
     def build_sandbox(self, stage: StackAllocationStage, sandbox: Sandbox) -> None:
         """Build sandbox in OpenStack."""
+        # TODO: create heat_stack when the lib will return the needed data
         LOG.debug("Building sandbox", sandbox=stage)
         definition = sandbox.allocation_unit.pool.definition
         sandbox_definition = definition_service.get_sandbox_definition(
@@ -191,7 +192,6 @@ class AnsibleAllocationStageManager:
         self.sandbox = sandbox
         self.directory = os.path.join(config.ANSIBLE_DOCKER_VOLUMES,
                                       sandbox.get_stack_name(), str(stage.id))
-        self.make_dir(self.directory)
 
     def run(self, name: str) -> None:
         """Run the stage."""
@@ -209,10 +209,7 @@ class AnsibleAllocationStageManager:
 
     @staticmethod
     def make_dir(dir_path: str) -> None:
-        try:
-            os.makedirs(dir_path, exist_ok=True)
-        except FileExistsError as e:
-            raise exceptions.ApiException(e)
+        os.makedirs(dir_path, exist_ok=True)
 
     @staticmethod
     def save_file(file_path: str, data: str) -> None:
@@ -220,12 +217,9 @@ class AnsibleAllocationStageManager:
             file.write(data)
 
     def prepare_ssh_dir(self) -> str:
-        """
-        Prepare files that will be passed to docker container.
+        """Prepare files that will be passed to docker container."""
 
-        :return: None
-        """
-
+        self.make_dir(self.directory)
         ssh_directory = os.path.join(self.directory, 'ssh')
         self.make_dir(ssh_directory)
 
