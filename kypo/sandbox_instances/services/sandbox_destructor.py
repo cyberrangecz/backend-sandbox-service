@@ -7,6 +7,7 @@ from ...sandbox_common import utils, exceptions
 from ...sandbox_common.config import config
 
 from ..models import CleanupRequest, SandboxAllocationUnit, StackCleanupStage
+from ...sandbox_ansible_runs import ansible_service
 from ...sandbox_ansible_runs.models import AnsibleCleanupStage
 
 LOG = structlog.get_logger()
@@ -22,6 +23,7 @@ def cleanup_sandbox_request(allocation_unit: SandboxAllocationUnit) -> CleanupRe
     if sandbox and sandbox.lock:
         raise exceptions.ValidationError('Sandbox ID={} is locked.'.format(sandbox.id))
 
+    # TODO: allow delete while still running
     if any([stage.is_running for stage in
             allocation_unit.allocation_request.stages.all()]):
         raise exceptions.ValidationError(
@@ -106,23 +108,30 @@ class StackCleanupStageManager:
 
 
 class AnsibleCleanupStageManager:
-    def run(self, stage: AnsibleCleanupStage, allocation_unit: SandboxAllocationUnit) -> None:
+    def __init__(self, stage: AnsibleCleanupStage,
+                 allocation_unit: SandboxAllocationUnit):
+        self.stage = stage
+        self.allocation_unit = allocation_unit
+
+    def run(self) -> None:
         """Run the stage."""
         try:
-            stage.start = timezone.now()
-            stage.save()
-            LOG.info('AnsibleCleanupStage started', stage=stage, allocation_unit=allocation_unit)
-            self.delete_ansible(allocation_unit)
+            self.stage.start = timezone.now()
+            self.stage.save()
+            LOG.info('AnsibleCleanupStage started', stage=self.stage,
+                     allocation_unit=self.allocation_unit)
+            self.delete_ansible()
         except Exception as ex:
-            stage.mark_failed(ex)
+            self.stage.mark_failed(ex)
             raise
         finally:
-            stage.end = timezone.now()
-            stage.save()
+            self.stage.end = timezone.now()
+            self.stage.save()
 
-    def delete_ansible(allocation_unit):
+    def delete_ansible(self):
         """Delete Ansible container."""
-        pass
+        ansible_service.delete_docker_container(
+            self.stage.allocation_stage.container.container_id)
 
 
 def delete_allocation_unit(allocation_unit: SandboxAllocationUnit) -> None:
