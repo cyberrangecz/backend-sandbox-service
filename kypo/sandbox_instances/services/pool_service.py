@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404
 from ...sandbox_common import utils, exceptions
 
 from . import sandbox_service, sandbox_creator
-from ..models import Pool, Sandbox, SandboxAllocationUnit
+from ..models import Pool, Sandbox, SandboxAllocationUnit, CleanupRequest, Lock
 from .. import serializers
 
 LOG = structlog.get_logger()
@@ -107,22 +107,21 @@ def create_sandboxes_in_pool(pool: Pool, count: int = None) -> List[SandboxAlloc
 #     sandbox_service.delete_sandboxes(sandboxes)
 
 
-#FIXME: use new model
 def get_unlocked_sandbox(pool: Pool) -> Optional[Sandbox]:
     """Return unlocked sandbox."""
     with transaction.atomic():
-        create_req_ids = [req.id for req in pool.sandboxcreaterequests.all()]
-        delete_create_req_ids = [req.sandbox_create_request.id
-                                 for req in pool.sandboxdeleterequests.all()]
+        unit_ids = [unit.id for unit in pool.allocation_units.all()]
+        cleanup_req_ids = [req.id for req in CleanupRequest.objects.filter(
+            allocation_unit_id__in=unit_ids)]
 
         sandbox = Sandbox.objects\
             .select_for_update()\
             .order_by('id')\
-            .filter(request_id__in=create_req_ids, locked=False)\
-            .exclude(request_id__in=delete_create_req_ids)\
+            .filter(allocation_unit_id__in=unit_ids, lock=None)\
+            .exclude(allocation_unit__in=cleanup_req_ids)\
             .first()
         if not sandbox:
             return None
-        sandbox.locked = True
+        sandbox.lock = Lock.objects.create()
         sandbox.save()
         return sandbox
