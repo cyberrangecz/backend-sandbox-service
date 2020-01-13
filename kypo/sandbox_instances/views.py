@@ -18,7 +18,7 @@ from . import serializers
 from .services import pool_service, sandbox_service, node_service,\
     sandbox_creator, sandbox_destructor
 from .models import Pool, Sandbox, SandboxAllocationUnit, AllocationRequest, AllocationStage, \
-    StackAllocationStage, CleanupRequest, StackCleanupStage, CleanupStage
+    StackAllocationStage, CleanupRequest, StackCleanupStage, CleanupStage, Lock
 
 # Create logger and configure logging
 LOG = structlog.get_logger()
@@ -277,23 +277,22 @@ class SandboxDetail(generics.GenericAPIView):
     queryset = Sandbox.objects.all()
 
 
-class SandboxLock(generics.GenericAPIView):
-    # TODO: This class is weird, probably can be done differently
-    queryset = Sandbox.objects.all()
-    lookup_url_kwarg = "sandbox_id"
+class SandboxLockList(mixins.CreateModelMixin, generics.GenericAPIView):
+    queryset = Lock.objects.all()
     serializer_class = serializers.LockSerializer
 
-    def post(self, _request, sandbox_id):
+    def post(self, request, sandbox_id):
         """Lock given sandbox."""
-        # FIXME: return lock instance
-        lock = sandbox_service.lock_sandbox(self.get_object())
-        return Response(self.serializer_class(lock).data)
+        sandbox = sandbox_service.get_sandbox(sandbox_id)
+        lock = sandbox_service.lock_sandbox(sandbox)
+        return Response(self.serializer_class(lock).data, status=status.HTTP_201_CREATED)
 
-    def delete(self, _request, sandbox_id):
-        """Unlock given sandbox."""
-        # FIXME: return lock instance
-        sandbox_service.unlock_sandbox(self.get_object())
-        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class SandboxLockDetail(generics.DestroyAPIView):
+    """delete: Delete given lock."""
+    queryset = Lock.objects.all()
+    lookup_url_kwarg = "lock_id"
+    serializer_class = serializers.LockSerializer
 
 
 class SandboxKeypairUser(generics.RetrieveAPIView):

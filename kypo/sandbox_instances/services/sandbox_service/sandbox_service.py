@@ -14,7 +14,7 @@ from kypo2_openstack_lib.stack import Event, Resource
 from ....sandbox_common import utils, exceptions
 from ....sandbox_common.sshconfig import Config
 
-from ...models import Sandbox
+from ...models import Sandbox, Lock
 from .topology import Topology
 from .sshconfig import SandboxSSHConfigCreator
 
@@ -70,24 +70,9 @@ def lock_sandbox(sandbox: Sandbox):
     """Locks given sandbox. Raise ValidationError if already locked."""
     with transaction.atomic():
         sandbox = Sandbox.objects.select_for_update().get(pk=sandbox.id)
-        if sandbox.locked:
+        if hasattr(sandbox, 'lock'):
             raise exceptions.ValidationError("Sandbox already locked.")
-        else:
-            sandbox.locked = True
-            sandbox.save()
-        return sandbox
-
-
-def unlock_sandbox(sandbox: Sandbox):
-    """Unlocks given sandbox. Raise ValidationError if already unlocked."""
-    with transaction.atomic():
-        sandbox = Sandbox.objects.select_for_update().get(pk=sandbox.id)
-        if not sandbox.locked:
-            raise exceptions.ValidationError("Sandbox already unlocked.")
-        else:
-            sandbox.locked = False
-            sandbox.save()
-        return sandbox
+        return Lock.objects.create(sandbox=sandbox)
 
 
 def get_sandbox_topology(sandbox: Sandbox) -> Topology:

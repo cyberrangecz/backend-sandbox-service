@@ -51,7 +51,10 @@ urlpatterns = [
 
     # Sandboxes
     path('sandboxes/<int:sandbox_id>/', views.SandboxDetail.as_view(), name='sandbox-detail'),
-    path('sandboxes/<int:sandbox_id>/lock/', views.SandboxLock.as_view(), name='sandbox-lock'),
+    path('sandboxes/<int:sandbox_id>/lock/', views.SandboxLockList.as_view(),
+         name='sandbox-lock-list'),
+    path('sandboxes/<int:sandbox_id>/lock/<int:lock_id>/', views.SandboxLockDetail.as_view(),
+         name='sandbox-lock-detail'),
     path('sandboxes/<int:sandbox_id>/topology/',
          cache_page(None)(views.SandboxTopology.as_view()), name='sandbox-topology'),
 
