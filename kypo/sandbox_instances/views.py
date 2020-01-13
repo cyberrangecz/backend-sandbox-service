@@ -277,7 +277,7 @@ class SandboxDetail(generics.GenericAPIView):
     queryset = Sandbox.objects.all()
 
 
-class SandboxLockList(mixins.CreateModelMixin, generics.GenericAPIView):
+class SandboxLockList(mixins.ListModelMixin, generics.GenericAPIView):
     queryset = Lock.objects.all()
     serializer_class = serializers.LockSerializer
 
@@ -286,6 +286,10 @@ class SandboxLockList(mixins.CreateModelMixin, generics.GenericAPIView):
         sandbox = sandbox_service.get_sandbox(sandbox_id)
         lock = sandbox_service.lock_sandbox(sandbox)
         return Response(self.serializer_class(lock).data, status=status.HTTP_201_CREATED)
+
+    def get(self, request, *args, **kwargs):
+        """List locks for given sandbox."""
+        return self.list(request, *args, **kwargs)
 
 
 class SandboxLockDetail(generics.DestroyAPIView):
