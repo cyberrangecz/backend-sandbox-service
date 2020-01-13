@@ -122,6 +122,5 @@ def get_unlocked_sandbox(pool: Pool) -> Optional[Sandbox]:
             .first()
         if not sandbox:
             return None
-        sandbox.lock = Lock.objects.create()
-        sandbox.save()
+        Lock.objects.create(sandbox=sandbox)
         return sandbox

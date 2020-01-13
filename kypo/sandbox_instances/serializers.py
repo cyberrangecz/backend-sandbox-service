@@ -7,6 +7,8 @@ Validators validate single fields or entire objects.
 
 Swagger can utilise type hints to determine type, so use them in your own methods.
 """
+from typing import Optional
+
 from rest_framework import serializers
 
 from ..sandbox_common.config import config
@@ -97,10 +99,16 @@ class OpenstackCleanupStageSerializer(CleanupStageSerializer):
 
 
 class SandboxSerializer(serializers.ModelSerializer):
+    lock = serializers.SerializerMethodField()
+
     class Meta:
         model = models.Sandbox
         fields = ('id', 'lock',)
         read_only_fields = ('id', 'lock',)
+
+    @staticmethod
+    def get_lock(obj) -> Optional[int]:
+        return obj.lock.id if hasattr(obj, 'lock') else None
 
 
 class LockSerializer(serializers.ModelSerializer):

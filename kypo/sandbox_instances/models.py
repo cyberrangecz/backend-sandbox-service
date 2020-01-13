@@ -45,22 +45,11 @@ class SandboxAllocationUnit(models.Model):
         return self.pool.definition.name + '-' + str(self.id)
 
 
-class Lock(models.Model):
-    pass
-
-
 class Sandbox(models.Model):
     allocation_unit = models.OneToOneField(
         SandboxAllocationUnit,
         on_delete=models.PROTECT,
         related_name='sandbox',
-    )
-    lock = models.OneToOneField(
-        Lock,
-        on_delete=models.PROTECT,
-        related_name='sandbox',
-        null=True,
-        default=None,
     )
     private_user_key = models.TextField()
     public_user_key = models.TextField()
@@ -69,12 +58,23 @@ class Sandbox(models.Model):
         ordering = ['id']
 
     def __str__(self):
-        return "ID: {0.id}, ALLOCATION_UNIT: {0.allocation_unit.id}, " \
-               "LOCK: {0.lock}".format(self)
+        return f"ID: {self.id}, ALLOCATION_UNIT: {self.allocation_unit.id}, " \
+               f"LOCK: {self.lock.id if hasattr(self, 'lock') else None}"
 
     def get_stack_name(self) -> str:
         """Returns a name of the stack for this sandbox"""
         return self.allocation_unit.get_stack_name()
+
+
+class Lock(models.Model):
+    sandbox = models.OneToOneField(
+        Sandbox,
+        on_delete=models.PROTECT,
+        related_name='lock',
+    )
+
+    def __str__(self):
+        return f"ID: {self.id}, Sandbox: {self.sandbox.id}"
 
 
 class SandboxRequest(models.Model):
