@@ -20,7 +20,7 @@ def cleanup_sandbox_request(allocation_unit: SandboxAllocationUnit) -> CleanupRe
     except ObjectDoesNotExist:
         sandbox = None
 
-    if sandbox and sandbox.lock:
+    if sandbox and hasattr(sandbox, 'lock'):
         raise exceptions.ValidationError('Sandbox ID={} is locked.'.format(sandbox.id))
 
     # TODO: allow delete while still running
@@ -41,11 +41,18 @@ def cleanup_sandbox_request(allocation_unit: SandboxAllocationUnit) -> CleanupRe
 def enqueue_request(request: CleanupRequest,
                     allocation_unit: SandboxAllocationUnit) -> None:
     """Enqueue given request."""
-    stg1 = StackCleanupStage.objects.create(request=request)
-    queue = django_rq.get_queue(config.OPENSTACK_QUEUE,
-                                default_timeout=config.SANDBOX_DELETE_TIMEOUT)
-    queue.enqueue(StackCleanupStageManager().run, stage=stg1,
-                  allocation_unit=allocation_unit)
+    alloc_stages = allocation_unit.allocation_request.stages.all().select_subclasses()
+    stg1 = StackCleanupStage.objects.create(request=request, allocation_stage=alloc_stages[0])
+    queue_openstack = django_rq.get_queue(config.OPENSTACK_QUEUE,
+                                          default_timeout=config.SANDBOX_DELETE_TIMEOUT)
+    result_openstack = queue_openstack.enqueue(StackCleanupStageManager().run, stage=stg1,
+                                               allocation_unit=allocation_unit)
+
+    # TODO: create and enqueue remaining stages
+
+    queue_default = django_rq.get_queue()
+    queue_default.enqueue(delete_allocation_unit, allocation_unit=allocation_unit,
+                          depends_on=result_openstack)
 
 
 class StackCleanupStageManager:
