@@ -308,6 +308,7 @@ class SandboxTopology(generics.GenericAPIView):
     serializer_class = serializers.TopologySerializer
     pagination_class = None
 
+    # noinspection PyUnusedLocal
     def get(self, request, sandbox_id):
         """Get topology data for given sandbox.
         Hosts specified as hidden are filtered out, but the network is still visible.
@@ -324,6 +325,7 @@ class SandboxVMDetail(generics.GenericAPIView):
     lookup_url_kwarg = "sandbox_id"
     serializer_class = serializers.NodeSerializer
 
+    # noinspection PyUnusedLocal
     def get(self, request, sandbox_id, vm_name):
         """Retrieve a VM info.
         Important Statuses:
@@ -336,6 +338,7 @@ class SandboxVMDetail(generics.GenericAPIView):
         node = node_service.get_node(sandbox, vm_name)
         return Response(serializers.NodeSerializer(node).data)
 
+    # noinspection PyUnusedLocal
     @swagger_auto_schema(request_body=serializers.NodeActionSerializer(),
                          responses={status.HTTP_200_OK: serializers.serializers.Serializer()})
     def patch(self, request, sandbox_id, vm_name):
@@ -360,6 +363,7 @@ class SandboxVMConsole(generics.GenericAPIView):
     serializer_class = serializers.NodeConsoleSerializer
     pagination_class = None
 
+    # noinspection PyUnusedLocal
     def get(self, request, sandbox_id, vm_name):
         """Get a console for given machine. It is active for 2 hours.
         But when the connection is active, it does not disconnect.
@@ -372,7 +376,8 @@ class SandboxVMConsole(generics.GenericAPIView):
 class SandboxUserSSHConfig(APIView):
     queryset = Sandbox.objects.none()  # Required for DjangoModelPermissions
 
-    def get(self, request, sandbox_id):
+    @staticmethod
+    def get(request, sandbox_id):
         """Generate SSH config for User access to this sandbox.
         Some values are user specific, the config contains placeholders for them."""
         sandbox = sandbox_service.get_sandbox(sandbox_id)
@@ -386,7 +391,8 @@ class SandboxUserSSHConfig(APIView):
 class SandboxManagementSSHConfig(APIView):
     queryset = Sandbox.objects.none()  # Required for DjangoModelPermissions
 
-    def get(self, request, sandbox_id):
+    @staticmethod
+    def get(request, sandbox_id):
         """Generate SSH config for Management access to this sandbox.
         Some values are user specific, the config contains placeholders for them."""
         sandbox = sandbox_service.get_sandbox(sandbox_id)
@@ -395,5 +401,3 @@ class SandboxManagementSSHConfig(APIView):
                                 content_type='application/txt')
         response['Content-Disposition'] = "attachment; filename=config"
         return response
-
-
