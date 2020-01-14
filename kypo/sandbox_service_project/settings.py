@@ -198,7 +198,7 @@ CACHES = {
     }
 }
 
-KYPO_DJANGO_OPENSTACK_CONFIG = os.path.join(BASE_DIR, 'devel-config.yml')
+KYPO_DJANGO_OPENSTACK_CONFIG = os.path.join(BASE_DIR, 'config.yml')
 
 RQ_QUEUES = {
     'default': {
