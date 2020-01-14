@@ -102,6 +102,19 @@ class SandboxAllocationUnitList(mixins.ListModelMixin, generics.GenericAPIView):
         """Get a list of Sandbox Allocation Units."""
         return self.list(request, *args, **kwargs)
 
+    # noinspection PyUnusedLocal
+    @swagger_auto_schema(responses={status.HTTP_202_ACCEPTED:
+                                    serializers.CleanupRequestSerializer(many=True)})
+    def delete(self, request, pool_id):
+        """Delete all Sandbox Allocation Units in pool.
+        __NOTE:__ The sandboxes associated with the Allocation units cannot be locked,
+        or the call fails.
+        """
+        pool = pool_service.get_pool(pool_id)
+        requests = pool_service.delete_allocation_units(pool)
+        serializer = serializers.CleanupRequestSerializer(requests, many=True)
+        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+
 
 class SandboxAllocationUnitDetail(generics.RetrieveAPIView, generics.GenericAPIView):
     """get: Retrieve a Sandbox Allocation Unit."""
@@ -117,7 +130,8 @@ class SandboxAllocationRequestList(generics.ListAPIView):
 
     def get_queryset(self):
         unit_id = self.kwargs.get('unit_id')
-        get_object_or_404(SandboxAllocationUnit, pk=unit_id)  # check that given request exists
+        # check that given request exists
+        get_object_or_404(SandboxAllocationUnit, pk=unit_id)
         return AllocationRequest.objects.filter(allocation_unit=unit_id)
 
 

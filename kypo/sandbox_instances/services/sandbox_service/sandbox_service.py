@@ -1,16 +1,14 @@
 """
 Sandbox Service module for Sandbox management.
 """
-from typing import Iterable, List
 import structlog
 from django.db import transaction
 from rest_framework.generics import get_object_or_404
 
-from kypo2_openstack_lib.stack import Event, Resource
-from ....sandbox_common import utils, exceptions
+from ....sandbox_common import exceptions
 from ....sandbox_common.sshconfig import Config
 
-from ...models import Sandbox
+from ...models import Sandbox, Lock
 from .topology import Topology
 from .sshconfig import SandboxSSHConfigCreator
 

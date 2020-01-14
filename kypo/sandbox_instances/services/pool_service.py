@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404
 
 from ...sandbox_common import utils, exceptions
 
-from . import sandbox_service, sandbox_creator
+from . import sandbox_service, sandbox_creator, sandbox_destructor
 from ..models import Pool, Sandbox, SandboxAllocationUnit, CleanupRequest, Lock
 from .. import serializers
 
@@ -100,11 +100,10 @@ def create_sandboxes_in_pool(pool: Pool, count: int = None) -> List[SandboxAlloc
         return sandbox_creator.create_sandbox_requests(pool, count)
 
 
-# TODO: fix
-# def delete_sandboxes_in_pool(pool: Pool) -> None:
-#     """Delete all sandboxes in given pool."""
-#     sandboxes = get_sandboxes_in_pool(pool)
-#     sandbox_service.delete_sandboxes(sandboxes)
+def delete_allocation_units(pool: Pool) -> List[CleanupRequest]:
+    """Delete all sandboxes in given pool."""
+    units = pool.allocation_units.all()
+    return [sandbox_destructor.cleanup_sandbox_request(unit) for unit in units]
 
 
 def get_unlocked_sandbox(pool: Pool) -> Optional[Sandbox]:
