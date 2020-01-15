@@ -1,3 +1,11 @@
 from django.contrib import admin
 
-# Register your models here.
+from .import models
+
+
+class ShowIdAdmin(admin.ModelAdmin):
+    # show id in the web admin
+    readonly_fields = ('id',)
+
+
+admin.site.register(models.Definition, ShowIdAdmin)

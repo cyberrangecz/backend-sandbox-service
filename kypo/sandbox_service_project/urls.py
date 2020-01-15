@@ -13,16 +13,63 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.conf.urls import url
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, re_path, include
+from rest_framework import permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+
+from ..sandbox_common.config import config
+
+HEADER = """
+## Specification of REST responses
+
+__Success JSON__
+```json
+{
+    Requested data or empty if no data requested.
+}
+```
+
+__Error JSON__
+```json
+{
+    detail: error message,
+    parameters: {
+        Dictionary of call parameters
+        name: value
+    }
+}
+```
+"""
+
+schema_view = get_schema_view(
+    openapi.Info(
+        title="KYPO2 OpenStack REST API documentation",
+        default_version=config.VERSION,
+        description=HEADER,
+    ),
+    validators=[],
+    public=True,
+    permission_classes=(permissions.AllowAny,),
+)
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    url(r'^api-auth/', include('rest_framework.urls')),
+    path('admin/', admin.site.urls, name='admin'),
+
+    path('doc/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    re_path(r'^doc(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0),
+            name='schema-json'),
+
+    path('django-rq/', include('django_rq.urls')),
 
     # Include Apps' URLs
-    url('', include('kypo.sandbox_ansible_runs.urls')),
-    url('', include('kypo.sandbox_definitions.urls')),
-    url('', include('kypo.sandbox_instances.urls')),
+    path('', include('kypo.sandbox_ansible_runs.urls')),
+    path('', include('kypo.sandbox_definitions.urls')),
+    path('', include('kypo.sandbox_instances.urls')),
+]
+
+# Prefixing urls
+urlpatterns = [
+    path(config.URL_PREFIX, include(urlpatterns)),
 ]
