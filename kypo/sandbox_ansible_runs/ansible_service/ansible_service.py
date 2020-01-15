@@ -8,7 +8,7 @@ LOG = structlog.get_logger()
 
 
 class AnsibleRunDockerContainer:
-    def __init__(self, image, url, rev, ssh_dir, inventory_path):
+    def __init__(self, image, url, rev, ssh_dir, inventory_path, local_git_repo=None):
         self.client = docker.from_env()
         self.killed = False
 
@@ -18,6 +18,9 @@ class AnsibleRunDockerContainer:
             ssh_dir: config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR'],
             inventory_path: config.ANSIBLE_DOCKER_VOLUMES_MAPPING['INVENTORY_PATH']
         }
+        if local_git_repo:
+            # TODO check if proper directory
+            volumes[local_git_repo] = {'bind': '/repos', 'mode': 'ro'}
         self.container = self.client.containers.run(image, detach=True,
                                                     command=command, volumes=volumes)
 
