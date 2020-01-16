@@ -7,8 +7,8 @@ from ...sandbox_common import utils, exceptions
 from ...sandbox_common.config import config
 
 from ..models import CleanupRequest, SandboxAllocationUnit, StackCleanupStage
-from ...sandbox_ansible_runs import ansible_service
-from ...sandbox_ansible_runs.models import AnsibleCleanupStage
+from ...sandbox_ansible_app import ansible_service
+from ...sandbox_ansible_app.models import AnsibleCleanupStage
 
 LOG = structlog.get_logger()
 

@@ -1,6 +1,6 @@
 from django.db import models
 
-from ..sandbox_instances.models import ExternalDependency, AllocationStage,\
+from ..sandbox_instance_app.models import ExternalDependency, AllocationStage,\
     CleanupStage, StageType
 
 
