@@ -18,7 +18,7 @@ from kypo2_openstack_lib.stack import Event, Resource
 from ...sandbox_common import utils, exceptions
 from ...sandbox_common.config import config
 
-from ...sandbox_definition_app import definition_service
+from ...sandbox_definition_app.lib import definition_service
 from ...sandbox_ansible_app.lib import ansible_service
 from ...sandbox_ansible_app.lib.inventory import Inventory
 from ...sandbox_ansible_app.models import AnsibleAllocationStage,\

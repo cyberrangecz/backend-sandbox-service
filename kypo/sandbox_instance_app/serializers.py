@@ -12,7 +12,7 @@ from typing import Optional
 from rest_framework import serializers
 
 from ..sandbox_common.config import config
-from .services import pool_service
+from .lib import pool_service
 from . import models
 
 
