@@ -2,11 +2,11 @@ import structlog
 import yaml
 
 from kypo2_openstack_lib.sandbox import Sandbox as Stack
-from ....sandbox_common import utils
-from ....sandbox_common.config import config
+from ...sandbox_common import utils
+from ...sandbox_common.config import config
 
-from ....sandbox_definitions.definition_service import get_sandbox_definition
-from ...models import Sandbox
+from ...sandbox_definition_app.lib.definition_service import get_sandbox_definition
+from ..models import Sandbox
 
 LOG = structlog.getLogger()
 

@@ -2,11 +2,11 @@ from typing import List
 import structlog
 
 from kypo2_openstack_lib.sandbox import Host, Router, Link, MAN
-from ....sandbox_common import utils
-from ....sandbox_common.config import config
-from ....sandbox_common import sshconfig
+from ...sandbox_common import utils
+from ...sandbox_common.config import config
+from ...sandbox_common import sshconfig
 
-from ...models import Sandbox
+from ..models import Sandbox
 
 LOG = structlog.getLogger()
 

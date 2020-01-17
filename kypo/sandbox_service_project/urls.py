@@ -64,9 +64,9 @@ urlpatterns = [
     path('django-rq/', include('django_rq.urls')),
 
     # Include Apps' URLs
-    path('', include('kypo.sandbox_ansible_runs.urls')),
-    path('', include('kypo.sandbox_definitions.urls')),
-    path('', include('kypo.sandbox_instances.urls')),
+    path('', include('kypo.sandbox_ansible_app.urls')),
+    path('', include('kypo.sandbox_definition_app.urls')),
+    path('', include('kypo.sandbox_instance_app.urls')),
 ]
 
 # Prefixing urls

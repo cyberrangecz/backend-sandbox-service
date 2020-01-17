@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404
 
 from ...sandbox_common import utils, exceptions
 
-from . import sandbox_service, sandbox_creator, sandbox_destructor
+from . import sandbox_creator, sandbox_destructor
 from ..models import Pool, Sandbox, SandboxAllocationUnit, CleanupRequest, Lock
 from .. import serializers
 

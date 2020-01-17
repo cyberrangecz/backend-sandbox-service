@@ -18,9 +18,10 @@ from kypo2_openstack_lib.stack import Event, Resource
 from ...sandbox_common import utils, exceptions
 from ...sandbox_common.config import config
 
-from ...sandbox_definitions import definition_service
-from ...sandbox_ansible_runs import ansible_service
-from ...sandbox_ansible_runs.models import AnsibleAllocationStage,\
+from ...sandbox_definition_app.lib import definition_service
+from ...sandbox_ansible_app.lib import ansible_service
+from ...sandbox_ansible_app.lib.inventory import Inventory
+from ...sandbox_ansible_app.models import AnsibleAllocationStage,\
     AnsibleOutput, DockerContainer
 
 from . import sandbox_service
@@ -279,8 +280,8 @@ class AnsibleAllocationStageManager:
                                         config.USER_PRIVATE_KEY_FILENAME)
         user_public_key = os.path.join(config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
                                        config.USER_PUBLIC_KEY_FILENAME)
-        inventory = ansible_service.Inventory.create_inventory(stack, sandbox_definition,
-                                                               user_private_key, user_public_key)
+        inventory = Inventory.create_inventory(stack, sandbox_definition,
+                                                   user_private_key, user_public_key)
 
         inventory_path = os.path.join(self.directory, config.ANSIBLE_INVENTORY_FILENAME)
         self.save_file(inventory_path, yaml.dump(inventory, default_flow_style=False, indent=2))

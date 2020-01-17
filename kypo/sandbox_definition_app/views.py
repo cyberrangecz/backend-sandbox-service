@@ -2,7 +2,8 @@ from rest_framework import status, generics, mixins
 from rest_framework.response import Response
 
 from .models import Definition
-from . import serializers, definition_service
+from . import serializers
+from .lib import definition_service
 
 
 class DefinitionList(mixins.ListModelMixin,

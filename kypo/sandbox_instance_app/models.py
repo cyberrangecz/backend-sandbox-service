@@ -4,7 +4,7 @@ from django.utils import timezone
 from model_utils.managers import InheritanceManager
 
 from ..sandbox_common import utils
-from ..sandbox_definitions.models import Definition
+from ..sandbox_definition_app.models import Definition
 
 
 class StageType(Enum):
