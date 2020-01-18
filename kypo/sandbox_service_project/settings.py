@@ -129,7 +129,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATIC_URL = '/static/'
 
 REST_FRAMEWORK = {
-    'EXCEPTION_HANDLER': 'kypo.sandbox_common.exceptions.custom_exception_handler',
+    'EXCEPTION_HANDLER': 'kypo.sandbox_common.exc_handler.custom_exception_handler',
     'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.AllowAny', ),
 
     'DEFAULT_PAGINATION_CLASS': 'kypo.sandbox_common.pagination.PageNumberWithPageSizePagination',
