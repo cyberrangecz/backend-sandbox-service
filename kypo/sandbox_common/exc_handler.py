@@ -34,7 +34,7 @@ def custom_exception_handler(exc, context):
                 'parameters': context['kwargs']
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    LOG.error(repr(exc), data=response.data, exc_info=True)
+    LOG.error(repr(exc), data=response.data if response else None, exc_info=True)
     return response
 
 
