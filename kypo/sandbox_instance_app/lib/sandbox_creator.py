@@ -192,7 +192,8 @@ class AnsibleAllocationStageManager:
         self.stage = stage
         self.sandbox = sandbox
         self.directory = os.path.join(config.ANSIBLE_DOCKER_VOLUMES,
-                                      sandbox.get_stack_name(), str(stage.id))
+                                      sandbox.get_stack_name(),
+                                      f'{stage.id}-{utils.get_simple_uuid()}')
 
     def run(self, name: str) -> None:
         """Run the stage."""
@@ -231,8 +232,9 @@ class AnsibleAllocationStageManager:
         self.save_file(os.path.join(ssh_directory, config.MNG_PRIVATE_KEY_FILENAME),
                        self.stage.request.allocation_unit.pool.private_management_key)
 
-        shutil.copy(config.GIT_PRIVATE_KEY,
-                    os.path.join(ssh_directory, os.path.basename(config.GIT_PRIVATE_KEY)))
+        if not ansible_service.AnsibleRunDockerContainer.is_local_repo(self.stage.repo_url):
+            shutil.copy(config.GIT_PRIVATE_KEY,
+                        os.path.join(ssh_directory, os.path.basename(config.GIT_PRIVATE_KEY)))
 
         stack = utils.get_ostack_client().get_sandbox(self.sandbox.get_stack_name())
         mng_private_key = os.path.join(config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
@@ -281,7 +283,7 @@ class AnsibleAllocationStageManager:
         user_public_key = os.path.join(config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
                                        config.USER_PUBLIC_KEY_FILENAME)
         inventory = Inventory.create_inventory(stack, sandbox_definition,
-                                                   user_private_key, user_public_key)
+                                               user_private_key, user_public_key)
 
         inventory_path = os.path.join(self.directory, config.ANSIBLE_INVENTORY_FILENAME)
         self.save_file(inventory_path, yaml.dump(inventory, default_flow_style=False, indent=2))

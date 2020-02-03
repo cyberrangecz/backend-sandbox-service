@@ -270,6 +270,8 @@ class SandboxGetAndLock(generics.GenericAPIView):
     lookup_url_kwarg = "pool_id"
     pagination_class = None
 
+    @swagger_auto_schema(
+         responses={status.HTTP_200_OK: serializers.SandboxSerializer()})
     def get(self, request, pool_id):
         """Get unlocked sandbox in given pool and lock it. Return 409 if all are locked."""
         pool = pool_service.get_pool(pool_id)
