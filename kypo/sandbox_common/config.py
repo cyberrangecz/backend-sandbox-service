@@ -39,6 +39,10 @@ class Settings:
         'INVENTORY_PATH': {
             'bind': os.path.join(ANSIBLE_DOCKER_WORKING_DIR, 'inventory.yml'),
             'mode': 'ro'
+        },
+        'LOCAL_REPO': {
+            'bind': 'path',
+            'mode': 'ro'
         }
     }
 

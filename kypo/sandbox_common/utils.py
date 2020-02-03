@@ -97,6 +97,8 @@ def wait_for(cond: Callable, timeout: int, freq: int, factor: float = 1.1, initi
     The time spent by condition check is not included.
     raises: LimitExceededError: on timeout with errmsg
     """
+    init_freq = freq
+    max_freq = 3 * init_freq
     time.sleep(initial_wait)
     elapsed = initial_wait
 
@@ -105,7 +107,7 @@ def wait_for(cond: Callable, timeout: int, freq: int, factor: float = 1.1, initi
         if elapsed > timeout:
             raise exceptions.LimitExceededError(errmsg)
         time.sleep(int(freq))
-        freq *= factor
+        freq = min(freq * factor, max_freq)
 
 
 def get_simple_uuid() -> str:
