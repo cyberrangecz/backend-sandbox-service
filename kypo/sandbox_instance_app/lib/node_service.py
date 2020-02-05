@@ -1,9 +1,10 @@
 """
 VM Service module for VM management.
 """
-from ...sandbox_common import utils, exceptions
-from ..models import Sandbox
 from kypo2_openstack_lib.instance import Instance
+
+from ..models import Sandbox
+from ...sandbox_common_lib import utils, exceptions
 
 
 def node_action(sandbox: Sandbox, node_name: str, action: str) -> None:

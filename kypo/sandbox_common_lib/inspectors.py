@@ -1,9 +1,11 @@
 """
 Inspectors for proper documentation schemas generation.
 """
+from collections import OrderedDict
+
 from drf_yasg import openapi
 from drf_yasg.inspectors import PaginatorInspector, NotHandled
-from collections import OrderedDict
+
 from . import pagination
 
 

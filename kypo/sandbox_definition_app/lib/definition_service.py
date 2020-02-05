@@ -1,15 +1,16 @@
 """
 Definition Service module for Definition management.
 """
+from typing import Optional
+
 import structlog
 import yaml
 from git.exc import GitCommandError
-from typing import Optional
 
-from ...sandbox_common import utils, exceptions
-from ...sandbox_common.config import config
 from .. import serializers
 from ..models import Definition
+from ...sandbox_common_lib import utils, exceptions
+from ...sandbox_common_lib.config import config
 
 LOG = structlog.get_logger()
 

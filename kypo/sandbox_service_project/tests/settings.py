@@ -129,16 +129,16 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATIC_URL = '/static/'
 
 REST_FRAMEWORK = {
-    'EXCEPTION_HANDLER': 'kypo.sandbox_common.exc_handler.custom_exception_handler',
+    'EXCEPTION_HANDLER': 'kypo.sandbox_common_lib.exc_handler.custom_exception_handler',
     'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.AllowAny', ),
 
-    'DEFAULT_PAGINATION_CLASS': 'kypo.sandbox_common.pagination.PageNumberWithPageSizePagination',
+    'DEFAULT_PAGINATION_CLASS': 'kypo.sandbox_common_lib.pagination.PageNumberWithPageSizePagination',
     'PAGE_SIZE': 50,
 }
 
 SWAGGER_SETTINGS = {
     'DEFAULT_PAGINATOR_INSPECTORS': [
-        'kypo.sandbox_common.inspectors.PageNumberWithPageSizePaginationInspector',
+        'kypo.sandbox_common_lib.inspectors.PageNumberWithPageSizePaginationInspector',
         'drf_yasg.inspectors.DjangoRestResponsePagination',
         'drf_yasg.inspectors.CoreAPICompatInspector',
     ],
@@ -147,7 +147,7 @@ SWAGGER_SETTINGS = {
 if AUTHENTICATED_REST_API:
     REST_FRAMEWORK.update({
         'DEFAULT_PERMISSION_CLASSES': (
-            'kypo.sandbox_common.permissions.ModelPermissions',
+            'kypo.sandbox_common_lib.permissions.ModelPermissions',
         ),
         'DEFAULT_AUTHENTICATION_CLASSES': (
             # For testing purposes, uncomment BasicAuthentication.

@@ -4,12 +4,12 @@ Sandbox Service module for Sandbox management.
 import structlog
 from django.db import transaction
 from rest_framework.generics import get_object_or_404
-from ...sandbox_common import exceptions
-from ...sandbox_common.sshconfig import Config
 
-from ..models import Sandbox, Lock
-from .topology import Topology
 from .sshconfig import SandboxSSHConfigCreator
+from .topology import Topology
+from ..models import Sandbox, Lock
+from ...sandbox_common_lib import exceptions
+from ...sandbox_common_lib.sshconfig import Config
 
 LOG = structlog.getLogger()
 

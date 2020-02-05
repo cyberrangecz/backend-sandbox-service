@@ -1,10 +1,12 @@
 """
 REST API configuration file
 """
-import os
 import logging
+import os
+
 import yaml
 from django.conf import settings
+
 from .exceptions import ImproperlyConfigured
 
 

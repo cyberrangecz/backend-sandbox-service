@@ -11,9 +11,9 @@ from typing import Optional
 
 from rest_framework import serializers
 
-from ..sandbox_common.config import config
-from .lib import pool_service
 from . import models
+from .lib import pool_service
+from ..sandbox_common_lib.config import config
 
 
 class PoolSerializer(serializers.ModelSerializer):

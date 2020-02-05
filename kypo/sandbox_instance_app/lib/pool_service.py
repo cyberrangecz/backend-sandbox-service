@@ -1,17 +1,17 @@
 """
 Pool Service module for Pool management.
 """
+from typing import List, Dict, Optional
+
 import structlog
 from django.db import transaction
 from django.db.models import QuerySet
-from typing import List, Dict, Optional
 from django.shortcuts import get_object_or_404
 
-from ...sandbox_common import utils, exceptions
-
 from . import sandbox_creator, sandbox_destructor
-from ..models import Pool, Sandbox, SandboxAllocationUnit, CleanupRequest, Lock
 from .. import serializers
+from ..models import Pool, Sandbox, SandboxAllocationUnit, CleanupRequest, Lock
+from ...sandbox_common_lib import utils, exceptions
 
 LOG = structlog.get_logger()
 

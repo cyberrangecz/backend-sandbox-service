@@ -1,33 +1,31 @@
 import io
+import os
+import shutil
 import time
 from functools import partial
 from typing import List
+
 import django_rq
-import rq
-import structlog
-from django.db import transaction
-from django.utils import timezone
-import yaml
-import os
-import shutil
 import docker.errors
 import requests.exceptions as requests_exceptions
+import rq
+import structlog
+import yaml
+from django.db import transaction
+from django.utils import timezone
+from kypo2_openstack_lib.stack import Event, Resource
 from rq.job import Job
 
-from kypo2_openstack_lib.stack import Event, Resource
-from ...sandbox_common import utils, exceptions
-from ...sandbox_common.config import config
-
-from ...sandbox_definition_app.lib import definition_service
-from ...sandbox_ansible_app.lib import ansible_service
-from ...sandbox_ansible_app.lib.inventory import Inventory
-from ...sandbox_ansible_app.models import AnsibleAllocationStage,\
-    AnsibleOutput, DockerContainer
-
 from . import sandbox_service
-
 from ..models import Sandbox, Pool, SandboxAllocationUnit, \
     AllocationRequest, StackAllocationStage
+from ...sandbox_ansible_app.lib import ansible_service
+from ...sandbox_ansible_app.lib.inventory import Inventory
+from ...sandbox_ansible_app.models import AnsibleAllocationStage, \
+    AnsibleOutput, DockerContainer
+from ...sandbox_common_lib import utils, exceptions
+from ...sandbox_common_lib.config import config
+from ...sandbox_definition_app.lib import definition_service
 
 STACK_STATUS_CREATE_COMPLETE = "CREATE_COMPLETE"
 

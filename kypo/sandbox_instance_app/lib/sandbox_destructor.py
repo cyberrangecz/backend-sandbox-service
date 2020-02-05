@@ -1,14 +1,13 @@
 import django_rq
 import structlog
-from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
-
-from ...sandbox_common import utils, exceptions
-from ...sandbox_common.config import config
+from django.utils import timezone
 
 from ..models import CleanupRequest, SandboxAllocationUnit, StackCleanupStage
 from ...sandbox_ansible_app.lib import ansible_service
 from ...sandbox_ansible_app.models import AnsibleCleanupStage
+from ...sandbox_common_lib import utils, exceptions
+from ...sandbox_common_lib.config import config
 
 LOG = structlog.get_logger()
 

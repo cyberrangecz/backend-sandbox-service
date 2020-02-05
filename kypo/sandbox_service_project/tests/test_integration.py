@@ -1,18 +1,19 @@
 import os
 import string
 import tempfile
+from zipfile import ZipFile
+
 import pytest
 import structlog
-from zipfile import ZipFile
 from django.urls import reverse
 from redis import Redis
 from rest_framework import status
 from rq import SimpleWorker
 
 from kypo.sandbox_ansible_app.lib import ansible_service
-from kypo.sandbox_common.config import config
-from kypo.sandbox_common import utils
 from kypo.sandbox_ansible_app.models import AnsibleOutput, DockerContainer
+from kypo.sandbox_common_lib import utils
+from kypo.sandbox_common_lib.config import config
 from kypo.sandbox_instance_app.models import Sandbox
 
 LOG = structlog.get_logger()

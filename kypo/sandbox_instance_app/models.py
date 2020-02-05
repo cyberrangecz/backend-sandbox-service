@@ -1,9 +1,10 @@
 from enum import Enum
+
 from django.db import models
 from django.utils import timezone
 from model_utils.managers import InheritanceManager
 
-from ..sandbox_common import utils
+from ..sandbox_common_lib import utils
 from ..sandbox_definition_app.models import Definition
 
 

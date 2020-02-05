@@ -3,19 +3,19 @@ Simple utils module.
 """
 import json
 import logging
-import time
 import multiprocessing
-import uuid
-
-import paramiko
-import scp
-import git
 import os
-import structlog
-from Crypto.PublicKey import RSA
+import time
+import uuid
 from typing import Tuple, Callable, Optional
 
+import git
+import paramiko
+import scp
+import structlog
+from Crypto.PublicKey import RSA
 from kypo2_openstack_lib.ostack_client import KypoOstackClient
+
 from . import exceptions
 from .config import config
 

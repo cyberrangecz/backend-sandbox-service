@@ -1,24 +1,24 @@
-import structlog
 import io
+from wsgiref.util import FileWrapper
+
+import structlog
+from django.conf import settings
 from django.http import HttpResponse
 from django.utils.module_loading import import_string
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework.response import Response
 from rest_framework import status, generics, mixins
-from django.conf import settings
-from wsgiref.util import FileWrapper
 from rest_framework.generics import get_object_or_404
+from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ..sandbox_common import exceptions
-from ..sandbox_common.permissions import AllowReadOnViewSandbox
-
 from . import serializers
-from .lib import pool_service, sandbox_service, node_service,\
+from .lib import pool_service, sandbox_service, node_service, \
     sandbox_creator, sandbox_destructor
 from .models import Pool, Sandbox, SandboxAllocationUnit, AllocationRequest, AllocationStage, \
     StackAllocationStage, CleanupRequest, StackCleanupStage, CleanupStage, Lock
+from ..sandbox_common_lib import exceptions
+from ..sandbox_common_lib.permissions import AllowReadOnViewSandbox
 
 # Create logger and configure logging
 LOG = structlog.get_logger()
