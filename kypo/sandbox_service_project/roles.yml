@@ -11,20 +11,57 @@
     - change_pool
     - delete_pool
 
-    - view_sandboxcreaterequest
-    - add_sandboxcreaterequest
-    - change_sandboxcreaterequest
-    - delete_sandboxcreaterequest
+    - view_sandboxallocationunit
+    - add_sandboxallocationunit
+    - change_sandboxallocationunit
+    - delete_sandboxallocationunit
 
-    - view_sandboxdeleterequest
-    - add_sandboxdeleterequest
-    - change_sandboxdeleterequest
-    - delete_sandboxdeleterequest
+    - view_allocationrequest
+    - add_allocationrequest
+    - change_allocationrequest
+    - delete_allocationrequest
+
+    - view_cleanuprequest
+    - add_cleanuprequest
+    - change_cleanuprequest
+    - delete_cleanuprequest
 
     - view_sandbox
     - add_sandbox
     - change_sandbox
     - delete_sandbox
+
+    - view_lock
+    - add_lock
+    - change_lock
+    - delete_lock
+
+    # Allocation Stages
+    - view_stackallocationstage
+    - add_stackallocationstage
+    - change_stackallocationstage
+    - delete_stackallocationstage
+
+    - view_ansibleallocationstage
+    - add_ansibleallocationstage
+    - change_ansibleallocationstage
+    - delete_ansibleallocationstage
+
+    - view_ansibleoutput
+    - add_ansibleoutput
+    - change_ansibleoutput
+    - delete_ansibleoutput
+
+    # Cleanup Stages
+    - view_stackcleanupstage
+    - add_stackcleanupstage
+    - change_stackcleanupstage
+    - delete_stackcleanupstage
+
+    - view_ansiblecleanupstage
+    - add_ansiblecleanupstage
+    - change_ansiblecleanupstage
+    - delete_ansiblecleanupstage
 
 - name: designer
   default: false
@@ -42,20 +79,57 @@
     - change_pool
     - delete_pool
 
-    - view_sandboxcreaterequest
-    - add_sandboxcreaterequest
-    - change_sandboxcreaterequest
-    - delete_sandboxcreaterequest
+    - view_sandboxallocationunit
+    - add_sandboxallocationunit
+    - change_sandboxallocationunit
+    - delete_sandboxallocationunit
 
-    - view_sandboxdeleterequest
-    - add_sandboxdeleterequest
-    - change_sandboxdeleterequest
-    - delete_sandboxdeleterequest
+    - view_allocationrequest
+    - add_allocationrequest
+    - change_allocationrequest
+    - delete_allocationrequest
+
+    - view_cleanuprequest
+    - add_cleanuprequest
+    - change_cleanuprequest
+    - delete_cleanuprequest
 
     - view_sandbox
     - add_sandbox
     - change_sandbox
     - delete_sandbox
+
+    - view_lock
+    - add_lock
+    - change_lock
+    - delete_lock
+
+    # Allocation Stages
+    - view_stackallocationstage
+    - add_stackallocationstage
+    - change_stackallocationstage
+    - delete_stackallocationstage
+
+    - view_ansibleallocationstage
+    - add_ansibleallocationstage
+    - change_ansibleallocationstage
+    - delete_ansibleallocationstage
+
+    - view_ansibleoutput
+    - add_ansibleoutput
+    - change_ansibleoutput
+    - delete_ansibleoutput
+
+    # Cleanup Stages
+    - view_stackcleanupstage
+    - add_stackcleanupstage
+    - change_stackcleanupstage
+    - delete_stackcleanupstage
+
+    - view_ansiblecleanupstage
+    - add_ansiblecleanupstage
+    - change_ansiblecleanupstage
+    - delete_ansiblecleanupstage
 
 - name: trainee
   default: true

@@ -50,6 +50,16 @@ Django application. It contains several modules.
     - `Sandbox Creator` for asynchronous sandbox creation
     - `Sandbox Destructor` for asynchronous sandbox cleanup
 
+
+## Register roles
+>>>>>>> fix readme
+To register user roles set the appropriase settings for `CSIRTMU_UAG_AUTH`
+in `settings.py` file and run the following command.
+```
+pipenv run python manage.py register_roles
+```
+
+
 ## Run tests
 - ### Unit
 ```bash
