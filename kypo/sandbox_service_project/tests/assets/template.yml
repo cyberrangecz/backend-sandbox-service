@@ -1,0 +1,91 @@
+heat_template_version: '2016-04-08'
+
+description: Integration test heat template
+
+parameters:
+    jump_image:
+        type: string
+        default: $JUMP_IMAGE
+        constraints:
+          - custom_constraint: glance.image
+
+    jump_flavor:
+        type: string
+        default: $JUMP_FLAVOR
+        constraints:
+          - custom_constraint: nova.flavor
+          
+    public_network:
+        type: string
+        default: $PUBLIC_NETWORK
+
+###################################################
+
+resources:
+    jump_network:
+        type: OS::Neutron::Net
+        properties:
+            name: jump_network
+
+    jump_network_subnet:
+        type: OS::Neutron::Subnet
+        depends_on: [jump_network]
+        properties:
+            name: jump_network_subnet
+            cidr: 192.168.64.0/18
+            ip_version: 4
+            dns_nameservers: [8.8.8.8]
+            network:
+                get_resource: jump_network
+
+    test_router:
+        type : OS::Neutron::Router
+        properties:
+            name: test_router
+            external_gateway_info:
+                network: { get_param: public_network }
+
+    test_router_interface:
+        type: OS::Neutron::RouterInterface
+        depends_on: [jump_network_subnet, test_router]
+        properties:
+            router: { get_resource: test_router }
+            subnet: { get_resource: jump_network_subnet }
+
+    jump_port:
+        type: OS::Neutron::Port
+        depends_on: [jump_network_subnet]
+        properties:
+            network_id: { get_resource: jump_network }
+            fixed_ips:
+                - subnet_id: { get_resource: jump_network_subnet }
+
+    floating_ip:
+        type: OS::Neutron::FloatingIP
+        depends_on: [jump_port]
+        properties:
+            floating_network_id: { get_param: public_network }
+            port_id: { get_resource: jump_port }
+
+    test_key:
+        type: OS::Nova::KeyPair
+        properties:
+          name: test_key
+          save_private_key: True
+
+    jump_server:
+        type: OS::Nova::Server
+        depends_on: [jump_network_subnet, jump_port]
+        properties:
+            name: jump_server
+            key_name: { get_resource: test_key }
+            image: { get_param: jump_image }
+            flavor: { get_param: jump_flavor }
+            networks:
+                - port: { get_resource: jump_port }
+
+outputs:
+    jump_ip:
+        value: { get_attr: [floating_ip, floating_ip_address] }
+    test_key:
+        value: { get_attr: [test_key, private_key] }

@@ -49,4 +49,21 @@ Django application. It contains several modules.
     - `Ansible service` for management of Ansible
     - `Sandbox Creator` for asynchronous sandbox creation
     - `Sandbox Destructor` for asynchronous sandbox cleanup
-   
+
+## Run tests
+- ### Unit
+```bash
+pipevn run tox
+```
+- ### Integration
+You need to have OpenStack credentials in you environment variables:
+```bash
+OS_AUTH_URL
+OS_APPLICATION_CREDENTIAL_ID
+OS_APPLICATION_CREDENTIAL_SECRET
+```
+Then run the following command.
+```bash
+pipevn run tox -- -m integration
+```
+__NOTE__: Kill all running workers before running integration tests.
