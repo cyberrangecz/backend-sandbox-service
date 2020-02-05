@@ -1,35 +1,36 @@
 Host man 201.201.2.133
-    AddKeysToAgent yes
     HostName 201.201.2.133
-    IdentityFile <path_to_pool_private_key>
     User debian
+    IdentityFile <path_to_pool_private_key>
+    AddKeysToAgent yes
 
 Host uan 172.16.2.3
     HostName 172.16.2.3
-    ProxyJump debian@man
     User debian
+    ProxyJump debian@man
 
 Host br 172.16.0.216
     HostName 172.16.0.216
-    ProxyJump debian@man
     User debian
+    ProxyJump debian@man
 
 Host home-router 172.16.1.228
     HostName 172.16.1.228
-    ProxyJump debian@man
     User debian
+    ProxyJump debian@man
 
 Host server-router 172.16.0.21
     HostName 172.16.0.21
-    ProxyJump debian@man
     User debian
+    ProxyJump debian@man
 
 Host home 172.16.2.230
     HostName 172.16.2.230
-    ProxyJump debian@man
     User debian
+    ProxyJump debian@man
 
 Host server 172.16.2.13
     HostName 172.16.2.13
-    ProxyJump debian@man
     User debian
+    ProxyJump debian@man
+

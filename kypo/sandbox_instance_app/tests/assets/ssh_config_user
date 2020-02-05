@@ -1,30 +1,31 @@
 Host man 201.201.2.133
-    AddKeysToAgent yes
     HostName 201.201.2.133
-    IdentityFile <path_to_sandbox_private_key>
     User user-access
+    IdentityFile <path_to_sandbox_private_key>
+    AddKeysToAgent yes
 
 Host uan 202.202.202.189
     HostName 202.202.202.189
-    ProxyJump user-access@man
     User user-access
+    ProxyJump user-access@man
 
 Host home-router 10.10.30.1
     HostName 10.10.30.1
-    ProxyJump user-access@uan
     User user-access
+    ProxyJump user-access@uan
 
 Host server-router 10.10.20.1
     HostName 10.10.20.1
-    ProxyJump user-access@uan
     User user-access
+    ProxyJump user-access@uan
 
 Host home 10.10.30.5
     HostName 10.10.30.5
-    ProxyJump user-access@uan
     User user-access
+    ProxyJump user-access@uan
 
 Host server 10.10.20.5
     HostName 10.10.20.5
-    ProxyJump user-access@uan
     User user-access
+    ProxyJump user-access@uan
+

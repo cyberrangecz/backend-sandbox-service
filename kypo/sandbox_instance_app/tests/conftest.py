@@ -5,9 +5,9 @@ import jsonpickle
 
 TESTING_DATA_DIR = 'assets'
 
-TESTING_STACK = "example_stack.json"
-TESTING_SSH_CONFIG_USER = "example_ssh_config_user"
-TESTING_SSH_CONFIG_MANAGEMENT = "example_ssh_config_management"
+TESTING_STACK = "stack.json"
+TESTING_SSH_CONFIG_USER = "ssh_config_user"
+TESTING_SSH_CONFIG_MANAGEMENT = "ssh_config_management"
 
 
 def data_path_join(file: str, data_dir: str = TESTING_DATA_DIR) -> str:
