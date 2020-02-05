@@ -8,6 +8,7 @@ TESTING_DATA_DIR = 'assets'
 TESTING_STACK = "stack.json"
 TESTING_SSH_CONFIG_USER = "ssh_config_user"
 TESTING_SSH_CONFIG_MANAGEMENT = "ssh_config_management"
+TESTING_SSH_CONFIG_ANSIBLE = "ssh_config_ansible"
 
 
 def data_path_join(file: str, data_dir: str = TESTING_DATA_DIR) -> str:
@@ -32,4 +33,11 @@ def user_ssh_config():
 def management_ssh_config():
     """Creates example Management ssh config for a sandbox."""
     with open(data_path_join(TESTING_SSH_CONFIG_MANAGEMENT)) as f:
+        return f.read()
+
+
+@pytest.fixture
+def ansible_ssh_config():
+    """Creates example Management ssh config for a sandbox."""
+    with open(data_path_join(TESTING_SSH_CONFIG_ANSIBLE)) as f:
         return f.read()
