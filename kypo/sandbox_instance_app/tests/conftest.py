@@ -1,0 +1,35 @@
+import pytest
+import os
+import re
+import jsonpickle
+
+TESTING_DATA_DIR = 'assets'
+
+TESTING_STACK = "example_stack.json"
+TESTING_SSH_CONFIG_USER = "example_ssh_config_user"
+TESTING_SSH_CONFIG_MANAGEMENT = "example_ssh_config_management"
+
+
+def data_path_join(file: str, data_dir: str = TESTING_DATA_DIR) -> str:
+    return os.path.join(re.sub('\\.', '/', __package__), data_dir, file)
+
+
+@pytest.fixture
+def stack():
+    """Creates example Stack normally returned by KYPO lib."""
+    with open(data_path_join(TESTING_STACK)) as f:
+        return jsonpickle.decode(f.read())
+
+
+@pytest.fixture
+def user_ssh_config():
+    """Creates example User ssh config for a sandbox."""
+    with open(data_path_join(TESTING_SSH_CONFIG_USER)) as f:
+        return f.read()
+
+
+@pytest.fixture
+def management_ssh_config():
+    """Creates example Management ssh config for a sandbox."""
+    with open(data_path_join(TESTING_SSH_CONFIG_MANAGEMENT)) as f:
+        return f.read()
