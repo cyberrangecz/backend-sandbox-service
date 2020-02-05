@@ -92,7 +92,6 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
             transaction.on_commit(partial(unlock_job, result_openstack))
 
 
-# TODO: why is it needed and why is it better?
 def lock_job():
     job = rq.get_current_job()
     stage = job.kwargs.get('stage')

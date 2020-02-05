@@ -1,0 +1,111 @@
+# The URL of OpenStack Identity service API.
+OS_AUTH_URL: ""
+
+# The ID of application credentials to authenticate at OpenStack cloud platform.
+OS_APPLICATION_CREDENTIAL_ID: ""
+
+# The secret string of APPLICATION_CREDENTIAL_ID.
+OS_APPLICATION_CREDENTIAL_SECRET: ""
+
+# The path to kypo2-django-openstack log file.
+#LOG_FILE: django-openstack.log
+
+# The level of log verbosity. One of: NOTSET, DEBUG, INFO, WARNING, ERROR, FATAL, CRITICAL.
+#LOG_LEVEL: INFO
+
+# The name of user on MAN nodes that kypo2-django-openstack communicate with.
+#MAN_USERNAME: root
+
+# The SSH private key that kypo2-django-openstack uses to communicate with Git repository.
+#GIT_PRIVATE_KEY: ~/.ssh/git_rsa_key
+
+# The address of Git repository.
+#GIT_SERVER: gitlab.ics.muni.cz
+
+# The name of user used for communication with Git repository.
+#GIT_USER: git
+
+# The path to local temporary directory
+#GIT_REPOSITORIES: /tmp
+
+# The filename of sandbox definition.
+#SANDBOX_DEFINITION_FILENAME: sandbox.yml
+
+# The path of Ansible directory in sandbox definition repository.
+#ANSIBLE_DIRECTORY_PATH: provisioning
+
+# The filename of Ansible playbook.
+#ANSIBLE_PLAYBOOK_FILENAME: playbook.yml
+
+# The filename of Ansible requirements.
+#ANSIBLE_REQUIREMENTS_FILENAME: requirements.yml
+
+# The URL of Ansible networking Git repository.
+ANSIBLE_NETWORKING_URL: ""
+
+# The rev of Ansible networking Git repository.
+#ANSIBLE_NETWORKING_REV: master
+
+# The name or ID of network in OpenStack where all sandboxes will be deployed.
+BASE_NETWORK: jump_network
+
+# The name of the image in OpenStack that will be used for management nodes (MAN, UAN, BR).
+MNG_IMAGE: debian-9-x86_64
+
+# The name of user in MNG_IMAGE virtual machine.
+MNG_USER: debian
+
+# The name of the flavor in OpenStack that will be used for management nodes.
+MNG_FLAVOR: csirtmu.tiny1x2
+
+# The name of the image in OpenStack that will be used for routers.
+# If not specified, MNG_IMAGE will be used.
+#ROUTER_IMAGE:
+
+# The user for the ROUTER_IMAGE.
+# If not specified, MNG_USER will be used.
+#ROUTER_USER:
+
+# The name of the flavor in OpenStack that will be used for routers.
+# If not specified, MNG_FLAVOR will be used.
+#ROUTER_FLAVOR:
+
+# The cidr notation of network between MAN and every other node in sandbox.
+#SANDBOX_MNG_CIDR: 192.168.128.0/17
+
+# The cidr notation of network between UAN and MAN node.
+#SANDBOX_UAN_CIDR: 192.168.0.0/28
+
+# The cidr notation of network between BR and MAN node.
+#SANDBOX_BR_CIDR: 192.168.0.16/28
+
+# The list of IP addresses to custom DNS servers.
+#DNS_NAMESERVERS: []
+
+# A path to directory of CA certificates or file of CA certificates, i.e. CA bundle.
+# Use in case of self-signed certificates in related services.
+#SSL_CA_CERTIFICATE_VERIFY: ""
+
+# Timeout of sandbox (stack) creation in cloud in seconds.
+SANDBOX_BUILD_TIMEOUT: 1200
+
+# Timeout of sandbox (stack) deletion in cloud in seconds.
+SANDBOX_DELETE_TIMEOUT : 1200
+
+# Timeout for Ansible.
+SANDBOX_ANSIBLE_TIMEOUT: 1200
+
+# The path to local temporary directory where KYPO will prepare Docker volumes.
+#ANSIBLE_DOCKER_VOLUMES: /tmp
+
+# The name of the Docker image that is able to run Ansible playbook.
+#ANSIBLE_DOCKER_IMAGE: csirtmu/kypo-ansible-runner
+
+# The object that represents SSH Host entry. Every attribute is one SSH option (see man page of ssh_config).
+PROXY_JUMP_TO_MAN_SSH_OPTIONS:
+    Host: ""
+    User: debian
+    Port: 22
+
+# The SSH private key that kypo2-django-openstack will use to communicate with proxy jump host.
+# PROXY_JUMP_TO_MAN_PRIVATE_KEY: ~/.ssh/id_rsa
