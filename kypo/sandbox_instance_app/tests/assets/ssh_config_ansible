@@ -1,0 +1,69 @@
+Host man 201.201.2.133
+    HostName 201.201.2.133
+    User debian
+    IdentityFile /root/.ssh/pool_mng_key
+    AddKeysToAgent yes
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
+    ProxyJump debian@jump-host-ip
+
+Host uan 172.16.2.3
+    HostName 172.16.2.3
+    User debian
+    ProxyJump debian@man
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
+    IdentityFile /root/.ssh/pool_mng_key
+
+Host br 172.16.0.216
+    HostName 172.16.0.216
+    User debian
+    ProxyJump debian@man
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
+    IdentityFile /root/.ssh/pool_mng_key
+
+Host home-router 172.16.1.228
+    HostName 172.16.1.228
+    User debian
+    ProxyJump debian@man
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
+    IdentityFile /root/.ssh/pool_mng_key
+
+Host server-router 172.16.0.21
+    HostName 172.16.0.21
+    User debian
+    ProxyJump debian@man
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
+    IdentityFile /root/.ssh/pool_mng_key
+
+Host home 172.16.2.230
+    HostName 172.16.2.230
+    User debian
+    ProxyJump debian@man
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
+    IdentityFile /root/.ssh/pool_mng_key
+
+Host server 172.16.2.13
+    HostName 172.16.2.13
+    User debian
+    ProxyJump debian@man
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
+    IdentityFile /root/.ssh/pool_mng_key
+
+Host gitlab.ics.muni.cz
+    User git
+    IdentityFile /root/.ssh/git_rsa_key
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
+
+Host jump-host-ip
+    User debian
+    IdentityFile /root/.ssh/id_rsa
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
+
