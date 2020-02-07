@@ -45,6 +45,8 @@ rq = "*"
 django-rq = "*"
 redis = "*"
 docker = "*"
+ssh_config = "*"
+
 # Project dependencies
 django-cors-headers = "*"
 psycopg2 = "*"

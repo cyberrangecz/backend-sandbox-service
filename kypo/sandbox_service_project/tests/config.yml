@@ -103,7 +103,7 @@ SANDBOX_ANSIBLE_TIMEOUT: 1200
 
 # The object that represents SSH Host entry. Every attribute is one SSH option (see man page of ssh_config).
 PROXY_JUMP_TO_MAN_SSH_OPTIONS:
-    Host: ""
+    Host: "jump-host-ip"
     User: debian
     Port: 22
 

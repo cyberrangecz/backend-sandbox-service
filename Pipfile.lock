@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "84fbb2363486af2d53cbe57068720df3cd0e9256b3559a8d3605a315a0bad49e"
+            "sha256": "8e30335bbb926fd15cc862d65eacf2ffdee2f312e09d695f9ab294b37d416b44"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -270,6 +270,12 @@
             ],
             "index": "pypi",
             "version": "==4.1.0"
+        },
+        "docopt": {
+            "hashes": [
+                "sha256:49b3a825280bd66b3aa83585ef59c4a8c82f2c8a522dbe754a8bc8d08c85c491"
+            ],
+            "version": "==0.6.2"
         },
         "dogpile.cache": {
             "hashes": [
@@ -973,6 +979,14 @@
             ],
             "version": "==0.3.0"
         },
+        "ssh-config": {
+            "hashes": [
+                "sha256:88271d883d6fbc6287a187f80fa4e212bb51490e259ee53426375440e5993d1e",
+                "sha256:f23832739af260122eb1e943f1aa150dafbf12bb862fa8cae75b9a7d0b76fb25"
+            ],
+            "index": "pypi",
+            "version": "==0.0.19"
+        },
         "stevedore": {
             "hashes": [
                 "sha256:01d9f4beecf0fbd070ddb18e5efb10567801ba7ef3ddab0074f54e3cd4e91730",
@@ -987,6 +1001,13 @@
             ],
             "index": "pypi",
             "version": "==20.1.0"
+        },
+        "texttable": {
+            "hashes": [
+                "sha256:7dc282a5b22564fe0fdc1c771382d5dd9a54742047c61558e071c8cd595add86",
+                "sha256:eff3703781fbc7750125f50e10f001195174f13825a92a45e9403037d539b4f4"
+            ],
+            "version": "==1.6.2"
         },
         "uritemplate": {
             "hashes": [

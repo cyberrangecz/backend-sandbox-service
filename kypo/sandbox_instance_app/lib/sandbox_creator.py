@@ -233,36 +233,13 @@ class AnsibleAllocationStageManager:
             shutil.copy(config.GIT_PRIVATE_KEY,
                         os.path.join(ssh_directory, os.path.basename(config.GIT_PRIVATE_KEY)))
 
-        stack = utils.get_ostack_client().get_sandbox(self.sandbox.get_stack_name())
-        mng_private_key = os.path.join(config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
-                                       config.MNG_PRIVATE_KEY_FILENAME)
-        git_private_key = os.path.join(config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
-                                       os.path.basename(config.GIT_PRIVATE_KEY))
-        mng_ssh_config = sandbox_service.SandboxSSHConfigCreator(
-            self.sandbox).create_management_config()
-        for pattern in mng_ssh_config.get_hosts():
-            mng_ssh_config.update_entry(pattern, UserKnownHostsFile='/dev/null',
-                                        StrictHostKeyChecking='no',
-                                        IdentityFile=mng_private_key)
-        mng_ssh_config.add_entry(Host=config.GIT_SERVER, User=config.GIT_USER,
-                                 IdentityFile=git_private_key,
-                                 UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no')
+        ans_ssh_config = sandbox_service.get_ansible_sshconfig(self.sandbox)
+
         if config.PROXY_JUMP_TO_MAN_SSH_OPTIONS:
             shutil.copy(config.PROXY_JUMP_TO_MAN_PRIVATE_KEY,
                         os.path.join(ssh_directory,
                                      os.path.basename(config.PROXY_JUMP_TO_MAN_PRIVATE_KEY)))
-            proxy_jump_to_man_private_key = os.path.join(
-                config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
-                os.path.basename(config.PROXY_JUMP_TO_MAN_PRIVATE_KEY))
-            mng_ssh_config.add_entry(**config.PROXY_JUMP_TO_MAN_SSH_OPTIONS)
-            entry_proxy_jump_host = config.PROXY_JUMP_TO_MAN_SSH_OPTIONS['Host']
-            entry_proxy_jump_user = config.PROXY_JUMP_TO_MAN_SSH_OPTIONS['User']
-            mng_ssh_config.update_entry(entry_proxy_jump_host,
-                                        IdentityFile=proxy_jump_to_man_private_key,
-                                        UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no')
-            mng_ssh_config.update_entry(stack.man.name,
-                                        ProxyJump=entry_proxy_jump_user + '@' + entry_proxy_jump_host)
-        self.save_file(os.path.join(ssh_directory, 'config'), str(mng_ssh_config))
+        self.save_file(os.path.join(ssh_directory, 'config'), str(ans_ssh_config))
 
         return ssh_directory
 
