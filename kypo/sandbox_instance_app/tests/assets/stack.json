@@ -3,7 +3,7 @@
         "flavor": "csirtmu.tiny1x2",
         "image": "debian-9-x86_64",
         "name": "br",
-        "py/object": "kypo2_openstack_lib.sandbox.MAN",
+        "py/object": "kypo.openstack_driver.sandbox_topology.SandboxExtraNode",
         "user": "debian"
     },
     "hosts": {
@@ -11,14 +11,14 @@
             "flavor": "csirtmu.tiny1x2",
             "image": "debian-9-x86_64",
             "name": "home",
-            "py/object": "kypo2_openstack_lib.sandbox.Host",
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxHost",
             "user": "debian"
         },
         "server": {
             "flavor": "csirtmu.tiny1x2",
             "image": "debian-9-x86_64",
             "name": "server",
-            "py/object": "kypo2_openstack_lib.sandbox.Host",
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxHost",
             "user": "debian"
         }
     },
@@ -33,16 +33,16 @@
                 "def_gw": "None",
                 "mask": "255.255.0.0",
                 "name": "mng-network",
-                "py/object": "kypo2_openstack_lib.sandbox.Network"
+                "py/object": "kypo.openstack_driver.sandbox_topology.SandboxNetwork"
             },
             "node": {
                 "flavor": "csirtmu.tiny1x2",
                 "image": "debian-9-x86_64",
                 "name": "uan",
-                "py/object": "kypo2_openstack_lib.sandbox.MAN",
+                "py/object": "kypo.openstack_driver.sandbox_topology.SandboxExtraNode",
                 "user": "debian"
             },
-            "py/object": "kypo2_openstack_lib.sandbox.Link"
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxLink"
         },
         {
             "ip": "202.202.202.189",
@@ -53,12 +53,12 @@
                 "def_gw": "None",
                 "mask": "255.255.255.0",
                 "name": "uan-network",
-                "py/object": "kypo2_openstack_lib.sandbox.Network"
+                "py/object": "kypo.openstack_driver.sandbox_topology.SandboxNetwork"
             },
             "node": {
                 "py/id": 7
             },
-            "py/object": "kypo2_openstack_lib.sandbox.Link"
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxLink"
         },
         {
             "ip": "10.10.20.3",
@@ -69,12 +69,12 @@
                 "def_gw": "server-router",
                 "mask": "255.255.255.0",
                 "name": "server-switch",
-                "py/object": "kypo2_openstack_lib.sandbox.Network"
+                "py/object": "kypo.openstack_driver.sandbox_topology.SandboxNetwork"
             },
             "node": {
                 "py/id": 7
             },
-            "py/object": "kypo2_openstack_lib.sandbox.Link"
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxLink"
         },
         {
             "ip": "10.10.30.3",
@@ -85,12 +85,12 @@
                 "def_gw": "home-router",
                 "mask": "255.255.255.0",
                 "name": "home-switch",
-                "py/object": "kypo2_openstack_lib.sandbox.Network"
+                "py/object": "kypo.openstack_driver.sandbox_topology.SandboxNetwork"
             },
             "node": {
                 "py/id": 7
             },
-            "py/object": "kypo2_openstack_lib.sandbox.Link"
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxLink"
         },
         {
             "ip": "172.16.2.230",
@@ -102,7 +102,7 @@
             "node": {
                 "py/id": 2
             },
-            "py/object": "kypo2_openstack_lib.sandbox.Link"
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxLink"
         },
         {
             "ip": "10.10.30.5",
@@ -114,7 +114,7 @@
             "node": {
                 "py/id": 2
             },
-            "py/object": "kypo2_openstack_lib.sandbox.Link"
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxLink"
         },
         {
             "ip": "172.16.1.228",
@@ -128,10 +128,10 @@
                 "flavor": "csirtmu.tiny1x2",
                 "image": "debian-9-x86_64",
                 "name": "home-router",
-                "py/object": "kypo2_openstack_lib.sandbox.Router",
+                "py/object": "kypo.openstack_driver.sandbox_topology.SandboxRouter",
                 "user": "debian"
             },
-            "py/object": "kypo2_openstack_lib.sandbox.Link"
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxLink"
         },
         {
             "ip": "200.100.100.3",
@@ -142,12 +142,12 @@
                 "def_gw": "None",
                 "mask": "255.255.255.248",
                 "name": "home-router-network",
-                "py/object": "kypo2_openstack_lib.sandbox.Network"
+                "py/object": "kypo.openstack_driver.sandbox_topology.SandboxNetwork"
             },
             "node": {
                 "py/id": 17
             },
-            "py/object": "kypo2_openstack_lib.sandbox.Link"
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxLink"
         },
         {
             "ip": "10.10.30.1",
@@ -159,7 +159,7 @@
             "node": {
                 "py/id": 17
             },
-            "py/object": "kypo2_openstack_lib.sandbox.Link"
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxLink"
         },
         {
             "ip": "172.16.0.216",
@@ -171,7 +171,7 @@
             "node": {
                 "py/id": 1
             },
-            "py/object": "kypo2_openstack_lib.sandbox.Link"
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxLink"
         },
         {
             "ip": "203.203.203.111",
@@ -182,12 +182,12 @@
                 "def_gw": "None",
                 "mask": "255.255.255.0",
                 "name": "br-network",
-                "py/object": "kypo2_openstack_lib.sandbox.Network"
+                "py/object": "kypo.openstack_driver.sandbox_topology.SandboxNetwork"
             },
             "node": {
                 "py/id": 1
             },
-            "py/object": "kypo2_openstack_lib.sandbox.Link"
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxLink"
         },
         {
             "ip": "100.100.100.4",
@@ -198,12 +198,12 @@
                 "def_gw": "None",
                 "mask": "255.255.255.248",
                 "name": "server-router-network",
-                "py/object": "kypo2_openstack_lib.sandbox.Network"
+                "py/object": "kypo.openstack_driver.sandbox_topology.SandboxNetwork"
             },
             "node": {
                 "py/id": 1
             },
-            "py/object": "kypo2_openstack_lib.sandbox.Link"
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxLink"
         },
         {
             "ip": "200.100.100.4",
@@ -215,7 +215,7 @@
             "node": {
                 "py/id": 1
             },
-            "py/object": "kypo2_openstack_lib.sandbox.Link"
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxLink"
         },
         {
             "ip": "172.16.0.21",
@@ -229,10 +229,10 @@
                 "flavor": "csirtmu.tiny1x2",
                 "image": "debian-9-x86_64",
                 "name": "server-router",
-                "py/object": "kypo2_openstack_lib.sandbox.Router",
+                "py/object": "kypo.openstack_driver.sandbox_topology.SandboxRouter",
                 "user": "debian"
             },
-            "py/object": "kypo2_openstack_lib.sandbox.Link"
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxLink"
         },
         {
             "ip": "100.100.100.3",
@@ -244,7 +244,7 @@
             "node": {
                 "py/id": 28
             },
-            "py/object": "kypo2_openstack_lib.sandbox.Link"
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxLink"
         },
         {
             "ip": "10.10.20.1",
@@ -256,7 +256,7 @@
             "node": {
                 "py/id": 28
             },
-            "py/object": "kypo2_openstack_lib.sandbox.Link"
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxLink"
         },
         {
             "ip": "172.16.3.141",
@@ -269,10 +269,10 @@
                 "flavor": "csirtmu.tiny1x2",
                 "image": "debian-9-x86_64",
                 "name": "man",
-                "py/object": "kypo2_openstack_lib.sandbox.MAN",
+                "py/object": "kypo.openstack_driver.sandbox_topology.SandboxExtraNode",
                 "user": "debian"
             },
-            "py/object": "kypo2_openstack_lib.sandbox.Link"
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxLink"
         },
         {
             "ip": "203.203.203.206",
@@ -284,7 +284,7 @@
             "node": {
                 "py/id": 32
             },
-            "py/object": "kypo2_openstack_lib.sandbox.Link"
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxLink"
         },
         {
             "ip": "202.202.202.194",
@@ -296,7 +296,7 @@
             "node": {
                 "py/id": 32
             },
-            "py/object": "kypo2_openstack_lib.sandbox.Link"
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxLink"
         },
         {
             "ip": "172.16.2.13",
@@ -308,7 +308,7 @@
             "node": {
                 "py/id": 3
             },
-            "py/object": "kypo2_openstack_lib.sandbox.Link"
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxLink"
         },
         {
             "ip": "10.10.20.5",
@@ -320,7 +320,7 @@
             "node": {
                 "py/id": 3
             },
-            "py/object": "kypo2_openstack_lib.sandbox.Link"
+            "py/object": "kypo.openstack_driver.sandbox_topology.SandboxLink"
         }
     ],
     "man": {
@@ -353,7 +353,7 @@
             "py/id": 9
         }
     },
-    "py/object": "kypo2_openstack_lib.sandbox.Sandbox",
+    "py/object": "kypo.openstack_driver.sandbox_topology.SandboxTopology",
     "routers": {
         "home-router": {
             "py/id": 17

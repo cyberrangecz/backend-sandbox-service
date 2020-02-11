@@ -47,6 +47,13 @@ class GitError(ApiException):
     pass
 
 
+class StackError(ApiException):
+    """
+    Raised when application was not configured properly.
+    """
+    pass
+
+
 class AnsibleError(ApiException):
     """
     Raised when there is some error during Ansible.

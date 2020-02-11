@@ -2,10 +2,12 @@
 Definition Service module for Definition management.
 """
 from typing import Optional
-
+import io
 import structlog
-import yaml
 from git.exc import GitCommandError
+from yamlize import YamlizingError
+
+from kypo.topology_definition.models import TopologyDefinition
 
 from .. import serializers
 from ..models import Definition
@@ -22,19 +24,18 @@ def create_definition(url: str, rev: str = None) -> Definition:
     :param rev: Revision of the repository
     :return: New definition instance
     """
-    sandbox_definition = get_sandbox_definition(url, rev)
+    top_def = get_definition(url, rev)
 
     client = utils.get_ostack_client()
-    client.validate_sandbox_definition(sandbox_definition)
+    client.validate_sandbox_definition(top_def)
 
-    parsed_sandbox_definition = yaml.full_load(sandbox_definition)
     serializer = serializers.DefinitionSerializerCreate(
-        data=dict(name=parsed_sandbox_definition['name'], url=url, rev=rev))
+        data=dict(name=top_def.name, url=url, rev=rev))
     serializer.is_valid(raise_exception=True)
     return serializer.save()
 
 
-def get_sandbox_definition(url: str, rev: str, name: Optional[str] = None) -> str:
+def get_definition(url: str, rev: str, name: Optional[str] = None) -> TopologyDefinition:
     """
     Get sandbox definition file content
 
@@ -51,4 +52,7 @@ def get_sandbox_definition(url: str, rev: str, name: Optional[str] = None) -> st
     except GitCommandError as ex:
         raise exceptions.GitError("Failed to get sandbox definition file {}.\n"
                                   .format(config.SANDBOX_DEFINITION_FILENAME) + str(ex))
-    return definition
+    try:
+        return TopologyDefinition.load(io.StringIO(definition))
+    except YamlizingError as ex:
+        raise exceptions.ValidationError(ex)

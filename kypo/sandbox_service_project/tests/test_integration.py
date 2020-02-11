@@ -34,8 +34,8 @@ DEFINITION_REV = 'integration-test'
 JUMP_STACK_NAME = 'integration_test_jump'
 TEMPLATE_DICT = dict(
     PUBLIC_NETWORK='public-muni-147-251-124-GROUP',
-    JUMP_IMAGE=config.SANDBOX_CONFIGURATION['MNG_IMAGE'],
-    JUMP_FLAVOR=config.SANDBOX_CONFIGURATION['MNG_FLAVOR'],
+    JUMP_IMAGE=config.trc.extra_nodes_image,
+    JUMP_FLAVOR=config.trc.extra_nodes_flavor,
 )
 
 # URL names
@@ -204,7 +204,10 @@ class TestIntegration:
         client = utils.get_ostack_client()
         client.stacks.create_stack_from_template(
             template.safe_substitute(**TEMPLATE_DICT), JUMP_STACK_NAME)
-        client.stacks.wait_for_complete(JUMP_STACK_NAME)
+
+        succ, msg = client.wait_for_stack_create_action(JUMP_STACK_NAME)
+        assert succ
+
         return client.stacks.get_outputs(JUMP_STACK_NAME)
 
     @staticmethod

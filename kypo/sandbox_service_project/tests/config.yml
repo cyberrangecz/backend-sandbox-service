@@ -58,18 +58,6 @@ MNG_USER: debian
 # The name of the flavor in OpenStack that will be used for management nodes.
 MNG_FLAVOR: csirtmu.tiny1x2
 
-# The name of the image in OpenStack that will be used for routers.
-# If not specified, MNG_IMAGE will be used.
-#ROUTER_IMAGE:
-
-# The user for the ROUTER_IMAGE.
-# If not specified, MNG_USER will be used.
-#ROUTER_USER:
-
-# The name of the flavor in OpenStack that will be used for routers.
-# If not specified, MNG_FLAVOR will be used.
-#ROUTER_FLAVOR:
-
 # The cidr notation of network between MAN and every other node in sandbox.
 #SANDBOX_MNG_CIDR: 192.168.128.0/17
 

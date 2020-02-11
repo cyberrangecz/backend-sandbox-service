@@ -101,16 +101,9 @@ class StackCleanupStageManager:
 
     def wait_for_stack_deletion(self, stack_name: str) -> None:
         """Wait for stack deletion."""
-        def sandbox_delete_check():
-            stacks = self.client.list_sandboxes()
-            if stack_name in stacks:
-                stack_status = stacks[stack_name].stack_status
-                return stack_status.endswith('FAILED')
-            return True
-
-        utils.wait_for(sandbox_delete_check, config.SANDBOX_DELETE_TIMEOUT, freq=10, initial_wait=3,
-                       errmsg='Sandbox deletion exceeded timeout of {} sec. Sandbox: {}'
-                       .format(config.SANDBOX_BUILD_TIMEOUT, str(stack_name)))
+        success, msg = self.client.wait_for_stack_delete_action(stack_name)
+        if not success:
+            raise exceptions.StackError(f'Stack {stack_name} delete failed: {msg}')
 
 
 class AnsibleCleanupStageManager:

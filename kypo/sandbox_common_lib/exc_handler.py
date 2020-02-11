@@ -1,6 +1,6 @@
 import structlog
 from django.conf import settings
-from kypo2_openstack_lib.exceptions import KypoException
+from kypo.openstack_driver.exceptions import KypoException
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
