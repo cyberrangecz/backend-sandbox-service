@@ -3,7 +3,8 @@ from typing import List
 import structlog
 import ssh_config
 
-from kypo2_openstack_lib.sandbox import Host, Router, Link, MAN
+from kypo.openstack_driver.sandbox_topology import SandboxHost, SandboxRouter, \
+    SandboxLink, SandboxExtraNode
 
 from ...sandbox_common_lib.config import config
 
@@ -54,8 +55,7 @@ class KypoSSHConfig(ssh_config.SSHConfig):
         for link in sshconf._get_uan_accessible_node_links():
             sshconf.append(ssh_config.Host([link.node.name, link.ip], dict(
                 User=config.SSH_PROXY_USERNAME, HostName=link.ip,
-                ProxyJump=config.SSH_PROXY_USERNAME + '@' +
-                          stack.uan.name)))
+                ProxyJump=config.SSH_PROXY_USERNAME + '@' + stack.uan.name)))
         return sshconf
 
     @classmethod
@@ -121,7 +121,7 @@ class KypoSSHConfig(ssh_config.SSHConfig):
             if link.node == self.stack.uan and link.network.name == config.UAN_NETWORK_NAME:
                 return link.ip
 
-    def _get_uan_accessible_node_links(self) -> List[Link]:
+    def _get_uan_accessible_node_links(self) -> List[SandboxLink]:
         # Only 'inner' networks UAN is connected to
         networks = [link.network for link in self.stack.get_node_links(self.stack.uan)
                     if link.network.name not in [config.UAN_NETWORK_NAME, self.stack.mng_net.name]]
@@ -129,22 +129,22 @@ class KypoSSHConfig(ssh_config.SSHConfig):
         links = [link for link in self.stack.links
                  if link.network in networks
                  and link.node != self.stack.uan
-                 and (isinstance(link.node, Host) or isinstance(link.node, Router))]
+                 and (isinstance(link.node, SandboxHost) or isinstance(link.node, SandboxRouter))]
 
         return self._sorted_links(links)
 
-    def _get_man_accessible_node_links(self) -> List[Link]:
+    def _get_man_accessible_node_links(self) -> List[SandboxLink]:
         links = [link for link in self.stack.links
                  if link.network == self.stack.mng_net and link.node != self.stack.man]
 
         return self._sorted_links(links)
 
     @staticmethod
-    def _sorted_links(links: List[Link]) -> List[Link]:
+    def _sorted_links(links: List[SandboxLink]) -> List[SandboxLink]:
         """Return new list of links sorted by the hosts type and then by name."""
-        mng_host_links = [link for link in links if isinstance(link.node, MAN)]
-        router_links = [link for link in links if isinstance(link.node, Router)]
-        host_links = [link for link in links if isinstance(link.node, Host)]
+        mng_host_links = [link for link in links if isinstance(link.node, SandboxExtraNode)]
+        router_links = [link for link in links if isinstance(link.node, SandboxRouter)]
+        host_links = [link for link in links if isinstance(link.node, SandboxHost)]
         router_links.sort(key=lambda l: l.node.name)
         host_links.sort(key=lambda l: l.node.name)
         return mng_host_links + router_links + host_links

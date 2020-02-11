@@ -1,6 +1,8 @@
 from typing import Dict, Tuple, List, Optional, Any
 
-from kypo2_openstack_lib.sandbox import Sandbox as Stack
+from kypo.topology_definition.models import TopologyDefinition
+
+from kypo.openstack_driver.sandbox_topology import SandboxTopology as Stack
 
 
 class Inventory:
@@ -20,14 +22,14 @@ class Inventory:
                 'routes': routes}
 
     @classmethod
-    def create_inventory(cls, stack: Stack, definition: Dict, user_private_key_path: str,
-                         user_public_key_path: str) -> Dict[str, Any]:
+    def create_inventory(cls, stack: Stack, top_def: TopologyDefinition,
+                         user_private_key_path: str, user_public_key_path: str) -> Dict[str, Any]:
         """
         Creates ansible inventory.
 
         :return: Dict representation of Ansible inventory file
         """
-        net_to_router = cls.get_net_to_router(definition)
+        net_to_router = cls.get_net_to_router(top_def)
         routers_routing, man_routes, br_interfaces = cls.create_routers_group(stack, net_to_router)
         mng_routing = cls.create_management_group(stack, br_interfaces, man_routes,
                                                   user_private_key_path, user_public_key_path)
@@ -43,7 +45,7 @@ class Inventory:
         # set MAN ip to outer IP, not in MNG network
         routing['management']['hosts'][stack.man.name]['ansible_host'] = stack.ip
 
-        routing.update(cls.create_user_groups(definition))
+        routing.update(cls.create_user_groups(top_def))
 
         inventory = {'all': {'children': routing}}
         return inventory
@@ -139,16 +141,16 @@ class Inventory:
         return routing, man_routes, br_interfaces
 
     @staticmethod
-    def get_net_to_router(definition: Dict) -> Dict[str, str]:
+    def get_net_to_router(top_def: TopologyDefinition) -> Dict[str, str]:
         """
         Return Dict[net_name, router_name].
         Prefers router which is first in alphabetical order.
         """
         net_to_router = {}
-        if 'router_mappings' in definition:
-            definition['router_mappings'].sort(key=lambda x: x['router'], reverse=True)
-            for mapping in definition['router_mappings']:
-                net_to_router[mapping['network']] = mapping['router']
+        # if 'router_mappings' in definition:
+        mapping = sorted(top_def.router_mappings, key=lambda x: x.router, reverse=True)
+        for mapp in mapping:
+            net_to_router[mapp.network] = mapp.router
         return net_to_router
 
     @staticmethod
@@ -161,14 +163,8 @@ class Inventory:
         return routing
 
     @staticmethod
-    def create_user_groups(definition: Dict[str, Dict]) -> Dict[str, Dict[str, Dict[str, None]]]:
+    def create_user_groups(top_def: TopologyDefinition) -> Dict[str, Dict[str, Dict[str, None]]]:
         """Parses user groups from _validated_ definition.
         Return Dict of user groups."""
-        groups = {}
-        for node in definition.get('hosts', []) + definition.get('routers', []):
-            for group in node.get('groups', []):
-                if group in groups:
-                    groups[group]['hosts'].update({node['name']: None})
-                else:
-                    groups[group] = {'hosts': {node['name']: None}}
-        return groups
+        return {g.name: {node: None for node in g.nodes}
+                for g in top_def.groups}

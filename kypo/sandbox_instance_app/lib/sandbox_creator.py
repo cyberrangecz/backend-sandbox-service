@@ -1,4 +1,3 @@
-import io
 import os
 import shutil
 import time
@@ -13,7 +12,7 @@ import structlog
 import yaml
 from django.db import transaction
 from django.utils import timezone
-from kypo2_openstack_lib.stack import Event, Resource
+from kypo.openstack_driver.stack import Event, Resource
 from rq.job import Job
 
 from . import sandbox_service
@@ -130,7 +129,7 @@ class StackAllocationStageManager:
             stage.start = timezone.now()
             stage.save()
             LOG.info("Stage 1 (StackCreationStage) started", stage=stage)
-            self.build_sandbox(stage, sandbox)
+            self.build_stack(stage, sandbox)
             self.wait_for_stack_creation(stage)
         except Exception as ex:
             stage.mark_failed(ex)
@@ -139,40 +138,31 @@ class StackAllocationStageManager:
             stage.end = timezone.now()
             stage.save()
 
-    def build_sandbox(self, stage: StackAllocationStage, sandbox: Sandbox) -> None:
+    def build_stack(self, stage: StackAllocationStage, sandbox: Sandbox) -> None:
         """Build sandbox in OpenStack."""
         # TODO: create heat_stack when the lib will return the needed data
         LOG.debug("Building sandbox", sandbox=stage)
         definition = sandbox.allocation_unit.pool.definition
-        sandbox_definition = definition_service.get_sandbox_definition(
+        top_def = definition_service.get_definition(
                 definition.url, definition.rev,
                 'rev-{0}_stage-{1}'.format(definition.rev, stage.id)
         )
         self.client.create_sandbox(
-            io.StringIO(sandbox_definition), sandbox.get_stack_name(),
-            SSH_KEY_NAME=stage.request.allocation_unit.pool.get_keypair_name(),
-            **config.SANDBOX_CONFIGURATION
+            sandbox.get_stack_name(), top_def,
+            kp_name=stage.request.allocation_unit.pool.get_keypair_name(),
         )
 
     def wait_for_stack_creation(self, stage: StackAllocationStage) -> None:
+        name = stage.request.get_stack_name()
         """Wait for stack creation."""
-        def sandbox_create_check():
-            stacks = self.client.list_sandboxes()
-            stack = stacks[stage.request.get_stack_name()]
-            if self.is_status_failed(stack.stack_status):
-                raise exceptions.InterruptError("sandbox creation failed")
-            return stack.stack_status == STACK_STATUS_CREATE_COMPLETE
+        success, msg = self.client.wait_for_stack_create_action(name)
+        if not success:
+            roll_succ, roll_msg = self.client.wait_for_stack_rollback_action(name)
+            if not roll_succ:
+                LOG.warning('Rollback failed', msg=roll_msg)
+            raise exceptions.StackError(f'Sandbox build failed: {msg}')
 
-        utils.wait_for(sandbox_create_check, config.SANDBOX_BUILD_TIMEOUT, freq=10, initial_wait=3,
-                       errmsg="Sandbox build exceeded timeout of {} sec. Stage: {}"
-                       .format(config.SANDBOX_BUILD_TIMEOUT, str(stage)))
-
-        LOG.info("Sandbox created successfully", stage=stage)
-
-    @staticmethod
-    def is_status_failed(status: str) -> bool:
-        """Check whether the status indicates, that stack create failed."""
-        return status == "ROLLBACK_COMPLETE" or status == "ROLLBACK_FAILED"
+        LOG.info("Stack created successfully", stage=stage)
 
     def update_stage(self, stage: StackAllocationStage) -> StackAllocationStage:
         """Update stage with current stack status from OpenStack."""
@@ -245,10 +235,9 @@ class AnsibleAllocationStageManager:
 
     def prepare_inventory_file(self) -> str:
         definition = self.stage.request.allocation_unit.pool.definition
-        sandbox_definition = \
-            definition_service.get_sandbox_definition(definition.url, definition.rev,
-                                                      'rev-{0}_stage-{1}'.format(definition.rev, self.stage.id))
-        sandbox_definition = yaml.full_load(sandbox_definition)
+        top_def = definition_service.get_definition(
+            definition.url, definition.rev,
+            'rev-{0}_stage-{1}'.format(definition.rev, self.stage.id))
 
         client = utils.get_ostack_client()
         stack = client.get_sandbox(self.sandbox.get_stack_name())
@@ -256,7 +245,7 @@ class AnsibleAllocationStageManager:
                                         config.USER_PRIVATE_KEY_FILENAME)
         user_public_key = os.path.join(config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
                                        config.USER_PUBLIC_KEY_FILENAME)
-        inventory = Inventory.create_inventory(stack, sandbox_definition,
+        inventory = Inventory.create_inventory(stack, top_def,
                                                user_private_key, user_public_key)
 
         inventory_path = os.path.join(self.directory, config.ANSIBLE_INVENTORY_FILENAME)

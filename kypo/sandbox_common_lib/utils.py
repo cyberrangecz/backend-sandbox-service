@@ -14,7 +14,7 @@ import paramiko
 import scp
 import structlog
 from Crypto.PublicKey import RSA
-from kypo2_openstack_lib.ostack_client import KypoOstackClient
+from kypo.openstack_driver.ostack_client import KypoOstackClient
 
 from . import exceptions
 from .config import config
@@ -25,6 +25,7 @@ LOG = structlog.get_logger()
 
 def configure_logging() -> None:
     """Configure logging and structlog"""
+    # noinspection PyArgumentList
     logging.basicConfig(level=config.LOG_LEVEL,
                         handlers=[logging.StreamHandler(), logging.FileHandler(config.LOG_FILE)],
                         format="%(message)s")
@@ -88,7 +89,7 @@ def generate_ssh_keypair(bits: int = 2048) -> Tuple[str, str]:
 
 def get_ostack_client() -> KypoOstackClient:
     """Abstracts creation and authentication to KYPO lib client."""
-    return KypoOstackClient(**config.OS_CREDENTIALS)
+    return KypoOstackClient(**config.OS_CREDENTIALS, trc=config.trc)
 
 
 def wait_for(cond: Callable, timeout: int, freq: int, factor: float = 1.1, initial_wait: int = 0,

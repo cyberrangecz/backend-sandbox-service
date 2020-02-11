@@ -6,6 +6,7 @@ import os
 
 import yaml
 from django.conf import settings
+from kypo.openstack_driver.transformation_configuration import TransformationConfiguration
 
 from .exceptions import ImproperlyConfigured
 
@@ -120,22 +121,17 @@ class Settings:
         # Authentication configuration
         self.SSL_CA_CERTIFICATE_VERIFY = configuration.get('SSL_CA_CERTIFICATE_VERIFY', "")
 
-        self.SANDBOX_CONFIGURATION = {
-            'BASE_NETWORK': configuration.get('BASE_NETWORK', 'base_network'),
-            'SB_MNG_CIDR': configuration.get('SANDBOX_MNG_CIDR', '192.168.128.0/17'),
-            'SB_UAN_CIDR': configuration.get('SANDBOX_UAN_CIDR', '192.168.0.0/28'),
-            'SB_BR_CIDR': configuration.get('SANDBOX_BR_CIDR', '192.168.0.16/28'),
-            'DNS_NAMESERVERS': configuration.get('DNS_NAMESERVERS', []),
+        self.trc = TransformationConfiguration(**{
+            'base_network': configuration.get('BASE_NETWORK', 'base_network'),
+            'sb_man_cidr': configuration.get('SANDBOX_MNG_CIDR', '192.168.128.0/17'),
+            'sb_uan_cidr': configuration.get('SANDBOX_UAN_CIDR', '192.168.0.0/28'),
+            'sb_br_cidr': configuration.get('SANDBOX_BR_CIDR', '192.168.0.16/28'),
+            'dns_name_servers': configuration.get('DNS_NAMESERVERS', []),
 
-            'MNG_IMAGE': self._get_required_attribute(configuration, 'MNG_IMAGE'),
-            'MNG_USER': self._get_required_attribute(configuration, 'MNG_USER'),
-            'MNG_FLAVOR': self._get_required_attribute(configuration, 'MNG_FLAVOR'),
-
-            # Defaults to MNG values
-            'ROUTER_IMAGE': configuration.get('ROUTER_IMAGE', configuration.get('MNG_IMAGE')),
-            'ROUTER_USER': configuration.get('ROUTER_USER', configuration.get('MNG_USER')),
-            'ROUTER_FLAVOR': configuration.get('ROUTER_FLAVOR', configuration.get('MNG_FLAVOR')),
-        }
+            'extra_nodes_image': self._get_required_attribute(configuration, 'MNG_IMAGE'),
+            'extra_nodes_flavor': self._get_required_attribute(configuration, 'MNG_FLAVOR'),
+            'extra_nodes_user': self._get_required_attribute(configuration, 'MNG_USER'),
+        })
 
         # Global setting of CA_BUNDLE for request package
         os.environ['REQUESTS_CA_BUNDLE'] = self.SSL_CA_CERTIFICATE_VERIFY

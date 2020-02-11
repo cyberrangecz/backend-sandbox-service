@@ -1,11 +1,10 @@
 import structlog
-import yaml
-from kypo2_openstack_lib.sandbox import Sandbox as Stack
+from kypo.openstack_driver.sandbox_topology import SandboxTopology as Stack
 
 from ..models import Sandbox
 from ...sandbox_common_lib import utils
 from ...sandbox_common_lib.config import config
-from ...sandbox_definition_app.lib.definition_service import get_sandbox_definition
+from ...sandbox_definition_app.lib.definition_service import get_definition
 
 LOG = structlog.getLogger()
 
@@ -62,16 +61,11 @@ class Topology:
 
         # Delete hidden host
         definition = sandbox.allocation_unit.pool.definition
-        sandbox_definition = yaml.full_load(get_sandbox_definition(
-            url=definition.url,
-            rev=definition.rev)
-        )
+        top_def = get_definition(url=definition.url, rev=definition.rev)
 
-        hidden_hosts = []
-        if 'hidden_hosts' in sandbox_definition:
-            hidden_hosts = sandbox_definition['hidden_hosts']
-        for hostname in hidden_hosts:
-            del stack.hosts[hostname]
+        for name, host in top_def.hosts.items():
+            if host.hidden:
+                del stack.hosts[name]
 
         # Delete MNG infrastructure
         mng_nodes = (stack.man.name, stack.br.name, stack.uan.name)
@@ -84,5 +78,5 @@ class Topology:
         # Delete links
         stack.links = [link for link in stack.links
                        if link.node.name not in mng_nodes
-                       and link.node.name not in hidden_hosts
+                       and not link.node.hidden
                        and link.network.name not in mng_networks]
