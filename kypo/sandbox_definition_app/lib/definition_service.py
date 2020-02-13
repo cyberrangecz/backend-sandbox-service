@@ -16,6 +16,8 @@ from ...sandbox_common_lib.config import config
 
 LOG = structlog.get_logger()
 
+SANDBOX_DEFINITION_FILENAME = 'sandbox.yml'
+
 
 def create_definition(url: str, rev: str = None) -> Definition:
     """Validates and creates a new definition in database.
@@ -48,10 +50,10 @@ def get_definition(url: str, rev: str, name: Optional[str] = None) -> TopologyDe
     """
     try:
         repo = utils.GitRepo.get_git_repo(url, rev, name)
-        definition = repo.git.show('{0}:{1}'.format(rev, config.SANDBOX_DEFINITION_FILENAME))
+        definition = repo.git.show('{0}:{1}'.format(rev, SANDBOX_DEFINITION_FILENAME))
     except GitCommandError as ex:
         raise exceptions.GitError("Failed to get sandbox definition file {}.\n"
-                                  .format(config.SANDBOX_DEFINITION_FILENAME) + str(ex))
+                                  .format(SANDBOX_DEFINITION_FILENAME) + str(ex))
     try:
         return TopologyDefinition.load(io.StringIO(definition))
     except YamlizingError as ex:

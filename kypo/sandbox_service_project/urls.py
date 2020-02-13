@@ -19,7 +19,9 @@ from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
 
-from ..sandbox_common_lib.config import config
+PROJECT_NAME = 'kypo-sandbox-service'
+VERSION = 'v1'
+URL_PREFIX = f'{PROJECT_NAME}/api/{VERSION}/'
 
 HEADER = """
 ## Specification of REST responses
@@ -46,7 +48,7 @@ __Error JSON__
 schema_view = get_schema_view(
     openapi.Info(
         title="KYPO2 OpenStack REST API documentation",
-        default_version=config.VERSION,
+        default_version=VERSION,
         description=HEADER,
     ),
     validators=[],
@@ -71,5 +73,5 @@ urlpatterns = [
 
 # Prefixing urls
 urlpatterns = [
-    path(config.URL_PREFIX, include(urlpatterns)),
+    path(URL_PREFIX, include(urlpatterns)),
 ]

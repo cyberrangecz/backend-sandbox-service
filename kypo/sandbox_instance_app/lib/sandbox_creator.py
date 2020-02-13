@@ -30,6 +30,10 @@ STACK_STATUS_CREATE_COMPLETE = "CREATE_COMPLETE"
 
 LOG = structlog.get_logger()
 
+ANSIBLE_INVENTORY_FILENAME = 'inventory.yml'
+USER_PRIVATE_KEY_FILENAME = 'user_key'
+USER_PUBLIC_KEY_FILENAME = 'user_key.pub'
+
 
 def create_sandbox_requests(pool: Pool, count: int) -> List[SandboxAllocationUnit]:
     """
@@ -212,9 +216,9 @@ class AnsibleAllocationStageManager:
         ssh_directory = os.path.join(self.directory, 'ssh')
         self.make_dir(ssh_directory)
 
-        self.save_file(os.path.join(ssh_directory, config.USER_PRIVATE_KEY_FILENAME),
+        self.save_file(os.path.join(ssh_directory, USER_PRIVATE_KEY_FILENAME),
                        self.sandbox.private_user_key)
-        self.save_file(os.path.join(ssh_directory, config.USER_PUBLIC_KEY_FILENAME),
+        self.save_file(os.path.join(ssh_directory, USER_PUBLIC_KEY_FILENAME),
                        self.sandbox.public_user_key)
         self.save_file(os.path.join(ssh_directory, config.MNG_PRIVATE_KEY_FILENAME),
                        self.stage.request.allocation_unit.pool.private_management_key)
@@ -225,10 +229,10 @@ class AnsibleAllocationStageManager:
 
         ans_ssh_config = sandbox_service.get_ansible_sshconfig(self.sandbox)
 
-        if config.PROXY_JUMP_TO_MAN_SSH_OPTIONS:
-            shutil.copy(config.PROXY_JUMP_TO_MAN_PRIVATE_KEY,
-                        os.path.join(ssh_directory,
-                                     os.path.basename(config.PROXY_JUMP_TO_MAN_PRIVATE_KEY)))
+        if 'IdentityFile' in config.PROXY_JUMP_TO_MAN_SSH_OPTIONS:
+            identity_file = config.PROXY_JUMP_TO_MAN_SSH_OPTIONS['IdentityFile']
+            shutil.copy(identity_file, os.path.join(ssh_directory,
+                        os.path.basename(identity_file)))
         self.save_file(os.path.join(ssh_directory, 'config'), str(ans_ssh_config))
 
         return ssh_directory
@@ -242,13 +246,13 @@ class AnsibleAllocationStageManager:
         client = utils.get_ostack_client()
         stack = client.get_sandbox(self.sandbox.get_stack_name())
         user_private_key = os.path.join(config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
-                                        config.USER_PRIVATE_KEY_FILENAME)
+                                        USER_PRIVATE_KEY_FILENAME)
         user_public_key = os.path.join(config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
-                                       config.USER_PUBLIC_KEY_FILENAME)
+                                       USER_PUBLIC_KEY_FILENAME)
         inventory = Inventory.create_inventory(stack, top_def,
                                                user_private_key, user_public_key)
 
-        inventory_path = os.path.join(self.directory, config.ANSIBLE_INVENTORY_FILENAME)
+        inventory_path = os.path.join(self.directory, ANSIBLE_INVENTORY_FILENAME)
         self.save_file(inventory_path, yaml.dump(inventory, default_flow_style=False, indent=2))
 
         return inventory_path

@@ -89,7 +89,10 @@ def generate_ssh_keypair(bits: int = 2048) -> Tuple[str, str]:
 
 def get_ostack_client() -> KypoOstackClient:
     """Abstracts creation and authentication to KYPO lib client."""
-    return KypoOstackClient(**config.OS_CREDENTIALS, trc=config.trc)
+    return KypoOstackClient(app_creds_id=config.OS_APPLICATION_CREDENTIAL_ID,
+                            auth_url=config.OS_AUTH_URL,
+                            app_creds_secret=config.OS_APPLICATION_CREDENTIAL_SECRET,
+                            trc=config.TRC)
 
 
 def wait_for(cond: Callable, timeout: int, freq: int, factor: float = 1.1, initial_wait: int = 0,
