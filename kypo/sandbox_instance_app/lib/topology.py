@@ -1,9 +1,8 @@
 import structlog
-from kypo.openstack_driver.sandbox_topology import SandboxTopology as Stack
+from kypo.openstack_driver.sandbox_topology import SandboxTopology as Stack, BR_NET_NAME, UAN_NET_NAME
 
 from ..models import Sandbox
 from ...sandbox_common_lib import utils
-from ...sandbox_common_lib.config import config
 from ...sandbox_definition_app.lib.definition_service import get_definition
 
 LOG = structlog.getLogger()
@@ -69,8 +68,7 @@ class Topology:
 
         # Delete MNG infrastructure
         mng_nodes = (stack.man.name, stack.br.name, stack.uan.name)
-        mng_networks = (config.UAN_NETWORK_NAME,
-                        config.BR_NETWORK_NAME, stack.mng_net.name)
+        mng_networks = (UAN_NET_NAME, BR_NET_NAME, stack.mng_net.name)
 
         for net in mng_networks:
             del stack.networks[net]

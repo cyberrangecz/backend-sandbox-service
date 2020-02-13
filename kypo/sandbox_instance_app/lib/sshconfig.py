@@ -4,11 +4,14 @@ import structlog
 import ssh_config
 
 from kypo.openstack_driver.sandbox_topology import SandboxHost, SandboxRouter, \
-    SandboxLink, SandboxExtraNode
+    SandboxLink, SandboxExtraNode, UAN_NET_NAME
 
 from ...sandbox_common_lib.config import config
 
 LOG = structlog.getLogger()
+
+SSH_PROXY_USERNAME = "user-access"
+
 
 # Add missing SSH Options to ssh_config.Host.attrs
 ssh_config.Host.attrs += (
@@ -21,7 +24,7 @@ class KypoSSHConfig(ssh_config.SSHConfig):
     """Subclass of ssh_config.SSHConfig with __str__ method."""
 
     def __init__(self, stack):
-        super().__init__(None)
+        super().__init__('')
         self.stack = stack
 
     def __str__(self) -> str:
@@ -41,21 +44,21 @@ class KypoSSHConfig(ssh_config.SSHConfig):
         """
         sshconf = cls(stack)
         man = ssh_config.Host([sshconf.stack.man.name, sshconf.stack.ip], dict(
-            User=config.SSH_PROXY_USERNAME, HostName=sshconf.stack.ip,
+            User=SSH_PROXY_USERNAME, HostName=sshconf.stack.ip,
             IdentityFile='<path_to_sandbox_private_key>',
             AddKeysToAgent='yes'))
         sshconf.append(man)
 
         uan_ip = sshconf._get_uan_ip()
         uan = ssh_config.Host([stack.uan.name, uan_ip], dict(
-            User=config.SSH_PROXY_USERNAME, HostName=uan_ip,
-            ProxyJump=config.SSH_PROXY_USERNAME + '@' + stack.man.name))
+            User=SSH_PROXY_USERNAME, HostName=uan_ip,
+            ProxyJump=SSH_PROXY_USERNAME + '@' + stack.man.name))
         sshconf.append(uan)
 
         for link in sshconf._get_uan_accessible_node_links():
             sshconf.append(ssh_config.Host([link.node.name, link.ip], dict(
-                User=config.SSH_PROXY_USERNAME, HostName=link.ip,
-                ProxyJump=config.SSH_PROXY_USERNAME + '@' + stack.uan.name)))
+                User=SSH_PROXY_USERNAME, HostName=link.ip,
+                ProxyJump=SSH_PROXY_USERNAME + '@' + stack.uan.name)))
         return sshconf
 
     @classmethod
@@ -97,34 +100,39 @@ class KypoSSHConfig(ssh_config.SSHConfig):
             UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no')))
 
         if config.PROXY_JUMP_TO_MAN_SSH_OPTIONS:
-            proxy_jump_to_man_private_key = os.path.join(
-                config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
-                os.path.basename(config.PROXY_JUMP_TO_MAN_PRIVATE_KEY))
-
-            jump_host_name = config.PROXY_JUMP_TO_MAN_SSH_OPTIONS.get('Host')
-            jump_host_user = config.PROXY_JUMP_TO_MAN_SSH_OPTIONS.get('User')
-            jump_host = ssh_config.Host(jump_host_name, dict(
-                USER=jump_host_user,
-                IdentityFile=proxy_jump_to_man_private_key,
-                UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no'))
-            sshconf.append(jump_host)
-
-            # Need to use the full-name
-            sshconf.get(" ".join([stack.man.name, stack.ip])).update(
-                {'ProxyJump': jump_host_user + '@' + jump_host_name})
+            sshconf.add_proxy_jump()
 
         return sshconf
+
+    def add_proxy_jump(self):
+        jump_host_name = config.PROXY_JUMP_TO_MAN_SSH_OPTIONS.get('Host')
+        jump_host_user = config.PROXY_JUMP_TO_MAN_SSH_OPTIONS.get('User')
+        jump_host = ssh_config.Host(jump_host_name,
+                                    config.PROXY_JUMP_TO_MAN_SSH_OPTIONS)
+        jump_host.update(dict(UserKnownHostsFile='/dev/null',
+                              StrictHostKeyChecking='no'))
+        self.append(jump_host)
+
+        if 'IdentityFile' in config.PROXY_JUMP_TO_MAN_SSH_OPTIONS:
+            proxy_jump_to_man_private_key = os.path.join(
+                config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
+                os.path.basename(config.PROXY_JUMP_TO_MAN_SSH_OPTIONS['IdentityFile']))
+            jump_host.update({'IdentityFile': proxy_jump_to_man_private_key})
+
+        # Need to use the full-name
+        self.get(" ".join([self.stack.man.name, self.stack.ip])).update(
+            {'ProxyJump': jump_host_user + '@' + jump_host_name})
 
     def _get_uan_ip(self) -> str:
         """Get IP of UAN in UAN_NETWORK."""
         for link in self.stack.links:
-            if link.node == self.stack.uan and link.network.name == config.UAN_NETWORK_NAME:
+            if link.node == self.stack.uan and link.network.name == UAN_NET_NAME:
                 return link.ip
 
     def _get_uan_accessible_node_links(self) -> List[SandboxLink]:
         # Only 'inner' networks UAN is connected to
         networks = [link.network for link in self.stack.get_node_links(self.stack.uan)
-                    if link.network.name not in [config.UAN_NETWORK_NAME, self.stack.mng_net.name]]
+                    if link.network.name not in [UAN_NET_NAME, self.stack.mng_net.name]]
 
         links = [link for link in self.stack.links
                  if link.network in networks

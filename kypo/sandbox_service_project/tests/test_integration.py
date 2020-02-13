@@ -34,8 +34,8 @@ DEFINITION_REV = 'integration-test'
 JUMP_STACK_NAME = 'integration_test_jump'
 TEMPLATE_DICT = dict(
     PUBLIC_NETWORK='public-muni-147-251-124-GROUP',
-    JUMP_IMAGE=config.trc.extra_nodes_image,
-    JUMP_FLAVOR=config.trc.extra_nodes_flavor,
+    JUMP_IMAGE=config.TRC.extra_nodes_image,
+    JUMP_FLAVOR=config.TRC.extra_nodes_flavor,
 )
 
 # URL names
@@ -62,13 +62,12 @@ class TestIntegration:
         """Set config values. Config.yml overrides those values if set.
         Also extract the zip repositories to tmp directory.
         """
-        creds = config.OS_CREDENTIALS
-        if not creds['auth_url']:
-            creds['auth_url'] = os.environ.get('OS_AUTH_URL')
-        if not creds['app_creds_id']:
-            creds['app_creds_id'] = os.environ.get('OS_APPLICATION_CREDENTIAL_ID')
-        if not creds['app_creds_secret']:
-            creds['app_creds_secret'] = os.environ.get('OS_APPLICATION_CREDENTIAL_SECRET')
+        if not config.OS_AUTH_URL:
+            config.OS_AUTH_URL = os.environ.get('OS_AUTH_URL')
+        if not config.OS_APPLICATION_CREDENTIAL_ID:
+            config.OS_APPLICATION_CREDENTIAL_ID = os.environ.get('OS_APPLICATION_CREDENTIAL_ID')
+        if not config.OS_APPLICATION_CREDENTIAL_SECRET:
+            config.OS_APPLICATION_CREDENTIAL_SECRET = os.environ.get('OS_APPLICATION_CREDENTIAL_SECRET')
 
         if not config.ANSIBLE_NETWORKING_URL:
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -222,6 +221,6 @@ class TestIntegration:
         LOG.info('Stack outputs', host=host, key_path=key_path,
                  private_key=private_key)
         config.PROXY_JUMP_TO_MAN_SSH_OPTIONS['Host'] = host
-        config.PROXY_JUMP_TO_MAN_PRIVATE_KEY = key_path
+        config.PROXY_JUMP_TO_MAN_SSH_OPTIONS['IdentityFile'] = key_path
         with open(key_path, 'w') as f:
             f.write(private_key)

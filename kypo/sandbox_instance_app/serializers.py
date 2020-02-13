@@ -13,7 +13,7 @@ from rest_framework import serializers
 
 from . import models
 from .lib import pool_service
-from ..sandbox_common_lib.config import config
+from .lib.pool_service import MAX_SANDBOXES_PER_POOL
 
 
 class PoolSerializer(serializers.ModelSerializer):
@@ -27,10 +27,10 @@ class PoolSerializer(serializers.ModelSerializer):
     @staticmethod
     def validate_max_size(value):
         """Validate that max_size is in [1, MAX_SANDBOXES_PER_POOL]"""
-        if value < 1 or value > config.MAX_SANDBOXES_PER_POOL:
-            raise serializers.ValidationError("Pool max_size value must be in interval [1, %s]."
-                                              "Your value: %s."
-                                              % (config.MAX_SANDBOXES_PER_POOL, value))
+        if not 1 <= value <= MAX_SANDBOXES_PER_POOL:
+            raise serializers.ValidationError(
+                f'Pool max_size value must be in interval [1, {MAX_SANDBOXES_PER_POOL}].'
+                f' Your value: {value}.')
         return value
 
     @staticmethod
