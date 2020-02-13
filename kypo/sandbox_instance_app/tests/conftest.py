@@ -1,6 +1,5 @@
 import pytest
 import os
-import re
 import jsonpickle
 
 TESTING_DATA_DIR = 'assets'
