@@ -15,8 +15,6 @@ from ...sandbox_common_lib import utils, exceptions
 
 LOG = structlog.get_logger()
 
-MAX_SANDBOXES_PER_POOL = 64
-
 
 def get_pool(pool_pk: int) -> Pool:
     """
