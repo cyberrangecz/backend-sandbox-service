@@ -23,7 +23,7 @@ pytest-django = "*"
 
 [packages]
 drf-oidc-auth = { index = "kypo", version = ">=2.0.1" }
-kypo-openstack-lib = { index = "kypo", version = "*" }
+kypo-openstack-lib = { index = "kypo", version = ">=0.21.0" }
 csirtmu-oidc-client = { index = "kypo", version = ">=0.1.4" }
 csirtmu-uag-auth = { index = "kypo", version = "*" }
 jsonpickle = "*"

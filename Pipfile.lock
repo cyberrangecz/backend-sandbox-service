@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "cb253504b207ba619af47ad0809e89ccb709823dc93a648abb293e5649558480"
+            "sha256": "6a708efca6a0554af68ac09d2d8deee99bb8b14b5c4f62837046f4c9adbe268f"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -294,11 +294,11 @@
         },
         "drf-yasg": {
             "hashes": [
-                "sha256:4cfec631880ae527a91ec7cd3241aea2f82189f59e2f089119aa687761afb227",
-                "sha256:504cce09035cf1bace63b84d9d778b772f86bb37d8a71ed6f723346362e633b2"
+                "sha256:5572e9d5baab9f6b49318169df9789f7399d0e3c7bdac8fdb8dfccf1d5d2b1ca",
+                "sha256:7d7af27ad16e18507e9392b2afd6b218fbffc432ec8dbea053099a2241e184ff"
             ],
             "index": "pypi",
-            "version": "==1.17.0"
+            "version": "==1.17.1"
         },
         "future": {
             "hashes": [
@@ -308,18 +308,18 @@
         },
         "gitdb2": {
             "hashes": [
-                "sha256:1b6df1433567a51a4a9c1a5a0de977aa351a405cc56d7d35f3388bad1f630350",
-                "sha256:96bbb507d765a7f51eb802554a9cfe194a174582f772e0d89f4e87288c288b7b"
+                "sha256:0375d983fd887d03c8942e81b1b0abc6c320cfb500cd3fe0d9c0eac87fbf2b52",
+                "sha256:b2b3a67090c17dc61f8407ca485e79ae811225ab5ebcd98ac5ee01448e8987b5"
             ],
-            "version": "==2.0.6"
+            "version": "==3.0.2"
         },
         "gitpython": {
             "hashes": [
-                "sha256:99c77677f31f255e130f3fed4c8e0eebb35f1a09df98ff965fff6774f71688cf",
-                "sha256:99cd0403cecd8a13b95d2e045b9fcaa7837137fcc5ec3105f2c413305d82c143"
+                "sha256:620b3c729bbc143b498cfea77e302999deedc55faec5b1067086c9ef90e101bc",
+                "sha256:a43a5d88a5bbc3cf32bb5223e4b4e68fd716db5e9996cad6e561bbfee6e5f4af"
             ],
             "index": "pypi",
-            "version": "==3.0.7"
+            "version": "==3.0.8"
         },
         "idna": {
             "hashes": [
@@ -379,11 +379,11 @@
         },
         "jsonpickle": {
             "hashes": [
-                "sha256:d0c5a4e6cb4e58f6d5406bdded44365c2bcf9c836c4f52910cc9ba7245a59dc2",
-                "sha256:d3e922d781b1d0096df2dad89a2e1f47177d7969b596aea806a9d91b4626b29b"
+                "sha256:71bca2b80ae28af4e3f86629ef247100af7f97032b5ca8d791c1f8725b411d95",
+                "sha256:efc6839cb341985f0c24f98650a4c1063a2877c236ffd3d7e1662f0c482bac93"
             ],
             "index": "pypi",
-            "version": "==1.2"
+            "version": "==1.3"
         },
         "jsonpointer": {
             "hashes": [
@@ -408,10 +408,10 @@
         },
         "kypo-openstack-lib": {
             "hashes": [
-                "sha256:95165535291d4057116bcc3930ea74063b1462eb975a992612adab4477387310"
+                "sha256:2e8b2b93263f233e0bd8bc96b28ec868be9f0bb93b56cbbaa7b750e7fb5f71b5"
             ],
             "index": "kypo",
-            "version": "==0.20.0"
+            "version": "==0.21.0"
         },
         "kypo-topology-definition": {
             "hashes": [
@@ -574,10 +574,10 @@
         },
         "oslo.i18n": {
             "hashes": [
-                "sha256:04aebc4134e1144dce7947caf25f276e3af5a34caae3a3365a728f05d90ff316",
-                "sha256:8479724031bee200cb72577cf9670c48c93089e32627a74fb3dc80dec2812fc9"
+                "sha256:2c6db1d4930ff49aaa7732d6d165fcf1454dc064fdab0a31144cb6d7d738bd61",
+                "sha256:b511fb702f25e48ff50eb5af3e600b5481b35ba405e16a098ee9d972949f59d8"
             ],
-            "version": "==3.25.1"
+            "version": "==4.0.0"
         },
         "oslo.log": {
             "hashes": [
@@ -836,10 +836,10 @@
         },
         "python-swiftclient": {
             "hashes": [
-                "sha256:0b460f6a2c16d474dd2a85674162a04e14f40a21d9ef0197172fb5c5cc0bc5d5",
-                "sha256:3a013303643f77a99befa05582dfb93671e1fba1aed9f4a517418129700aedb8"
+                "sha256:4f2097492e4c76e948882fc859bfa033ade09bed72f8e6b328e34a3467d9a377",
+                "sha256:cba38ac00a69bcea610318bfbe4f8aaee9d7b46705359477b8d3602ea2009878"
             ],
-            "version": "==3.8.1"
+            "version": "==3.9.0"
         },
         "pytz": {
             "hashes": [
@@ -905,10 +905,10 @@
         },
         "ruamel.yaml": {
             "hashes": [
-                "sha256:9d59fa89985c55155d35c886663e357813404ae8f94638cb673135b8c8c1a7c7",
-                "sha256:dba517a7e330b6caf476b757022d21efa13c32694bfba1e057ce59a374f18f0a"
+                "sha256:0962fd7999e064c4865f96fb1e23079075f4a2a14849bcdc5cdba53a24f9759b",
+                "sha256:099c644a778bf72ffa00524f78dd0b6476bca94a1da344130f4bf3381ce5b954"
             ],
-            "version": "==0.16.7"
+            "version": "==0.16.10"
         },
         "ruamel.yaml.clib": {
             "hashes": [
@@ -932,7 +932,7 @@
                 "sha256:ed5b3698a2bb241b7f5cbbe277eaa7fe48b07a58784fba4f75224fd066d253ad",
                 "sha256:f9dcc1ae73f36e8059589b601e8e4776b9976effd76c21ad6a855a74318efd6e"
             ],
-            "markers": "platform_python_implementation == 'CPython' and python_version < '3.8'",
+            "markers": "platform_python_implementation == 'CPython' and python_version < '3.9'",
             "version": "==0.2.0"
         },
         "scp": {
@@ -996,10 +996,10 @@
         },
         "stevedore": {
             "hashes": [
-                "sha256:01d9f4beecf0fbd070ddb18e5efb10567801ba7ef3ddab0074f54e3cd4e91730",
-                "sha256:e0739f9739a681c7a1fda76a102b65295e96a144ccdb552f2ae03c5f0abe8a14"
+                "sha256:18afaf1d623af5950cc0f7e75e70f917784c73b652a34a12d90b309451b5500b",
+                "sha256:a4e7dc759fb0f2e3e2f7d8ffe2358c19d45b9b8297f393ef1256858d82f69c9b"
             ],
-            "version": "==1.31.0"
+            "version": "==1.32.0"
         },
         "structlog": {
             "hashes": [
@@ -1053,9 +1053,9 @@
         },
         "wrapt": {
             "hashes": [
-                "sha256:565a021fd19419476b9362b05eeaa094178de64f8361e44468f9e9d7843901e1"
+                "sha256:0ec40d9fd4ec9f9e3ff9bdd12dbd3535f4085949f4db93025089d7a673ea94e8"
             ],
-            "version": "==1.11.2"
+            "version": "==1.12.0"
         },
         "yamlize": {
             "hashes": [
@@ -1128,6 +1128,12 @@
                 "sha256:fca1669d464f0c9831fd10be2eef6b86f5ebd76c724d1e0706ebdff86bb4adf0"
             ],
             "version": "==5.0.3"
+        },
+        "distlib": {
+            "hashes": [
+                "sha256:2e166e231a26b36d6dfe35a48c4464346620f8645ed0ace01ee31822b288de21"
+            ],
+            "version": "==0.3.0"
         },
         "filelock": {
             "hashes": [
@@ -1261,10 +1267,10 @@
         },
         "virtualenv": {
             "hashes": [
-                "sha256:09740201a02918564a84eea071708c46ac26f3bd9b688b48fc6a86f331c536b7",
-                "sha256:ef3fd938ef165956e51bba0d0623508de920ca9f3ccd30c6e9f74381677e0cbb"
+                "sha256:08f3623597ce73b85d6854fb26608a6f39ee9d055c81178dc6583803797f8994",
+                "sha256:de2cbdd5926c48d7b84e0300dea9e8f276f61d186e8e49223d71d91250fbaebd"
             ],
-            "version": "==20.0.1"
+            "version": "==20.0.4"
         },
         "virtualenv-clone": {
             "hashes": [
