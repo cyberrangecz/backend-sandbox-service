@@ -1,0 +1,36 @@
+- model: sandbox_definition_app.definition
+  pk: 1
+  fields:
+    name: test-def-name
+    url: test-def-url
+    rev: test-def-rev
+
+- model: sandbox_instance_app.pool
+  pk: 1
+  fields:
+    definition: 1
+    max_size: 10
+    private_management_key: -----RSA PRIVATE KEY-----
+    public_management_key: ssh-rsa
+    uuid: 0fb3160d
+
+- model: sandbox_instance_app.pool
+  pk: 2
+  fields:
+    definition: 1
+    max_size: 0
+    private_management_key: -----RSA PRIVATE KEY-----
+    public_management_key: ssh-rsa
+    uuid: 0fb3160d
+
+- model: sandbox_instance_app.sandboxallocationunit
+  pk: 1
+  fields:
+    pool: 1
+
+- model: sandbox_instance_app.sandbox
+  pk: 1
+  fields:
+    allocation_unit: 1
+    private_user_key: -----BEGIN RSA PRIVATE KEY-----
+    public_user_key: ssh-rsa

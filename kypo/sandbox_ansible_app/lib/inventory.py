@@ -166,5 +166,5 @@ class Inventory:
     def create_user_groups(top_def: TopologyDefinition) -> Dict[str, Dict[str, Dict[str, None]]]:
         """Parses user groups from _validated_ definition.
         Return Dict of user groups."""
-        return {g.name: {node: None for node in g.nodes}
+        return {g.name: {'hosts': {node: None for node in g.nodes}}
                 for g in top_def.groups}

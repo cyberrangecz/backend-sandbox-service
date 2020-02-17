@@ -13,7 +13,8 @@ from rest_framework import serializers
 
 from . import models
 from .lib import pool_service
-from .lib.pool_service import MAX_SANDBOXES_PER_POOL
+
+MAX_SANDBOXES_PER_POOL = 64
 
 
 class PoolSerializer(serializers.ModelSerializer):
