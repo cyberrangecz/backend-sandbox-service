@@ -26,6 +26,7 @@ ANSIBLE_DOCKER_VOLUMES = '/tmp/kypo'
 ANSIBLE_DOCKER_IMAGE = 'csirtmu/kypo-ansible-runner'
 
 
+# TODO maybe remove after yamlize hashing problems are resolved
 class AttributeDict(Attribute):
     """Attribute subclass for (immutable!) dict since they are not hashable by default."""
     def __init__(self, *args, **kwargs):
