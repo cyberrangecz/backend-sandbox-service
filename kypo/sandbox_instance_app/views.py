@@ -401,7 +401,7 @@ class SandboxUserSSHConfig(APIView):
         """Generate SSH config for User access to this sandbox.
         Some values are user specific, the config contains placeholders for them."""
         sandbox = sandbox_service.get_sandbox(sandbox_id)
-        ssh_config = sandbox_service.SandboxSSHConfigCreator(sandbox).create_user_config()
+        ssh_config = sandbox_service.get_user_sshconfig(sandbox)
         response = HttpResponse(FileWrapper(io.StringIO(str(ssh_config))),
                                 content_type='application/txt')
         response['Content-Disposition'] = "attachment; filename=config"
@@ -416,7 +416,7 @@ class SandboxManagementSSHConfig(APIView):
         """Generate SSH config for Management access to this sandbox.
         Some values are user specific, the config contains placeholders for them."""
         sandbox = sandbox_service.get_sandbox(sandbox_id)
-        ssh_config = sandbox_service.SandboxSSHConfigCreator(sandbox).create_management_config()
+        ssh_config = sandbox_service.get_management_sshconfig(sandbox)
         response = HttpResponse(FileWrapper(io.StringIO(str(ssh_config))),
                                 content_type='application/txt')
         response['Content-Disposition'] = "attachment; filename=config"
