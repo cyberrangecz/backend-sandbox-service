@@ -31,8 +31,11 @@ STACK_STATUS_CREATE_COMPLETE = "CREATE_COMPLETE"
 LOG = structlog.get_logger()
 
 ANSIBLE_INVENTORY_FILENAME = 'inventory.yml'
+MNG_PRIVATE_KEY_FILENAME = 'pool_mng_key'
 USER_PRIVATE_KEY_FILENAME = 'user_key'
 USER_PUBLIC_KEY_FILENAME = 'user_key.pub'
+OPENSTACK_QUEUE = 'openstack'
+ANSIBLE_QUEUE = 'ansible'
 
 
 def create_sandbox_requests(pool: Pool, count: int) -> List[SandboxAllocationUnit]:
@@ -63,7 +66,7 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
         with transaction.atomic():
             stage_openstack = StackAllocationStage.objects.create(request=request)
             queue_openstack = django_rq.get_queue(
-                config.OPENSTACK_QUEUE, default_timeout=config.SANDBOX_BUILD_TIMEOUT)
+                OPENSTACK_QUEUE, default_timeout=config.SANDBOX_BUILD_TIMEOUT)
             result_openstack = queue_openstack.enqueue(
                 StackAllocationStageManager().run, stage=stage_openstack,
                 sandbox=sandbox, meta=dict(locked=True))
@@ -73,7 +76,7 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
                 rev=config.ANSIBLE_NETWORKING_REV
             )
             queue_ansible = django_rq.get_queue(
-                config.ANSIBLE_QUEUE, default_timeout=config.SANDBOX_ANSIBLE_TIMEOUT)
+                ANSIBLE_QUEUE, default_timeout=config.SANDBOX_ANSIBLE_TIMEOUT)
             result_networking = queue_ansible.enqueue(
                 AnsibleAllocationStageManager(stage=stage_networking, sandbox=sandbox).run,
                 name='networking', depends_on=result_openstack
@@ -220,7 +223,7 @@ class AnsibleAllocationStageManager:
                        self.sandbox.private_user_key)
         self.save_file(os.path.join(ssh_directory, USER_PUBLIC_KEY_FILENAME),
                        self.sandbox.public_user_key)
-        self.save_file(os.path.join(ssh_directory, config.MNG_PRIVATE_KEY_FILENAME),
+        self.save_file(os.path.join(ssh_directory, MNG_PRIVATE_KEY_FILENAME),
                        self.stage.request.allocation_unit.pool.private_management_key)
 
         if not ansible_service.AnsibleRunDockerContainer.is_local_repo(self.stage.repo_url):

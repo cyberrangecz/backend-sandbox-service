@@ -7,6 +7,7 @@ from kypo.openstack_driver.sandbox_topology import SandboxHost, SandboxRouter, \
     SandboxLink, SandboxExtraNode, UAN_NET_NAME
 
 from ...sandbox_common_lib.config import config
+from . import sandbox_creator
 
 LOG = structlog.getLogger()
 
@@ -86,7 +87,7 @@ class KypoSSHConfig(ssh_config.SSHConfig):
         sshconf = cls.create_management_config(stack)
 
         mng_private_key = os.path.join(config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
-                                       config.MNG_PRIVATE_KEY_FILENAME)
+                                       sandbox_creator.MNG_PRIVATE_KEY_FILENAME)
         git_private_key = os.path.join(config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
                                        os.path.basename(config.GIT_PRIVATE_KEY))
 

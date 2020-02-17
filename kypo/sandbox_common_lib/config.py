@@ -39,9 +39,6 @@ class AttributeDict(Attribute):
 
 
 class Settings(Object):
-    OPENSTACK_QUEUE = 'openstack'
-    ANSIBLE_QUEUE = 'ansible'
-    MNG_PRIVATE_KEY_FILENAME = 'pool_mng_key'
     ANSIBLE_DOCKER_WORKING_DIR = '/app'
     ANSIBLE_DOCKER_VOLUMES_MAPPING = {
         'SSH_DIR': {

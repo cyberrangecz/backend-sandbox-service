@@ -14,6 +14,7 @@ from kypo.sandbox_ansible_app.lib import ansible_service
 from kypo.sandbox_ansible_app.models import AnsibleOutput, DockerContainer
 from kypo.sandbox_common_lib import utils
 from kypo.sandbox_common_lib.config import config
+from kypo.sandbox_instance_app.lib.sandbox_creator import OPENSTACK_QUEUE, ANSIBLE_QUEUE
 from kypo.sandbox_instance_app.models import Sandbox
 
 LOG = structlog.get_logger()
@@ -54,7 +55,7 @@ CLEANUP_REQUEST_LIST = 'sandbox-cleanup-request-list'
 @pytest.mark.integration
 class TestIntegration:
     pytestmark = pytest.mark.django_db(transaction=True)
-    RQ_QUEUES = ('default', config.OPENSTACK_QUEUE, config.ANSIBLE_QUEUE)
+    RQ_QUEUES = ('default', OPENSTACK_QUEUE, ANSIBLE_QUEUE)
     DEFINITION_URL = None
 
     @pytest.fixture(autouse=True)
