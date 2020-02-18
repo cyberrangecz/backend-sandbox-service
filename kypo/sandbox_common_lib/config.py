@@ -39,7 +39,7 @@ class ProxyJump(Object):
         self.IdentityFile = identity_file
 
 
-class KypoSettings(Object):
+class KypoConfiguration(Object):
     os_auth_url = Attribute(type=str)
     os_application_credential_id = Attribute(type=str)
     os_application_credential_secret = Attribute(type=str)
@@ -51,7 +51,7 @@ class KypoSettings(Object):
     git_server = Attribute(type=str, default=GIT_SERVER)
     git_user = Attribute(type=str, default=GIT_USER)
     git_private_key = Attribute(type=str, default=GIT_PRIVATE_KEY)
-    git_reposotories = Attribute(type=str, default=GIT_REPOSITORIES)
+    git_repositories = Attribute(type=str, default=GIT_REPOSITORIES)
 
     ansible_networking_url = Attribute(type=str)
     ansible_networking_rev = Attribute(type=str, default=ANSIBLE_NETWORKING_REV)
@@ -69,6 +69,10 @@ class KypoSettings(Object):
 
     trc = Attribute(type=TransformationConfiguration, key='sandbox_configuration')
 
+    def __init__(self, **kwargs):
+        for key, val in kwargs.items():
+            setattr(self, key, val)
+
     # Override
     @classmethod
     def load(cls, *args, **kwargs):
@@ -81,5 +85,15 @@ class KypoSettings(Object):
         return obj
 
 
-with open(getattr(settings, CONFIG_FILE_VARIABLE)) as f:
-    config = KypoSettings.load(f)
+class KypoConfigurationManager:
+    """Lazy configuration loader and manager."""
+    _config = None
+
+    @property
+    @classmethod
+    def config(cls):
+        if not cls.config:
+            with open(getattr(settings, CONFIG_FILE_VARIABLE)) as f:
+                _config = KypoConfiguration.load(f)
+        return cls._config
+

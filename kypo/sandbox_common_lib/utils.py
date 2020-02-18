@@ -17,7 +17,7 @@ from Crypto.PublicKey import RSA
 from kypo.openstack_driver.ostack_client import KypoOstackClient
 
 from . import exceptions
-from .config import config
+from .config import KypoConfigurationManager as kcm
 
 # Create logger
 LOG = structlog.get_logger()
@@ -26,8 +26,8 @@ LOG = structlog.get_logger()
 def configure_logging() -> None:
     """Configure logging and structlog"""
     # noinspection PyArgumentList
-    logging.basicConfig(level=config.LOG_LEVEL,
-                        handlers=[logging.StreamHandler(), logging.FileHandler(config.LOG_FILE)],
+    logging.basicConfig(level=kcm.config.LOG_LEVEL,
+                        handlers=[logging.StreamHandler(), logging.FileHandler(kcm.config.LOG_FILE)],
                         format="%(message)s")
     structlog.configure(
         processors=[
@@ -89,10 +89,10 @@ def generate_ssh_keypair(bits: int = 2048) -> Tuple[str, str]:
 
 def get_ostack_client() -> KypoOstackClient:
     """Abstracts creation and authentication to KYPO lib client."""
-    return KypoOstackClient(app_creds_id=config.OS_APPLICATION_CREDENTIAL_ID,
-                            auth_url=config.OS_AUTH_URL,
-                            app_creds_secret=config.OS_APPLICATION_CREDENTIAL_SECRET,
-                            trc=config.TRC)
+    return KypoOstackClient(app_creds_id=kcm.config.OS_APPLICATION_CREDENTIAL_ID,
+                            auth_url=kcm.config.OS_AUTH_URL,
+                            app_creds_secret=kcm.config.OS_APPLICATION_CREDENTIAL_SECRET,
+                            trc=kcm.config.TRC)
 
 
 def wait_for(cond: Callable, timeout: int, freq: int, factor: float = 1.1, initial_wait: int = 0,
@@ -134,8 +134,8 @@ class GitRepo:
         :raise: git.exc.GitCommandError if the revision is unknown to Git
         """
         with cls.lock:
-            git_ssh_cmd = 'ssh -o StrictHostKeyChecking=no -i {0}'.format(config.GIT_PRIVATE_KEY)
-            local_repository = os.path.join(config.GIT_REPOSITORIES, url, name if name else rev).replace(":", "")
+            git_ssh_cmd = 'ssh -o StrictHostKeyChecking=no -i {0}'.format(kcm.config.GIT_PRIVATE_KEY)
+            local_repository = os.path.join(kcm.config.GIT_REPOSITORIES, url, name if name else rev).replace(":", "")
 
             if os.path.isdir(local_repository):
                 repo = git.Repo(local_repository)

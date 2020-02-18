@@ -23,7 +23,7 @@ os_application_credential_secret: ""
 #git_private_key: ~/.ssh/git_rsa_key
 
 # The path to local temporary directory
-#git_reposotories: /tmp
+#git_repositories: /tmp
 
 # The URL of Ansible networking Git repository.
 ansible_networking_url: ""
