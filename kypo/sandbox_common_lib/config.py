@@ -24,22 +24,22 @@ SANDBOX_DELETE_TIMEOUT = 3600
 SANDBOX_ANSIBLE_TIMEOUT = 3600 * 2
 ANSIBLE_DOCKER_VOLUMES = '/tmp/kypo'
 ANSIBLE_DOCKER_IMAGE = 'csirtmu/kypo-ansible-runner'
+PROXY_JUMP_TO_MAN = None
 SSL_CA_CERTIFICATE_VERIFY = ''
 
 
-# TODO maybe remove after yamlize hashing problems are resolved
-class AttributeDict(Attribute):
-    """Attribute subclass for (immutable!) dict since they are not hashable by default."""
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class ProxyJump(Object):
+    Host = Attribute(type=str)
+    User = Attribute(type=str)
+    IdentityFile = Attribute(type=str)
 
-    def __hash__(self):
-        return sum(hash(getattr(self, attr_name))
-                   for attr_name in self.__class__.__slots__
-                   if not isinstance(getattr(self, attr_name), dict))
+    def __init__(self, host, user, identity_file):
+        self.Host = host
+        self.User = user
+        self.IdentityFile = identity_file
 
 
-class Settings(Object):
+class KypoSettings(Object):
     os_auth_url = Attribute(type=str)
     os_application_credential_id = Attribute(type=str)
     os_application_credential_secret = Attribute(type=str)
@@ -56,7 +56,7 @@ class Settings(Object):
     ansible_networking_url = Attribute(type=str)
     ansible_networking_rev = Attribute(type=str, default=ANSIBLE_NETWORKING_REV)
 
-    proxy_jump_to_man = AttributeDict(type=dict, default={})
+    proxy_jump_to_man = Attribute(type=ProxyJump, default=PROXY_JUMP_TO_MAN)
 
     sandbox_build_timeout = Attribute(type=int, default=SANDBOX_BUILD_TIMEOUT)
     sandbox_delete_timeout = Attribute(type=int, default=SANDBOX_DELETE_TIMEOUT)
@@ -82,4 +82,4 @@ class Settings(Object):
 
 
 with open(getattr(settings, CONFIG_FILE_VARIABLE)) as f:
-    config = Settings.load(f)
+    config = KypoSettings.load(f)
