@@ -81,7 +81,7 @@ class KypoConfiguration(Object):
             obj = super().load(*args, **kwargs)
         except YamlizingError as ex:
             raise ImproperlyConfigured(ex)
-        os.environ['REQUESTS_CA_BUNDLE'] = obj.SSL_CA_CERTIFICATE_VERIFY
+        os.environ['REQUESTS_CA_BUNDLE'] = obj.ssl_ca_certificate_verify
         return obj
 
 
@@ -89,11 +89,10 @@ class KypoConfigurationManager:
     """Lazy configuration loader and manager."""
     _config = None
 
-    @property
-    @classmethod
+    @staticmethod
     def config(cls):
-        if not cls.config:
+        if not cls._config:
             with open(getattr(settings, CONFIG_FILE_VARIABLE)) as f:
-                _config = KypoConfiguration.load(f)
+                cls._config = KypoConfiguration.load(f)
         return cls._config
 
