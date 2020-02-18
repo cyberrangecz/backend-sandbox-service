@@ -19,6 +19,7 @@ from . import sandbox_service
 from ..models import Sandbox, Pool, SandboxAllocationUnit, \
     AllocationRequest, StackAllocationStage
 from ...sandbox_ansible_app.lib import ansible_service
+from ...sandbox_ansible_app.lib.ansible_service import ANSIBLE_DOCKER_SSH_DIR
 from ...sandbox_ansible_app.lib.inventory import Inventory
 from ...sandbox_ansible_app.models import AnsibleAllocationStage, \
     AnsibleOutput, DockerContainer
@@ -248,9 +249,9 @@ class AnsibleAllocationStageManager:
 
         client = utils.get_ostack_client()
         stack = client.get_sandbox(self.sandbox.get_stack_name())
-        user_private_key = os.path.join(config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
+        user_private_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
                                         USER_PRIVATE_KEY_FILENAME)
-        user_public_key = os.path.join(config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
+        user_public_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
                                        USER_PUBLIC_KEY_FILENAME)
         inventory = Inventory.create_inventory(stack, top_def,
                                                user_private_key, user_public_key)

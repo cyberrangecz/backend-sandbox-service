@@ -7,6 +7,8 @@ from kypo.openstack_driver.sandbox_topology import SandboxHost, SandboxRouter, \
     SandboxLink, SandboxExtraNode, UAN_NET_NAME
 
 from ...sandbox_common_lib.config import config
+from ...sandbox_ansible_app.lib.ansible_service import ANSIBLE_DOCKER_SSH_DIR
+
 from . import sandbox_creator
 
 LOG = structlog.getLogger()
@@ -86,9 +88,9 @@ class KypoSSHConfig(ssh_config.SSHConfig):
         """Generates Ansible ssh config string for sandbox."""
         sshconf = cls.create_management_config(stack)
 
-        mng_private_key = os.path.join(config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
+        mng_private_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
                                        sandbox_creator.MNG_PRIVATE_KEY_FILENAME)
-        git_private_key = os.path.join(config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
+        git_private_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
                                        os.path.basename(config.GIT_PRIVATE_KEY))
 
         for host in sshconf.hosts():
@@ -116,7 +118,7 @@ class KypoSSHConfig(ssh_config.SSHConfig):
 
         if 'IdentityFile' in config.PROXY_JUMP_TO_MAN_SSH_OPTIONS:
             proxy_jump_to_man_private_key = os.path.join(
-                config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
+                ANSIBLE_DOCKER_SSH_DIR.bind,
                 os.path.basename(config.PROXY_JUMP_TO_MAN_SSH_OPTIONS['IdentityFile']))
             jump_host.update({'IdentityFile': proxy_jump_to_man_private_key})
 

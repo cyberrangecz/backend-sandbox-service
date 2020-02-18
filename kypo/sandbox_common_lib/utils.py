@@ -196,3 +196,9 @@ def ssh_connection(server: str, username: str, cmd: str, key_path: str, proxy: s
         raise exceptions.NetworkError("Command {} returned exitcode {}; stdout: {}, stderr: {}".
                                       format(cmd, exit_code, out, err))
     return exit_code, out, err
+
+
+class AttrDict(dict):
+    def __init__(self, *args, **kwargs):
+        super(AttrDict, self).__init__(*args, **kwargs)
+        self.__dict__ = self

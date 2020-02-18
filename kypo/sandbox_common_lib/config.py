@@ -39,22 +39,6 @@ class AttributeDict(Attribute):
 
 
 class Settings(Object):
-    ANSIBLE_DOCKER_WORKING_DIR = '/app'
-    ANSIBLE_DOCKER_VOLUMES_MAPPING = {
-        'SSH_DIR': {
-            'bind': '/root/.ssh',
-            'mode': 'rw'
-        },
-        'INVENTORY_PATH': {
-            'bind': os.path.join(ANSIBLE_DOCKER_WORKING_DIR, 'inventory.yml'),
-            'mode': 'ro'
-        },
-        'LOCAL_REPO': {
-            'bind': 'path',
-            'mode': 'ro'
-        }
-    }
-
     OS_AUTH_URL = Attribute(type=str)
     OS_APPLICATION_CREDENTIAL_ID = Attribute(type=str)
     OS_APPLICATION_CREDENTIAL_SECRET = Attribute(type=str)
