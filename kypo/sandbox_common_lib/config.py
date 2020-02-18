@@ -24,6 +24,7 @@ SANDBOX_DELETE_TIMEOUT = 3600
 SANDBOX_ANSIBLE_TIMEOUT = 3600 * 2
 ANSIBLE_DOCKER_VOLUMES = '/tmp/kypo'
 ANSIBLE_DOCKER_IMAGE = 'csirtmu/kypo-ansible-runner'
+SSL_CA_CERTIFICATE_VERIFY = ''
 
 
 # TODO maybe remove after yamlize hashing problems are resolved
@@ -39,34 +40,34 @@ class AttributeDict(Attribute):
 
 
 class Settings(Object):
-    OS_AUTH_URL = Attribute(type=str)
-    OS_APPLICATION_CREDENTIAL_ID = Attribute(type=str)
-    OS_APPLICATION_CREDENTIAL_SECRET = Attribute(type=str)
+    os_auth_url = Attribute(type=str)
+    os_application_credential_id = Attribute(type=str)
+    os_application_credential_secret = Attribute(type=str)
 
-    LOG_FILE = Attribute(type=str, default=LOG_FILE)
-    LOG_LEVEL = Attribute(type=str, default=LOG_LEVEL)
+    log_file = Attribute(type=str, default=LOG_FILE)
+    log_level = Attribute(type=str, default=LOG_LEVEL)
 
     # Sandbox creation configuration
-    GIT_SERVER = Attribute(type=str, default=GIT_SERVER)
-    GIT_USER = Attribute(type=str, default=GIT_USER)
-    GIT_PRIVATE_KEY = Attribute(type=str, default=GIT_PRIVATE_KEY)
-    GIT_REPOSITORIES = Attribute(type=str, default=GIT_REPOSITORIES)
+    git_server = Attribute(type=str, default=GIT_SERVER)
+    git_user = Attribute(type=str, default=GIT_USER)
+    git_private_key = Attribute(type=str, default=GIT_PRIVATE_KEY)
+    git_reposotories = Attribute(type=str, default=GIT_REPOSITORIES)
 
-    ANSIBLE_NETWORKING_URL = Attribute(type=str)
-    ANSIBLE_NETWORKING_REV = Attribute(type=str, default=ANSIBLE_NETWORKING_REV)
+    ansible_networking_url = Attribute(type=str)
+    ansible_networking_rev = Attribute(type=str, default=ANSIBLE_NETWORKING_REV)
 
-    PROXY_JUMP_TO_MAN_SSH_OPTIONS = AttributeDict(type=dict, default={})
+    proxy_jump_to_man = AttributeDict(type=dict, default={})
 
-    SANDBOX_BUILD_TIMEOUT = Attribute(type=int, default=SANDBOX_BUILD_TIMEOUT)
-    SANDBOX_DELETE_TIMEOUT = Attribute(type=int, default=SANDBOX_DELETE_TIMEOUT)
-    SANDBOX_ANSIBLE_TIMEOUT = Attribute(type=int, default=SANDBOX_ANSIBLE_TIMEOUT)
+    sandbox_build_timeout = Attribute(type=int, default=SANDBOX_BUILD_TIMEOUT)
+    sandbox_delete_timeout = Attribute(type=int, default=SANDBOX_DELETE_TIMEOUT)
+    sandbox_ansible_timeout = Attribute(type=int, default=SANDBOX_ANSIBLE_TIMEOUT)
 
-    ANSIBLE_DOCKER_VOLUMES = Attribute(type=str, default=ANSIBLE_DOCKER_VOLUMES)
-    ANSIBLE_DOCKER_IMAGE = Attribute(type=str, default=ANSIBLE_DOCKER_IMAGE)
+    ansible_docker_volumes = Attribute(type=str, default=ANSIBLE_DOCKER_VOLUMES)
+    ansible_docker_image = Attribute(type=str, default=ANSIBLE_DOCKER_IMAGE)
 
-    SSL_CA_CERTIFICATE_VERIFY = Attribute(type=str, default='')
+    ssl_ca_certificate_verify = Attribute(type=str, default=SSL_CA_CERTIFICATE_VERIFY)
 
-    TRC = Attribute(type=TransformationConfiguration, key='SANDBOX_CONFIGURATION')
+    trc = Attribute(type=TransformationConfiguration, key='sandbox_configuration')
 
     # Override
     @classmethod

@@ -20,6 +20,7 @@ ANSIBLE_DOCKER_LOCAL_REPO = AttrDict(
     mode='ro'
 )
 
+
 class AnsibleRunDockerContainer:
     def __init__(self, image, url, rev, ssh_dir, inventory_path):
         self.client = docker.from_env()

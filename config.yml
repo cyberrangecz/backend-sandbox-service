@@ -1,62 +1,62 @@
 # The URL of OpenStack Identity service API.
-OS_AUTH_URL: ""
+os_auth_url: ""
 
 # The ID of application credentials to authenticate at OpenStack cloud platform.
-OS_APPLICATION_CREDENTIAL_ID: ""
+os_application_credential_id: ""
 
 # The secret string of APPLICATION_CREDENTIAL_ID.
-OS_APPLICATION_CREDENTIAL_SECRET: ""
+os_application_credential_secret: ""
 
 # The path to kypo2-django-openstack log file.
-#LOG_FILE: django-openstack.log
+#log_file: django-openstack.log
 
 # The level of log verbosity. One of: NOTSET, DEBUG, INFO, WARNING, ERROR, FATAL, CRITICAL.
-#LOG_LEVEL: INFO
-
-# The SSH private key that kypo2-django-openstack uses to communicate with Git repository.
-#GIT_PRIVATE_KEY: ~/.ssh/git_rsa_key
+#log_level: INFO
 
 # The address of Git repository.
-#GIT_SERVER: gitlab.ics.muni.cz
+#git_server: gitlab.ics.muni.cz
 
 # The name of user used for communication with Git repository.
-#GIT_USER: git
+#git_user: git
+
+# The SSH private key that kypo2-django-openstack uses to communicate with Git repository.
+#git_private_key: ~/.ssh/git_rsa_key
 
 # The path to local temporary directory
-#GIT_REPOSITORIES: /tmp
+#git_reposotories: /tmp
 
 # The URL of Ansible networking Git repository.
-ANSIBLE_NETWORKING_URL: ""
+ansible_networking_url: ""
 
 # The rev of Ansible networking Git repository.
-#ANSIBLE_NETWORKING_REV: master
+#ansible_networking_rev: master
 
 # The object that represents SSH Host entry. Every attribute is one SSH option (see man page of ssh_config). If you do not use proxy jump, do not set this variable.
-#PROXY_JUMP_TO_MAN_SSH_OPTIONS:
+#proxy_jump_to_man:
 #    Host: jumphost.example.com
 #    User: jump
 #    IdentityFile: ~/.ssh/id_rsa
 
 # Timeout of sandbox (stack) creation in cloud in seconds.
-#SANDBOX_BUILD_TIMEOUT: 7200
+#sandbox_build_timeout: 7200
 
 # Timeout of sandbox (stack) deletion in cloud in seconds.
-#SANDBOX_DELETE_TIMEOUT : 3600
+#sandbox_delete_timeout : 3600
 
 # Timeout for Ansible.
-#SANDBOX_ANSIBLE_TIMEOUT: 7200
+#sandbox_ansible_timeout: 7200
 
 # The path to local temporary directory where KYPO will prepare Docker volumes.
-#ANSIBLE_DOCKER_VOLUMES: /tmp
+#ansible_docker_volumes: /tmp
 
 # The name of the Docker image that is able to run Ansible playbook.
-#ANSIBLE_DOCKER_IMAGE: csirtmu/kypo-ansible-runner
+#ansible_docker_image: csirtmu/kypo-ansible-runner
 
 # A path to directory of CA certificates or file of CA certificates, i.e. CA bundle.
 # Use in case of self-signed certificates in related services.
-#SSL_CA_CERTIFICATE_VERIFY: ""
+#ssl_ca_certificate_verify: ""
 
-SANDBOX_CONFIGURATION:
+sandbox_configuration:
     # The name or ID of network in OpenStack where all sandboxes will be deployed.
     #base_network: base_network
 

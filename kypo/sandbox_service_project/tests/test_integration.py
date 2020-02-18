@@ -63,14 +63,14 @@ class TestIntegration:
         """Set config values. Config.yml overrides those values if set.
         Also extract the zip repositories to tmp directory.
         """
-        if not config.OS_AUTH_URL:
-            config.OS_AUTH_URL = os.environ.get('OS_AUTH_URL')
-        if not config.OS_APPLICATION_CREDENTIAL_ID:
-            config.OS_APPLICATION_CREDENTIAL_ID = os.environ.get('OS_APPLICATION_CREDENTIAL_ID')
-        if not config.OS_APPLICATION_CREDENTIAL_SECRET:
-            config.OS_APPLICATION_CREDENTIAL_SECRET = os.environ.get('OS_APPLICATION_CREDENTIAL_SECRET')
+        if not config.os_auth_url:
+            config.os_auth_url = os.environ.get('OS_AUTH_URL')
+        if not config.os_application_credential_id:
+            config.os_application_credential_id = os.environ.get('OS_APPLICATION_CREDENTIAL_ID')
+        if not config.os_application_credential_secret:
+            config.os_application_credential_secret = os.environ.get('OS_APPLICATION_CREDENTIAL_SECRET')
 
-        if not config.ANSIBLE_NETWORKING_URL:
+        if not config.ANSIBLE_Nansible_networking_urlETWORKING_URL:
             with tempfile.TemporaryDirectory() as tmpdir:
                 for archive in (DEFINITION_REPO_NAME, NETWORKING_REPO_NAME):
                     with ZipFile(get_asset_repo_path(archive)) as f:
