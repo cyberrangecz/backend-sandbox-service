@@ -75,7 +75,7 @@ class KypoConfiguration(Object):
 
     # Override
     @classmethod
-    def load(cls, *args, **kwargs):
+    def load(cls, *args, **kwargs) -> 'KypoConfiguration':
         """Factory method. Use it to create a new object of this class."""
         try:
             obj = super().load(*args, **kwargs)
@@ -89,10 +89,9 @@ class KypoConfigurationManager:
     """Lazy configuration loader and manager."""
     _config = None
 
-    @staticmethod
-    def config(cls):
+    @classmethod
+    def config(cls) -> KypoConfiguration:
         if not cls._config:
             with open(getattr(settings, CONFIG_FILE_VARIABLE)) as f:
                 cls._config = KypoConfiguration.load(f)
         return cls._config
-

@@ -45,7 +45,7 @@ def enqueue_request(request: CleanupRequest,
     alloc_stages = allocation_unit.allocation_request.stages.all().select_subclasses()
     stg1 = StackCleanupStage.objects.create(request=request, allocation_stage=alloc_stages[0])
     queue_openstack = django_rq.get_queue(OPENSTACK_QUEUE,
-                                          default_timeout=kcm.config().SANDBOX_DELETE_TIMEOUT)
+                                          default_timeout=kcm.config().sandbox_delete_timeout)
     result_openstack = queue_openstack.enqueue(StackCleanupStageManager().run, stage=stg1,
                                                allocation_unit=allocation_unit)
 

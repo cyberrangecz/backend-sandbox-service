@@ -13,7 +13,7 @@ from rq import SimpleWorker
 from kypo.sandbox_ansible_app.lib import ansible_service
 from kypo.sandbox_ansible_app.models import AnsibleOutput, DockerContainer
 from kypo.sandbox_common_lib import utils
-from kypo.sandbox_common_lib.config import config
+from kypo.sandbox_common_lib.config import KypoConfigurationManager as kcm
 from kypo.sandbox_instance_app.lib.sandbox_creator import OPENSTACK_QUEUE, ANSIBLE_QUEUE
 from kypo.sandbox_instance_app.models import Sandbox
 
@@ -26,7 +26,7 @@ def get_asset_repo_path(name):
 
 
 NETWORKING_REPO_NAME = 'kypo2-ansible-stage-one.git.zip'
-ANSIBLE_NETWORKING_REV = 'integration-test'
+ansible_networking_rev = 'integration-test'
 
 DEFINITION_REPO_NAME = 'small-sandbox.git.zip'
 DEFINITION_REV = 'integration-test'
@@ -35,8 +35,8 @@ DEFINITION_REV = 'integration-test'
 JUMP_STACK_NAME = 'integration_test_jump'
 TEMPLATE_DICT = dict(
     PUBLIC_NETWORK='public-muni-147-251-124-GROUP',
-    JUMP_IMAGE=config.TRC.extra_nodes_image,
-    JUMP_FLAVOR=config.TRC.extra_nodes_flavor,
+    JUMP_IMAGE=kcm.config().trc.extra_nodes_image,
+    JUMP_FLAVOR=kcm.config().trc.extra_nodes_flavor,
 )
 
 # URL names
@@ -63,6 +63,7 @@ class TestIntegration:
         """Set config values. Config.yml overrides those values if set.
         Also extract the zip repositories to tmp directory.
         """
+        config = kcm.config()
         if not config.os_auth_url:
             config.os_auth_url = os.environ.get('OS_AUTH_URL')
         if not config.os_application_credential_id:
@@ -70,7 +71,7 @@ class TestIntegration:
         if not config.os_application_credential_secret:
             config.os_application_credential_secret = os.environ.get('OS_APPLICATION_CREDENTIAL_SECRET')
 
-        if not config.ANSIBLE_Nansible_networking_urlETWORKING_URL:
+        if not config.ansible_networking_url:
             with tempfile.TemporaryDirectory() as tmpdir:
                 for archive in (DEFINITION_REPO_NAME, NETWORKING_REPO_NAME):
                     with ZipFile(get_asset_repo_path(archive)) as f:
@@ -79,7 +80,7 @@ class TestIntegration:
                 name = NETWORKING_REPO_NAME.replace('.zip', "")
                 config.ANSIBLE_NETWORKING_URL = 'file://' + os.path.join(tmpdir,
                                                                          name)
-                config.ANSIBLE_NETWORKING_REV = ANSIBLE_NETWORKING_REV
+                config.ansible_networking_rev = ansible_networking_rev
                 name = DEFINITION_REPO_NAME.replace('.zip', "")
                 self.DEFINITION_URL = 'file://' + os.path.join(tmpdir, name)
                 yield
@@ -221,7 +222,7 @@ class TestIntegration:
         key_path = f'/tmp/test-key-{utils.get_simple_uuid()}'
         LOG.info('Stack outputs', host=host, key_path=key_path,
                  private_key=private_key)
-        config.PROXY_JUMP_TO_MAN_SSH_OPTIONS['Host'] = host
-        config.PROXY_JUMP_TO_MAN_SSH_OPTIONS['IdentityFile'] = key_path
+        config.proxy_jump_to_man['Host'] = host
+        config.proxy_jump_to_man['IdentityFile'] = key_path
         with open(key_path, 'w') as f:
             f.write(private_key)
