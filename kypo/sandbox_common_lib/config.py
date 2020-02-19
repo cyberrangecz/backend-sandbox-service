@@ -24,80 +24,74 @@ SANDBOX_DELETE_TIMEOUT = 3600
 SANDBOX_ANSIBLE_TIMEOUT = 3600 * 2
 ANSIBLE_DOCKER_VOLUMES = '/tmp/kypo'
 ANSIBLE_DOCKER_IMAGE = 'csirtmu/kypo-ansible-runner'
+PROXY_JUMP_TO_MAN = None
+SSL_CA_CERTIFICATE_VERIFY = ''
 
 
-# TODO maybe remove after yamlize hashing problems are resolved
-class AttributeDict(Attribute):
-    """Attribute subclass for (immutable!) dict since they are not hashable by default."""
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class ProxyJump(Object):
+    Host = Attribute(type=str)
+    User = Attribute(type=str)
+    IdentityFile = Attribute(type=str)
 
-    def __hash__(self):
-        return sum(hash(getattr(self, attr_name))
-                   for attr_name in self.__class__.__slots__
-                   if not isinstance(getattr(self, attr_name), dict))
+    def __init__(self, host, user, identity_file):
+        self.Host = host
+        self.User = user
+        self.IdentityFile = identity_file
 
 
-class Settings(Object):
-    OPENSTACK_QUEUE = 'openstack'
-    ANSIBLE_QUEUE = 'ansible'
-    MNG_PRIVATE_KEY_FILENAME = 'pool_mng_key'
-    ANSIBLE_DOCKER_WORKING_DIR = '/app'
-    ANSIBLE_DOCKER_VOLUMES_MAPPING = {
-        'SSH_DIR': {
-            'bind': '/root/.ssh',
-            'mode': 'rw'
-        },
-        'INVENTORY_PATH': {
-            'bind': os.path.join(ANSIBLE_DOCKER_WORKING_DIR, 'inventory.yml'),
-            'mode': 'ro'
-        },
-        'LOCAL_REPO': {
-            'bind': 'path',
-            'mode': 'ro'
-        }
-    }
+class KypoConfiguration(Object):
+    os_auth_url = Attribute(type=str)
+    os_application_credential_id = Attribute(type=str)
+    os_application_credential_secret = Attribute(type=str)
 
-    OS_AUTH_URL = Attribute(type=str)
-    OS_APPLICATION_CREDENTIAL_ID = Attribute(type=str)
-    OS_APPLICATION_CREDENTIAL_SECRET = Attribute(type=str)
-
-    LOG_FILE = Attribute(type=str, default=LOG_FILE)
-    LOG_LEVEL = Attribute(type=str, default=LOG_LEVEL)
+    log_file = Attribute(type=str, default=LOG_FILE)
+    log_level = Attribute(type=str, default=LOG_LEVEL)
 
     # Sandbox creation configuration
-    GIT_SERVER = Attribute(type=str, default=GIT_SERVER)
-    GIT_USER = Attribute(type=str, default=GIT_USER)
-    GIT_PRIVATE_KEY = Attribute(type=str, default=GIT_PRIVATE_KEY)
-    GIT_REPOSITORIES = Attribute(type=str, default=GIT_REPOSITORIES)
+    git_server = Attribute(type=str, default=GIT_SERVER)
+    git_user = Attribute(type=str, default=GIT_USER)
+    git_private_key = Attribute(type=str, default=GIT_PRIVATE_KEY)
+    git_repositories = Attribute(type=str, default=GIT_REPOSITORIES)
 
-    ANSIBLE_NETWORKING_URL = Attribute(type=str)
-    ANSIBLE_NETWORKING_REV = Attribute(type=str, default=ANSIBLE_NETWORKING_REV)
+    ansible_networking_url = Attribute(type=str)
+    ansible_networking_rev = Attribute(type=str, default=ANSIBLE_NETWORKING_REV)
 
-    PROXY_JUMP_TO_MAN_SSH_OPTIONS = AttributeDict(type=dict, default={})
+    proxy_jump_to_man = Attribute(type=ProxyJump, default=PROXY_JUMP_TO_MAN)
 
-    SANDBOX_BUILD_TIMEOUT = Attribute(type=int, default=SANDBOX_BUILD_TIMEOUT)
-    SANDBOX_DELETE_TIMEOUT = Attribute(type=int, default=SANDBOX_DELETE_TIMEOUT)
-    SANDBOX_ANSIBLE_TIMEOUT = Attribute(type=int, default=SANDBOX_ANSIBLE_TIMEOUT)
+    sandbox_build_timeout = Attribute(type=int, default=SANDBOX_BUILD_TIMEOUT)
+    sandbox_delete_timeout = Attribute(type=int, default=SANDBOX_DELETE_TIMEOUT)
+    sandbox_ansible_timeout = Attribute(type=int, default=SANDBOX_ANSIBLE_TIMEOUT)
 
-    ANSIBLE_DOCKER_VOLUMES = Attribute(type=str, default=ANSIBLE_DOCKER_VOLUMES)
-    ANSIBLE_DOCKER_IMAGE = Attribute(type=str, default=ANSIBLE_DOCKER_IMAGE)
+    ansible_docker_volumes = Attribute(type=str, default=ANSIBLE_DOCKER_VOLUMES)
+    ansible_docker_image = Attribute(type=str, default=ANSIBLE_DOCKER_IMAGE)
 
-    SSL_CA_CERTIFICATE_VERIFY = Attribute(type=str, default='')
+    ssl_ca_certificate_verify = Attribute(type=str, default=SSL_CA_CERTIFICATE_VERIFY)
 
-    TRC = Attribute(type=TransformationConfiguration, key='SANDBOX_CONFIGURATION')
+    trc = Attribute(type=TransformationConfiguration, key='sandbox_configuration')
+
+    def __init__(self, **kwargs):
+        for key, val in kwargs.items():
+            setattr(self, key, val)
 
     # Override
     @classmethod
-    def load(cls, *args, **kwargs):
+    def load(cls, *args, **kwargs) -> 'KypoConfiguration':
         """Factory method. Use it to create a new object of this class."""
         try:
             obj = super().load(*args, **kwargs)
         except YamlizingError as ex:
             raise ImproperlyConfigured(ex)
-        os.environ['REQUESTS_CA_BUNDLE'] = obj.SSL_CA_CERTIFICATE_VERIFY
+        os.environ['REQUESTS_CA_BUNDLE'] = obj.ssl_ca_certificate_verify
         return obj
 
 
-with open(getattr(settings, CONFIG_FILE_VARIABLE)) as f:
-    config = Settings.load(f)
+class KypoConfigurationManager:
+    """Lazy configuration loader and manager."""
+    _config = None
+
+    @classmethod
+    def config(cls) -> KypoConfiguration:
+        if not cls._config:
+            with open(getattr(settings, CONFIG_FILE_VARIABLE)) as f:
+                cls._config = KypoConfiguration.load(f)
+        return cls._config

@@ -6,7 +6,10 @@ import ssh_config
 from kypo.openstack_driver.sandbox_topology import SandboxHost, SandboxRouter, \
     SandboxLink, SandboxExtraNode, UAN_NET_NAME
 
-from ...sandbox_common_lib.config import config
+from ...sandbox_common_lib.config import KypoConfigurationManager as KCM
+from ...sandbox_ansible_app.lib.ansible_service import ANSIBLE_DOCKER_SSH_DIR
+
+from . import sandbox_creator
 
 LOG = structlog.getLogger()
 
@@ -85,39 +88,40 @@ class KypoSSHConfig(ssh_config.SSHConfig):
         """Generates Ansible ssh config string for sandbox."""
         sshconf = cls.create_management_config(stack)
 
-        mng_private_key = os.path.join(config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
-                                       config.MNG_PRIVATE_KEY_FILENAME)
-        git_private_key = os.path.join(config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
-                                       os.path.basename(config.GIT_PRIVATE_KEY))
+        mng_private_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
+                                       sandbox_creator.MNG_PRIVATE_KEY_FILENAME)
+        git_private_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
+                                       os.path.basename(
+                                           KCM.config().git_private_key))
 
         for host in sshconf.hosts():
             host.update(dict(UserKnownHostsFile='/dev/null',
                              StrictHostKeyChecking='no',
                              IdentityFile=mng_private_key))
 
-        sshconf.append(ssh_config.Host(config.GIT_SERVER, dict(
-            User=config.GIT_USER, IdentityFile=git_private_key,
+        sshconf.append(ssh_config.Host(KCM.config().git_server, dict(
+            User=KCM.config().git_user, IdentityFile=git_private_key,
             UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no')))
 
-        if config.PROXY_JUMP_TO_MAN_SSH_OPTIONS:
+        if KCM.config().proxy_jump_to_man:
             sshconf.add_proxy_jump()
 
         return sshconf
 
     def add_proxy_jump(self):
-        jump_host_name = config.PROXY_JUMP_TO_MAN_SSH_OPTIONS.get('Host')
-        jump_host_user = config.PROXY_JUMP_TO_MAN_SSH_OPTIONS.get('User')
-        jump_host = ssh_config.Host(jump_host_name,
-                                    config.PROXY_JUMP_TO_MAN_SSH_OPTIONS)
-        jump_host.update(dict(UserKnownHostsFile='/dev/null',
-                              StrictHostKeyChecking='no'))
-        self.append(jump_host)
+        jump_host_name = KCM.config().proxy_jump_to_man.Host
+        jump_host_user = KCM.config().proxy_jump_to_man.User
+        jump_host_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
+                                     os.path.basename(
+                                         KCM.config().proxy_jump_to_man.IdentityFile))
 
-        if 'IdentityFile' in config.PROXY_JUMP_TO_MAN_SSH_OPTIONS:
-            proxy_jump_to_man_private_key = os.path.join(
-                config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
-                os.path.basename(config.PROXY_JUMP_TO_MAN_SSH_OPTIONS['IdentityFile']))
-            jump_host.update({'IdentityFile': proxy_jump_to_man_private_key})
+        jump_host = ssh_config.Host(jump_host_name, dict(
+            User=jump_host_user,
+            IdentityFile=jump_host_key,
+            UserKnownHostsFile='/dev/null',
+            StrictHostKeyChecking='no'
+        ))
+        self.append(jump_host)
 
         # Need to use the full-name
         self.get(" ".join([self.stack.man.name, self.stack.ip])).update(

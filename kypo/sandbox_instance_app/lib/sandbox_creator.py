@@ -19,11 +19,12 @@ from . import sandbox_service
 from ..models import Sandbox, Pool, SandboxAllocationUnit, \
     AllocationRequest, StackAllocationStage
 from ...sandbox_ansible_app.lib import ansible_service
+from ...sandbox_ansible_app.lib.ansible_service import ANSIBLE_DOCKER_SSH_DIR
 from ...sandbox_ansible_app.lib.inventory import Inventory
 from ...sandbox_ansible_app.models import AnsibleAllocationStage, \
     AnsibleOutput, DockerContainer
 from ...sandbox_common_lib import utils, exceptions
-from ...sandbox_common_lib.config import config
+from ...sandbox_common_lib.config import KypoConfigurationManager as KCM
 from ...sandbox_definition_app.lib import definition_service
 
 STACK_STATUS_CREATE_COMPLETE = "CREATE_COMPLETE"
@@ -31,8 +32,11 @@ STACK_STATUS_CREATE_COMPLETE = "CREATE_COMPLETE"
 LOG = structlog.get_logger()
 
 ANSIBLE_INVENTORY_FILENAME = 'inventory.yml'
+MNG_PRIVATE_KEY_FILENAME = 'pool_mng_key'
 USER_PRIVATE_KEY_FILENAME = 'user_key'
 USER_PUBLIC_KEY_FILENAME = 'user_key.pub'
+OPENSTACK_QUEUE = 'openstack'
+ANSIBLE_QUEUE = 'ansible'
 
 
 def create_sandbox_requests(pool: Pool, count: int) -> List[SandboxAllocationUnit]:
@@ -63,17 +67,17 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
         with transaction.atomic():
             stage_openstack = StackAllocationStage.objects.create(request=request)
             queue_openstack = django_rq.get_queue(
-                config.OPENSTACK_QUEUE, default_timeout=config.SANDBOX_BUILD_TIMEOUT)
+                OPENSTACK_QUEUE, default_timeout=KCM.config().sandbox_build_timeout)
             result_openstack = queue_openstack.enqueue(
                 StackAllocationStageManager().run, stage=stage_openstack,
                 sandbox=sandbox, meta=dict(locked=True))
 
             stage_networking = AnsibleAllocationStage.objects.create(
-                request=request, repo_url=config.ANSIBLE_NETWORKING_URL,
-                rev=config.ANSIBLE_NETWORKING_REV
+                request=request, repo_url=KCM.config().ansible_networking_url,
+                rev=KCM.config().ansible_networking_rev
             )
             queue_ansible = django_rq.get_queue(
-                config.ANSIBLE_QUEUE, default_timeout=config.SANDBOX_ANSIBLE_TIMEOUT)
+                ANSIBLE_QUEUE, default_timeout=KCM.config().sandbox_ansible_timeout)
             result_networking = queue_ansible.enqueue(
                 AnsibleAllocationStageManager(stage=stage_networking, sandbox=sandbox).run,
                 name='networking', depends_on=result_openstack
@@ -182,7 +186,7 @@ class AnsibleAllocationStageManager:
     def __init__(self, stage: AnsibleAllocationStage, sandbox: Sandbox) -> None:
         self.stage = stage
         self.sandbox = sandbox
-        self.directory = os.path.join(config.ANSIBLE_DOCKER_VOLUMES,
+        self.directory = os.path.join(KCM.config().ansible_docker_volumes,
                                       sandbox.get_stack_name(),
                                       f'{stage.id}-{utils.get_simple_uuid()}')
 
@@ -220,17 +224,17 @@ class AnsibleAllocationStageManager:
                        self.sandbox.private_user_key)
         self.save_file(os.path.join(ssh_directory, USER_PUBLIC_KEY_FILENAME),
                        self.sandbox.public_user_key)
-        self.save_file(os.path.join(ssh_directory, config.MNG_PRIVATE_KEY_FILENAME),
+        self.save_file(os.path.join(ssh_directory, MNG_PRIVATE_KEY_FILENAME),
                        self.stage.request.allocation_unit.pool.private_management_key)
 
         if not ansible_service.AnsibleRunDockerContainer.is_local_repo(self.stage.repo_url):
-            shutil.copy(config.GIT_PRIVATE_KEY,
-                        os.path.join(ssh_directory, os.path.basename(config.GIT_PRIVATE_KEY)))
+            shutil.copy(KCM.config().git_private_key,
+                        os.path.join(ssh_directory, os.path.basename(KCM.config().git_private_key)))
 
         ans_ssh_config = sandbox_service.get_ansible_sshconfig(self.sandbox)
 
-        if 'IdentityFile' in config.PROXY_JUMP_TO_MAN_SSH_OPTIONS:
-            identity_file = config.PROXY_JUMP_TO_MAN_SSH_OPTIONS['IdentityFile']
+        if 'IdentityFile' in KCM.config().proxy_jump_to_man:
+            identity_file = KCM.config().proxy_jump_to_man['IdentityFile']
             shutil.copy(identity_file, os.path.join(ssh_directory,
                         os.path.basename(identity_file)))
         self.save_file(os.path.join(ssh_directory, 'config'), str(ans_ssh_config))
@@ -245,9 +249,9 @@ class AnsibleAllocationStageManager:
 
         client = utils.get_ostack_client()
         stack = client.get_sandbox(self.sandbox.get_stack_name())
-        user_private_key = os.path.join(config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
+        user_private_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
                                         USER_PRIVATE_KEY_FILENAME)
-        user_public_key = os.path.join(config.ANSIBLE_DOCKER_VOLUMES_MAPPING['SSH_DIR']['bind'],
+        user_public_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
                                        USER_PUBLIC_KEY_FILENAME)
         inventory = Inventory.create_inventory(stack, top_def,
                                                user_private_key, user_public_key)
@@ -263,7 +267,7 @@ class AnsibleAllocationStageManager:
 
         try:
             container = ansible_service.AnsibleRunDockerContainer(
-                config.ANSIBLE_DOCKER_IMAGE, self.stage.repo_url,
+                KCM.config().ansible_docker_image, self.stage.repo_url,
                 self.stage.rev, ssh_directory, inventory_path
             )
             DockerContainer.objects.create(stage=self.stage, container_id=container.id)

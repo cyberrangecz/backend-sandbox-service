@@ -13,7 +13,7 @@ import structlog
 from Crypto.PublicKey import RSA
 from kypo.openstack_driver.ostack_client import KypoOstackClient
 
-from .config import config
+from .config import KypoConfigurationManager as KCM
 
 # Create logger
 LOG = structlog.get_logger()
@@ -22,8 +22,8 @@ LOG = structlog.get_logger()
 def configure_logging() -> None:
     """Configure logging and structlog"""
     # noinspection PyArgumentList
-    logging.basicConfig(level=config.LOG_LEVEL,
-                        handlers=[logging.StreamHandler(), logging.FileHandler(config.LOG_FILE)],
+    logging.basicConfig(level=KCM.config().log_level,
+                        handlers=[logging.StreamHandler(), logging.FileHandler(KCM.config().log_file)],
                         format="%(message)s")
     structlog.configure(
         processors=[
@@ -67,10 +67,10 @@ def generate_ssh_keypair(bits: int = 2048) -> Tuple[str, str]:
 
 def get_ostack_client() -> KypoOstackClient:
     """Abstracts creation and authentication to KYPO lib client."""
-    return KypoOstackClient(app_creds_id=config.OS_APPLICATION_CREDENTIAL_ID,
-                            auth_url=config.OS_AUTH_URL,
-                            app_creds_secret=config.OS_APPLICATION_CREDENTIAL_SECRET,
-                            trc=config.TRC)
+    return KypoOstackClient(app_creds_id=KCM.config().os_application_credential_id,
+                            auth_url=KCM.config().os_auth_url,
+                            app_creds_secret=KCM.config().os_application_credential_secret,
+                            trc=KCM.config().trc)
 
 
 def get_simple_uuid() -> str:
@@ -93,8 +93,8 @@ class GitRepo:
         :raise: git.exc.GitCommandError if the revision is unknown to Git
         """
         with cls.lock:
-            git_ssh_cmd = 'ssh -o StrictHostKeyChecking=no -i {0}'.format(config.GIT_PRIVATE_KEY)
-            local_repository = os.path.join(config.GIT_REPOSITORIES, url, name if name else rev).replace(":", "")
+            git_ssh_cmd = 'ssh -o StrictHostKeyChecking=no -i {0}'.format(KCM.config().git_private_key)
+            local_repository = os.path.join(KCM.config().git_repositories, url, name if name else rev).replace(":", "")
 
             if os.path.isdir(local_repository):
                 repo = git.Repo(local_repository)
@@ -111,3 +111,9 @@ class GitRepo:
                 pass
 
             return repo
+
+
+class AttrDict(dict):
+    def __init__(self, *args, **kwargs):
+        super(AttrDict, self).__init__(*args, **kwargs)
+        self.__dict__ = self
