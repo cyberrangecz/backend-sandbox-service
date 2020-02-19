@@ -4,11 +4,12 @@ import structlog
 import ssh_config
 
 from kypo.openstack_driver.sandbox_topology import SandboxHost, SandboxRouter, \
-    SandboxLink, SandboxExtraNode, UAN_NET_NAME
+    SandboxLink, SandboxExtraNode, UAN_NET_NAME, SandboxTopology
 
 from ...sandbox_ansible_app.lib.ansible_service import ANSIBLE_DOCKER_SSH_DIR
 
 from . import sandbox_creator
+from ...sandbox_common_lib.config import KypoConfiguration
 
 LOG = structlog.getLogger()
 
@@ -40,7 +41,8 @@ class KypoSSHConfig(ssh_config.SSHConfig):
         return "".join(res)
 
     @classmethod
-    def create_user_config(cls, stack, config) -> 'KypoSSHConfig':
+    def create_user_config(cls, stack: SandboxTopology, config: KypoConfiguration)\
+            -> 'KypoSSHConfig':
         """Generates user ssh config string for sandbox.
         If router has multiple networks, then config contains one router entry
         for each of the networks.
@@ -65,7 +67,8 @@ class KypoSSHConfig(ssh_config.SSHConfig):
         return sshconf
 
     @classmethod
-    def create_management_config(cls, stack, config) -> 'KypoSSHConfig':
+    def create_management_config(cls, stack: SandboxTopology, config: KypoConfiguration)\
+            -> 'KypoSSHConfig':
         """Generates management ssh config string for sandbox.
         It uses MNG network for access.
         """
@@ -84,7 +87,8 @@ class KypoSSHConfig(ssh_config.SSHConfig):
         return sshconf
 
     @classmethod
-    def create_ansible_config(cls, stack, config) -> 'KypoSSHConfig':
+    def create_ansible_config(cls, stack: SandboxTopology, config: KypoConfiguration)\
+            -> 'KypoSSHConfig':
         """Generates Ansible ssh config string for sandbox."""
         sshconf = cls.create_management_config(stack, config)
 
