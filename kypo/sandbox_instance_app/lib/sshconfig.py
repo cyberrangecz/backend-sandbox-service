@@ -109,19 +109,19 @@ class KypoSSHConfig(ssh_config.SSHConfig):
         return sshconf
 
     def add_proxy_jump(self):
-        jump_host_name = KCM.config().proxy_jump_to_man.get('Host')
-        jump_host_user = KCM.config().proxy_jump_to_man.get('User')
-        jump_host = ssh_config.Host(jump_host_name,
-                                    KCM.config().proxy_jump_to_man)
-        jump_host.update(dict(UserKnownHostsFile='/dev/null',
-                              StrictHostKeyChecking='no'))
-        self.append(jump_host)
+        jump_host_name = KCM.config().proxy_jump_to_man.Host
+        jump_host_user = KCM.config().proxy_jump_to_man.User
+        jump_host_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
+                                     os.path.basename(
+                                         KCM.config().proxy_jump_to_man.IdentityFile))
 
-        if 'IdentityFile' in KCM.config().proxy_jump_to_man:
-            proxy_jump_to_man_private_key = os.path.join(
-                ANSIBLE_DOCKER_SSH_DIR.bind,
-                os.path.basename(KCM.config().proxy_jump_to_man['IdentityFile']))
-            jump_host.update({'IdentityFile': proxy_jump_to_man_private_key})
+        jump_host = ssh_config.Host(jump_host_name, dict(
+            User=jump_host_user,
+            IdentityFile=jump_host_key,
+            UserKnownHostsFile='/dev/null',
+            StrictHostKeyChecking='no'
+        ))
+        self.append(jump_host)
 
         # Need to use the full-name
         self.get(" ".join([self.stack.man.name, self.stack.ip])).update(

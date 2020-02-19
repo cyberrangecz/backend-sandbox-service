@@ -222,7 +222,7 @@ class TestIntegration:
         key_path = f'/tmp/test-key-{utils.get_simple_uuid()}'
         LOG.info('Stack outputs', host=host, key_path=key_path,
                  private_key=private_key)
-        config.proxy_jump_to_man['Host'] = host
-        config.proxy_jump_to_man['IdentityFile'] = key_path
+        KCM.config().proxy_jump_to_man['Host'] = host
+        KCM.config().proxy_jump_to_man['IdentityFile'] = key_path
         with open(key_path, 'w') as f:
             f.write(private_key)
