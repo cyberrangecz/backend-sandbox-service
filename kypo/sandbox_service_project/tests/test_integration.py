@@ -13,7 +13,7 @@ from rq import SimpleWorker
 from kypo.sandbox_ansible_app.lib import ansible_service
 from kypo.sandbox_ansible_app.models import AnsibleOutput, DockerContainer
 from kypo.sandbox_common_lib import utils
-from kypo.sandbox_common_lib.config import KypoConfigurationManager as kcm
+from kypo.sandbox_common_lib.config import KypoConfigurationManager as KCM
 from kypo.sandbox_instance_app.lib.sandbox_creator import OPENSTACK_QUEUE, ANSIBLE_QUEUE
 from kypo.sandbox_instance_app.models import Sandbox
 
@@ -35,8 +35,8 @@ DEFINITION_REV = 'integration-test'
 JUMP_STACK_NAME = 'integration_test_jump'
 TEMPLATE_DICT = dict(
     PUBLIC_NETWORK='public-muni-147-251-124-GROUP',
-    JUMP_IMAGE=kcm.config().trc.extra_nodes_image,
-    JUMP_FLAVOR=kcm.config().trc.extra_nodes_flavor,
+    JUMP_IMAGE=KCM.config().trc.extra_nodes_image,
+    JUMP_FLAVOR=KCM.config().trc.extra_nodes_flavor,
 )
 
 # URL names
@@ -63,7 +63,7 @@ class TestIntegration:
         """Set config values. Config.yml overrides those values if set.
         Also extract the zip repositories to tmp directory.
         """
-        config = kcm.config()
+        config = KCM.config()
         if not config.os_auth_url:
             config.os_auth_url = os.environ.get('OS_AUTH_URL')
         if not config.os_application_credential_id:

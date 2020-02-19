@@ -6,7 +6,7 @@ import ssh_config
 from kypo.openstack_driver.sandbox_topology import SandboxHost, SandboxRouter, \
     SandboxLink, SandboxExtraNode, UAN_NET_NAME
 
-from ...sandbox_common_lib.config import KypoConfigurationManager as kcm
+from ...sandbox_common_lib.config import KypoConfigurationManager as KCM
 from ...sandbox_ansible_app.lib.ansible_service import ANSIBLE_DOCKER_SSH_DIR
 
 from . import sandbox_creator
@@ -92,35 +92,35 @@ class KypoSSHConfig(ssh_config.SSHConfig):
                                        sandbox_creator.MNG_PRIVATE_KEY_FILENAME)
         git_private_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
                                        os.path.basename(
-                                           kcm.config().git_private_key))
+                                           KCM.config().git_private_key))
 
         for host in sshconf.hosts():
             host.update(dict(UserKnownHostsFile='/dev/null',
                              StrictHostKeyChecking='no',
                              IdentityFile=mng_private_key))
 
-        sshconf.append(ssh_config.Host(kcm.config().git_server, dict(
-            User=kcm.config().git_user, IdentityFile=git_private_key,
+        sshconf.append(ssh_config.Host(KCM.config().git_server, dict(
+            User=KCM.config().git_user, IdentityFile=git_private_key,
             UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no')))
 
-        if kcm.config().proxy_jump_to_man:
+        if KCM.config().proxy_jump_to_man:
             sshconf.add_proxy_jump()
 
         return sshconf
 
     def add_proxy_jump(self):
-        jump_host_name = kcm.config().proxy_jump_to_man.get('Host')
-        jump_host_user = kcm.config().proxy_jump_to_man.get('User')
+        jump_host_name = KCM.config().proxy_jump_to_man.get('Host')
+        jump_host_user = KCM.config().proxy_jump_to_man.get('User')
         jump_host = ssh_config.Host(jump_host_name,
-                                    kcm.config().proxy_jump_to_man)
+                                    KCM.config().proxy_jump_to_man)
         jump_host.update(dict(UserKnownHostsFile='/dev/null',
                               StrictHostKeyChecking='no'))
         self.append(jump_host)
 
-        if 'IdentityFile' in kcm.config().proxy_jump_to_man:
+        if 'IdentityFile' in KCM.config().proxy_jump_to_man:
             proxy_jump_to_man_private_key = os.path.join(
                 ANSIBLE_DOCKER_SSH_DIR.bind,
-                os.path.basename(kcm.config().proxy_jump_to_man['IdentityFile']))
+                os.path.basename(KCM.config().proxy_jump_to_man['IdentityFile']))
             jump_host.update({'IdentityFile': proxy_jump_to_man_private_key})
 
         # Need to use the full-name
