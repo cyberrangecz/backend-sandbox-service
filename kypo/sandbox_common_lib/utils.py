@@ -5,18 +5,14 @@ import json
 import logging
 import multiprocessing
 import os
-import time
 import uuid
-from typing import Tuple, Callable, Optional
+from typing import Tuple, Optional
 
 import git
-import paramiko
-import scp
 import structlog
 from Crypto.PublicKey import RSA
 from kypo.openstack_driver.ostack_client import KypoOstackClient
 
-from . import exceptions
 from .config import KypoConfigurationManager as KCM
 
 # Create logger
@@ -57,24 +53,6 @@ def json_pretty_print(data: dict) -> str:
     return json.dumps(data, indent=2)
 
 
-def get_scp_client(server: str, username: str, key_filename: str,
-                   timeout: int = 30) -> scp.SCPClient:
-    """
-    Get scp client. Call `close` method after you finish.
-
-    :param server: Server IP
-    :param username: Username
-    :param key_filename: Private key filename
-    :param timeout: Optional timeout parameter
-    :return: SCP client
-    """
-    ssh_client = paramiko.SSHClient()
-    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh_client.connect(server, username=username, key_filename=key_filename, timeout=timeout)
-
-    return scp.SCPClient(ssh_client.get_transport())
-
-
 def generate_ssh_keypair(bits: int = 2048) -> Tuple[str, str]:
     """
     Generate SSH-RSA key pair.
@@ -93,25 +71,6 @@ def get_ostack_client() -> KypoOstackClient:
                             auth_url=KCM.config().os_auth_url,
                             app_creds_secret=KCM.config().os_application_credential_secret,
                             trc=KCM.config().trc)
-
-
-def wait_for(cond: Callable, timeout: int, freq: int, factor: float = 1.1, initial_wait: int = 0,
-             errmsg: str = "") -> None:
-    """ Wait until `cond` returns True or timeout seconds.
-    The time spent by condition check is not included.
-    raises: LimitExceededError: on timeout with errmsg
-    """
-    init_freq = freq
-    max_freq = 3 * init_freq
-    time.sleep(initial_wait)
-    elapsed = initial_wait
-
-    while not cond():
-        elapsed += freq
-        if elapsed > timeout:
-            raise exceptions.LimitExceededError(errmsg)
-        time.sleep(int(freq))
-        freq = min(freq * factor, max_freq)
 
 
 def get_simple_uuid() -> str:
@@ -152,50 +111,6 @@ class GitRepo:
                 pass
 
             return repo
-
-
-def ssh_connection(server: str, username: str, cmd: str, key_path: str, proxy: str = None,
-                   proxy_username: str = None, timeout: int = 30, raise_on_error=False)\
-        -> Tuple[int, str, str]:
-    """
-    Creates ssh connection to server and executes given command on server.
-    If raise_on_error set to True, then raises `NetworkError` if exit code is not 0.
-
-    return: Tuple of (exit code, stdout, stderr)
-    """
-    port = 22
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-    if proxy:
-        proxy_client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        proxy_client.connect(proxy, username=proxy_username, key_filename=key_path, timeout=timeout,
-                             banner_timeout=timeout, auth_timeout=timeout)
-
-        dst_addr = (server, port)
-        src_addr = (proxy, port)
-        transport = client.get_transport()
-        channel = transport.open_channel("direct-tcpip", dst_addr, src_addr)
-
-        client.connect(server, username=username, key_filename=key_path, timeout=timeout,
-                       sock=channel, banner_timeout=timeout, auth_timeout=timeout)
-    else:
-        client.connect(server, username=username, key_filename=key_path, timeout=timeout,
-                       banner_timeout=timeout, auth_timeout=timeout)
-
-    stdin, stdout, stderr = client.exec_command(cmd)
-
-    out = stdout.read().decode()
-    exit_code = stdout.channel.recv_exit_status()
-    err = stderr.read().decode()
-
-    client.close()
-
-    if raise_on_error and exit_code != 0:
-        raise exceptions.NetworkError("Command {} returned exitcode {}; stdout: {}, stderr: {}".
-                                      format(cmd, exit_code, out, err))
-    return exit_code, out, err
 
 
 class AttrDict(dict):
