@@ -6,7 +6,6 @@ import ssh_config
 from kypo.openstack_driver.sandbox_topology import SandboxHost, SandboxRouter, \
     SandboxLink, SandboxExtraNode, UAN_NET_NAME
 
-from ...sandbox_common_lib.config import KypoConfigurationManager as KCM
 from ...sandbox_ansible_app.lib.ansible_service import ANSIBLE_DOCKER_SSH_DIR
 
 from . import sandbox_creator
@@ -26,9 +25,10 @@ ssh_config.Host.attrs += (
 class KypoSSHConfig(ssh_config.SSHConfig):
     """Subclass of ssh_config.SSHConfig with __str__ method."""
 
-    def __init__(self, stack):
+    def __init__(self, stack, config):
         super().__init__('')
         self.stack = stack
+        self.config = config
 
     def __str__(self) -> str:
         res = []
@@ -40,12 +40,12 @@ class KypoSSHConfig(ssh_config.SSHConfig):
         return "".join(res)
 
     @classmethod
-    def create_user_config(cls, stack) -> 'KypoSSHConfig':
+    def create_user_config(cls, stack, config) -> 'KypoSSHConfig':
         """Generates user ssh config string for sandbox.
         If router has multiple networks, then config contains one router entry
         for each of the networks.
         """
-        sshconf = cls(stack)
+        sshconf = cls(stack, config)
         man = ssh_config.Host([sshconf.stack.man.name, sshconf.stack.ip], dict(
             User=SSH_PROXY_USERNAME, HostName=sshconf.stack.ip,
             IdentityFile='<path_to_sandbox_private_key>',
@@ -65,11 +65,11 @@ class KypoSSHConfig(ssh_config.SSHConfig):
         return sshconf
 
     @classmethod
-    def create_management_config(cls, stack) -> 'KypoSSHConfig':
+    def create_management_config(cls, stack, config) -> 'KypoSSHConfig':
         """Generates management ssh config string for sandbox.
         It uses MNG network for access.
         """
-        sshconf = cls(stack)
+        sshconf = cls(stack, config)
         man = ssh_config.Host([stack.man.name, stack.ip], dict(
             User=stack.man.user, HostName=stack.ip,
             IdentityFile='<path_to_pool_private_key>',
@@ -84,36 +84,36 @@ class KypoSSHConfig(ssh_config.SSHConfig):
         return sshconf
 
     @classmethod
-    def create_ansible_config(cls, stack) -> 'KypoSSHConfig':
+    def create_ansible_config(cls, stack, config) -> 'KypoSSHConfig':
         """Generates Ansible ssh config string for sandbox."""
-        sshconf = cls.create_management_config(stack)
+        sshconf = cls.create_management_config(stack, config)
 
         mng_private_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
                                        sandbox_creator.MNG_PRIVATE_KEY_FILENAME)
         git_private_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
                                        os.path.basename(
-                                           KCM.config().git_private_key))
+                                           config.git_private_key))
 
         for host in sshconf.hosts():
             host.update(dict(UserKnownHostsFile='/dev/null',
                              StrictHostKeyChecking='no',
                              IdentityFile=mng_private_key))
 
-        sshconf.append(ssh_config.Host(KCM.config().git_server, dict(
-            User=KCM.config().git_user, IdentityFile=git_private_key,
+        sshconf.append(ssh_config.Host(config.git_server, dict(
+            User=config.git_user, IdentityFile=git_private_key,
             UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no')))
 
-        if KCM.config().proxy_jump_to_man:
+        if config.proxy_jump_to_man:
             sshconf.add_proxy_jump()
 
         return sshconf
 
     def add_proxy_jump(self):
-        jump_host_name = KCM.config().proxy_jump_to_man.Host
-        jump_host_user = KCM.config().proxy_jump_to_man.User
+        jump_host_name = self.config.proxy_jump_to_man.Host
+        jump_host_user = self.config.proxy_jump_to_man.User
         jump_host_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
                                      os.path.basename(
-                                         KCM.config().proxy_jump_to_man.IdentityFile))
+                                         self.config.proxy_jump_to_man.IdentityFile))
 
         jump_host = ssh_config.Host(jump_host_name, dict(
             User=jump_host_user,
