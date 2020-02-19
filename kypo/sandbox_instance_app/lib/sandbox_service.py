@@ -9,6 +9,7 @@ from .sshconfig import KypoSSHConfig
 from .topology import Topology
 from ..models import Sandbox, Lock
 from ...sandbox_common_lib import exceptions, utils
+from ...sandbox_common_lib.config import KypoConfigurationManager as KCM
 
 LOG = structlog.getLogger()
 
@@ -45,18 +46,18 @@ def get_user_sshconfig(sandbox: Sandbox) -> KypoSSHConfig:
     """Get user SSH config."""
     client = utils.get_ostack_client()
     stack = client.get_sandbox(sandbox.get_stack_name())
-    return KypoSSHConfig.create_user_config(stack)
+    return KypoSSHConfig.create_user_config(stack, KCM.config())
 
 
 def get_management_sshconfig(sandbox: Sandbox) -> KypoSSHConfig:
     """Get management SSH config."""
     client = utils.get_ostack_client()
     stack = client.get_sandbox(sandbox.get_stack_name())
-    return KypoSSHConfig.create_management_config(stack)
+    return KypoSSHConfig.create_management_config(stack, KCM.config())
 
 
 def get_ansible_sshconfig(sandbox: Sandbox) -> KypoSSHConfig:
     """Get Ansible SSH config."""
     client = utils.get_ostack_client()
     stack = client.get_sandbox(sandbox.get_stack_name())
-    return KypoSSHConfig.create_ansible_config(stack)
+    return KypoSSHConfig.create_ansible_config(stack, KCM.config())
