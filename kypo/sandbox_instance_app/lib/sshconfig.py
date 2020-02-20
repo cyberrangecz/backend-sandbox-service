@@ -1,7 +1,7 @@
 import os
-from typing import List
+from typing import List, Union
 import structlog
-import ssh_config
+from ssh_config import Host, SSHConfig
 
 from kypo.openstack_driver.sandbox_topology import SandboxHost, SandboxRouter, \
     SandboxLink, SandboxExtraNode, UAN_NET_NAME, SandboxTopology
@@ -17,13 +17,13 @@ SSH_PROXY_USERNAME = "user-access"
 
 
 # Add missing SSH Options to ssh_config.Host.attrs
-ssh_config.Host.attrs += (
+Host.attrs += (
     ('UserKnownHostsFile', str),
     ('StrictHostKeyChecking', str),
 )
 
 
-class KypoSSHConfig(ssh_config.SSHConfig):
+class KypoSSHConfig(SSHConfig):
     """Subclass of ssh_config.SSHConfig with __str__ method."""
 
     def __init__(self, stack, config):
@@ -40,6 +40,21 @@ class KypoSSHConfig(ssh_config.SSHConfig):
             res.append('\n')
         return "".join(res)
 
+    @staticmethod
+    def man_entry(name: Union[str, List[str]], user: str, host_name: str,
+                  identity_file: str) -> Host:
+        return Host(name, {'User': user,
+                           'HostName': host_name,
+                           'IdentityFile': identity_file,
+                           'AddKeysToAgent': 'yes'})
+
+    @staticmethod
+    def host_entry(name: Union[str, List[str]], user: str, host_name: str,
+                   proxy_jump: str) -> Host:
+        return Host(name, {'User': user,
+                           'HostName': host_name,
+                           'ProxyJump': proxy_jump})
+
     @classmethod
     def create_user_config(cls, stack: SandboxTopology, config: KypoConfiguration)\
             -> 'KypoSSHConfig':
@@ -48,22 +63,23 @@ class KypoSSHConfig(ssh_config.SSHConfig):
         for each of the networks.
         """
         sshconf = cls(stack, config)
-        man = ssh_config.Host([sshconf.stack.man.name, sshconf.stack.ip], dict(
-            User=SSH_PROXY_USERNAME, HostName=sshconf.stack.ip,
-            IdentityFile='<path_to_sandbox_private_key>',
-            AddKeysToAgent='yes'))
-        sshconf.append(man)
+        sshconf.append(cls.man_entry([sshconf.stack.man.name, sshconf.stack.ip],
+                                     SSH_PROXY_USERNAME,
+                                     stack.ip,
+                                     '<path_to_sandbox_private_key>'))
 
         uan_ip = sshconf._get_uan_ip()
-        uan = ssh_config.Host([stack.uan.name, uan_ip], dict(
-            User=SSH_PROXY_USERNAME, HostName=uan_ip,
-            ProxyJump=SSH_PROXY_USERNAME + '@' + stack.man.name))
+        uan = cls.host_entry([stack.uan.name, uan_ip],
+                             SSH_PROXY_USERNAME,
+                             uan_ip,
+                             SSH_PROXY_USERNAME + '@' + stack.man.name)
         sshconf.append(uan)
 
         for link in sshconf._get_uan_accessible_node_links():
-            sshconf.append(ssh_config.Host([link.node.name, link.ip], dict(
-                User=SSH_PROXY_USERNAME, HostName=link.ip,
-                ProxyJump=SSH_PROXY_USERNAME + '@' + stack.uan.name)))
+            sshconf.append(cls.host_entry([link.node.name, link.ip],
+                                          SSH_PROXY_USERNAME,
+                                          link.ip,
+                                          SSH_PROXY_USERNAME + '@' + stack.uan.name))
         return sshconf
 
     @classmethod
@@ -73,17 +89,16 @@ class KypoSSHConfig(ssh_config.SSHConfig):
         It uses MNG network for access.
         """
         sshconf = cls(stack, config)
-        man = ssh_config.Host([stack.man.name, stack.ip], dict(
-            User=stack.man.user, HostName=stack.ip,
-            IdentityFile='<path_to_pool_private_key>',
-            AddKeysToAgent='yes'))
-        sshconf.append(man)
+        sshconf.append(cls.man_entry([sshconf.stack.man.name, sshconf.stack.ip],
+                                     stack.man.user,
+                                     stack.ip,
+                                     '<path_to_pool_private_key>'))
 
         for link in sshconf._get_man_accessible_node_links():
-            sshconf.append(ssh_config.Host([link.node.name, link.ip], dict(
-                User=link.node.user, HostName=link.ip,
-                ProxyJump=stack.man.user + '@' + stack.man.name)))
-
+            sshconf.append(cls.host_entry([link.node.name, link.ip],
+                                          link.node.user,
+                                          link.ip,
+                                          stack.man.user + '@' + stack.man.name))
         return sshconf
 
     @classmethod
@@ -103,9 +118,11 @@ class KypoSSHConfig(ssh_config.SSHConfig):
                              StrictHostKeyChecking='no',
                              IdentityFile=mng_private_key))
 
-        sshconf.append(ssh_config.Host(config.git_server, dict(
-            User=config.git_user, IdentityFile=git_private_key,
-            UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no')))
+        sshconf.append(Host(config.git_server, dict(
+            User=config.git_user,
+            IdentityFile=git_private_key,
+            UserKnownHostsFile='/dev/null',
+            StrictHostKeyChecking='no')))
 
         if config.proxy_jump_to_man:
             sshconf.add_proxy_jump()
@@ -119,7 +136,7 @@ class KypoSSHConfig(ssh_config.SSHConfig):
                                      os.path.basename(
                                          self.config.proxy_jump_to_man.IdentityFile))
 
-        jump_host = ssh_config.Host(jump_host_name, dict(
+        jump_host = Host(jump_host_name, dict(
             User=jump_host_user,
             IdentityFile=jump_host_key,
             UserKnownHostsFile='/dev/null',
