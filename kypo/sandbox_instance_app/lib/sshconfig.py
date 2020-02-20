@@ -148,29 +148,36 @@ class KypoSSHConfig(SSHConfig):
         self.get(" ".join([self.stack.man.name, self.stack.ip])).update(
             {'ProxyJump': jump_host_user + '@' + jump_host_name})
 
-    def _get_uan_ip(self) -> str:
+    ###################################
+    # Private methods
+    ###################################
+
+    @staticmethod
+    def _get_uan_ip(stack: SandboxTopology) -> str:
         """Get IP of UAN in UAN_NETWORK."""
-        for link in self.stack.links:
-            if link.node == self.stack.uan and link.network.name == UAN_NET_NAME:
+        for link in stack.links:
+            if link.node == stack.uan and link.network.name == UAN_NET_NAME:
                 return link.ip
 
-    def _get_uan_accessible_node_links(self) -> List[SandboxLink]:
+    @classmethod
+    def _get_uan_accessible_node_links(cls, stack: SandboxTopology) -> List[SandboxLink]:
         # Only 'inner' networks UAN is connected to
-        networks = [link.network for link in self.stack.get_node_links(self.stack.uan)
-                    if link.network.name not in [UAN_NET_NAME, self.stack.mng_net.name]]
+        networks = [link.network for link in stack.get_node_links(stack.uan)
+                    if link.network.name not in [UAN_NET_NAME, stack.mng_net.name]]
 
-        links = [link for link in self.stack.links
+        links = [link for link in stack.links
                  if link.network in networks
-                 and link.node != self.stack.uan
+                 and link.node != stack.uan
                  and (isinstance(link.node, SandboxHost) or isinstance(link.node, SandboxRouter))]
 
-        return self._sorted_links(links)
+        return cls._sorted_links(links)
 
-    def _get_man_accessible_node_links(self) -> List[SandboxLink]:
-        links = [link for link in self.stack.links
-                 if link.network == self.stack.mng_net and link.node != self.stack.man]
+    @classmethod
+    def _get_man_accessible_node_links(cls, stack: SandboxTopology) -> List[SandboxLink]:
+        links = [link for link in stack.links
+                 if link.network == stack.mng_net and link.node != stack.man]
 
-        return self._sorted_links(links)
+        return cls._sorted_links(links)
 
     @staticmethod
     def _sorted_links(links: List[SandboxLink]) -> List[SandboxLink]:
