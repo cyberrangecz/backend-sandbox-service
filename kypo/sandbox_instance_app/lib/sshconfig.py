@@ -59,6 +59,7 @@ class KypoSSHConfig(SSHConfig):
                                 'IdentityFile': identity_file,
                                 'UserKnownHostsFile': '/dev/null',
                                 'StrictHostKeyChecking': 'no'}))
+
     # TODO: add jumphost
     @classmethod
     def create_user_config(cls, stack: SandboxTopology, config: KypoConfiguration)\
@@ -85,6 +86,7 @@ class KypoSSHConfig(SSHConfig):
                              link.ip,
                              SSH_PROXY_USERNAME + '@' + stack.uan.name)
         return sshconf
+
     # TODO: add jumphost
     @classmethod
     def create_management_config(cls, stack: SandboxTopology, config: KypoConfiguration)\
@@ -94,7 +96,7 @@ class KypoSSHConfig(SSHConfig):
         """
         sshconf = cls()
         sshconf.add_man([stack.man.name, stack.ip],
-                        SSH_PROXY_USERNAME,
+                        stack.man.user,
                         stack.ip,
                         '<path_to_pool_private_key>')
 
