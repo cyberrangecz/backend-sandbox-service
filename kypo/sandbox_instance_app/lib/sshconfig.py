@@ -60,6 +60,19 @@ class KypoSSHConfig(SSHConfig):
                                 'UserKnownHostsFile': '/dev/null',
                                 'StrictHostKeyChecking': 'no'}))
 
+    def add_proxy_jump(self, stack, name: Union[str, List[str]], user: str, key_path: str) -> None:
+        jump_host = Host(name, dict(
+            User=user,
+            IdentityFile=key_path,
+            UserKnownHostsFile='/dev/null',
+            StrictHostKeyChecking='no'
+        ))
+        self.append(jump_host)
+
+        # Need to use the full-name
+        self.get(" ".join([stack.man.name, stack.ip])).update(
+            {'ProxyJump': user + '@' + name})
+
     # TODO: add jumphost
     @classmethod
     def create_user_config(cls, stack: SandboxTopology, config: KypoConfiguration)\
@@ -129,27 +142,13 @@ class KypoSSHConfig(SSHConfig):
                                git_private_key)
 
         if config.proxy_jump_to_man:
+            key_path = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
+                                    os.path.basename(config.proxy_jump_to_man.IdentityFile))
             sshconf.add_proxy_jump(stack,
                                    config.proxy_jump_to_man.Host,
                                    config.proxy_jump_to_man.User,
-                                   config.proxy_jump_to_man.IdentityFile)
+                                   key_path)
         return sshconf
-
-    def add_proxy_jump(self, stack, name: Union[str, List[str]], user: str, key: str) -> None:
-        jump_host_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
-                                     os.path.basename(key))
-
-        jump_host = Host(name, dict(
-            User=user,
-            IdentityFile=jump_host_key,
-            UserKnownHostsFile='/dev/null',
-            StrictHostKeyChecking='no'
-        ))
-        self.append(jump_host)
-
-        # Need to use the full-name
-        self.get(" ".join([stack.man.name, stack.ip])).update(
-            {'ProxyJump': user + '@' + name})
 
     ###################################
     # Private methods
