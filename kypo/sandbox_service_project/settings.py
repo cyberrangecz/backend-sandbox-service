@@ -180,7 +180,8 @@ if AUTHENTICATED_REST_API:
         # User and Group roles acquisition endpoint URL
         'ROLES_ACQUISITION_URL': 'https://example.com/kypo2-rest-user-and-group/api/v1/users/info',
         # Path to roles definition file
-        'ROLES_DEFINITION_PATH': os.path.join(BASE_DIR, 'kypo/sandbox_service_project/roles.yml'),
+        'ROLES_DEFINITION_PATH': os.path.join(BASE_DIR,
+                                              'kypo/sandbox_service_project/permissions/roles.yml'),
 
         # User and Group information configuration
         'MICROSERVICE_NAME': __package__,
