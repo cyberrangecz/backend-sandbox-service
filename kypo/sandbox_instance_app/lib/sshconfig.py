@@ -1,5 +1,5 @@
 import os
-from typing import List, Union
+from typing import List, Union, Optional
 import structlog
 from ssh_config import Host, SSHConfig
 
@@ -133,8 +133,9 @@ class KypoSSHConfig(SSHConfig):
         return sshconf
 
     @classmethod
-    def create_ansible_config(cls, stack: SandboxTopology, config: KypoConfiguration)\
-            -> 'KypoSSHConfig':
+    def create_ansible_config(cls, stack: SandboxTopology, config: KypoConfiguration,
+                              mng_key: str, git_key: str,
+                              proxy_key: Optional[str] = None) -> 'KypoSSHConfig':
         """Generates Ansible ssh config string for sandbox."""
         sshconf = cls.create_management_config(stack, config, add_jump=False)
 
@@ -147,11 +148,11 @@ class KypoSSHConfig(SSHConfig):
         for host in sshconf.hosts():
             host.update(dict(UserKnownHostsFile='/dev/null',
                              StrictHostKeyChecking='no',
-                             IdentityFile=mng_private_key))
+                             IdentityFile=mng_key))
 
         sshconf.add_git_server(config.git_server,
                                config.git_user,
-                               git_private_key)
+                               git_key)
 
         if config.proxy_jump_to_man:
             key_path = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
@@ -159,7 +160,7 @@ class KypoSSHConfig(SSHConfig):
             sshconf.add_proxy_jump(stack,
                                    config.proxy_jump_to_man.Host,
                                    config.proxy_jump_to_man.User,
-                                   key_path)
+                                   proxy_key)
         return sshconf
 
     ###################################
