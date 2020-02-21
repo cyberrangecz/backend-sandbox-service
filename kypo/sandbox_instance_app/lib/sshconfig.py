@@ -1,4 +1,3 @@
-import os
 from typing import List, Union, Optional
 import structlog
 from ssh_config import Host, SSHConfig
@@ -6,9 +5,6 @@ from ssh_config import Host, SSHConfig
 from kypo.openstack_driver.sandbox_topology import SandboxHost, SandboxRouter, \
     SandboxLink, SandboxExtraNode, UAN_NET_NAME, SandboxTopology
 
-from ...sandbox_ansible_app.lib.ansible_service import ANSIBLE_DOCKER_SSH_DIR
-
-from . import sandbox_creator
 from ...sandbox_common_lib.config import KypoConfiguration
 
 LOG = structlog.getLogger()
@@ -139,12 +135,6 @@ class KypoSSHConfig(SSHConfig):
         """Generates Ansible ssh config string for sandbox."""
         sshconf = cls.create_management_config(stack, config, add_jump=False)
 
-        mng_private_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
-                                       sandbox_creator.MNG_PRIVATE_KEY_FILENAME)
-        git_private_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
-                                       os.path.basename(
-                                           config.git_private_key))
-
         for host in sshconf.hosts():
             host.update(dict(UserKnownHostsFile='/dev/null',
                              StrictHostKeyChecking='no',
@@ -155,8 +145,6 @@ class KypoSSHConfig(SSHConfig):
                                git_key)
 
         if config.proxy_jump_to_man:
-            key_path = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
-                                    os.path.basename(config.proxy_jump_to_man.IdentityFile))
             sshconf.add_proxy_jump(stack,
                                    config.proxy_jump_to_man.Host,
                                    config.proxy_jump_to_man.User,
