@@ -6,7 +6,7 @@ from collections import OrderedDict
 from drf_yasg import openapi
 from drf_yasg.inspectors import PaginatorInspector, NotHandled
 
-from . import pagination
+from kypo.sandbox_common_lib import pagination
 
 
 class PageNumberWithPageSizePaginationInspector(PaginatorInspector):

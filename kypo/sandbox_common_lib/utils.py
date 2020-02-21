@@ -13,7 +13,7 @@ import structlog
 from Crypto.PublicKey import RSA
 from kypo.openstack_driver.ostack_client import KypoOstackClient
 
-from .config import KypoConfigurationManager as KCM
+from kypo.sandbox_common_lib.config import KypoConfigurationManager as KCM
 
 # Create logger
 LOG = structlog.get_logger()

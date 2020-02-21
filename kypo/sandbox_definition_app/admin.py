@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .import models
+from kypo.sandbox_definition_app import models
 
 
 class ShowIdAdmin(admin.ModelAdmin):

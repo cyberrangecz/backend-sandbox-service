@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
-from ..sandbox_common_lib import utils
+from kypo.sandbox_common_lib import utils
 
 
 class KypoSandboxInstancesConfig(AppConfig):

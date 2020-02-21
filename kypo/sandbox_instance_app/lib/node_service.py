@@ -3,8 +3,8 @@ VM Service module for VM management.
 """
 from kypo.openstack_driver.instance import Instance
 
-from ..models import Sandbox
-from ...sandbox_common_lib import utils, exceptions
+from kypo.sandbox_instance_app.models import Sandbox
+from kypo.sandbox_common_lib import utils, exceptions
 
 
 def node_action(sandbox: Sandbox, node_name: str, action: str) -> None:

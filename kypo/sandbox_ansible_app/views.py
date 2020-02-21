@@ -2,8 +2,8 @@ import structlog
 from django.shortcuts import get_object_or_404
 from rest_framework import generics
 
-from . import serializers
-from .models import AnsibleAllocationStage
+from kypo.sandbox_ansible_app import serializers
+from kypo.sandbox_ansible_app.models import AnsibleAllocationStage
 
 # Create logger and configure logging
 LOG = structlog.get_logger()

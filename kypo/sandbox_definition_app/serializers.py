@@ -10,7 +10,7 @@ Swagger can utilise type hints to determine type, so use them in your own method
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
-from . import models
+from kypo.sandbox_definition_app import models
 
 
 class DefinitionSerializer(serializers.ModelSerializer):

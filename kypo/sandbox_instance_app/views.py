@@ -12,13 +12,13 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from . import serializers
-from .lib import pool_service, sandbox_service, node_service, \
+from kypo.sandbox_instance_app import serializers
+from kypo.sandbox_instance_app.lib import pool_service, sandbox_service, node_service,\
     sandbox_creator, sandbox_destructor
-from .models import Pool, Sandbox, SandboxAllocationUnit, AllocationRequest, AllocationStage, \
-    StackAllocationStage, CleanupRequest, StackCleanupStage, CleanupStage, Lock
-from ..sandbox_common_lib import exceptions
-from ..sandbox_common_lib.permissions import AllowReadOnViewSandbox
+from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit, AllocationRequest, \
+    AllocationStage, StackAllocationStage, CleanupRequest, StackCleanupStage, CleanupStage, Lock
+from kypo.sandbox_common_lib import exceptions
+from kypo.sandbox_common_lib.permissions import AllowReadOnViewSandbox
 
 # Create logger and configure logging
 LOG = structlog.get_logger()

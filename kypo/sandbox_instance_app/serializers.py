@@ -11,8 +11,8 @@ from typing import Optional
 
 from rest_framework import serializers
 
-from . import models
-from .lib import pool_service
+from kypo.sandbox_instance_app import models
+from kypo.sandbox_instance_app.lib import pool_service
 
 MAX_SANDBOXES_PER_POOL = 64
 

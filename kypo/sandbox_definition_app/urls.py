@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from kypo.sandbox_definition_app import views
 
 
 urlpatterns = [

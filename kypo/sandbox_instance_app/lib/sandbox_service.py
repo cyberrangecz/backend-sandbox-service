@@ -5,10 +5,10 @@ import structlog
 from django.db import transaction
 from rest_framework.generics import get_object_or_404
 
-from .sshconfig import KypoSSHConfig
-from .topology import Topology
-from ..models import Sandbox, Lock
-from ...sandbox_common_lib import exceptions, utils
+from kypo.sandbox_instance_app.lib.sshconfig import KypoSSHConfig
+from kypo.sandbox_instance_app.lib.topology import Topology
+from kypo.sandbox_instance_app.models import Sandbox, Lock
+from kypo.sandbox_common_lib import exceptions, utils
 
 LOG = structlog.getLogger()
 

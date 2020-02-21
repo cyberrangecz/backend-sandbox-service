@@ -4,8 +4,8 @@ from django.db import models
 from django.utils import timezone
 from model_utils.managers import InheritanceManager
 
-from ..sandbox_common_lib import utils
-from ..sandbox_definition_app.models import Definition
+from kypo.sandbox_common_lib import utils
+from kypo.sandbox_definition_app.models import Definition
 
 
 class StageType(Enum):

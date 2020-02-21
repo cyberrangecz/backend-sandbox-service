@@ -6,10 +6,10 @@ import ssh_config
 from kypo.openstack_driver.sandbox_topology import SandboxHost, SandboxRouter, \
     SandboxLink, SandboxExtraNode, UAN_NET_NAME
 
-from ...sandbox_common_lib.config import KypoConfigurationManager as KCM
-from ...sandbox_ansible_app.lib.ansible_service import ANSIBLE_DOCKER_SSH_DIR
+from kypo.sandbox_common_lib.config import KypoConfigurationManager as KCM
+from kypo.sandbox_ansible_app.lib.ansible_service import ANSIBLE_DOCKER_SSH_DIR
 
-from . import sandbox_creator
+from kypo.sandbox_instance_app.lib import sandbox_creator
 
 LOG = structlog.getLogger()
 

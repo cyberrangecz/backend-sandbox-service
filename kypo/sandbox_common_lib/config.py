@@ -8,7 +8,7 @@ from kypo.openstack_driver.transformation_configuration import\
     TransformationConfiguration
 from yamlize import Attribute, Object, YamlizingError
 
-from .exceptions import ImproperlyConfigured
+from kypo.sandbox_common_lib.exceptions import ImproperlyConfigured
 
 CONFIG_FILE_VARIABLE = 'KYPO_DJANGO_OPENSTACK_CONFIG'
 

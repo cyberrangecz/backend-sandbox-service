@@ -9,9 +9,9 @@ from yamlize import YamlizingError
 
 from kypo.topology_definition.models import TopologyDefinition
 
-from .. import serializers
-from ..models import Definition
-from ...sandbox_common_lib import utils, exceptions
+from kypo.sandbox_definition_app import serializers
+from kypo.sandbox_definition_app.models import Definition
+from kypo.sandbox_common_lib import utils, exceptions
 
 LOG = structlog.get_logger()
 
