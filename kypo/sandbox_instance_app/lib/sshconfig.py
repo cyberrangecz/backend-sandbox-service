@@ -13,7 +13,8 @@ from ...sandbox_common_lib.config import KypoConfiguration
 
 LOG = structlog.getLogger()
 
-SSH_PROXY_USERNAME = "user-access"
+SSH_PROXY_USERNAME = 'user-access'
+SSH_PROXY_KEY = '<path to proxy jump private key>'
 
 Hostname = Union[str, List[str]]
 
@@ -73,7 +74,6 @@ class KypoSSHConfig(SSHConfig):
         self.get(" ".join([stack.man.name, stack.ip])).update(
             {'ProxyJump': user + '@' + name})
 
-    # TODO: add jumphost
     @classmethod
     def create_user_config(cls, stack: SandboxTopology, config: KypoConfiguration)\
             -> 'KypoSSHConfig':
@@ -98,11 +98,17 @@ class KypoSSHConfig(SSHConfig):
                              SSH_PROXY_USERNAME,
                              link.ip,
                              SSH_PROXY_USERNAME + '@' + stack.uan.name)
+
+        if config.proxy_jump_to_man:
+            sshconf.add_proxy_jump(stack,
+                                   config.proxy_jump_to_man.Host,
+                                   config.proxy_jump_to_man.User,
+                                   SSH_PROXY_KEY)
         return sshconf
 
-    # TODO: add jumphost
     @classmethod
-    def create_management_config(cls, stack: SandboxTopology, config: KypoConfiguration)\
+    def create_management_config(cls, stack: SandboxTopology, config: KypoConfiguration,
+                                 add_jump=True)\
             -> 'KypoSSHConfig':
         """Generates management ssh config string for sandbox.
         It uses MNG network for access.
@@ -118,13 +124,19 @@ class KypoSSHConfig(SSHConfig):
                              link.node.user,
                              link.ip,
                              stack.man.user + '@' + stack.man.name)
+
+        if add_jump and config.proxy_jump_to_man:
+            sshconf.add_proxy_jump(stack,
+                                   config.proxy_jump_to_man.Host,
+                                   config.proxy_jump_to_man.User,
+                                   SSH_PROXY_KEY)
         return sshconf
 
     @classmethod
     def create_ansible_config(cls, stack: SandboxTopology, config: KypoConfiguration)\
             -> 'KypoSSHConfig':
         """Generates Ansible ssh config string for sandbox."""
-        sshconf = cls.create_management_config(stack, config)
+        sshconf = cls.create_management_config(stack, config, add_jump=False)
 
         mng_private_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
                                        sandbox_creator.MNG_PRIVATE_KEY_FILENAME)
