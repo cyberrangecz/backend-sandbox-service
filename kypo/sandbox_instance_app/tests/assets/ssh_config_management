@@ -3,6 +3,7 @@ Host man 201.201.2.133
     User debian
     IdentityFile <path_to_pool_private_key>
     AddKeysToAgent yes
+    ProxyJump debian@jump-host-ip
 
 Host uan 172.16.2.3
     HostName 172.16.2.3
@@ -33,4 +34,10 @@ Host server 172.16.2.13
     HostName 172.16.2.13
     User debian
     ProxyJump debian@man
+
+Host jump-host-ip
+    User debian
+    IdentityFile <path to proxy jump private key>
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
 
