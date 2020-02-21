@@ -38,37 +38,26 @@ class KypoSSHConfig(SSHConfig):
 
     def add_man(self, name: Union[str, List[str]], user: str, host_name: str,
                 identity_file: str) -> None:
-        self.append(Host(name, {'User': user,
-                                'HostName': host_name,
-                                'IdentityFile': identity_file,
-                                'AddKeysToAgent': 'yes'}))
+        opts = dict(User=user, HostName=host_name, IdentityFile=identity_file, AddKeysToAgent='yes')
+        self.append(Host(name, opts))
 
     def add_host(self, name: Union[str, List[str]], user: str, host_name: str,
                  proxy_jump: str, **kwargs) -> None:
-        options = {'User': user,
-                   'HostName': host_name,
-                   'ProxyJump': proxy_jump}
-        options.update(kwargs)
-        self.append(Host(name, options))
+        opts = dict(User=user, HostName=host_name, ProxyJump=proxy_jump)
+        opts.update(kwargs)
+        self.append(Host(name, opts))
 
     def add_git_server(self, name: Union[str, List[str]], user: str, identity_file: str) -> None:
-        self.append(Host(name, {'User': user,
-                                'IdentityFile': identity_file,
-                                'UserKnownHostsFile': '/dev/null',
-                                'StrictHostKeyChecking': 'no'}))
+        opts = dict(User=user, IdentityFile=identity_file, UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no')
+        self.append(Host(name, opts))
 
     def add_proxy_jump(self, stack, name: Union[str, List[str]], user: str, key_path: str) -> None:
-        jump_host = Host(name, dict(
-            User=user,
-            IdentityFile=key_path,
-            UserKnownHostsFile='/dev/null',
-            StrictHostKeyChecking='no'
-        ))
+        opts = dict(User=user, IdentityFile=key_path, UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no')
+        jump_host = Host(name, opts)
         self.append(jump_host)
 
         # Need to use the full-name
-        self.get(" ".join([stack.man.name, stack.ip])).update(
-            {'ProxyJump': user + '@' + name})
+        self.get(" ".join([stack.man.name, stack.ip])).update(dict(ProxyJump=user + '@' + name))
 
     @classmethod
     def create_user_config(cls, stack: SandboxTopology, config: KypoConfiguration)\
@@ -136,9 +125,8 @@ class KypoSSHConfig(SSHConfig):
         sshconf = cls.create_management_config(stack, config, add_jump=False)
 
         for host in sshconf.hosts():
-            host.update(dict(UserKnownHostsFile='/dev/null',
-                             StrictHostKeyChecking='no',
-                             IdentityFile=mng_key))
+            opts = dict(UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no', IdentityFile=mng_key)
+            host.update(opts)
 
         sshconf.add_git_server(config.git_server,
                                config.git_user,
