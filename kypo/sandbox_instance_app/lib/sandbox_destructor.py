@@ -3,13 +3,13 @@ import structlog
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 
-from ..models import CleanupRequest, SandboxAllocationUnit, StackCleanupStage
-from .sandbox_creator import OPENSTACK_QUEUE
+from kypo.sandbox_instance_app.models import CleanupRequest, SandboxAllocationUnit, StackCleanupStage
+from kypo.sandbox_instance_app.lib.sandbox_creator import OPENSTACK_QUEUE
 
-from ...sandbox_ansible_app.lib import ansible_service
-from ...sandbox_ansible_app.models import AnsibleCleanupStage
-from ...sandbox_common_lib import utils, exceptions
-from ...sandbox_common_lib.config import KypoConfigurationManager as KCM
+from kypo.sandbox_ansible_app.lib import ansible_service
+from kypo.sandbox_ansible_app.models import AnsibleCleanupStage
+from kypo.sandbox_common_lib import utils, exceptions
+from kypo.sandbox_common_lib.config import KypoConfigurationManager as KCM
 
 LOG = structlog.get_logger()
 

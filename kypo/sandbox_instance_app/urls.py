@@ -1,7 +1,7 @@
 from django.urls import path
 from django.views.decorators.cache import cache_page
 
-from . import views
+from kypo.sandbox_instance_app import views
 
 WEEK = 3600 * 24 * 7
 

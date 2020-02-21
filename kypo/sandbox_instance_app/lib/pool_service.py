@@ -8,10 +8,10 @@ from django.db import transaction
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 
-from . import sandbox_creator, sandbox_destructor
-from .. import serializers
-from ..models import Pool, Sandbox, SandboxAllocationUnit, CleanupRequest, Lock
-from ...sandbox_common_lib import utils, exceptions
+from kypo.sandbox_instance_app.lib import sandbox_creator, sandbox_destructor
+from kypo.sandbox_instance_app import serializers
+from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit, CleanupRequest, Lock
+from kypo.sandbox_common_lib import utils, exceptions
 
 LOG = structlog.get_logger()
 

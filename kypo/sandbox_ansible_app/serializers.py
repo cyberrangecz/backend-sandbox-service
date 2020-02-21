@@ -9,10 +9,9 @@ Swagger can utilise type hints to determine type, so use them in your own method
 """
 from rest_framework import serializers
 
-from ..sandbox_instance_app.serializers import AllocationStageSerializer,\
-    CleanupStageSerializer
+from kypo.sandbox_instance_app.serializers import AllocationStageSerializer, CleanupStageSerializer
 
-from . import models
+from kypo.sandbox_ansible_app import models
 
 
 class AnsibleAllocationStageSerializer(AllocationStageSerializer):

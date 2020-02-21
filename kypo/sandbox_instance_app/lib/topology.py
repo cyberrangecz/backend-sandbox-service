@@ -2,9 +2,9 @@ import structlog
 from kypo.openstack_driver.sandbox_topology import SandboxTopology as Stack,\
     BR_NET_NAME, UAN_NET_NAME
 
-from ..models import Sandbox
-from ...sandbox_common_lib import utils
-from ...sandbox_definition_app.lib import definition_service
+from kypo.sandbox_instance_app.models import Sandbox
+from kypo.sandbox_common_lib import utils
+from kypo.sandbox_definition_app.lib import definition_service
 
 LOG = structlog.getLogger()
 

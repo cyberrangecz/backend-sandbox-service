@@ -1,9 +1,9 @@
 from rest_framework import status, generics, mixins
 from rest_framework.response import Response
 
-from .models import Definition
-from . import serializers
-from .lib import definition_service
+from kypo.sandbox_definition_app.models import Definition
+from kypo.sandbox_definition_app import serializers
+from kypo.sandbox_definition_app.lib import definition_service
 
 
 class DefinitionList(mixins.ListModelMixin,

@@ -15,17 +15,16 @@ from django.utils import timezone
 from kypo.openstack_driver.stack import Event, Resource
 from rq.job import Job
 
-from . import sandbox_service
-from ..models import Sandbox, Pool, SandboxAllocationUnit, \
-    AllocationRequest, StackAllocationStage
-from ...sandbox_ansible_app.lib import ansible_service
-from ...sandbox_ansible_app.lib.ansible_service import ANSIBLE_DOCKER_SSH_DIR
-from ...sandbox_ansible_app.lib.inventory import Inventory
-from ...sandbox_ansible_app.models import AnsibleAllocationStage, \
-    AnsibleOutput, DockerContainer
-from ...sandbox_common_lib import utils, exceptions
-from ...sandbox_common_lib.config import KypoConfigurationManager as KCM
-from ...sandbox_definition_app.lib import definition_service
+from kypo.sandbox_instance_app.lib import sandbox_service
+from kypo.sandbox_instance_app.models import Sandbox, Pool, SandboxAllocationUnit, AllocationRequest, \
+    StackAllocationStage
+from kypo.sandbox_ansible_app.lib import ansible_service
+from kypo.sandbox_ansible_app.lib.ansible_service import ANSIBLE_DOCKER_SSH_DIR
+from kypo.sandbox_ansible_app.lib.inventory import Inventory
+from kypo.sandbox_ansible_app.models import AnsibleAllocationStage, AnsibleOutput, DockerContainer
+from kypo.sandbox_common_lib import utils, exceptions
+from kypo.sandbox_common_lib.config import KypoConfigurationManager as KCM
+from kypo.sandbox_definition_app.lib import definition_service
 
 STACK_STATUS_CREATE_COMPLETE = "CREATE_COMPLETE"
 

@@ -6,7 +6,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import exception_handler
 
-from .exceptions import ApiException
+from kypo.sandbox_common_lib.exceptions import ApiException
 
 # Create logger
 LOG = structlog.get_logger()
