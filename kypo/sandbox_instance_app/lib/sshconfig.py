@@ -1,34 +1,31 @@
-import os
-from typing import List
+from typing import List, Union, Optional
 import structlog
-import ssh_config
+from ssh_config import Host, SSHConfig
 
 from kypo.openstack_driver.sandbox_topology import SandboxHost, SandboxRouter, \
-    SandboxLink, SandboxExtraNode, UAN_NET_NAME
+    SandboxLink, SandboxExtraNode, UAN_NET_NAME, SandboxTopology
 
-from kypo.sandbox_common_lib.config import KypoConfigurationManager as KCM
-from kypo.sandbox_ansible_app.lib.ansible_service import ANSIBLE_DOCKER_SSH_DIR
-
-from kypo.sandbox_instance_app.lib import sandbox_creator
+from kypo.sandbox_common_lib.config import KypoConfiguration
 
 LOG = structlog.getLogger()
 
-SSH_PROXY_USERNAME = "user-access"
+SSH_PROXY_USERNAME = 'user-access'
+SSH_PROXY_KEY = '<path to proxy jump private key>'
 
+Hostname = Union[str, List[str]]
 
 # Add missing SSH Options to ssh_config.Host.attrs
-ssh_config.Host.attrs += (
+Host.attrs += (
     ('UserKnownHostsFile', str),
     ('StrictHostKeyChecking', str),
 )
 
 
-class KypoSSHConfig(ssh_config.SSHConfig):
+class KypoSSHConfig(SSHConfig):
     """Subclass of ssh_config.SSHConfig with __str__ method."""
 
-    def __init__(self, stack):
+    def __init__(self):
         super().__init__('')
-        self.stack = stack
 
     def __str__(self) -> str:
         res = []
@@ -39,117 +36,151 @@ class KypoSSHConfig(ssh_config.SSHConfig):
             res.append('\n')
         return "".join(res)
 
-    @classmethod
-    def create_user_config(cls, stack) -> 'KypoSSHConfig':
-        """Generates user ssh config string for sandbox.
-        If router has multiple networks, then config contains one router entry
-        for each of the networks.
-        """
-        sshconf = cls(stack)
-        man = ssh_config.Host([sshconf.stack.man.name, sshconf.stack.ip], dict(
-            User=SSH_PROXY_USERNAME, HostName=sshconf.stack.ip,
-            IdentityFile='<path_to_sandbox_private_key>',
-            AddKeysToAgent='yes'))
-        sshconf.append(man)
+    def add_man(self, name: Union[str, List[str]], user: str, host_name: str,
+                identity_file: str) -> None:
+        self.append(Host(name, {'User': user,
+                                'HostName': host_name,
+                                'IdentityFile': identity_file,
+                                'AddKeysToAgent': 'yes'}))
 
-        uan_ip = sshconf._get_uan_ip()
-        uan = ssh_config.Host([stack.uan.name, uan_ip], dict(
-            User=SSH_PROXY_USERNAME, HostName=uan_ip,
-            ProxyJump=SSH_PROXY_USERNAME + '@' + stack.man.name))
-        sshconf.append(uan)
+    def add_host(self, name: Union[str, List[str]], user: str, host_name: str,
+                 proxy_jump: str, **kwargs) -> None:
+        options = {'User': user,
+                   'HostName': host_name,
+                   'ProxyJump': proxy_jump}
+        options.update(kwargs)
+        self.append(Host(name, options))
 
-        for link in sshconf._get_uan_accessible_node_links():
-            sshconf.append(ssh_config.Host([link.node.name, link.ip], dict(
-                User=SSH_PROXY_USERNAME, HostName=link.ip,
-                ProxyJump=SSH_PROXY_USERNAME + '@' + stack.uan.name)))
-        return sshconf
+    def add_git_server(self, name: Union[str, List[str]], user: str, identity_file: str) -> None:
+        self.append(Host(name, {'User': user,
+                                'IdentityFile': identity_file,
+                                'UserKnownHostsFile': '/dev/null',
+                                'StrictHostKeyChecking': 'no'}))
 
-    @classmethod
-    def create_management_config(cls, stack) -> 'KypoSSHConfig':
-        """Generates management ssh config string for sandbox.
-        It uses MNG network for access.
-        """
-        sshconf = cls(stack)
-        man = ssh_config.Host([stack.man.name, stack.ip], dict(
-            User=stack.man.user, HostName=stack.ip,
-            IdentityFile='<path_to_pool_private_key>',
-            AddKeysToAgent='yes'))
-        sshconf.append(man)
-
-        for link in sshconf._get_man_accessible_node_links():
-            sshconf.append(ssh_config.Host([link.node.name, link.ip], dict(
-                User=link.node.user, HostName=link.ip,
-                ProxyJump=stack.man.user + '@' + stack.man.name)))
-
-        return sshconf
-
-    @classmethod
-    def create_ansible_config(cls, stack) -> 'KypoSSHConfig':
-        """Generates Ansible ssh config string for sandbox."""
-        sshconf = cls.create_management_config(stack)
-
-        mng_private_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
-                                       sandbox_creator.MNG_PRIVATE_KEY_FILENAME)
-        git_private_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
-                                       os.path.basename(
-                                           KCM.config().git_private_key))
-
-        for host in sshconf.hosts():
-            host.update(dict(UserKnownHostsFile='/dev/null',
-                             StrictHostKeyChecking='no',
-                             IdentityFile=mng_private_key))
-
-        sshconf.append(ssh_config.Host(KCM.config().git_server, dict(
-            User=KCM.config().git_user, IdentityFile=git_private_key,
-            UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no')))
-
-        if KCM.config().proxy_jump_to_man:
-            sshconf.add_proxy_jump()
-
-        return sshconf
-
-    def add_proxy_jump(self):
-        jump_host_name = KCM.config().proxy_jump_to_man.Host
-        jump_host_user = KCM.config().proxy_jump_to_man.User
-        jump_host_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
-                                     os.path.basename(
-                                         KCM.config().proxy_jump_to_man.IdentityFile))
-
-        jump_host = ssh_config.Host(jump_host_name, dict(
-            User=jump_host_user,
-            IdentityFile=jump_host_key,
+    def add_proxy_jump(self, stack, name: Union[str, List[str]], user: str, key_path: str) -> None:
+        jump_host = Host(name, dict(
+            User=user,
+            IdentityFile=key_path,
             UserKnownHostsFile='/dev/null',
             StrictHostKeyChecking='no'
         ))
         self.append(jump_host)
 
         # Need to use the full-name
-        self.get(" ".join([self.stack.man.name, self.stack.ip])).update(
-            {'ProxyJump': jump_host_user + '@' + jump_host_name})
+        self.get(" ".join([stack.man.name, stack.ip])).update(
+            {'ProxyJump': user + '@' + name})
 
-    def _get_uan_ip(self) -> str:
+    @classmethod
+    def create_user_config(cls, stack: SandboxTopology, config: KypoConfiguration)\
+            -> 'KypoSSHConfig':
+        """Generates user ssh config string for sandbox.
+        If router has multiple networks, then config contains one router entry
+        for each of the networks.
+        """
+        sshconf = cls()
+        sshconf.add_man([stack.man.name, stack.ip],
+                        SSH_PROXY_USERNAME,
+                        stack.ip,
+                        '<path_to_sandbox_private_key>')
+
+        uan_ip = cls._get_uan_ip(stack)
+        sshconf.add_host([stack.uan.name, uan_ip],
+                         SSH_PROXY_USERNAME,
+                         uan_ip,
+                         SSH_PROXY_USERNAME + '@' + stack.man.name)
+
+        for link in sshconf._get_uan_accessible_node_links(stack):
+            sshconf.add_host([link.node.name, link.ip],
+                             SSH_PROXY_USERNAME,
+                             link.ip,
+                             SSH_PROXY_USERNAME + '@' + stack.uan.name)
+
+        if config.proxy_jump_to_man:
+            sshconf.add_proxy_jump(stack,
+                                   config.proxy_jump_to_man.Host,
+                                   config.proxy_jump_to_man.User,
+                                   SSH_PROXY_KEY)
+        return sshconf
+
+    @classmethod
+    def create_management_config(cls, stack: SandboxTopology, config: KypoConfiguration,
+                                 add_jump=True)\
+            -> 'KypoSSHConfig':
+        """Generates management ssh config string for sandbox.
+        It uses MNG network for access.
+        """
+        sshconf = cls()
+        sshconf.add_man([stack.man.name, stack.ip],
+                        stack.man.user,
+                        stack.ip,
+                        '<path_to_pool_private_key>')
+
+        for link in sshconf._get_man_accessible_node_links(stack):
+            sshconf.add_host([link.node.name, link.ip],
+                             link.node.user,
+                             link.ip,
+                             stack.man.user + '@' + stack.man.name)
+
+        if add_jump and config.proxy_jump_to_man:
+            sshconf.add_proxy_jump(stack,
+                                   config.proxy_jump_to_man.Host,
+                                   config.proxy_jump_to_man.User,
+                                   SSH_PROXY_KEY)
+        return sshconf
+
+    @classmethod
+    def create_ansible_config(cls, stack: SandboxTopology, config: KypoConfiguration,
+                              mng_key: str, git_key: str,
+                              proxy_key: Optional[str] = None) -> 'KypoSSHConfig':
+        """Generates Ansible ssh config string for sandbox."""
+        sshconf = cls.create_management_config(stack, config, add_jump=False)
+
+        for host in sshconf.hosts():
+            host.update(dict(UserKnownHostsFile='/dev/null',
+                             StrictHostKeyChecking='no',
+                             IdentityFile=mng_key))
+
+        sshconf.add_git_server(config.git_server,
+                               config.git_user,
+                               git_key)
+
+        if config.proxy_jump_to_man:
+            sshconf.add_proxy_jump(stack,
+                                   config.proxy_jump_to_man.Host,
+                                   config.proxy_jump_to_man.User,
+                                   proxy_key)
+        return sshconf
+
+    ###################################
+    # Private methods
+    ###################################
+
+    @staticmethod
+    def _get_uan_ip(stack: SandboxTopology) -> str:
         """Get IP of UAN in UAN_NETWORK."""
-        for link in self.stack.links:
-            if link.node == self.stack.uan and link.network.name == UAN_NET_NAME:
+        for link in stack.links:
+            if link.node == stack.uan and link.network.name == UAN_NET_NAME:
                 return link.ip
 
-    def _get_uan_accessible_node_links(self) -> List[SandboxLink]:
+    @classmethod
+    def _get_uan_accessible_node_links(cls, stack: SandboxTopology) -> List[SandboxLink]:
         # Only 'inner' networks UAN is connected to
-        networks = [link.network for link in self.stack.get_node_links(self.stack.uan)
-                    if link.network.name not in [UAN_NET_NAME, self.stack.mng_net.name]]
+        networks = [link.network for link in stack.get_node_links(stack.uan)
+                    if link.network.name not in [UAN_NET_NAME, stack.mng_net.name]]
 
-        links = [link for link in self.stack.links
+        links = [link for link in stack.links
                  if link.network in networks
-                 and link.node != self.stack.uan
+                 and link.node != stack.uan
                  and (isinstance(link.node, SandboxHost) or isinstance(link.node, SandboxRouter))]
 
-        return self._sorted_links(links)
+        return cls._sorted_links(links)
 
-    def _get_man_accessible_node_links(self) -> List[SandboxLink]:
-        links = [link for link in self.stack.links
-                 if link.network == self.stack.mng_net and link.node != self.stack.man]
+    @classmethod
+    def _get_man_accessible_node_links(cls, stack: SandboxTopology) -> List[SandboxLink]:
+        links = [link for link in stack.links
+                 if link.network == stack.mng_net and link.node != stack.man]
 
-        return self._sorted_links(links)
+        return cls._sorted_links(links)
 
     @staticmethod
     def _sorted_links(links: List[SandboxLink]) -> List[SandboxLink]:

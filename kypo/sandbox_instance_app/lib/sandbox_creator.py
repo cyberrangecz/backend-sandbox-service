@@ -214,7 +214,7 @@ class AnsibleAllocationStageManager:
 
     def prepare_ssh_dir(self) -> str:
         """Prepare files that will be passed to docker container."""
-
+        config = KCM.config()
         self.make_dir(self.directory)
         ssh_directory = os.path.join(self.directory, 'ssh')
         self.make_dir(ssh_directory)
@@ -227,13 +227,20 @@ class AnsibleAllocationStageManager:
                        self.stage.request.allocation_unit.pool.private_management_key)
 
         if not ansible_service.AnsibleRunDockerContainer.is_local_repo(self.stage.repo_url):
-            shutil.copy(KCM.config().git_private_key,
-                        os.path.join(ssh_directory, os.path.basename(KCM.config().git_private_key)))
+            shutil.copy(config.git_private_key,
+                        os.path.join(ssh_directory, os.path.basename(config.git_private_key)))
 
-        ans_ssh_config = sandbox_service.get_ansible_sshconfig(self.sandbox)
+        mng_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind, MNG_PRIVATE_KEY_FILENAME)
+        git_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
+                               os.path.basename(config.git_private_key))
+        proxy_key = None
+        if config.proxy_jump_to_man:
+            proxy_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
+                                     os.path.basename(config.proxy_jump_to_man.IdentityFile))
+        ans_ssh_config = sandbox_service.get_ansible_sshconfig(self.sandbox, mng_key, git_key, proxy_key)
 
-        if 'IdentityFile' in KCM.config().proxy_jump_to_man:
-            identity_file = KCM.config().proxy_jump_to_man['IdentityFile']
+        if 'IdentityFile' in config.proxy_jump_to_man:
+            identity_file = config.proxy_jump_to_man['IdentityFile']
             shutil.copy(identity_file, os.path.join(ssh_directory,
                         os.path.basename(identity_file)))
         self.save_file(os.path.join(ssh_directory, 'config'), str(ans_ssh_config))
