@@ -12,5 +12,8 @@ class TestGetSshConfig:
         assert str(result) == management_ssh_config
 
     def test_create_ansible_config_success(self, stack, ansible_ssh_config):
-        result = sshconfig.KypoSSHConfig.create_ansible_config(stack, KCM.config())
+        result = sshconfig.KypoSSHConfig.create_ansible_config(stack, KCM.config(),
+                                                               mng_key='/root/.ssh/pool_mng_key',
+                                                               git_key='/root/.ssh/git_rsa_key',
+                                                               proxy_key='/root/.ssh/id_rsa')
         assert str(result) == ansible_ssh_config
