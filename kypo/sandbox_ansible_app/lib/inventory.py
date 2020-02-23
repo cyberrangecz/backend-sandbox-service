@@ -1,5 +1,7 @@
 from typing import Dict, Tuple, List, Optional, Any
 
+import yaml
+
 from kypo.topology_definition.models import TopologyDefinition
 
 from kypo.openstack_driver.sandbox_topology import SandboxTopology as Stack
@@ -7,6 +9,12 @@ from kypo.openstack_driver.sandbox_topology import SandboxTopology as Stack
 
 class Inventory:
     """CLass for Ansible inventory creation."""
+
+    def __init__(self):
+        self.data = None
+
+    def __str__(self):
+        return yaml.dump(self.data, default_flow_style=False, indent=2)
 
     @staticmethod
     def route_dict(cidr: str, mask: str, gw: str) -> Dict[str, str]:
@@ -22,13 +30,14 @@ class Inventory:
                 'routes': routes}
 
     @classmethod
-    def create_inventory(cls, stack: Stack, top_def: TopologyDefinition,
-                         user_private_key_path: str, user_public_key_path: str) -> Dict[str, Any]:
+    def create(cls, stack: Stack, top_def: TopologyDefinition,
+               user_private_key_path: str, user_public_key_path: str) -> 'Inventory':
         """
         Creates ansible inventory.
 
         :return: Dict representation of Ansible inventory file
         """
+        inv = cls()
         net_to_router = cls.get_net_to_router(top_def)
         routers_routing, man_routes, br_interfaces = cls.create_routers_group(stack, net_to_router)
         mng_routing = cls.create_management_group(stack, br_interfaces, man_routes,
@@ -47,8 +56,9 @@ class Inventory:
 
         routing.update(cls.create_user_groups(top_def))
 
-        inventory = {'all': {'children': routing}}
-        return inventory
+        inv.data = {'all': {'children': routing}}
+
+        return inv
 
     @staticmethod
     def get_management_ips(stack: Stack) -> Dict[str, str]:
@@ -99,7 +109,8 @@ class Inventory:
         return routing
 
     @classmethod
-    def create_routers_group(cls, stack: Stack, net_to_router: Dict[str, str]) -> Tuple[Dict, List, List]:
+    def create_routers_group(cls, stack: Stack, net_to_router: Dict[str, str])\
+            -> Tuple[Dict, List, List]:
         """Get routing information for routers
         and MAN routes and BR interfaces."""
         routing = dict()
