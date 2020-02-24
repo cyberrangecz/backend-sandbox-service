@@ -1,0 +1,13 @@
+stages:
+  - unitTests
+
+unitTests:
+  image: python:3.6
+  stage: unitTests
+  script:
+    - pip3 install pipenv
+    - pipenv sync --dev
+    - pipenv run tox
+  only:
+    - branches
+    - tags
