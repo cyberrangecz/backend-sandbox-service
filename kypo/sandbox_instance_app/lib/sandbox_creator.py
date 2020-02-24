@@ -16,8 +16,9 @@ from rq.job import Job
 from django.conf import settings
 
 from kypo.sandbox_instance_app.lib import sandbox_service
-from kypo.sandbox_instance_app.models import Sandbox, Pool, SandboxAllocationUnit, AllocationRequest, \
-    StackAllocationStage
+from kypo.sandbox_instance_app.models import Sandbox, Pool, SandboxAllocationUnit, \
+    AllocationRequest, \
+    StackAllocationStage, AllocationStage
 from kypo.sandbox_ansible_app.lib import ansible_service
 from kypo.sandbox_ansible_app.lib.ansible_service import ANSIBLE_DOCKER_SSH_DIR
 from kypo.sandbox_ansible_app.lib.inventory import Inventory
@@ -116,6 +117,24 @@ def unlock_job(job: Job):
         LOG.debug('Unlocking stage.', stage=stage)
     job.meta['locked'] = False
     job.save_meta()
+
+
+class StageManager:
+    def run(self, stage: AllocationStage, sb_id: int) -> None:
+        """Run the stage."""
+        try:
+            lock_job()
+            stage.start = timezone.now()
+            stage.save()
+            LOG.info("Stage 1 (StackCreationStage) started", stage=stage)
+            self.build_stack(stage, sandbox)
+            self.wait_for_stack_creation(stage)
+        except Exception as ex:
+            stage.mark_failed(ex)
+            raise
+        finally:
+            stage.end = timezone.now()
+            stage.save()
 
 
 class StackAllocationStageManager:
