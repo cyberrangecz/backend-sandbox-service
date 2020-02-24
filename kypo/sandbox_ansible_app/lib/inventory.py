@@ -34,7 +34,7 @@ class Inventory:
         self.data = {'all': {'children': groups}}
 
     def __str__(self):
-        return yaml.dump(self.data, default_flow_style=False, indent=2)
+        return self.to_yaml()
 
     @staticmethod
     def route(cidr: str, mask: str, gw: str) -> Dict[str, str]:
@@ -53,6 +53,10 @@ class Inventory:
         return {'ip_forward': ip_forward,
                 'interfaces': interfaces,
                 "ansible_user": ansible_user}
+
+    def to_yaml(self) -> str:
+        """Return YAML representation of Inventory as a string."""
+        return yaml.dump(self.data, default_flow_style=False, indent=2)
 
     @classmethod
     def create_management_group(cls, stack: Stack, br_interfaces: List, man_routes: List,
