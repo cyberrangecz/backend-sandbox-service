@@ -8,7 +8,9 @@ from kypo.openstack_driver.sandbox_topology import SandboxTopology as Stack
 
 
 class Inventory:
-    """Class for Ansible inventory."""
+    """This class represents Ansible inventory.
+    Use `data` attribute to access the inventory as a dictionary.
+    """
 
     def __init__(self, stack: Stack, top_def: TopologyDefinition,
                  user_priv_key_path: str, user_pub_key_path: str):
