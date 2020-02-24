@@ -41,15 +41,14 @@ class Inventory:
                 'gw': gw}
 
     @staticmethod
-    def interface(mac: str, def_gw: Optional[str], routes: List[Dict[str, str]])\
-            -> Dict[str, str]:
+    def interface(mac: str, def_gw: Optional[str], routes: List[Dict[str, str]]) -> Dict[str, str]:
         return {'mac': mac,
                 'def_gw_ip': def_gw,
                 'routes': routes}
 
     @staticmethod
-    def router(interfaces: List[Dict], ansible_user: str) -> Dict[str, Any]:
-        return {'ip_forward': True,
+    def router(ip_forward: bool, interfaces: List[Dict], ansible_user: str) -> Dict[str, Any]:
+        return {'ip_forward': ip_forward,
                 'interfaces': interfaces,
                 "ansible_user": ansible_user}
 
@@ -67,16 +66,16 @@ class Inventory:
              stack.get_links_to_network_between_nodes(stack.man, stack.br)
              if link_tuple[0].network.name == stack.get_br_network().name][0]
 
-        group[stack.uan.name] = {
-            "ip_forward": False,
-            "interfaces": [cls.interface(uan_man_link.mac, man_uan_link.ip, [])],
-            "ansible_user": stack.uan.user,
-        }
-        group[stack.br.name] = {
-            'ip_forward': True,
-            'interfaces': br_interfaces,
-            "ansible_user": stack.br.user,
-        }
+        group[stack.uan.name] = cls.router(
+            False,
+            [cls.interface(uan_man_link.mac, man_uan_link.ip, [])],
+            stack.uan.user
+        )
+        group[stack.br.name] = cls.router(
+            True,
+            br_interfaces,
+            stack.br.user
+        )
         group[stack.man.name] = {
             'ip_forward': True,
             'interfaces': [
@@ -104,7 +103,8 @@ class Inventory:
             for r_link in stack.get_network_links(br_link.network):
                 if r_link.node.name not in stack.routers:  # link back to MAN
                     continue
-                group[r_link.node.name] = cls.router([cls.interface(r_link.mac, br_link.ip, [])],
+                group[r_link.node.name] = cls.router(True,
+                                                     [cls.interface(r_link.mac, br_link.ip, [])],
                                                      r_link.node.user)
                 cls._update_man_routes_and_br_interfaces(
                     man_routes, br_interfaces, stack, r_link, br_man_link, br_link, net_to_router)
