@@ -1,0 +1,16 @@
+stages:
+  - unitTests
+
+unitTests:
+  image: python:3.6
+  stage: unitTests
+  script:
+    - export LC_ALL=C.UTF-8
+    - export LANG=C.UTF-8
+    - pip3 install pipenv
+    - pipenv sync --dev
+    - pipenv run python -V
+    - pipenv run tox
+  only:
+    - branches
+    - tags
