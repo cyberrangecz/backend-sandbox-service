@@ -93,8 +93,7 @@ class KypoSSHConfig(SSHConfig):
 
     @classmethod
     def create_management_config(cls, stack: SandboxTopology, config: KypoConfiguration,
-                                 add_jump=True)\
-            -> 'KypoSSHConfig':
+                                 add_jump=True) -> 'KypoSSHConfig':
         """Generates management ssh config string for sandbox.
         It uses MNG network for access.
         """
@@ -167,7 +166,6 @@ class KypoSSHConfig(SSHConfig):
     def _get_man_accessible_node_links(cls, stack: SandboxTopology) -> List[SandboxLink]:
         links = [link for link in stack.links
                  if link.network == stack.mng_net and link.node != stack.man]
-
         return cls._sorted_links(links)
 
     @staticmethod

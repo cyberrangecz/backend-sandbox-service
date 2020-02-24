@@ -9,7 +9,6 @@ import docker.errors
 import requests.exceptions as requests_exceptions
 import rq
 import structlog
-import yaml
 from django.db import transaction
 from django.utils import timezone
 from kypo.openstack_driver.stack import Event, Resource
@@ -259,11 +258,10 @@ class AnsibleAllocationStageManager:
                                         USER_PRIVATE_KEY_FILENAME)
         user_public_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
                                        USER_PUBLIC_KEY_FILENAME)
-        inventory = Inventory.create_inventory(stack, top_def,
-                                               user_private_key, user_public_key)
+        inventory = Inventory(stack, top_def, user_private_key, user_public_key)
 
         inventory_path = os.path.join(self.directory, ANSIBLE_INVENTORY_FILENAME)
-        self.save_file(inventory_path, yaml.dump(inventory, default_flow_style=False, indent=2))
+        self.save_file(inventory_path, str(inventory))
 
         return inventory_path
 
