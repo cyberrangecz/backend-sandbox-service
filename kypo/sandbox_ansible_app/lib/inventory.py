@@ -8,10 +8,33 @@ from kypo.openstack_driver.sandbox_topology import SandboxTopology as Stack
 
 
 class Inventory:
-    """CLass for Ansible inventory creation."""
+    """CLass for Ansible inventory."""
 
-    def __init__(self):
-        self.data = None
+    def __init__(self, stack: Stack, top_def: TopologyDefinition,
+                 user_private_key_path: str, user_public_key_path: str):
+        net_to_router = self.get_net_to_router(top_def)
+        routers_routing, man_routes, br_interfaces = self.create_routers_group(stack, net_to_router)
+        mng_routing = self.create_management_group(stack, br_interfaces, man_routes,
+                                                   user_private_key_path, user_public_key_path)
+        host_routing = self.create_host_group(stack)
+
+        routing = {
+            'management': {'hosts': mng_routing},
+            'routers': {'hosts': routers_routing},
+            'hosts': {'hosts': host_routing},
+        }
+        self.add_management_ips(stack, routing)
+
+        # set MAN ip to outer IP, not in MNG network
+        routing['management']['hosts'][stack.man.name]['ansible_host'] = stack.ip
+
+        routing.update(self.create_user_groups(top_def))
+
+        self.data = {'all': {'children': routing}}
+
+    # @property
+    # def data(self):
+    #     return {'all': {'children': routing}}
 
     def __str__(self):
         return yaml.dump(self.data, default_flow_style=False, indent=2)
@@ -28,37 +51,6 @@ class Inventory:
         return {'mac': mac,
                 'def_gw_ip': def_gw,
                 'routes': routes}
-
-    @classmethod
-    def create(cls, stack: Stack, top_def: TopologyDefinition,
-               user_private_key_path: str, user_public_key_path: str) -> 'Inventory':
-        """
-        Creates ansible inventory.
-
-        :return: Dict representation of Ansible inventory file
-        """
-        inv = cls()
-        net_to_router = cls.get_net_to_router(top_def)
-        routers_routing, man_routes, br_interfaces = cls.create_routers_group(stack, net_to_router)
-        mng_routing = cls.create_management_group(stack, br_interfaces, man_routes,
-                                                  user_private_key_path, user_public_key_path)
-        host_routing = cls.create_host_group(stack)
-
-        routing = {
-            'management': {'hosts': mng_routing},
-            'routers': {'hosts': routers_routing},
-            'hosts': {'hosts': host_routing},
-        }
-        cls.add_management_ips(stack, routing)
-
-        # set MAN ip to outer IP, not in MNG network
-        routing['management']['hosts'][stack.man.name]['ansible_host'] = stack.ip
-
-        routing.update(cls.create_user_groups(top_def))
-
-        inv.data = {'all': {'children': routing}}
-
-        return inv
 
     @staticmethod
     def get_management_ips(stack: Stack) -> Dict[str, str]:
