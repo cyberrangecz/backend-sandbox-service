@@ -11,48 +11,53 @@ class Inventory:
     """Class for Ansible inventory."""
 
     def __init__(self, stack: Stack, top_def: TopologyDefinition,
-                 user_private_key_path: str, user_public_key_path: str):
-        net_to_router = self._get_net_to_router(top_def)
-        routers_routing, man_routes, br_interfaces = self.create_routers_group(stack, net_to_router)
-        mng_routing = self.create_management_group(stack, br_interfaces, man_routes,
-                                                   user_private_key_path, user_public_key_path)
-        host_routing = self.create_host_group(stack)
+                 user_priv_key_path: str, user_pub_key_path: str):
+        router_group, man_routes, br_interfaces = self.create_routers_group(stack, top_def)
+        mng_group = self.create_management_group(stack, br_interfaces, man_routes,
+                                                 user_priv_key_path, user_pub_key_path)
+        host_group = self.create_host_group(stack)
 
-        routing = {
-            'management': {'hosts': mng_routing},
-            'routers': {'hosts': routers_routing},
-            'hosts': {'hosts': host_routing},
+        groups = {
+            'management': {'hosts': mng_group},
+            'routers': {'hosts': router_group},
+            'hosts': {'hosts': host_group},
         }
-        self.add_management_ips(stack, routing)
+        self.add_management_ips(stack, groups)
 
         # set MAN ip to outer IP, not in MNG network
-        routing['management']['hosts'][stack.man.name]['ansible_host'] = stack.ip
+        groups['management']['hosts'][stack.man.name]['ansible_host'] = stack.ip
 
-        routing.update(self.create_user_groups(top_def))
+        groups.update(self.create_user_groups(top_def))
 
-        self.data = {'all': {'children': routing}}
+        self.data = {'all': {'children': groups}}
 
     def __str__(self):
         return yaml.dump(self.data, default_flow_style=False, indent=2)
 
     @staticmethod
-    def route_dict(cidr: str, mask: str, gw: str) -> Dict[str, str]:
+    def route(cidr: str, mask: str, gw: str) -> Dict[str, str]:
         return {'net': cidr.split('/')[0],
                 'mask': mask,
                 'gw': gw}
 
     @staticmethod
-    def interface_dict(mac: str, def_gw: Optional[str], routes: List[Dict[str, str]])\
+    def interface(mac: str, def_gw: Optional[str], routes: List[Dict[str, str]])\
             -> Dict[str, str]:
         return {'mac': mac,
                 'def_gw_ip': def_gw,
                 'routes': routes}
 
+    @staticmethod
+    def router(interfaces: List[Dict], ansible_user: str) -> Dict[str, Any]:
+        return {'ip_forward': True,
+                'interfaces': interfaces,
+                "ansible_user": ansible_user}
+
     @classmethod
     def create_management_group(cls, stack: Stack, br_interfaces: List, man_routes: List,
-                                user_private_key_path: str, user_public_key_path: str) -> Dict:
+                                user_priv_key_path: str, user_pub_key_path: str) -> Dict:
         """Get routing information for management nodes."""
-        routing = {}
+        group = {}
         man_uan_link, uan_man_link = \
             [link_tuple for link_tuple in
              stack.get_links_to_network_between_nodes(stack.man, stack.uan)
@@ -62,38 +67,35 @@ class Inventory:
              stack.get_links_to_network_between_nodes(stack.man, stack.br)
              if link_tuple[0].network.name == stack.get_br_network().name][0]
 
-        routing[stack.uan.name] = {
+        group[stack.uan.name] = {
             "ip_forward": False,
-            "interfaces": [cls.interface_dict(uan_man_link.mac, man_uan_link.ip, [])],
+            "interfaces": [cls.interface(uan_man_link.mac, man_uan_link.ip, [])],
             "ansible_user": stack.uan.user,
         }
-        routing[stack.br.name] = {
+        group[stack.br.name] = {
             'ip_forward': True,
             'interfaces': br_interfaces,
             "ansible_user": stack.br.user,
         }
-        routing[stack.man.name] = {
+        group[stack.man.name] = {
             'ip_forward': True,
             'interfaces': [
-                cls.interface_dict(man_br_link.mac, None, man_routes)],
+                cls.interface(man_br_link.mac, None, man_routes)],
             "ansible_user": stack.man.user,
-            'user_private_key_path': user_private_key_path,
-            'user_public_key_path': user_public_key_path
+            'user_private_key_path': user_priv_key_path,
+            'user_public_key_path': user_pub_key_path
         }
-        return routing
+        return group
 
     @classmethod
-    def create_routers_group(cls, stack: Stack, net_to_router: Dict[str, str])\
+    def create_routers_group(cls, stack: Stack, top_def: TopologyDefinition)\
             -> Tuple[Dict, List, List]:
-        """Get routing information for routers
-        and MAN routes and BR interfaces."""
-        routing = dict()
-        man_br_link, br_man_link = \
-            [link_tuple for link_tuple in
-             stack.get_links_to_network_between_nodes(stack.man, stack.br)
-             if link_tuple[0].network.name == stack.get_br_network().name][0]
+        """Get routing information for routers and MAN routes and BR interfaces."""
+        net_to_router = cls._get_net_to_router(top_def)
+        group = dict()
+        man_br_link, br_man_link = cls._get_man_br_links(stack)
         man_routes = []
-        br_interfaces = [cls.interface_dict(br_man_link.mac, man_br_link.ip, [])]
+        br_interfaces = [cls.interface(br_man_link.mac, man_br_link.ip, [])]
 
         br_links_to_routers = [link for link in stack.get_node_links(stack.br)
                                if link.network is not stack.mng_net
@@ -102,37 +104,20 @@ class Inventory:
             for r_link in stack.get_network_links(br_link.network):
                 if r_link.node.name not in stack.routers:  # link back to MAN
                     continue
-                routing[r_link.node.name] = {
-                    'ip_forward': True,
-                    'interfaces': [cls.interface_dict(r_link.mac, br_link.ip, [])],
-                    "ansible_user": r_link.node.user,
-                }
-                # Update MAN routes and BR interfaces
-                br_routes = []
-                man_routes.append(
-                    cls.route_dict(r_link.network.cidr, r_link.network.mask, br_man_link.ip))
-                for net_link in stack.get_node_links(r_link.node):
-                    if net_link.network is not stack.mng_net and net_link.network is not r_link.network\
-                            and net_to_router[net_link.network.name] == r_link.node.name:
-                        br_routes.append(
-                            cls.route_dict(net_link.network.cidr, net_link.network.mask, r_link.ip)
-                        )
-                        man_routes.append(
-                            cls.route_dict(net_link.network.cidr, net_link.network.mask,
-                                           br_man_link.ip)
-                        )
-                br_interfaces.append(cls.interface_dict(br_link.mac, None, br_routes))
+                group[r_link.node.name] = cls.router([cls.interface(r_link.mac, br_link.ip, [])],
+                                                     r_link.node.user)
+                cls._update_man_routes_and_br_interfaces(
+                    man_routes, br_interfaces, stack, r_link, br_man_link, br_link, net_to_router)
 
-        return routing, man_routes, br_interfaces
+        return group, man_routes, br_interfaces
 
     @staticmethod
     def create_host_group(stack: Stack) -> Dict[str, dict]:
         """Get routing information for hosts."""
-        routing = {}
+        group = {}
         for name, host in stack.hosts.items():
-            routing[name] = {}
-            routing[name]['ansible_user'] = host.user
-        return routing
+            group[name] = {'ansible_user': host.user}
+        return group
 
     @staticmethod
     def create_user_groups(top_def: TopologyDefinition) -> Dict[str, Dict[str, Dict[str, None]]]:
@@ -142,16 +127,22 @@ class Inventory:
                 for g in top_def.groups}
 
     @classmethod
-    def add_management_ips(cls, stack: Stack, routing: Dict[str, Any]) -> None:
-        """Add management IPs to routing"""
+    def add_management_ips(cls, stack: Stack, groups: Dict[str, Any]) -> None:
+        """Add management IPs to groups routing."""
         mng_ips = cls._get_management_ips(stack)
-        for group in routing.values():
+        for group in groups.values():
             for name, node in group['hosts'].items():
                 node['ansible_host'] = mng_ips[name]
 
     ###################################
     # Private methods
     ###################################
+
+    @staticmethod
+    def _get_man_br_links(stack: Stack) -> List:
+        return [link_tuple for link_tuple in
+                stack.get_links_to_network_between_nodes(stack.man, stack.br)
+                if link_tuple[0].network.name == stack.get_br_network().name][0]
 
     @staticmethod
     def _get_net_to_router(top_def: TopologyDefinition) -> Dict[str, str]:
@@ -165,6 +156,24 @@ class Inventory:
         for mapp in mapping:
             net_to_router[mapp.network] = mapp.router
         return net_to_router
+
+    @classmethod
+    def _update_man_routes_and_br_interfaces(cls, man_routes, br_interfaces, stack, r_link,
+                                             br_man_link, br_link, net_to_router) -> None:
+        br_routes = []
+        man_routes.append(
+            cls.route(r_link.network.cidr, r_link.network.mask, br_man_link.ip))
+        for net_link in stack.get_node_links(r_link.node):
+            if net_link.network is not stack.mng_net and net_link.network is not r_link.network \
+                    and net_to_router[net_link.network.name] == r_link.node.name:
+                br_routes.append(
+                    cls.route(net_link.network.cidr, net_link.network.mask, r_link.ip)
+                )
+                man_routes.append(
+                    cls.route(net_link.network.cidr, net_link.network.mask,
+                              br_man_link.ip)
+                )
+        br_interfaces.append(cls.interface(br_link.mac, None, br_routes))
 
     @staticmethod
     def _get_management_ips(stack: Stack) -> Dict[str, str]:
