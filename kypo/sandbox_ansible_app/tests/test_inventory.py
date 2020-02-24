@@ -21,5 +21,5 @@ class TestCreateInventory:
 
     def test_get_net_to_router(self, top_def):
         expected = {'home-switch': 'home-router', 'server-switch': 'server-router'}
-        result = Inventory.get_net_to_router(top_def)
+        result = Inventory._get_net_to_router(top_def)
         assert expected == result

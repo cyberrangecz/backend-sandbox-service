@@ -8,11 +8,11 @@ from kypo.openstack_driver.sandbox_topology import SandboxTopology as Stack
 
 
 class Inventory:
-    """CLass for Ansible inventory."""
+    """Class for Ansible inventory."""
 
     def __init__(self, stack: Stack, top_def: TopologyDefinition,
                  user_private_key_path: str, user_public_key_path: str):
-        net_to_router = self.get_net_to_router(top_def)
+        net_to_router = self._get_net_to_router(top_def)
         routers_routing, man_routes, br_interfaces = self.create_routers_group(stack, net_to_router)
         mng_routing = self.create_management_group(stack, br_interfaces, man_routes,
                                                    user_private_key_path, user_public_key_path)
@@ -32,10 +32,6 @@ class Inventory:
 
         self.data = {'all': {'children': routing}}
 
-    # @property
-    # def data(self):
-    #     return {'all': {'children': routing}}
-
     def __str__(self):
         return yaml.dump(self.data, default_flow_style=False, indent=2)
 
@@ -51,20 +47,6 @@ class Inventory:
         return {'mac': mac,
                 'def_gw_ip': def_gw,
                 'routes': routes}
-
-    @staticmethod
-    def get_management_ips(stack: Stack) -> Dict[str, str]:
-        """Creates dict of `Node name: management IP`."""
-        return {link.node.name: link.ip
-                for link in stack.get_network_links(stack.mng_net)}
-
-    @classmethod
-    def add_management_ips(cls, stack: Stack, routing: Dict[str, Any]) -> None:
-        """Add management IPs to routing"""
-        mng_ips = cls.get_management_ips(stack)
-        for group in routing.values():
-            for name, node in group['hosts'].items():
-                node['ansible_host'] = mng_ips[name]
 
     @classmethod
     def create_management_group(cls, stack: Stack, br_interfaces: List, man_routes: List,
@@ -144,19 +126,6 @@ class Inventory:
         return routing, man_routes, br_interfaces
 
     @staticmethod
-    def get_net_to_router(top_def: TopologyDefinition) -> Dict[str, str]:
-        """
-        Return Dict[net_name, router_name].
-        Prefers router which is first in alphabetical order.
-        """
-        net_to_router = {}
-        # if 'router_mappings' in definition:
-        mapping = sorted(top_def.router_mappings, key=lambda x: x.router, reverse=True)
-        for mapp in mapping:
-            net_to_router[mapp.network] = mapp.router
-        return net_to_router
-
-    @staticmethod
     def create_host_group(stack: Stack) -> Dict[str, dict]:
         """Get routing information for hosts."""
         routing = {}
@@ -171,3 +140,34 @@ class Inventory:
         Return Dict of user groups."""
         return {g.name: {'hosts': {node: None for node in g.nodes}}
                 for g in top_def.groups}
+
+    @classmethod
+    def add_management_ips(cls, stack: Stack, routing: Dict[str, Any]) -> None:
+        """Add management IPs to routing"""
+        mng_ips = cls._get_management_ips(stack)
+        for group in routing.values():
+            for name, node in group['hosts'].items():
+                node['ansible_host'] = mng_ips[name]
+
+    ###################################
+    # Private methods
+    ###################################
+
+    @staticmethod
+    def _get_net_to_router(top_def: TopologyDefinition) -> Dict[str, str]:
+        """
+        Return Dict[net_name, router_name].
+        Prefers router which is first in alphabetical order.
+        """
+        net_to_router = {}
+        # if 'router_mappings' in definition:
+        mapping = sorted(top_def.router_mappings, key=lambda x: x.router, reverse=True)
+        for mapp in mapping:
+            net_to_router[mapp.network] = mapp.router
+        return net_to_router
+
+    @staticmethod
+    def _get_management_ips(stack: Stack) -> Dict[str, str]:
+        """Creates dict of `Node name: management IP`."""
+        return {link.node.name: link.ip
+                for link in stack.get_network_links(stack.mng_net)}
