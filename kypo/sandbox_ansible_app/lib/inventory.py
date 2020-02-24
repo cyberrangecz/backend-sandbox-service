@@ -122,7 +122,8 @@ class Inventory:
     @staticmethod
     def create_user_groups(top_def: TopologyDefinition) -> Dict[str, Dict[str, Dict[str, None]]]:
         """Parses user groups from _validated_ definition.
-        Return Dict of user groups."""
+        Return Dict of user groups.
+        """
         return {g.name: {'hosts': {node: None for node in g.nodes}}
                 for g in top_def.groups}
 
@@ -146,12 +147,10 @@ class Inventory:
 
     @staticmethod
     def _get_net_to_router(top_def: TopologyDefinition) -> Dict[str, str]:
-        """
-        Return Dict[net_name, router_name].
+        """Return Dict[net_name, router_name].
         Prefers router which is first in alphabetical order.
         """
         net_to_router = {}
-        # if 'router_mappings' in definition:
         mapping = sorted(top_def.router_mappings, key=lambda x: x.router, reverse=True)
         for mapp in mapping:
             net_to_router[mapp.network] = mapp.router
