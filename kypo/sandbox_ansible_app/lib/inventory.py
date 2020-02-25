@@ -34,7 +34,7 @@ class Inventory:
         self.data = {'all': {'children': groups}}
 
     def __str__(self):
-        return self.to_yaml()
+        return self.serialize()
 
     @staticmethod
     def route(cidr: str, mask: str, gw: str) -> Dict[str, str]:
@@ -54,7 +54,7 @@ class Inventory:
                 'interfaces': interfaces,
                 "ansible_user": ansible_user}
 
-    def to_yaml(self) -> str:
+    def serialize(self) -> str:
         """Return YAML representation of Inventory as a string."""
         return yaml.dump(self.data, default_flow_style=False, indent=2)
 

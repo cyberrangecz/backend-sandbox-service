@@ -28,10 +28,10 @@ class KypoSSHConfig(SSHConfig):
         super().__init__('')
 
     def __str__(self):
-        return self.to_yaml()
+        return self.serialize()
 
-    def to_yaml(self) -> str:
-        """Return YAML representation of KypoSSHConfig as a string."""
+    def serialize(self) -> str:
+        """Return the string representation of KypoSSHConfig."""
         res = []
         for host in self.hosts():
             res.append(f'Host {host.name}\n')

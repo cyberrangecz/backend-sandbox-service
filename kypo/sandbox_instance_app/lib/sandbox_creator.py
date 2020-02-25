@@ -261,7 +261,7 @@ class AnsibleAllocationStageManager:
         inventory = Inventory(stack, top_def, user_private_key, user_public_key)
 
         inventory_path = os.path.join(self.directory, ANSIBLE_INVENTORY_FILENAME)
-        self.save_file(inventory_path, inventory.to_yaml())
+        self.save_file(inventory_path, inventory.serialize())
 
         return inventory_path
 
