@@ -402,7 +402,7 @@ class SandboxUserSSHConfig(APIView):
         Some values are user specific, the config contains placeholders for them."""
         sandbox = sandbox_service.get_sandbox(sandbox_id)
         ssh_config = sandbox_service.get_user_sshconfig(sandbox)
-        response = HttpResponse(FileWrapper(io.StringIO(str(ssh_config))),
+        response = HttpResponse(FileWrapper(io.StringIO(ssh_config.serialize())),
                                 content_type='application/txt')
         response['Content-Disposition'] = "attachment; filename=config"
         return response
@@ -417,7 +417,7 @@ class SandboxManagementSSHConfig(APIView):
         Some values are user specific, the config contains placeholders for them."""
         sandbox = sandbox_service.get_sandbox(sandbox_id)
         ssh_config = sandbox_service.get_management_sshconfig(sandbox)
-        response = HttpResponse(FileWrapper(io.StringIO(str(ssh_config))),
+        response = HttpResponse(FileWrapper(io.StringIO(ssh_config.serialize())),
                                 content_type='application/txt')
         response['Content-Disposition'] = "attachment; filename=config"
         return response

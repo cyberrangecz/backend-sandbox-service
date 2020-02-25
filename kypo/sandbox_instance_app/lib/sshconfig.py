@@ -27,7 +27,11 @@ class KypoSSHConfig(SSHConfig):
     def __init__(self):
         super().__init__('')
 
-    def __str__(self) -> str:
+    def __str__(self):
+        return self.serialize()
+
+    def serialize(self) -> str:
+        """Return the string representation of KypoSSHConfig."""
         res = []
         for host in self.hosts():
             res.append(f'Host {host.name}\n')
