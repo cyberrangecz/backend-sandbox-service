@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 
 import os
 
+from kypo.sandbox_common_lib.config import KypoConfiguration
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -200,7 +202,8 @@ CACHES = {
     }
 }
 
-KYPO_DJANGO_OPENSTACK_CONFIG = os.path.join(BASE_DIR, 'config.yml')
+KYPO_DJANGO_OPENSTACK_CONFIG_PATH = os.path.join(BASE_DIR, 'config.yml')
+KYPO_CONFIG = KypoConfiguration.from_file(KYPO_DJANGO_OPENSTACK_CONFIG_PATH)
 
 RQ_QUEUES = {
     'default': {

@@ -13,6 +13,7 @@ from django.db import transaction
 from django.utils import timezone
 from kypo.openstack_driver.stack import Event, Resource
 from rq.job import Job
+from django.conf import settings
 
 from kypo.sandbox_instance_app.lib import sandbox_service
 from kypo.sandbox_instance_app.models import Sandbox, Pool, SandboxAllocationUnit, AllocationRequest, \
@@ -22,7 +23,6 @@ from kypo.sandbox_ansible_app.lib.ansible_service import ANSIBLE_DOCKER_SSH_DIR
 from kypo.sandbox_ansible_app.lib.inventory import Inventory
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage, AnsibleOutput, DockerContainer
 from kypo.sandbox_common_lib import utils, exceptions
-from kypo.sandbox_common_lib.config import KypoConfigurationManager as KCM
 from kypo.sandbox_definition_app.lib import definition_service
 
 STACK_STATUS_CREATE_COMPLETE = "CREATE_COMPLETE"
@@ -65,17 +65,17 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
         with transaction.atomic():
             stage_openstack = StackAllocationStage.objects.create(request=request)
             queue_openstack = django_rq.get_queue(
-                OPENSTACK_QUEUE, default_timeout=KCM.config().sandbox_build_timeout)
+                OPENSTACK_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_build_timeout)
             result_openstack = queue_openstack.enqueue(
                 StackAllocationStageManager().run, stage=stage_openstack,
                 sandbox=sandbox, meta=dict(locked=True))
 
             stage_networking = AnsibleAllocationStage.objects.create(
-                request=request, repo_url=KCM.config().ansible_networking_url,
-                rev=KCM.config().ansible_networking_rev
+                request=request, repo_url=settings.KYPO_CONFIG.ansible_networking_url,
+                rev=settings.KYPO_CONFIG.ansible_networking_rev
             )
             queue_ansible = django_rq.get_queue(
-                ANSIBLE_QUEUE, default_timeout=KCM.config().sandbox_ansible_timeout)
+                ANSIBLE_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_ansible_timeout)
             result_networking = queue_ansible.enqueue(
                 AnsibleAllocationStageManager(stage=stage_networking, sandbox=sandbox).run,
                 name='networking', depends_on=result_openstack
@@ -184,7 +184,7 @@ class AnsibleAllocationStageManager:
     def __init__(self, stage: AnsibleAllocationStage, sandbox: Sandbox) -> None:
         self.stage = stage
         self.sandbox = sandbox
-        self.directory = os.path.join(KCM.config().ansible_docker_volumes,
+        self.directory = os.path.join(settings.KYPO_CONFIG.ansible_docker_volumes,
                                       sandbox.get_stack_name(),
                                       f'{stage.id}-{utils.get_simple_uuid()}')
 
@@ -213,7 +213,7 @@ class AnsibleAllocationStageManager:
 
     def prepare_ssh_dir(self) -> str:
         """Prepare files that will be passed to docker container."""
-        config = KCM.config()
+        config = settings.KYPO_CONFIG
         self.make_dir(self.directory)
         ssh_directory = os.path.join(self.directory, 'ssh')
         self.make_dir(ssh_directory)
@@ -271,7 +271,7 @@ class AnsibleAllocationStageManager:
 
         try:
             container = ansible_service.AnsibleRunDockerContainer(
-                KCM.config().ansible_docker_image, self.stage.repo_url,
+                settings.KYPO_CONFIG.ansible_docker_image, self.stage.repo_url,
                 self.stage.rev, ssh_directory, inventory_path
             )
             DockerContainer.objects.create(stage=self.stage, container_id=container.id)

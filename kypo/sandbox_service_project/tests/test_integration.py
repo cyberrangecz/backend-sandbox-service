@@ -9,11 +9,11 @@ from django.urls import reverse
 from redis import Redis
 from rest_framework import status
 from rq import SimpleWorker
+from django.conf import settings
 
 from kypo.sandbox_ansible_app.lib import ansible_service
 from kypo.sandbox_ansible_app.models import AnsibleOutput, DockerContainer
 from kypo.sandbox_common_lib import utils
-from kypo.sandbox_common_lib.config import KypoConfigurationManager as KCM
 from kypo.sandbox_instance_app.lib.sandbox_creator import OPENSTACK_QUEUE, ANSIBLE_QUEUE
 from kypo.sandbox_instance_app.models import Sandbox
 
@@ -35,8 +35,8 @@ DEFINITION_REV = 'integration-test'
 JUMP_STACK_NAME = 'integration_test_jump'
 TEMPLATE_DICT = dict(
     PUBLIC_NETWORK='public-muni-147-251-124-GROUP',
-    JUMP_IMAGE=KCM.config().trc.extra_nodes_image,
-    JUMP_FLAVOR=KCM.config().trc.extra_nodes_flavor,
+    JUMP_IMAGE=settings.KYPO_CONFIG.trc.extra_nodes_image,
+    JUMP_FLAVOR=settings.KYPO_CONFIG.trc.extra_nodes_flavor,
 )
 
 # URL names
@@ -63,7 +63,7 @@ class TestIntegration:
         """Set config values. Config.yml overrides those values if set.
         Also extract the zip repositories to tmp directory.
         """
-        config = KCM.config()
+        config = settings.KYPO_CONFIG
         if not config.os_auth_url:
             config.os_auth_url = os.environ.get('OS_AUTH_URL')
         if not config.os_application_credential_id:
@@ -222,7 +222,7 @@ class TestIntegration:
         key_path = f'/tmp/test-key-{utils.get_simple_uuid()}'
         LOG.info('Stack outputs', host=host, key_path=key_path,
                  private_key=private_key)
-        KCM.config().proxy_jump_to_man['Host'] = host
-        KCM.config().proxy_jump_to_man['IdentityFile'] = key_path
+        settings.KYPO_CONFIG.proxy_jump_to_man['Host'] = host
+        settings.KYPO_CONFIG.proxy_jump_to_man['IdentityFile'] = key_path
         with open(key_path, 'w') as f:
             f.write(private_key)

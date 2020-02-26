@@ -6,12 +6,12 @@ from typing import Optional
 import structlog
 from django.db import transaction
 from rest_framework.generics import get_object_or_404
+from django.conf import settings
 
 from kypo.sandbox_instance_app.lib.sshconfig import KypoSSHConfig
 from kypo.sandbox_instance_app.lib.topology import Topology
 from kypo.sandbox_instance_app.models import Sandbox, Lock
 from kypo.sandbox_common_lib import exceptions, utils
-from kypo.sandbox_common_lib.config import KypoConfigurationManager as KCM
 
 LOG = structlog.getLogger()
 
@@ -48,14 +48,14 @@ def get_user_sshconfig(sandbox: Sandbox) -> KypoSSHConfig:
     """Get user SSH config."""
     client = utils.get_ostack_client()
     stack = client.get_sandbox(sandbox.get_stack_name())
-    return KypoSSHConfig.create_user_config(stack, KCM.config())
+    return KypoSSHConfig.create_user_config(stack, settings.KYPO_CONFIG)
 
 
 def get_management_sshconfig(sandbox: Sandbox) -> KypoSSHConfig:
     """Get management SSH config."""
     client = utils.get_ostack_client()
     stack = client.get_sandbox(sandbox.get_stack_name())
-    return KypoSSHConfig.create_management_config(stack, KCM.config())
+    return KypoSSHConfig.create_management_config(stack, settings.KYPO_CONFIG)
 
 
 def get_ansible_sshconfig(sandbox: Sandbox, mng_key: str, git_key: str,
@@ -63,5 +63,5 @@ def get_ansible_sshconfig(sandbox: Sandbox, mng_key: str, git_key: str,
     """Get Ansible SSH config."""
     client = utils.get_ostack_client()
     stack = client.get_sandbox(sandbox.get_stack_name())
-    return KypoSSHConfig.create_ansible_config(stack, KCM.config(), mng_key, git_key,
-                                               proxy_key)
+    return KypoSSHConfig.create_ansible_config(stack, settings.KYPO_CONFIG,
+                                               mng_key, git_key, proxy_key)
