@@ -10,8 +10,6 @@ from yamlize import Attribute, Object, YamlizingError
 
 from kypo.sandbox_common_lib.exceptions import ImproperlyConfigured
 
-CONFIG_FILE_VARIABLE = 'KYPO_DJANGO_OPENSTACK_CONFIG'
-
 LOG_FILE = 'django-openstack.log'
 LOG_LEVEL = 'INFO'
 GIT_SERVER = 'gitlab.ics.muni.cz'
@@ -84,14 +82,7 @@ class KypoConfiguration(Object):
         os.environ['REQUESTS_CA_BUNDLE'] = obj.ssl_ca_certificate_verify
         return obj
 
-
-class KypoConfigurationManager:
-    """Lazy configuration loader and manager."""
-    _config = None
-
     @classmethod
-    def config(cls) -> KypoConfiguration:
-        if not cls._config:
-            with open(getattr(settings, CONFIG_FILE_VARIABLE)) as f:
-                cls._config = KypoConfiguration.load(f)
-        return cls._config
+    def from_file(cls, path):
+        with open(path) as f:
+            return cls.load(f)

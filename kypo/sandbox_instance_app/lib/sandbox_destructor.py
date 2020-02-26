@@ -2,14 +2,13 @@ import django_rq
 import structlog
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
+from django.conf import settings
 
 from kypo.sandbox_instance_app.models import CleanupRequest, SandboxAllocationUnit, StackCleanupStage
 from kypo.sandbox_instance_app.lib.sandbox_creator import OPENSTACK_QUEUE
-
 from kypo.sandbox_ansible_app.lib import ansible_service
 from kypo.sandbox_ansible_app.models import AnsibleCleanupStage
 from kypo.sandbox_common_lib import utils, exceptions
-from kypo.sandbox_common_lib.config import KypoConfigurationManager as KCM
 
 LOG = structlog.get_logger()
 
@@ -45,7 +44,7 @@ def enqueue_request(request: CleanupRequest,
     alloc_stages = allocation_unit.allocation_request.stages.all().select_subclasses()
     stg1 = StackCleanupStage.objects.create(request=request, allocation_stage=alloc_stages[0])
     queue_openstack = django_rq.get_queue(OPENSTACK_QUEUE,
-                                          default_timeout=KCM.config().sandbox_delete_timeout)
+                                          default_timeout=settings.KYPO_CONFIG.sandbox_delete_timeout)
     result_openstack = queue_openstack.enqueue(StackCleanupStageManager().run, stage=stg1,
                                                allocation_unit=allocation_unit)
 
