@@ -145,49 +145,6 @@ SWAGGER_SETTINGS = {
     ],
 }
 
-if AUTHENTICATED_REST_API:
-    REST_FRAMEWORK.update({
-        'DEFAULT_PERMISSION_CLASSES': (
-            'kypo.sandbox_common_lib.permissions.ModelPermissions',
-        ),
-        'DEFAULT_AUTHENTICATION_CLASSES': (
-            # For testing purposes, uncomment BasicAuthentication.
-            # It allows login using name & password (nice for permission testing).
-            # 'rest_framework.authentication.BasicAuthentication',
-            'csirtmu.oidc_client.authentication.JWTAccessTokenAuthentication',
-        ),
-    })
-
-    OIDC_AUTH = {
-        # (Optional) Function that resolves id_token into user.
-        # This function receives a request and an id_token dict and expects to
-        # return a User object. The default implementation tries to find the user
-        # based on username (natural key) taken from the 'sub'-claim of the
-        # id_token.
-        'OIDC_RESOLVE_USER_FUNCTION': 'csirtmu.uag_auth.auth.get_or_create_user',
-    }
-
-    CSIRTMU_OIDC_CLIENT = {
-        # Need to be set when using JWTAccessTokenAuthentication,
-        # which supports multiple OIDC providers (parsing them from the token).
-        # Only those listed here will be allowed.
-        'ALLOWED_OIDC_PROVIDERS': ('https://oidc.example.cz/oidc', ),
-    }
-
-    CSIRTMU_UAG_AUTH = {
-        # User and Group roles registration endpoint URL
-        'ROLES_REGISTRATION_URL': 'https://example.com/kypo2-rest-user-and-group/api/v1/microservices',
-        # User and Group roles acquisition endpoint URL
-        'ROLES_ACQUISITION_URL': 'https://example.com/kypo2-rest-user-and-group/api/v1/users/info',
-        # Path to roles definition file
-        'ROLES_DEFINITION_PATH': "kypo2_django_openstack_project/roles.yml",
-
-        # User and Group information configuration
-        'MICROSERVICE_NAME': __package__,
-        'ROLE_PREFIX': "ROLE",
-        'ENDPOINT': __package__,
-    }
-
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
