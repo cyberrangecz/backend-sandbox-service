@@ -3,7 +3,6 @@ REST API configuration file
 """
 import os
 
-from django.conf import settings
 from kypo.openstack_driver.transformation_configuration import\
     TransformationConfiguration
 from yamlize import Attribute, Object, YamlizingError

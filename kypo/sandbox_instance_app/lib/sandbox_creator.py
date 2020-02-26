@@ -238,10 +238,9 @@ class AnsibleAllocationStageManager:
                                      os.path.basename(config.proxy_jump_to_man.IdentityFile))
         ans_ssh_config = sandbox_service.get_ansible_sshconfig(self.sandbox, mng_key, git_key, proxy_key)
 
-        if 'IdentityFile' in config.proxy_jump_to_man:
-            identity_file = config.proxy_jump_to_man['IdentityFile']
-            shutil.copy(identity_file, os.path.join(ssh_directory,
-                        os.path.basename(identity_file)))
+        identity_file = config.proxy_jump_to_man.IdentityFile
+        shutil.copy(identity_file, os.path.join(ssh_directory,
+                    os.path.basename(identity_file)))
         self.save_file(os.path.join(ssh_directory, 'config'), str(ans_ssh_config))
 
         return ssh_directory
