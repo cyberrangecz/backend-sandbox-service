@@ -2,7 +2,7 @@ import os
 import shutil
 import time
 from functools import partial
-from typing import List
+from typing import List, Callable
 
 import django_rq
 import docker.errors
@@ -68,7 +68,7 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
             queue_openstack = django_rq.get_queue(
                 OPENSTACK_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_build_timeout)
             result_openstack = queue_openstack.enqueue(
-                StackAllocationStageManager().run, stage=stage_openstack,
+                StackAllocationStageHandler().run, stage=stage_openstack,
                 sandbox=sandbox, meta=dict(locked=True))
 
             stage_networking = AnsibleAllocationStage.objects.create(
@@ -78,7 +78,7 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
             queue_ansible = django_rq.get_queue(
                 ANSIBLE_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_ansible_timeout)
             result_networking = queue_ansible.enqueue(
-                AnsibleAllocationStageManager(stage=stage_networking, sandbox=sandbox).run,
+                AnsibleAllocationStageHandler(stage=stage_networking, sandbox=sandbox).run,
                 name='networking', depends_on=result_openstack
             )
 
@@ -87,7 +87,7 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
                 rev=request.allocation_unit.pool.definition.rev
             )
             result_user_ansible = queue_ansible.enqueue(
-                AnsibleAllocationStageManager(stage=stage_user_ansible, sandbox=sandbox).run,
+                AnsibleAllocationStageHandler(stage=stage_user_ansible, sandbox=sandbox).run,
                 name='user-ansible', depends_on=result_networking)
 
             queue_default = django_rq.get_queue()
@@ -96,11 +96,12 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
             transaction.on_commit(partial(unlock_job, result_openstack))
 
 
-def lock_job():
+def lock_job(timeout=60, step=5):
     job = rq.get_current_job()
     stage = job.kwargs.get('stage')
+    elapsed = 0
 
-    while True:
+    while elapsed <= timeout:
         job.refresh()
         locked = job.meta.get('locked', True)
         if not locked:
@@ -108,7 +109,8 @@ def lock_job():
             break
         else:
             LOG.debug('Wait until the stage is unlocked.', stage=stage)
-            time.sleep(10)
+            time.sleep(step)
+            elapsed += step
 
 
 def unlock_job(job: Job):
@@ -119,16 +121,15 @@ def unlock_job(job: Job):
     job.save_meta()
 
 
-class StageManager:
-    def run(self, stage: AllocationStage, sb_id: int) -> None:
+class StageHandler:
+    def create(self, func: Callable, stage: AllocationStage, sandbox: Sandbox) -> None:
         """Run the stage."""
         try:
             lock_job()
             stage.start = timezone.now()
             stage.save()
-            LOG.info("Stage 1 (StackCreationStage) started", stage=stage)
-            self.build_stack(stage, sandbox)
-            self.wait_for_stack_creation(stage)
+            LOG.info(f'Stage {str(stage)} started', stage=stage)
+            func(stage, sandbox)
         except Exception as ex:
             stage.mark_failed(ex)
             raise
@@ -137,7 +138,7 @@ class StageManager:
             stage.save()
 
 
-class StackAllocationStageManager:
+class StackAllocationStageHandler(StageHandler):
     def __init__(self):
         self._client = None
 
@@ -153,7 +154,7 @@ class StackAllocationStageManager:
             lock_job()
             stage.start = timezone.now()
             stage.save()
-            LOG.info("Stage 1 (StackCreationStage) started", stage=stage)
+            LOG.info("Stage StackCreationStage started", stage=stage)
             self.build_stack(stage, sandbox)
             self.wait_for_stack_creation(stage)
         except Exception as ex:
@@ -165,17 +166,13 @@ class StackAllocationStageManager:
 
     def build_stack(self, stage: StackAllocationStage, sandbox: Sandbox) -> None:
         """Build sandbox in OpenStack."""
-        # TODO: create heat_stack when the lib will return the needed data
-        LOG.debug("Building sandbox", sandbox=stage)
         definition = sandbox.allocation_unit.pool.definition
         top_def = definition_service.get_definition(
                 definition.url, definition.rev,
                 'rev-{0}_stage-{1}'.format(definition.rev, stage.id)
         )
-        self.client.create_sandbox(
-            sandbox.get_stack_name(), top_def,
-            kp_name=stage.request.allocation_unit.pool.get_keypair_name(),
-        )
+        self.client.create_sandbox(sandbox.get_stack_name(), top_def,
+                                   kp_name=stage.request.allocation_unit.pool.get_keypair_name())
 
     def wait_for_stack_creation(self, stage: StackAllocationStage) -> None:
         name = stage.request.get_stack_name()
@@ -199,7 +196,7 @@ class StackAllocationStageManager:
         return stage
 
 
-class AnsibleAllocationStageManager:
+class AnsibleAllocationStageHandler:
     def __init__(self, stage: AnsibleAllocationStage, sandbox: Sandbox) -> None:
         self.stage = stage
         self.sandbox = sandbox
