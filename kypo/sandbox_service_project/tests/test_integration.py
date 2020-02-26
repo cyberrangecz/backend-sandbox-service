@@ -78,7 +78,7 @@ class TestIntegration:
                         f.extractall(tmpdir)
 
                 name = NETWORKING_REPO_NAME.replace('.zip', "")
-                config.ANSIBLE_NETWORKING_URL = 'file://' + os.path.join(tmpdir,
+                config.ansible_networking_url = 'file://' + os.path.join(tmpdir,
                                                                          name)
                 config.ansible_networking_rev = ansible_networking_rev
                 name = DEFINITION_REPO_NAME.replace('.zip', "")
@@ -222,7 +222,7 @@ class TestIntegration:
         key_path = f'/tmp/test-key-{utils.get_simple_uuid()}'
         LOG.info('Stack outputs', host=host, key_path=key_path,
                  private_key=private_key)
-        settings.KYPO_CONFIG.proxy_jump_to_man['Host'] = host
-        settings.KYPO_CONFIG.proxy_jump_to_man['IdentityFile'] = key_path
+        settings.KYPO_CONFIG.proxy_jump_to_man.Host = host
+        settings.KYPO_CONFIG.proxy_jump_to_man.IdentityFile = key_path
         with open(key_path, 'w') as f:
             f.write(private_key)
