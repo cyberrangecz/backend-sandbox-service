@@ -78,7 +78,7 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
             queue_ansible = django_rq.get_queue(
                 ANSIBLE_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_ansible_timeout)
             result_networking = queue_ansible.enqueue(
-                AnsibleStageHandler(stage=stage_networking, sandbox=sandbox).build,
+                AnsibleStageHandler().build, stage=stage_networking, sandbox=sandbox,
                 name='networking', depends_on=result_openstack
             )
 
@@ -87,7 +87,7 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
                 rev=request.allocation_unit.pool.definition.rev
             )
             result_user_ansible = queue_ansible.enqueue(
-                AnsibleStageHandler(stage=stage_user_ansible, sandbox=sandbox).build,
+                AnsibleStageHandler().build, stage=stage_user_ansible, sandbox=sandbox,
                 name='user-ansible', depends_on=result_networking)
 
             queue_default = django_rq.get_queue()
@@ -166,8 +166,8 @@ class StackStageHandler(StageHandler):
         """Build sandbox in OpenStack."""
         definition = sandbox.allocation_unit.pool.definition
         top_def = definition_service.get_definition(
-                definition.url, definition.rev,
-                'rev-{0}_stage-{1}'.format(definition.rev, stage.id)
+            definition.url, definition.rev,
+            'rev-{0}_stage-{1}'.format(definition.rev, stage.id)
         )
         stack = self.client.create_sandbox(
             sandbox.allocation_unit.get_stack_name(), top_def,
@@ -228,94 +228,31 @@ class StackStageHandler(StageHandler):
 
 
 class AnsibleStageHandler(StageHandler):
-    def __init__(self, stage: AnsibleAllocationStage, sandbox: Sandbox) -> None:
-        self.stage = stage
-        self.sandbox = sandbox
-        self.directory = os.path.join(settings.KYPO_CONFIG.ansible_docker_volumes,
-                                      sandbox.allocation_unit.get_stack_name(),
-                                      f'{stage.id}-{utils.get_simple_uuid()}')
+    def __init__(self) -> None:
+        pass
 
-    def build(self, name: str) -> None:
+    def build(self, stage: AnsibleAllocationStage, sandbox: Sandbox, name: str) -> None:
         """Run the stage."""
-        self.run_stage(self.run_docker_container, self.stage)
+        self.run_stage(self.run_docker_container, stage, sandbox)
 
-    @staticmethod
-    def make_dir(dir_path: str) -> None:
-        os.makedirs(dir_path, exist_ok=True)
-
-    @staticmethod
-    def save_file(file_path: str, data: str) -> None:
-        with open(file_path, 'w') as file:
-            file.write(data)
-
-    def prepare_ssh_dir(self) -> str:
-        """Prepare files that will be passed to docker container."""
-        config = settings.KYPO_CONFIG
-        self.make_dir(self.directory)
-        ssh_directory = os.path.join(self.directory, 'ssh')
-        self.make_dir(ssh_directory)
-
-        self.save_file(os.path.join(ssh_directory, USER_PRIVATE_KEY_FILENAME),
-                       self.sandbox.private_user_key)
-        self.save_file(os.path.join(ssh_directory, USER_PUBLIC_KEY_FILENAME),
-                       self.sandbox.public_user_key)
-        self.save_file(os.path.join(ssh_directory, MNG_PRIVATE_KEY_FILENAME),
-                       self.stage.request.allocation_unit.pool.private_management_key)
-
-        if not ansible_service.AnsibleRunDockerContainer.is_local_repo(self.stage.repo_url):
-            shutil.copy(config.git_private_key,
-                        os.path.join(ssh_directory, os.path.basename(config.git_private_key)))
-
-        mng_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind, MNG_PRIVATE_KEY_FILENAME)
-        git_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
-                               os.path.basename(config.git_private_key))
-        proxy_key = None
-        if config.proxy_jump_to_man:
-            proxy_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
-                                     os.path.basename(config.proxy_jump_to_man.IdentityFile))
-        ans_ssh_config = sandbox_service.get_ansible_sshconfig(self.sandbox, mng_key, git_key, proxy_key)
-
-        identity_file = config.proxy_jump_to_man.IdentityFile
-        shutil.copy(identity_file, os.path.join(ssh_directory,
-                    os.path.basename(identity_file)))
-        self.save_file(os.path.join(ssh_directory, 'config'), str(ans_ssh_config))
-
-        return ssh_directory
-
-    def prepare_inventory_file(self) -> str:
-        definition = self.stage.request.allocation_unit.pool.definition
-        top_def = definition_service.get_definition(
-            definition.url, definition.rev,
-            'rev-{0}_stage-{1}'.format(definition.rev, self.stage.id))
-
-        client = utils.get_ostack_client()
-        stack = client.get_sandbox(self.sandbox.allocation_unit.get_stack_name())
-        user_private_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
-                                        USER_PRIVATE_KEY_FILENAME)
-        user_public_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
-                                       USER_PUBLIC_KEY_FILENAME)
-        inventory = Inventory(stack, top_def, user_private_key, user_public_key)
-
-        inventory_path = os.path.join(self.directory, ANSIBLE_INVENTORY_FILENAME)
-        self.save_file(inventory_path, inventory.serialize())
-
-        return inventory_path
-
-    def run_docker_container(self) -> None:
-        ssh_directory = self.prepare_ssh_dir()
-        inventory_path = self.prepare_inventory_file()
+    def run_docker_container(self, stage: AnsibleAllocationStage, sandbox: Sandbox) -> None:
+        dir_path = os.path.join(settings.KYPO_CONFIG.ansible_docker_volumes,
+                                sandbox.allocation_unit.get_stack_name(),
+                                f'{stage.id}-{utils.get_simple_uuid()}')
+        ssh_directory = self.prepare_ssh_dir(dir_path, stage, sandbox)
+        inventory_path = self.prepare_inventory_file(dir_path, stage, sandbox)
 
         try:
             container = ansible_service.AnsibleRunDockerContainer(
-                settings.KYPO_CONFIG.ansible_docker_image, self.stage.repo_url,
-                self.stage.rev, ssh_directory, inventory_path
+                settings.KYPO_CONFIG.ansible_docker_image, stage.repo_url,
+                stage.rev, ssh_directory, inventory_path
             )
-            DockerContainer.objects.create(stage=self.stage, container_id=container.id)
+            DockerContainer.objects.create(stage=stage, container_id=container.id)
 
             for output in container.logs(stream=True):
                 output = output.decode('utf-8')
                 output = output[:-1] if output[-1] == '\n' else output
-                AnsibleOutput.objects.create(stage=self.stage, content=output)
+                AnsibleOutput.objects.create(stage=stage, content=output)
 
             status = container.wait(timeout=60)
         except (docker.errors.APIError,
@@ -326,7 +263,71 @@ class AnsibleStageHandler(StageHandler):
         status_code = status['StatusCode']
         if status_code != 0:
             raise exceptions.AnsibleError('Ansible ID={} failed with status code \'{}\''
-                                          .format(self.stage.id, status_code))
+                                          .format(stage.id, status_code))
+
+    @staticmethod
+    def make_dir(dir_path: str) -> None:
+        os.makedirs(dir_path, exist_ok=True)
+
+    @staticmethod
+    def save_file(file_path: str, data: str) -> None:
+        with open(file_path, 'w') as file:
+            file.write(data)
+
+    def prepare_ssh_dir(self, dir_path: str, stage: AnsibleAllocationStage,
+                        sandbox: Sandbox) -> str:
+        """Prepare files that will be passed to docker container."""
+        config = settings.KYPO_CONFIG
+        self.make_dir(dir_path)
+        ssh_directory = os.path.join(dir_path, 'ssh')
+        self.make_dir(ssh_directory)
+
+        self.save_file(os.path.join(ssh_directory, USER_PRIVATE_KEY_FILENAME),
+                       sandbox.private_user_key)
+        self.save_file(os.path.join(ssh_directory, USER_PUBLIC_KEY_FILENAME),
+                       sandbox.public_user_key)
+        self.save_file(os.path.join(ssh_directory, MNG_PRIVATE_KEY_FILENAME),
+                       stage.request.allocation_unit.pool.private_management_key)
+
+        if not ansible_service.AnsibleRunDockerContainer.is_local_repo(stage.repo_url):
+            shutil.copy(config.git_private_key,
+                        os.path.join(ssh_directory, os.path.basename(config.git_private_key)))
+
+        mng_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind, MNG_PRIVATE_KEY_FILENAME)
+        git_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
+                               os.path.basename(config.git_private_key))
+        proxy_key = None
+        if config.proxy_jump_to_man:
+            proxy_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
+                                     os.path.basename(config.proxy_jump_to_man.IdentityFile))
+        ans_ssh_config = sandbox_service.get_ansible_sshconfig(sandbox, mng_key, git_key, proxy_key)
+
+        identity_file = config.proxy_jump_to_man.IdentityFile
+        shutil.copy(identity_file, os.path.join(ssh_directory,
+                                                os.path.basename(identity_file)))
+        self.save_file(os.path.join(ssh_directory, 'config'), str(ans_ssh_config))
+
+        return ssh_directory
+
+    def prepare_inventory_file(self, dir_path: str, stage: AnsibleAllocationStage,
+                               sandbox: Sandbox) -> str:
+        definition = stage.request.allocation_unit.pool.definition
+        top_def = definition_service.get_definition(
+            definition.url, definition.rev,
+            'rev-{0}_stage-{1}'.format(definition.rev, stage.id))
+
+        client = utils.get_ostack_client()
+        stack = client.get_sandbox(sandbox.allocation_unit.get_stack_name())
+        user_private_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
+                                        USER_PRIVATE_KEY_FILENAME)
+        user_public_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
+                                       USER_PUBLIC_KEY_FILENAME)
+        inventory = Inventory(stack, top_def, user_private_key, user_public_key)
+
+        inventory_path = os.path.join(dir_path, ANSIBLE_INVENTORY_FILENAME)
+        self.save_file(inventory_path, inventory.serialize())
+
+        return inventory_path
 
 
 def save_sandbox_to_database(sandbox):
