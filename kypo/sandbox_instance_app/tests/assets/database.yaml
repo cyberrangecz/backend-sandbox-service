@@ -9,7 +9,7 @@
   pk: 1
   fields:
     definition: 1
-    max_size: 10
+    max_size: 3
     private_management_key: -----RSA PRIVATE KEY-----
     public_management_key: ssh-rsa
     uuid: 0fb3160d
