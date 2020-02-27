@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.conf import settings
 
 from kypo.sandbox_instance_app.models import CleanupRequest, SandboxAllocationUnit, StackCleanupStage
+from kypo.sandbox_instance_app.lib import sandbox_creator
 from kypo.sandbox_instance_app.lib.sandbox_creator import OPENSTACK_QUEUE
 from kypo.sandbox_ansible_app.lib import ansible_service
 from kypo.sandbox_ansible_app.models import AnsibleCleanupStage
@@ -45,66 +46,13 @@ def enqueue_request(request: CleanupRequest,
     stg1 = StackCleanupStage.objects.create(request=request, allocation_stage=alloc_stages[0])
     queue_openstack = django_rq.get_queue(OPENSTACK_QUEUE,
                                           default_timeout=settings.KYPO_CONFIG.sandbox_delete_timeout)
-    result_openstack = queue_openstack.enqueue(StackCleanupStageManager().run, stage=stg1,
-                                               allocation_unit=allocation_unit)
+    result_openstack = queue_openstack.enqueue(sandbox_creator.StackStageHandler().cleanup, stage=stg1)
 
     # TODO: create and enqueue remaining stages
 
     queue_default = django_rq.get_queue()
     queue_default.enqueue(delete_allocation_unit, allocation_unit=allocation_unit,
                           depends_on=result_openstack)
-
-
-class StackCleanupStageManager:
-    def __init__(self):
-        self._client = None
-
-    @property
-    def client(self):
-        if not self._client:
-            self._client = utils.get_ostack_client()
-        return self._client
-
-    def run(self, stage: StackCleanupStage, allocation_unit: SandboxAllocationUnit) -> None:
-        """Run the stage."""
-        try:
-            stage.start = timezone.now()
-            stage.save()
-            LOG.info('StackCleanupStage started', stage=stage, allocation_unit=allocation_unit)
-            self.delete_sandbox(allocation_unit)
-        except Exception as ex:
-            stage.mark_failed(ex)
-            raise
-        finally:
-            stage.end = timezone.now()
-            stage.save()
-
-    def delete_sandbox(self, allocation_unit: SandboxAllocationUnit) -> None:
-        """Deletes given sandbox. Hard specifies whether to use hard delete.
-        On soft delete raises ValidationError if any sandbox is locked."""
-        stack_name = allocation_unit.get_stack_name()
-
-        try:
-            sandbox = allocation_unit.sandbox
-        except ObjectDoesNotExist:
-            pass
-        else:
-            sandbox.delete()
-
-        LOG.info('Starting Stack delete in OpenStack',
-                 stack_name=stack_name, allocation_unit=allocation_unit)
-
-        self.client.delete_sandbox(stack_name)
-        self.wait_for_stack_deletion(stack_name)
-
-        LOG.info('Stack deleted successfully from OpenStack',
-                 stack_name=stack_name, allocation_unit=allocation_unit)
-
-    def wait_for_stack_deletion(self, stack_name: str) -> None:
-        """Wait for stack deletion."""
-        success, msg = self.client.wait_for_stack_delete_action(stack_name)
-        if not success:
-            raise exceptions.StackError(f'Stack {stack_name} delete failed: {msg}')
 
 
 class AnsibleCleanupStageManager:

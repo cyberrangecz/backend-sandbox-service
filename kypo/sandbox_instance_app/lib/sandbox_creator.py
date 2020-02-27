@@ -79,7 +79,7 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
             queue_ansible = django_rq.get_queue(
                 ANSIBLE_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_ansible_timeout)
             result_networking = queue_ansible.enqueue(
-                AnsibleStageHandler(stage=stage_networking, sandbox=sandbox).run,
+                AnsibleStageHandler(stage=stage_networking, sandbox=sandbox).build,
                 name='networking', depends_on=result_openstack
             )
 
@@ -88,7 +88,7 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
                 rev=request.allocation_unit.pool.definition.rev
             )
             result_user_ansible = queue_ansible.enqueue(
-                AnsibleStageHandler(stage=stage_user_ansible, sandbox=sandbox).run,
+                AnsibleStageHandler(stage=stage_user_ansible, sandbox=sandbox).build,
                 name='user-ansible', depends_on=result_networking)
 
             queue_default = django_rq.get_queue()
@@ -161,7 +161,7 @@ class StackStageHandler(StageHandler):
         self.run_stage(self.build_stack, stage, sandbox)
 
     def cleanup(self, stage: StackCleanupStage) -> None:
-        self.run_stage(self.delete_sandbox, StackCleanupStage)
+        self.run_stage(self.delete_sandbox, stage)
 
     def build_stack(self, stage: StackAllocationStage, sandbox: Sandbox) -> None:
         """Build sandbox in OpenStack."""
@@ -187,6 +187,33 @@ class StackStageHandler(StageHandler):
 
         LOG.info("Stack created successfully", stage=stage)
 
+    def delete_sandbox(self, stage: StackCleanupStage) -> None:
+        """Deletes given sandbox. Hard specifies whether to use hard delete.
+        On soft delete raises ValidationError if any sandbox is locked."""
+        allocation_unit = stage.request.allocation_unit
+        stack_name = allocation_unit.get_stack_name()
+
+        try:
+            sandbox = allocation_unit.sandbox
+        except ObjectDoesNotExist:
+            pass
+        else:
+            sandbox.delete()
+
+        LOG.info('Starting Stack delete in OpenStack',
+                 stack_name=stack_name, allocation_unit=allocation_unit)
+
+        self.client.delete_sandbox(stack_name)
+        self.wait_for_stack_deletion(stack_name)
+
+        LOG.info('Stack deleted successfully from OpenStack',
+                 stack_name=stack_name, allocation_unit=allocation_unit)
+
+    def wait_for_stack_deletion(self, stack_name: str) -> None:
+        """Wait for stack deletion."""
+        success, msg = self.client.wait_for_stack_delete_action(stack_name)
+        if not success:
+            raise exceptions.StackError(f'Stack {stack_name} delete failed: {msg}')
 
     def update_stage(self, stage: StackAllocationStage) -> StackAllocationStage:
         """Update stage with current stack status from OpenStack."""
@@ -198,7 +225,7 @@ class StackStageHandler(StageHandler):
         return stage
 
 
-class AnsibleStageHandler:
+class AnsibleStageHandler(StageHandler):
     def __init__(self, stage: AnsibleAllocationStage, sandbox: Sandbox) -> None:
         self.stage = stage
         self.sandbox = sandbox
@@ -206,19 +233,9 @@ class AnsibleStageHandler:
                                       sandbox.get_stack_name(),
                                       f'{stage.id}-{utils.get_simple_uuid()}')
 
-    def run(self, name: str) -> None:
+    def build(self, name: str) -> None:
         """Run the stage."""
-        try:
-            self.stage.start = timezone.now()
-            self.stage.save()
-            LOG.info("Stage {} (AnsibleRunStage) started".format(name), stage=self.stage)
-            self.run_docker_container()
-        except Exception as ex:
-            self.stage.mark_failed(ex)
-            raise
-        finally:
-            self.stage.end = timezone.now()
-            self.stage.save()
+        self.run_stage(self.run_docker_container, self.stage)
 
     @staticmethod
     def make_dir(dir_path: str) -> None:
