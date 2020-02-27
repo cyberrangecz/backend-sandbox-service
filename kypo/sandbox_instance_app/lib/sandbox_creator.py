@@ -22,7 +22,8 @@ from kypo.sandbox_instance_app.models import Sandbox, Pool, SandboxAllocationUni
 from kypo.sandbox_ansible_app.lib import ansible_service
 from kypo.sandbox_ansible_app.lib.ansible_service import ANSIBLE_DOCKER_SSH_DIR
 from kypo.sandbox_ansible_app.lib.inventory import Inventory
-from kypo.sandbox_ansible_app.models import AnsibleAllocationStage, AnsibleOutput, DockerContainer
+from kypo.sandbox_ansible_app.models import AnsibleAllocationStage, AnsibleOutput, DockerContainer, \
+    AnsibleCleanupStage
 from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_definition_app.lib import definition_service
 
@@ -148,7 +149,6 @@ class StackStageHandler(StageHandler):
         return self._client
 
     def build(self, stage: StackAllocationStage, sandbox: Sandbox) -> None:
-        """Run the stage."""
         try:
             lock_job()
         except Exception as ex:
@@ -232,8 +232,11 @@ class AnsibleStageHandler(StageHandler):
         pass
 
     def build(self, stage: AnsibleAllocationStage, sandbox: Sandbox, name: str) -> None:
-        """Run the stage."""
         self.run_stage(self.run_docker_container, stage, sandbox)
+
+    def cleanup(self, stage: AnsibleCleanupStage):
+        ansible_service.delete_docker_container(
+            stage.allocation_stage.container.container_id)
 
     def run_docker_container(self, stage: AnsibleAllocationStage, sandbox: Sandbox) -> None:
         dir_path = os.path.join(settings.KYPO_CONFIG.ansible_docker_volumes,
@@ -311,10 +314,10 @@ class AnsibleStageHandler(StageHandler):
 
     def prepare_inventory_file(self, dir_path: str, stage: AnsibleAllocationStage,
                                sandbox: Sandbox) -> str:
-        definition = stage.request.allocation_unit.pool.definition
         top_def = definition_service.get_definition(
-            definition.url, definition.rev,
-            'rev-{0}_stage-{1}'.format(definition.rev, stage.id))
+            stage.request.allocation_unit.pool.definition.url,
+            stage.request.allocation_unit.pool.definition.rev,
+            f'rev-{stage.request.allocation_unit.pool.definition.rev}_stage-{stage.id}')
 
         client = utils.get_ostack_client()
         stack = client.get_sandbox(sandbox.allocation_unit.get_stack_name())

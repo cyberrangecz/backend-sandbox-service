@@ -55,33 +55,6 @@ def enqueue_request(request: CleanupRequest,
                           depends_on=result_openstack)
 
 
-class AnsibleCleanupStageManager:
-    def __init__(self, stage: AnsibleCleanupStage,
-                 allocation_unit: SandboxAllocationUnit):
-        self.stage = stage
-        self.allocation_unit = allocation_unit
-
-    def run(self) -> None:
-        """Run the stage."""
-        try:
-            self.stage.start = timezone.now()
-            self.stage.save()
-            LOG.info('AnsibleCleanupStage started', stage=self.stage,
-                     allocation_unit=self.allocation_unit)
-            self.delete_ansible()
-        except Exception as ex:
-            self.stage.mark_failed(ex)
-            raise
-        finally:
-            self.stage.end = timezone.now()
-            self.stage.save()
-
-    def delete_ansible(self):
-        """Delete Ansible container."""
-        ansible_service.delete_docker_container(
-            self.stage.allocation_stage.container.container_id)
-
-
 def delete_allocation_unit(allocation_unit: SandboxAllocationUnit) -> None:
     allocation_unit.delete()
     LOG.info('Allocation Unit deleted from DB', allocation_unit=allocation_unit)

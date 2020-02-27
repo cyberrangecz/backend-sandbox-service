@@ -62,7 +62,7 @@ class AnsibleRunDockerContainer:
 def delete_docker_container(container_id: str) -> None:
     client = docker.from_env()
     container = client.get(container_id)
-    container.remove(force=True)  # kill running container
+    container.remove(force=True)  # force: kill running container
 
 
 def get_logs(container_id: str) -> str:
