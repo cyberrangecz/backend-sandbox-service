@@ -211,6 +211,7 @@ class HeatStack(ExternalDependency):
         primary_key=True,
         related_name='heatstack',
     )
+    stack_id = models.UUIDField()
 
 
 class SystemProcesses(ExternalDependency):

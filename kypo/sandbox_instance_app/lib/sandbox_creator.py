@@ -19,7 +19,7 @@ from django.conf import settings
 from kypo.sandbox_instance_app.lib import sandbox_service
 from kypo.sandbox_instance_app.models import Sandbox, Pool, SandboxAllocationUnit, \
     AllocationRequest, \
-    StackAllocationStage, AllocationStage, StackCleanupStage, CleanupStage, Stage
+    StackAllocationStage, AllocationStage, StackCleanupStage, CleanupStage, Stage, HeatStack
 from kypo.sandbox_ansible_app.lib import ansible_service
 from kypo.sandbox_ansible_app.lib.ansible_service import ANSIBLE_DOCKER_SSH_DIR
 from kypo.sandbox_ansible_app.lib.inventory import Inventory
@@ -170,8 +170,11 @@ class StackStageHandler(StageHandler):
                 definition.url, definition.rev,
                 'rev-{0}_stage-{1}'.format(definition.rev, stage.id)
         )
-        self.client.create_sandbox(sandbox.get_stack_name(), top_def,
-                                   kp_name=stage.request.allocation_unit.pool.get_keypair_name())
+        stack = self.client.create_sandbox(
+            sandbox.get_stack_name(), top_def,
+            kp_name=stage.request.allocation_unit.pool.get_keypair_name())
+
+        HeatStack.objects.create(stage=stage, stack_id=stack['stack']['id'])
 
         self.wait_for_stack_creation(stage)
 
