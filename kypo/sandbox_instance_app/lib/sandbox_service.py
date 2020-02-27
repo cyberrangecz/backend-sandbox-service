@@ -47,14 +47,14 @@ def get_sandbox_topology(sandbox: Sandbox) -> Topology:
 def get_user_sshconfig(sandbox: Sandbox) -> KypoSSHConfig:
     """Get user SSH config."""
     client = utils.get_ostack_client()
-    stack = client.get_sandbox(sandbox.get_stack_name())
+    stack = client.get_sandbox(sandbox.allocation_unit.get_stack_name())
     return KypoSSHConfig.create_user_config(stack, settings.KYPO_CONFIG)
 
 
 def get_management_sshconfig(sandbox: Sandbox) -> KypoSSHConfig:
     """Get management SSH config."""
     client = utils.get_ostack_client()
-    stack = client.get_sandbox(sandbox.get_stack_name())
+    stack = client.get_sandbox(sandbox.allocation_unit.get_stack_name())
     return KypoSSHConfig.create_management_config(stack, settings.KYPO_CONFIG)
 
 
@@ -62,6 +62,6 @@ def get_ansible_sshconfig(sandbox: Sandbox, mng_key: str, git_key: str,
                           proxy_key: Optional[str] = None) -> KypoSSHConfig:
     """Get Ansible SSH config."""
     client = utils.get_ostack_client()
-    stack = client.get_sandbox(sandbox.get_stack_name())
+    stack = client.get_sandbox(sandbox.allocation_unit.get_stack_name())
     return KypoSSHConfig.create_ansible_config(stack, settings.KYPO_CONFIG,
                                                mng_key, git_key, proxy_key)

@@ -28,7 +28,7 @@ def get_asset_repo_path(name):
 NETWORKING_REPO_NAME = 'kypo2-ansible-stage-one.git.zip'
 ansible_networking_rev = 'integration-test'
 
-DEFINITION_REPO_NAME = 'small-sandbox.git.zip'
+DEFINITION_REPO_NAME = 'empty-sandbox.git.zip'
 DEFINITION_REV = 'integration-test'
 
 # Heat stack and template values

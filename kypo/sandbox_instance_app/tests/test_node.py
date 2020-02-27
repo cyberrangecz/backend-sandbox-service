@@ -23,7 +23,8 @@ class TestNodeAction:
         node_name = "node_name"
         node_service.node_action(sb_mock, node_name, action)
 
-        action_dict[action].assert_called_once_with(sb_mock.get_stack_name.return_value, node_name)
+        action_dict[action].assert_called_once_with(
+            sb_mock.allocation_unit.get_stack_name.return_value, node_name)
 
     def test_node_action_unknown_action(self, mocker):
         mocker.patch("kypo.sandbox_common_lib.utils.get_ostack_client")

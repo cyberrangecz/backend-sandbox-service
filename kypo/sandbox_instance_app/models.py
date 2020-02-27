@@ -62,10 +62,6 @@ class Sandbox(models.Model):
         return f"ID: {self.id}, ALLOCATION_UNIT: {self.allocation_unit.id}, " \
                f"LOCK: {self.lock.id if hasattr(self, 'lock') else None}"
 
-    def get_stack_name(self) -> str:
-        """Returns a name of the stack for this sandbox"""
-        return self.allocation_unit.get_stack_name()
-
 
 class Lock(models.Model):
     sandbox = models.OneToOneField(
@@ -89,10 +85,6 @@ class SandboxRequest(models.Model):
     def __str__(self):
         return "ID: {0.id}, ALLOCATION_UNIT: {0.allocation_unit.id}, CREATED: {0.created}"\
             .format(self)
-
-    def get_stack_name(self) -> str:
-        """Returns a name of the stack for this sandbox"""
-        return self.allocation_unit.get_stack_name()
 
 
 class AllocationRequest(SandboxRequest):

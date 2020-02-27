@@ -18,8 +18,7 @@ from django.conf import settings
 
 from kypo.sandbox_instance_app.lib import sandbox_service
 from kypo.sandbox_instance_app.models import Sandbox, Pool, SandboxAllocationUnit, \
-    AllocationRequest, \
-    StackAllocationStage, AllocationStage, StackCleanupStage, CleanupStage, Stage, HeatStack
+    AllocationRequest, StackAllocationStage, StackCleanupStage, Stage, HeatStack
 from kypo.sandbox_ansible_app.lib import ansible_service
 from kypo.sandbox_ansible_app.lib.ansible_service import ANSIBLE_DOCKER_SSH_DIR
 from kypo.sandbox_ansible_app.lib.inventory import Inventory
@@ -171,7 +170,7 @@ class StackStageHandler(StageHandler):
                 'rev-{0}_stage-{1}'.format(definition.rev, stage.id)
         )
         stack = self.client.create_sandbox(
-            sandbox.get_stack_name(), top_def,
+            sandbox.allocation_unit.get_stack_name(), top_def,
             kp_name=stage.request.allocation_unit.pool.get_keypair_name())
 
         HeatStack.objects.create(stage=stage, stack_id=stack['stack']['id'])
@@ -179,7 +178,7 @@ class StackStageHandler(StageHandler):
         self.wait_for_stack_creation(stage)
 
     def wait_for_stack_creation(self, stage: StackAllocationStage) -> None:
-        name = stage.request.get_stack_name()
+        name = stage.request.allocation_unit.get_stack_name()
         """Wait for stack creation."""
         success, msg = self.client.wait_for_stack_create_action(name)
         if not success:
@@ -221,7 +220,7 @@ class StackStageHandler(StageHandler):
     def update_stage(self, stage: StackAllocationStage) -> StackAllocationStage:
         """Update stage with current stack status from OpenStack."""
         sandboxes = self.client.list_sandboxes()
-        sb = sandboxes[stage.request.get_stack_name()]
+        sb = sandboxes[stage.request.allocation_unit.get_stack_name()]
         stage.status = sb.stack_status
         stage.status_reason = sb.stack_status_reason
         stage.save()
@@ -233,7 +232,7 @@ class AnsibleStageHandler(StageHandler):
         self.stage = stage
         self.sandbox = sandbox
         self.directory = os.path.join(settings.KYPO_CONFIG.ansible_docker_volumes,
-                                      sandbox.get_stack_name(),
+                                      sandbox.allocation_unit.get_stack_name(),
                                       f'{stage.id}-{utils.get_simple_uuid()}')
 
     def build(self, name: str) -> None:
@@ -290,7 +289,7 @@ class AnsibleStageHandler(StageHandler):
             'rev-{0}_stage-{1}'.format(definition.rev, self.stage.id))
 
         client = utils.get_ostack_client()
-        stack = client.get_sandbox(self.sandbox.get_stack_name())
+        stack = client.get_sandbox(self.sandbox.allocation_unit.get_stack_name())
         user_private_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
                                         USER_PRIVATE_KEY_FILENAME)
         user_public_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,

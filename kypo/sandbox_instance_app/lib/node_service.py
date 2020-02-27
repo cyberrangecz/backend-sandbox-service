@@ -16,7 +16,7 @@ def node_action(sandbox: Sandbox, node_name: str, action: str) -> None:
                   'reboot': client.reboot_node,
     }
     try:
-        return action_dict[action](sandbox.get_stack_name(), node_name)
+        return action_dict[action](sandbox.allocation_unit.get_stack_name(), node_name)
     except KeyError:
         raise exceptions.ValidationError("Unknown action: '%s'" % action)
 
@@ -24,10 +24,10 @@ def node_action(sandbox: Sandbox, node_name: str, action: str) -> None:
 def get_node(sandbox: Sandbox, node_name: str) -> Instance:
     """Retrieve Instance from OpenStack."""
     client = utils.get_ostack_client()
-    return client.get_node(sandbox.get_stack_name(), node_name)
+    return client.get_node(sandbox.allocation_unit.get_stack_name(), node_name)
 
 
 def get_console_url(sandbox: Sandbox, node_name: str) -> str:
     """Get console URL for given VM."""
     client = utils.get_ostack_client()
-    return client.get_spice_console(sandbox.get_stack_name(), node_name)
+    return client.get_spice_console(sandbox.allocation_unit.get_stack_name(), node_name)
