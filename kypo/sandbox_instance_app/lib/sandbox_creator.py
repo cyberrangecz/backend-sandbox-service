@@ -9,6 +9,7 @@ import docker.errors
 import requests.exceptions as requests_exceptions
 import rq
 import structlog
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils import timezone
 from kypo.openstack_driver.stack import Event, Resource
@@ -18,7 +19,7 @@ from django.conf import settings
 from kypo.sandbox_instance_app.lib import sandbox_service
 from kypo.sandbox_instance_app.models import Sandbox, Pool, SandboxAllocationUnit, \
     AllocationRequest, \
-    StackAllocationStage, AllocationStage
+    StackAllocationStage, AllocationStage, StackCleanupStage, CleanupStage, Stage
 from kypo.sandbox_ansible_app.lib import ansible_service
 from kypo.sandbox_ansible_app.lib.ansible_service import ANSIBLE_DOCKER_SSH_DIR
 from kypo.sandbox_ansible_app.lib.inventory import Inventory
@@ -68,7 +69,7 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
             queue_openstack = django_rq.get_queue(
                 OPENSTACK_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_build_timeout)
             result_openstack = queue_openstack.enqueue(
-                StackAllocationStageHandler().run, stage=stage_openstack,
+                StackStageHandler().build, stage=stage_openstack,
                 sandbox=sandbox, meta=dict(locked=True))
 
             stage_networking = AnsibleAllocationStage.objects.create(
@@ -78,7 +79,7 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
             queue_ansible = django_rq.get_queue(
                 ANSIBLE_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_ansible_timeout)
             result_networking = queue_ansible.enqueue(
-                AnsibleAllocationStageHandler(stage=stage_networking, sandbox=sandbox).run,
+                AnsibleStageHandler(stage=stage_networking, sandbox=sandbox).run,
                 name='networking', depends_on=result_openstack
             )
 
@@ -87,7 +88,7 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
                 rev=request.allocation_unit.pool.definition.rev
             )
             result_user_ansible = queue_ansible.enqueue(
-                AnsibleAllocationStageHandler(stage=stage_user_ansible, sandbox=sandbox).run,
+                AnsibleStageHandler(stage=stage_user_ansible, sandbox=sandbox).run,
                 name='user-ansible', depends_on=result_networking)
 
             queue_default = django_rq.get_queue()
@@ -122,14 +123,13 @@ def unlock_job(job: Job):
 
 
 class StageHandler:
-    def create(self, func: Callable, stage: AllocationStage, sandbox: Sandbox) -> None:
+    def run_stage(self, func: Callable, stage: Stage, *args, **kwargs) -> None:
         """Run the stage."""
         try:
-            lock_job()
             stage.start = timezone.now()
             stage.save()
             LOG.info(f'Stage {str(stage)} started', stage=stage)
-            func(stage, sandbox)
+            func(stage, *args, **kwargs)
         except Exception as ex:
             stage.mark_failed(ex)
             raise
@@ -138,7 +138,7 @@ class StageHandler:
             stage.save()
 
 
-class StackAllocationStageHandler(StageHandler):
+class StackStageHandler(StageHandler):
     def __init__(self):
         self._client = None
 
@@ -148,21 +148,20 @@ class StackAllocationStageHandler(StageHandler):
             self._client = utils.get_ostack_client()
         return self._client
 
-    def run(self, stage: StackAllocationStage, sandbox: Sandbox) -> None:
+    def build(self, stage: StackAllocationStage, sandbox: Sandbox) -> None:
         """Run the stage."""
         try:
             lock_job()
-            stage.start = timezone.now()
-            stage.save()
-            LOG.info("Stage StackCreationStage started", stage=stage)
-            self.build_stack(stage, sandbox)
-            self.wait_for_stack_creation(stage)
         except Exception as ex:
             stage.mark_failed(ex)
-            raise
-        finally:
             stage.end = timezone.now()
             stage.save()
+            raise
+
+        self.run_stage(self.build_stack, stage, sandbox)
+
+    def cleanup(self, stage: StackCleanupStage) -> None:
+        self.run_stage(self.delete_sandbox, StackCleanupStage)
 
     def build_stack(self, stage: StackAllocationStage, sandbox: Sandbox) -> None:
         """Build sandbox in OpenStack."""
@@ -173,6 +172,8 @@ class StackAllocationStageHandler(StageHandler):
         )
         self.client.create_sandbox(sandbox.get_stack_name(), top_def,
                                    kp_name=stage.request.allocation_unit.pool.get_keypair_name())
+
+        self.wait_for_stack_creation(stage)
 
     def wait_for_stack_creation(self, stage: StackAllocationStage) -> None:
         name = stage.request.get_stack_name()
@@ -186,6 +187,7 @@ class StackAllocationStageHandler(StageHandler):
 
         LOG.info("Stack created successfully", stage=stage)
 
+
     def update_stage(self, stage: StackAllocationStage) -> StackAllocationStage:
         """Update stage with current stack status from OpenStack."""
         sandboxes = self.client.list_sandboxes()
@@ -196,7 +198,7 @@ class StackAllocationStageHandler(StageHandler):
         return stage
 
 
-class AnsibleAllocationStageHandler:
+class AnsibleStageHandler:
     def __init__(self, stage: AnsibleAllocationStage, sandbox: Sandbox) -> None:
         self.stage = stage
         self.sandbox = sandbox
