@@ -108,8 +108,8 @@ class StackStageHandler(StageHandler):
         self.wait_for_stack_creation(stage)
 
     def wait_for_stack_creation(self, stage: StackAllocationStage) -> None:
-        name = stage.request.allocation_unit.get_stack_name()
         """Wait for stack creation."""
+        name = stage.request.allocation_unit.get_stack_name()
         success, msg = self.client.wait_for_stack_create_action(name)
         if not success:
             roll_succ, roll_msg = self.client.wait_for_stack_rollback_action(name)
@@ -119,9 +119,8 @@ class StackStageHandler(StageHandler):
 
         LOG.info("Stack created successfully", stage=stage)
 
-    def delete_sandbox(self, allocation_unit: SandboxAllocationUnit, wait=True) -> None:
-        """Deletes given sandbox. Hard specifies whether to use hard delete.
-        On soft delete raises ValidationError if any sandbox is locked."""
+    def delete_sandbox(self, allocation_unit: SandboxAllocationUnit, wait: bool = True) -> None:
+        """Delete given sandbox. Wait for completion if `wait` is True."""
         stack_name = allocation_unit.get_stack_name()
 
         LOG.debug('Starting Stack delete in OpenStack',
@@ -164,14 +163,15 @@ class AnsibleStageHandler(StageHandler):
             AnsibleDockerRunner().delete_container(stage.container.container_id)
 
     def cleanup(self, stage: AnsibleCleanupStage):
-        """Only sets the stage values."""
+        """Only set the stage values."""
         self.run_stage(self.stage_name, self.cleanup_logic, stage)
 
     def cleanup_logic(self, *args, **kwargs):
         """Currently just a dummy function for clean up."""
         pass
 
-    def run_docker_container(self, stage: AnsibleAllocationStage, sandbox: Sandbox) -> None:
+    @staticmethod
+    def run_docker_container(stage: AnsibleAllocationStage, sandbox: Sandbox) -> None:
         dir_path = os.path.join(settings.KYPO_CONFIG.ansible_docker_volumes,
                                 sandbox.allocation_unit.get_stack_name(),
                                 f'{stage.id}-{utils.get_simple_uuid()}')
