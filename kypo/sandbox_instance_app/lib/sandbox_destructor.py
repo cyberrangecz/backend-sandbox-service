@@ -33,10 +33,11 @@ def cleanup_sandbox_request(allocation_unit: SandboxAllocationUnit) -> CleanupRe
     request = CleanupRequest.objects.create(allocation_unit=allocation_unit)
     LOG.info('CleanupRequest created', request=request,
              allocation_unit=allocation_unit, sandbox=sandbox)
+
+    if sandbox:
+        sandbox.delete()
+
     enqueue_request(request, allocation_unit)
-
-    sandbox.delete()
-
     return request
 
 
@@ -49,14 +50,14 @@ def enqueue_request(request: CleanupRequest,
                                                         allocation_stage=alloc_stages[2])
     queue_ansible = django_rq.get_queue(ANSIBLE_QUEUE)
     job_user_ans = queue_ansible.enqueue(
-        StackStageHandler(USER_ANSIBLE_NAME).cleanup,
+        AnsibleStageHandler(USER_ANSIBLE_NAME).cleanup,
         stage=stage_user_ans)
 
     stage_networking = AnsibleCleanupStage.objects.create(request=request,
                                                           allocation_stage=alloc_stages[1])
     job_networking = queue_ansible.enqueue(
-        StackStageHandler(NETWORKING_ANSIBLE_NAME).cleanup,
-        stage=stage_user_ans, depeneds_on=job_user_ans)
+        AnsibleStageHandler(NETWORKING_ANSIBLE_NAME).cleanup,
+        stage=stage_networking, depends_on=job_user_ans)
 
     stage_openstack = StackCleanupStage.objects.create(request=request,
                                                        allocation_stage=alloc_stages[0])
@@ -65,7 +66,7 @@ def enqueue_request(request: CleanupRequest,
     job_openstack = queue_openstack.enqueue(
         StackStageHandler(stage_openstack.__class__.__name__).cleanup,
         stage=stage_openstack,
-        denepnds_on=job_networking)
+        depends_on=job_networking)
 
     queue_default = django_rq.get_queue()
     queue_default.enqueue(delete_allocation_unit, allocation_unit=allocation_unit,

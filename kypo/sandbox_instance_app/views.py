@@ -189,6 +189,10 @@ class SandboxCleanupRequestStageList(generics.ListAPIView):
         return CleanupStage.objects.filter(request_id=request_id)
 
 
+class SandboxCreateRequestStop(generics.GenericAPIView):
+    pass
+
+
 class OpenstackAllocationStageDetail(generics.GenericAPIView):
     serializer_class = serializers.OpenstackAllocationStageSerializer
     queryset = StackAllocationStage.objects.all()

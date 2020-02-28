@@ -32,7 +32,8 @@ LOG = structlog.get_logger()
 
 
 class StageHandler:
-    def run_stage(self, name: str, func: Callable, stage: Stage, *args, **kwargs) -> None:
+    @staticmethod
+    def run_stage(name: str, func: Callable, stage: Stage, *args, **kwargs) -> None:
         """Run the stage."""
         try:
             stage.start = timezone.now()
@@ -133,15 +134,8 @@ class StackStageHandler(StageHandler):
         On soft delete raises ValidationError if any sandbox is locked."""
         stack_name = allocation_unit.get_stack_name()
 
-        try:
-            sandbox = allocation_unit.sandbox
-        except ObjectDoesNotExist:
-            pass
-        else:
-            sandbox.delete()
-
-        LOG.info('Starting Stack delete in OpenStack',
-                 stack_name=stack_name, allocation_unit=allocation_unit)
+        LOG.debug('Starting Stack delete in OpenStack',
+                  stack_name=stack_name, allocation_unit=allocation_unit)
 
         self.client.delete_sandbox(stack_name)
         if wait:
@@ -181,7 +175,11 @@ class AnsibleStageHandler(StageHandler):
 
     def cleanup(self, stage: AnsibleCleanupStage):
         """Only sets the stage values."""
-        self.run_stage(self.stage_name, lambda x: None, stage)
+        self.run_stage(self.stage_name, self.cleanup_logic, stage)
+
+    def cleanup_logic(self, *args, **kwargs):
+        """Currently just a dummy function for clean up."""
+        pass
 
     def run_docker_container(self, stage: AnsibleAllocationStage, sandbox: Sandbox) -> None:
         dir_path = os.path.join(settings.KYPO_CONFIG.ansible_docker_volumes,
@@ -191,7 +189,7 @@ class AnsibleStageHandler(StageHandler):
         inventory_path = self.prepare_inventory_file(dir_path, stage, sandbox)
 
         try:
-            container = ansible_service.AnsibleRunDockerContainer(
+            container = ansible_service.AnsibleDockerContainer(
                 settings.KYPO_CONFIG.ansible_docker_image, stage.repo_url,
                 stage.rev, ssh_directory, inventory_path
             )
@@ -237,7 +235,7 @@ class AnsibleStageHandler(StageHandler):
         self.save_file(os.path.join(ssh_directory, MNG_PRIVATE_KEY_FILENAME),
                        stage.request.allocation_unit.pool.private_management_key)
 
-        if not ansible_service.AnsibleRunDockerContainer.is_local_repo(stage.repo_url):
+        if not ansible_service.AnsibleDockerContainer.is_local_repo(stage.repo_url):
             shutil.copy(config.git_private_key,
                         os.path.join(ssh_directory, os.path.basename(config.git_private_key)))
 
