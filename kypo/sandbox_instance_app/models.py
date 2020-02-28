@@ -180,10 +180,10 @@ class CleanupStage(Stage):
 class StackCleanupStage(CleanupStage):
     type = StageType.OPENSTACK
 
-    allocation_stage = models.OneToOneField(
+    allocation_stage = models.ForeignKey(
         StackAllocationStage,
         on_delete=models.CASCADE,
-        related_name='cleanup_stage',
+        related_name='cleanup_stages',
     )
 
     def __str__(self):
