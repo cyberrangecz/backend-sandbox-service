@@ -18,7 +18,7 @@ from django.conf import settings
 
 from kypo.sandbox_instance_app.lib import sandbox_service
 from kypo.sandbox_instance_app.models import Sandbox, Pool, SandboxAllocationUnit, \
-    AllocationRequest, StackAllocationStage, StackCleanupStage, Stage, HeatStack
+    AllocationRequest, StackAllocationStage, StackCleanupStage, Stage, HeatStack, SystemProcess
 from kypo.sandbox_ansible_app.lib import ansible_service
 from kypo.sandbox_ansible_app.lib.ansible_service import ANSIBLE_DOCKER_SSH_DIR
 from kypo.sandbox_ansible_app.lib.inventory import Inventory
@@ -68,9 +68,11 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
             stage_openstack = StackAllocationStage.objects.create(request=request)
             queue_openstack = django_rq.get_queue(
                 OPENSTACK_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_build_timeout)
-            result_openstack = queue_openstack.enqueue(
+            job_openstack = queue_openstack.enqueue(
                 StackStageHandler().build, stage=stage_openstack,
-                sandbox=sandbox, meta=dict(locked=True))
+                sandbox=sandbox, meta=dict(locked=True)
+            )
+            SystemProcess.objects.create(stage=stage_openstack, process_id=job_openstack.id)
 
             stage_networking = AnsibleAllocationStage.objects.create(
                 request=request, repo_url=settings.KYPO_CONFIG.ansible_networking_url,
@@ -78,23 +80,25 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
             )
             queue_ansible = django_rq.get_queue(
                 ANSIBLE_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_ansible_timeout)
-            result_networking = queue_ansible.enqueue(
+            job_networking = queue_ansible.enqueue(
                 AnsibleStageHandler().build, stage=stage_networking, sandbox=sandbox,
-                name='networking', depends_on=result_openstack
+                name='networking', depends_on=job_openstack
             )
+            SystemProcess.objects.create(stage=stage_networking, process_id=job_networking.id)
 
             stage_user_ansible = AnsibleAllocationStage.objects.create(
                 request=request, repo_url=request.allocation_unit.pool.definition.url,
                 rev=request.allocation_unit.pool.definition.rev
             )
-            result_user_ansible = queue_ansible.enqueue(
+            job_user_ansible = queue_ansible.enqueue(
                 AnsibleStageHandler().build, stage=stage_user_ansible, sandbox=sandbox,
-                name='user-ansible', depends_on=result_networking)
+                name='user-ansible', depends_on=job_networking)
+            SystemProcess.objects.create(stage=stage_user_ansible, process_id=job_user_ansible.id)
 
             queue_default = django_rq.get_queue()
             queue_default.enqueue(save_sandbox_to_database, sandbox=sandbox,
-                                  depends_on=result_user_ansible)
-            transaction.on_commit(partial(unlock_job, result_openstack))
+                                  depends_on=job_user_ansible)
+            transaction.on_commit(partial(unlock_job, job_openstack))
 
 
 def lock_job(timeout=60, step=5):
@@ -159,8 +163,11 @@ class StackStageHandler(StageHandler):
 
         self.run_stage(self.build_stack, stage, sandbox)
 
+    def stop(self, stage: StackAllocationStage) -> None:
+        self.delete_sandbox(stage.request.allocation_unit, wait=False)
+
     def cleanup(self, stage: StackCleanupStage) -> None:
-        self.run_stage(self.delete_sandbox, stage)
+        self.run_stage(lambda stg: self.delete_sandbox(stg.request.allocation_unit), stage)
 
     def build_stack(self, stage: StackAllocationStage, sandbox: Sandbox) -> None:
         """Build sandbox in OpenStack."""
@@ -189,10 +196,9 @@ class StackStageHandler(StageHandler):
 
         LOG.info("Stack created successfully", stage=stage)
 
-    def delete_sandbox(self, stage: StackCleanupStage) -> None:
+    def delete_sandbox(self, allocation_unit: SandboxAllocationUnit, wait=True) -> None:
         """Deletes given sandbox. Hard specifies whether to use hard delete.
         On soft delete raises ValidationError if any sandbox is locked."""
-        allocation_unit = stage.request.allocation_unit
         stack_name = allocation_unit.get_stack_name()
 
         try:
@@ -206,7 +212,8 @@ class StackStageHandler(StageHandler):
                  stack_name=stack_name, allocation_unit=allocation_unit)
 
         self.client.delete_sandbox(stack_name)
-        self.wait_for_stack_deletion(stack_name)
+        if wait:
+            self.wait_for_stack_deletion(stack_name)
 
         LOG.info('Stack deleted successfully from OpenStack',
                  stack_name=stack_name, allocation_unit=allocation_unit)

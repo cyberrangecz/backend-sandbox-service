@@ -203,8 +203,14 @@ class HeatStack(ExternalDependency):
         primary_key=True,
         related_name='heatstack',
     )
-    stack_id = models.UUIDField()
+    stack_id = models.TextField()
 
 
-class SystemProcesses(ExternalDependency):
-    pass
+class SystemProcess(ExternalDependency):
+    stage = models.OneToOneField(
+        StackAllocationStage,
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name='process',
+    )
+    process_id = models.TextField()
