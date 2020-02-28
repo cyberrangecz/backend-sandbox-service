@@ -11,7 +11,7 @@ from rest_framework import status
 from rq import SimpleWorker
 from django.conf import settings
 
-from kypo.sandbox_ansible_app.lib import ansible_service
+from kypo.sandbox_ansible_app.lib.ansible_service import AnsibleDockerRunner
 from kypo.sandbox_ansible_app.models import AnsibleOutput, DockerContainer
 from kypo.sandbox_common_lib import utils
 from kypo.sandbox_instance_app.lib.sandbox_creator import OPENSTACK_QUEUE, ANSIBLE_QUEUE
@@ -28,7 +28,7 @@ def get_asset_repo_path(name):
 NETWORKING_REPO_NAME = 'kypo2-ansible-stage-one.git.zip'
 ansible_networking_rev = 'integration-test'
 
-DEFINITION_REPO_NAME = 'empty-sandbox.git.zip'
+DEFINITION_REPO_NAME = 'small-sandbox.git.zip'
 DEFINITION_REV = 'integration-test'
 
 # Heat stack and template values
@@ -141,7 +141,7 @@ class TestIntegration:
         if response.status_code != status.HTTP_201_CREATED:
             LOG.info('Ansible output',
                      output=[str(x) for x in AnsibleOutput.objects.all()],
-                     logs=[ansible_service.get_logs(x.container_id)
+                     logs=[AnsibleDockerRunner().get_container(x.container_id).logs()
                            for x in DockerContainer.objects.all()]
                      )
         assert response.status_code == status.HTTP_201_CREATED
