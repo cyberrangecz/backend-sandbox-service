@@ -3,7 +3,6 @@ import time
 from typing import Callable
 
 import docker.errors
-from heatclient.exc import HTTPNotFound
 import rq
 import structlog
 from django.conf import settings
@@ -27,12 +26,13 @@ LOG = structlog.get_logger()
 
 class StageHandler:
     @staticmethod
-    def run_stage(name: str, func: Callable, stage: Stage, *args, **kwargs) -> None:
+    def run_stage(stage_name: str, func: Callable, stage: Stage, *args, **kwargs) -> \
+            None:
         """Run the stage."""
         try:
             stage.start = timezone.now()
             stage.save()
-            LOG.info(f'Stage {name} started', stage=stage)
+            LOG.info(f'Stage {stage_name} started', stage=stage)
             func(stage, *args, **kwargs)
         except Exception as ex:
             stage.mark_failed(ex)
@@ -67,8 +67,7 @@ class StageHandler:
 
 
 class StackStageHandler(StageHandler):
-    def __init__(self, stage_name=None):
-        self.stage_name = stage_name
+    def __init__(self):
         self._client = None
 
     @property
@@ -77,7 +76,8 @@ class StackStageHandler(StageHandler):
             self._client = utils.get_ostack_client()
         return self._client
 
-    def build(self, stage: StackAllocationStage, sandbox: Sandbox) -> None:
+    def build(self, stage_name: str, stage: StackAllocationStage, sandbox: Sandbox) -> None:
+        """Run the stage."""
         try:
             self.lock_job()
         except Exception as ex:
@@ -86,17 +86,18 @@ class StackStageHandler(StageHandler):
             stage.save()
             raise
 
-        self.run_stage(self.stage_name, self.build_stack, stage, sandbox)
+        self.run_stage(stage_name, self.build_stack, stage, sandbox)
 
     def stop(self, stage: StackAllocationStage) -> None:
-        # TODO: check existence of sb and job
+        """Stop running stage."""
         self.delete_job(stage.process.process_id)
         if stage.start:
             self.delete_sandbox(stage.request.allocation_unit, wait=False)
         stage.mark_failed()
 
-    def cleanup(self, stage: StackCleanupStage) -> None:
-        self.run_stage(self.stage_name,
+    def cleanup(self, stage_name: str, stage: StackCleanupStage) -> None:
+        """Clean up stage resources."""
+        self.run_stage(stage_name,
                        lambda stg: self.delete_sandbox(stg.request.allocation_unit),
                        stage)
 
@@ -164,13 +165,12 @@ class StackStageHandler(StageHandler):
 
 
 class AnsibleStageHandler(StageHandler):
-    def __init__(self, stage_name=None) -> None:
-        self.stage_name = stage_name
-
-    def build(self, stage: AnsibleAllocationStage, sandbox: Sandbox) -> None:
-        self.run_stage(self.stage_name, self.run_docker_container, stage, sandbox)
+    def build(self, stage_name: str, stage: AnsibleAllocationStage, sandbox: Sandbox) -> None:
+        """Run the stage."""
+        self.run_stage(stage_name, self.run_docker_container, stage, sandbox)
 
     def stop(self, stage: AnsibleAllocationStage) -> None:
+        """Stop running stage."""
         self.delete_job(stage.process.process_id)
         try:
             if hasattr(stage, 'container'):
@@ -182,16 +182,15 @@ class AnsibleStageHandler(StageHandler):
         stage.failed = True
         stage.save()
 
-    def cleanup(self, stage: AnsibleCleanupStage):
-        """Only set the stage values."""
-        self.run_stage(self.stage_name, self.cleanup_logic, stage)
-
-    def cleanup_logic(self, *args, **kwargs):
-        """Currently just a dummy function for clean up."""
-        pass
+    def cleanup(self, stage_name: str, stage: AnsibleCleanupStage):
+        """Clean up stage resources. Currently there is nothing to be done;
+        only set the stage as finished.
+        """
+        self.run_stage(stage_name, lambda x: None, stage)
 
     @staticmethod
     def run_docker_container(stage: AnsibleAllocationStage, sandbox: Sandbox) -> None:
+        """Prepare and run the Ansible."""
         dir_path = os.path.join(settings.KYPO_CONFIG.ansible_docker_volumes,
                                 sandbox.allocation_unit.get_stack_name(),
                                 f'{stage.id}-{utils.get_simple_uuid()}')

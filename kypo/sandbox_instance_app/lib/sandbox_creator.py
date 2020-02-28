@@ -20,9 +20,6 @@ LOG = structlog.get_logger()
 OPENSTACK_QUEUE = 'openstack'
 ANSIBLE_QUEUE = 'ansible'
 
-NETWORKING_ANSIBLE_NAME = 'Networking Ansible'
-USER_ANSIBLE_NAME = 'User Ansible'
-
 
 def create_sandbox_requests(pool: Pool, count: int) -> List[SandboxAllocationUnit]:
     """
@@ -54,7 +51,7 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
             queue_stack = django_rq.get_queue(
                 OPENSTACK_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_build_timeout)
             job_stack = queue_stack.enqueue(
-                StackStageHandler(stage_stack.__class__.__name__).build,
+                StackStageHandler().build, stage_name=stage_stack.__class__.__name__,
                 stage=stage_stack, sandbox=sandbox, meta=dict(locked=True)
             )
             SystemProcess.objects.create(stage=stage_stack, process_id=job_stack.id)
@@ -66,8 +63,8 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
             queue_ansible = django_rq.get_queue(
                 ANSIBLE_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_ansible_timeout)
             job_networking = queue_ansible.enqueue(
-                AnsibleStageHandler(NETWORKING_ANSIBLE_NAME).build, stage=stage_networking,
-                sandbox=sandbox, depends_on=job_stack
+                AnsibleStageHandler().build, stage_name='Allocation Networking Ansible',
+                stage=stage_networking, sandbox=sandbox, depends_on=job_stack
             )
             SystemProcess.objects.create(stage=stage_networking, process_id=job_networking.id)
 
@@ -76,8 +73,8 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
                 rev=request.allocation_unit.pool.definition.rev
             )
             job_user_ansible = queue_ansible.enqueue(
-                AnsibleStageHandler(USER_ANSIBLE_NAME).build, stage=stage_user_ansible,
-                sandbox=sandbox, depends_on=job_networking)
+                AnsibleStageHandler().build, stage_name='Allocation User Ansible',
+                stage=stage_user_ansible, sandbox=sandbox, depends_on=job_networking)
             SystemProcess.objects.create(stage=stage_user_ansible, process_id=job_user_ansible.id)
 
             queue_default = django_rq.get_queue()
