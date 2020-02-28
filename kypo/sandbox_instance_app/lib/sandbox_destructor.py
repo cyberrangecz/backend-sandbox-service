@@ -4,7 +4,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
 
 from kypo.sandbox_instance_app.lib.stage_handlers import StackStageHandler, AnsibleStageHandler
-from kypo.sandbox_instance_app.models import CleanupRequest, SandboxAllocationUnit, StackCleanupStage
+from kypo.sandbox_instance_app.models import CleanupRequest, SandboxAllocationUnit, \
+    StackCleanupStage, AllocationRequest
 from kypo.sandbox_instance_app.lib.sandbox_creator import OPENSTACK_QUEUE, ANSIBLE_QUEUE, \
     NETWORKING_ANSIBLE_NAME, USER_ANSIBLE_NAME
 from kypo.sandbox_common_lib import exceptions
@@ -23,8 +24,7 @@ def cleanup_sandbox_request(allocation_unit: SandboxAllocationUnit) -> CleanupRe
         if hasattr(sandbox, 'lock'):
             raise exceptions.ValidationError('Sandbox ID={} is locked.'.format(sandbox.id))
 
-    if any([stage.is_running for stage in
-            allocation_unit.allocation_request.stages.all()]):
+    if not allocation_unit.allocation_request.is_finished:
         raise exceptions.ValidationError(
             f'Create sandbox allocation request ID={allocation_unit.allocation_request.id}'
             f' has not finished yet. You need to stop it first.'
@@ -76,3 +76,15 @@ def enqueue_request(request: CleanupRequest,
 def delete_allocation_unit(allocation_unit: SandboxAllocationUnit) -> None:
     allocation_unit.delete()
     LOG.info('Allocation Unit deleted from DB', allocation_unit=allocation_unit)
+
+
+def stop_allocation_request(alloc_req: AllocationRequest):
+    """(Soft) stop all stages of Allocation Request."""
+    stages = alloc_req.stages.all().select_subclasses()
+    if alloc_req.is_finished:
+        raise exceptions.ValidationError(
+            f'Allocation request ID {alloc_req.id} is finished and does not need stopping.'
+        )
+    AnsibleStageHandler().stop(stages[2])
+    AnsibleStageHandler().stop(stages[1])
+    StackStageHandler().stop(stages[0])

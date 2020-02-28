@@ -144,6 +144,16 @@ class SandboxAllocationRequestDetail(generics.RetrieveAPIView):
     lookup_url_kwarg = "request_id"
 
 
+class SandboxAllocationRequestStop(generics.GenericAPIView):
+    serializer_class = serializers.AllocationRequestSerializer
+    queryset = AllocationRequest.objects.all()
+    lookup_url_kwarg = "request_id"
+
+    def patch(self, request, unit_id, request_id):
+        sandbox_destructor.stop_allocation_request(self.get_object())
+        return Response()
+
+
 class SandboxAllocationRequestStageList(generics.ListAPIView):
     """get: List sandbox Allocation stages."""
     serializer_class = serializers.AllocationStageSerializer
@@ -187,10 +197,6 @@ class SandboxCleanupRequestStageList(generics.ListAPIView):
         request_id = self.kwargs.get('request_id')
         get_object_or_404(CleanupRequest, pk=request_id)  # check that given request exists
         return CleanupStage.objects.filter(request_id=request_id)
-
-
-class SandboxCreateRequestStop(generics.GenericAPIView):
-    pass
 
 
 class OpenstackAllocationStageDetail(generics.GenericAPIView):

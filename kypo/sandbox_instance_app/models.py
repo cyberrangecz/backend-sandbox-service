@@ -86,6 +86,14 @@ class SandboxRequest(models.Model):
         return "ID: {0.id}, ALLOCATION_UNIT: {0.allocation_unit.id}, CREATED: {0.created}"\
             .format(self)
 
+    @property
+    def is_running(self):
+        return any([stage.is_running for stage in self.stages.all()])
+
+    @property
+    def is_finished(self):
+        return all([stage.is_finished for stage in self.stages.all()])
+
 
 class AllocationRequest(SandboxRequest):
     allocation_unit = models.OneToOneField(
@@ -113,7 +121,7 @@ class Stage(models.Model):
 
     @property
     def is_finished(self):
-        return self.end is not None
+        return self.end is not None or self.failed
 
     @property
     def is_running(self):

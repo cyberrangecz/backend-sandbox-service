@@ -3,11 +3,14 @@ import time
 from typing import Callable
 
 import docker.errors
+from heatclient.exc import HTTPNotFound
 import rq
 import structlog
 from django.conf import settings
 from django.utils import timezone
+from redis import Redis
 from requests import exceptions as requests_exceptions
+from rq.exceptions import NoSuchJobError
 from rq.job import Job
 
 from kypo.sandbox_ansible_app.lib.ansible_service import AnsibleDockerRunner
@@ -39,7 +42,10 @@ class StageHandler:
 
     @staticmethod
     def delete_job(job_id):
-        Job.fetch(job_id).delete(delete_dependents=True)
+        try:
+            Job.fetch(job_id, connection=Redis()).delete(delete_dependents=True)
+        except NoSuchJobError:  # Job already deleted
+            pass
 
     @staticmethod
     def lock_job(timeout=60, step=5):
@@ -86,6 +92,7 @@ class StackStageHandler(StageHandler):
         self.delete_job(stage.process.process_id)
         if stage.start:
             self.delete_sandbox(stage.request.allocation_unit, wait=False)
+        stage.mark_failed()
 
     def cleanup(self, stage: StackCleanupStage) -> None:
         self.run_stage(self.stage_name,
@@ -126,7 +133,12 @@ class StackStageHandler(StageHandler):
         LOG.debug('Starting Stack delete in OpenStack',
                   stack_name=stack_name, allocation_unit=allocation_unit)
 
-        self.client.delete_sandbox(stack_name)
+        try:
+            self.client.delete_sandbox(stack_name)
+        except HTTPNotFound as exc:
+            LOG.warning(str(exc), exc_info=True)
+            return
+
         if wait:
             self.wait_for_stack_deletion(stack_name)
 
@@ -150,7 +162,7 @@ class StackStageHandler(StageHandler):
 
 
 class AnsibleStageHandler(StageHandler):
-    def __init__(self, stage_name) -> None:
+    def __init__(self, stage_name=None) -> None:
         self.stage_name = stage_name
 
     def build(self, stage: AnsibleAllocationStage, sandbox: Sandbox) -> None:
@@ -161,6 +173,8 @@ class AnsibleStageHandler(StageHandler):
         self.delete_job(stage.process.process_id)
         if stage.start:
             AnsibleDockerRunner().delete_container(stage.container.container_id)
+        stage.failed = True
+        stage.save()
 
     def cleanup(self, stage: AnsibleCleanupStage):
         """Only set the stage values."""
