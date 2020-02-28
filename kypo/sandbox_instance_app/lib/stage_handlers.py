@@ -216,6 +216,8 @@ class AnsibleStageHandler(StageHandler):
                 AnsibleOutput.objects.create(stage=stage, content=output)
 
             status = container.wait(timeout=60)
+            container.remove()
+
         except (docker.errors.APIError,
                 docker.errors.DockerException,
                 requests_exceptions.ReadTimeout) as ex:
