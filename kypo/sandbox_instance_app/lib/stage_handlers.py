@@ -12,8 +12,8 @@ from django.utils import timezone
 from requests import exceptions as requests_exceptions
 from rq.job import Job
 
-from kypo.sandbox_ansible_app.lib import ansible_service
-from kypo.sandbox_ansible_app.lib.ansible_service import ANSIBLE_DOCKER_SSH_DIR
+from kypo.sandbox_ansible_app.lib.ansible_service import AnsibleDockerRunner, \
+    ANSIBLE_DOCKER_SSH_DIR
 from kypo.sandbox_ansible_app.lib.inventory import Inventory
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage, AnsibleCleanupStage,\
     DockerContainer, AnsibleOutput
@@ -171,7 +171,7 @@ class AnsibleStageHandler(StageHandler):
         # TODO: check existence of container and job
         self.delete_job(stage.process.process_id)
         if stage.start:
-            ansible_service.delete_docker_container(stage.container.container_id)
+            AnsibleDockerRunner().delete(stage.container.container_id)
 
     def cleanup(self, stage: AnsibleCleanupStage):
         """Only sets the stage values."""
@@ -189,7 +189,7 @@ class AnsibleStageHandler(StageHandler):
         inventory_path = self.prepare_inventory_file(dir_path, stage, sandbox)
 
         try:
-            container = ansible_service.AnsibleDockerContainer(
+            container = AnsibleDockerRunner().run(
                 settings.KYPO_CONFIG.ansible_docker_image, stage.repo_url,
                 stage.rev, ssh_directory, inventory_path
             )
@@ -235,7 +235,7 @@ class AnsibleStageHandler(StageHandler):
         self.save_file(os.path.join(ssh_directory, MNG_PRIVATE_KEY_FILENAME),
                        stage.request.allocation_unit.pool.private_management_key)
 
-        if not ansible_service.AnsibleDockerContainer.is_local_repo(stage.repo_url):
+        if not AnsibleDockerRunner.is_local_repo(stage.repo_url):
             shutil.copy(config.git_private_key,
                         os.path.join(ssh_directory, os.path.basename(config.git_private_key)))
 
