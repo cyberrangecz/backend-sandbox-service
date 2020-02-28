@@ -8,6 +8,7 @@ import rq
 import structlog
 from django.conf import settings
 from django.utils import timezone
+from kypo.openstack_driver.exceptions import KypoException
 from redis import Redis
 from requests import exceptions as requests_exceptions
 from rq.exceptions import NoSuchJobError
@@ -135,9 +136,11 @@ class StackStageHandler(StageHandler):
 
         try:
             self.client.delete_sandbox(stack_name)
-        except HTTPNotFound as exc:
-            LOG.warning(str(exc), exc_info=True)
+        except KypoException as ex:
+            LOG.warning('Stopping sandbox', exception=str(ex), allocation_unit=allocation_unit)
             return
+
+        self.client.delete_sandbox(stack_name)
 
         if wait:
             self.wait_for_stack_deletion(stack_name)
@@ -169,10 +172,14 @@ class AnsibleStageHandler(StageHandler):
         self.run_stage(self.stage_name, self.run_docker_container, stage, sandbox)
 
     def stop(self, stage: AnsibleAllocationStage) -> None:
-        # TODO: check existence of container and job
         self.delete_job(stage.process.process_id)
-        if stage.start:
-            AnsibleDockerRunner().delete_container(stage.container.container_id)
+        try:
+            if hasattr(stage, 'container'):
+                container = stage.container
+                AnsibleDockerRunner().delete_container(container.container_id)
+                container.delete()
+        except docker.errors.NotFound as ex:
+            LOG.warning('Stopping Ansible', exception=str(ex), stage=stage)
         stage.failed = True
         stage.save()
 

@@ -58,7 +58,7 @@ class AnsibleDockerRunner:
                                           command=command, volumes=volumes)
 
     def get_container(self, container_id: str) -> Container:
-        return self.client.get(container_id)
+        return self.client.containers.get(container_id)
 
     def delete_container(self, container_id: str, force=True) -> None:
         """Delete given container. Parameter `force` is whether to kill the running one."""
