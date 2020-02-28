@@ -50,14 +50,14 @@ def create_sandbox_requests(pool: Pool, count: int) -> List[SandboxAllocationUni
 def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
     for request, sandbox in zip(requests, sandboxes):
         with transaction.atomic():
-            stage_openstack = StackAllocationStage.objects.create(request=request)
-            queue_openstack = django_rq.get_queue(
+            stage_stack = StackAllocationStage.objects.create(request=request)
+            queue_stack = django_rq.get_queue(
                 OPENSTACK_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_build_timeout)
-            job_openstack = queue_openstack.enqueue(
-                StackStageHandler(stage_openstack.__class__.__name__).build,
-                stage=stage_openstack, sandbox=sandbox, meta=dict(locked=True)
+            job_stack = queue_stack.enqueue(
+                StackStageHandler(stage_stack.__class__.__name__).build,
+                stage=stage_stack, sandbox=sandbox, meta=dict(locked=True)
             )
-            SystemProcess.objects.create(stage=stage_openstack, process_id=job_openstack.id)
+            SystemProcess.objects.create(stage=stage_stack, process_id=job_stack.id)
 
             stage_networking = AnsibleAllocationStage.objects.create(
                 request=request, repo_url=settings.KYPO_CONFIG.ansible_networking_url,
@@ -67,7 +67,7 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
                 ANSIBLE_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_ansible_timeout)
             job_networking = queue_ansible.enqueue(
                 AnsibleStageHandler(NETWORKING_ANSIBLE_NAME).build, stage=stage_networking,
-                sandbox=sandbox, depends_on=job_openstack
+                sandbox=sandbox, depends_on=job_stack
             )
             SystemProcess.objects.create(stage=stage_networking, process_id=job_networking.id)
 
@@ -83,7 +83,7 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
             queue_default = django_rq.get_queue()
             queue_default.enqueue(save_sandbox_to_database, sandbox=sandbox,
                                   depends_on=job_user_ansible)
-            transaction.on_commit(partial(unlock_job, job_openstack))
+            transaction.on_commit(partial(unlock_job, job_stack))
 
 
 def unlock_job(job: Job):

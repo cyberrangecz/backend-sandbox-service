@@ -144,9 +144,8 @@ class StackStageHandler(StageHandler):
 
         if wait:
             self.wait_for_stack_deletion(stack_name)
-
-        LOG.info('Stack deleted successfully from OpenStack',
-                 stack_name=stack_name, allocation_unit=allocation_unit)
+            LOG.info('Stack deleted successfully from OpenStack',
+                     stack_name=stack_name, allocation_unit=allocation_unit)
 
     def wait_for_stack_deletion(self, stack_name: str) -> None:
         """Wait for stack deletion."""

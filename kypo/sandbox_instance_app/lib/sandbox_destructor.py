@@ -59,18 +59,18 @@ def enqueue_request(request: CleanupRequest,
         AnsibleStageHandler(NETWORKING_ANSIBLE_NAME).cleanup,
         stage=stage_networking, depends_on=job_user_ans)
 
-    stage_openstack = StackCleanupStage.objects.create(request=request,
-                                                       allocation_stage=alloc_stages[0])
-    queue_openstack = django_rq.get_queue(OPENSTACK_QUEUE,
-                                          default_timeout=settings.KYPO_CONFIG.sandbox_delete_timeout)
-    job_openstack = queue_openstack.enqueue(
-        StackStageHandler(stage_openstack.__class__.__name__).cleanup,
-        stage=stage_openstack,
+    stage_stack = StackCleanupStage.objects.create(request=request,
+                                                   allocation_stage=alloc_stages[0])
+    queue_stack = django_rq.get_queue(OPENSTACK_QUEUE,
+                                      default_timeout=settings.KYPO_CONFIG.sandbox_delete_timeout)
+    job_stack = queue_stack.enqueue(
+        StackStageHandler(stage_stack.__class__.__name__).cleanup,
+        stage=stage_stack,
         depends_on=job_networking)
 
     queue_default = django_rq.get_queue()
     queue_default.enqueue(delete_allocation_unit, allocation_unit=allocation_unit,
-                          depends_on=job_openstack)
+                          depends_on=job_stack)
 
 
 def delete_allocation_unit(allocation_unit: SandboxAllocationUnit) -> None:
