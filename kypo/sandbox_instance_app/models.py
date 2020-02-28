@@ -205,12 +205,18 @@ class HeatStack(ExternalDependency):
     )
     stack_id = models.TextField()
 
+    def __str__(self):
+        return "STAGE: {0.stage.id}, STACK: {0.stack_id}".format(self)
+
 
 class SystemProcess(ExternalDependency):
     stage = models.OneToOneField(
-        StackAllocationStage,
+        AllocationStage,
         on_delete=models.CASCADE,
         primary_key=True,
         related_name='process',
     )
     process_id = models.TextField()
+
+    def __str__(self):
+        return "STAGE: {0.stage.id}, PROCESS: {0.process_id}".format(self)

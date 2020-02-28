@@ -12,9 +12,11 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from kypo.sandbox_instance_app.lib.stage_handlers import StackStageHandler
+from kypo.sandbox_instance_app.lib import unit_service
 from kypo.sandbox_instance_app import serializers
 from kypo.sandbox_instance_app.lib import pool_service, sandbox_service, node_service,\
-    sandbox_creator, sandbox_destructor
+    sandbox_destructor
 from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit, AllocationRequest, \
     AllocationStage, StackAllocationStage, CleanupRequest, StackCleanupStage, CleanupStage, Lock
 from kypo.sandbox_common_lib import exceptions
@@ -197,7 +199,7 @@ class OpenstackAllocationStageDetail(generics.GenericAPIView):
     def get(self, request, stage_id):
         """Retrieve an `openstack` stage."""
         stage = self.get_object()
-        updated = sandbox_creator.StackStageHandler().update_stage(stage)
+        updated = StackStageHandler().update_allocation_stage(stage)
         serializer = self.get_serializer(updated)
         return Response(serializer.data)
 
@@ -216,7 +218,7 @@ class SandboxEventList(generics.ListAPIView):
     def get_queryset(self):
         unit_id = self.kwargs.get('unit_id')
         unit = get_object_or_404(SandboxAllocationUnit, pk=unit_id)
-        return sandbox_creator.get_stack_events(unit.get_stack_name())
+        return unit_service.get_stack_events(unit.get_stack_name())
 
 
 class SandboxResourceList(generics.ListAPIView):
@@ -226,7 +228,7 @@ class SandboxResourceList(generics.ListAPIView):
     def get_queryset(self):
         unit_id = self.kwargs.get('unit_id')
         unit = get_object_or_404(SandboxAllocationUnit, pk=unit_id)
-        return sandbox_creator.get_stack_resources(unit.get_stack_name())
+        return unit_service.get_stack_resources(unit.get_stack_name())
 
 
 #########################################
