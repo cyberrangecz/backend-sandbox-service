@@ -1,9 +1,7 @@
-import time
 from functools import partial
 from typing import List
 
 import django_rq
-import rq
 import structlog
 from django.db import transaction
 from rq.job import Job
@@ -19,10 +17,6 @@ STACK_STATUS_CREATE_COMPLETE = "CREATE_COMPLETE"
 
 LOG = structlog.get_logger()
 
-ANSIBLE_INVENTORY_FILENAME = 'inventory.yml'
-MNG_PRIVATE_KEY_FILENAME = 'pool_mng_key'
-USER_PRIVATE_KEY_FILENAME = 'user_key'
-USER_PUBLIC_KEY_FILENAME = 'user_key.pub'
 OPENSTACK_QUEUE = 'openstack'
 ANSIBLE_QUEUE = 'ansible'
 
@@ -92,23 +86,6 @@ def enqueue_requests(requests: List[AllocationRequest], sandboxes) -> None:
             transaction.on_commit(partial(unlock_job, job_openstack))
 
 
-def lock_job(timeout=60, step=5):
-    job = rq.get_current_job()
-    stage = job.kwargs.get('stage')
-    elapsed = 0
-
-    while elapsed <= timeout:
-        job.refresh()
-        locked = job.meta.get('locked', True)
-        if not locked:
-            LOG.debug('Stage unlocked.', stage=stage)
-            break
-        else:
-            LOG.debug('Wait until the stage is unlocked.', stage=stage)
-            time.sleep(step)
-            elapsed += step
-
-
 def unlock_job(job: Job):
     stage = job.kwargs.get('stage')
     if job.meta.get('locked', True):
@@ -119,7 +96,3 @@ def unlock_job(job: Job):
 
 def save_sandbox_to_database(sandbox):
     sandbox.save()
-
-
-def delete_job(job_id):
-    Job.fetch(job_id).delete(delete_dependents=True)

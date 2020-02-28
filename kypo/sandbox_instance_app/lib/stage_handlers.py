@@ -1,12 +1,16 @@
 import os
 import shutil
+import time
 from typing import Callable
 
 import docker.errors
+import rq
+import structlog
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 from requests import exceptions as requests_exceptions
+from rq.job import Job
 
 from kypo.sandbox_ansible_app.lib import ansible_service
 from kypo.sandbox_ansible_app.lib.ansible_service import ANSIBLE_DOCKER_SSH_DIR
@@ -16,11 +20,15 @@ from kypo.sandbox_ansible_app.models import AnsibleAllocationStage, AnsibleClean
 from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_definition_app.lib import definition_service
 from kypo.sandbox_instance_app.lib import sandbox_service
-# from kypo.sandbox_instance_app.lib.sandbox_creator import lock_job, delete_job, LOG, \
-#     USER_PRIVATE_KEY_FILENAME, USER_PUBLIC_KEY_FILENAME, MNG_PRIVATE_KEY_FILENAME, \
-#     ANSIBLE_INVENTORY_FILENAME
 from kypo.sandbox_instance_app.models import StackAllocationStage, Sandbox, StackCleanupStage,\
     HeatStack, SandboxAllocationUnit, Stage
+
+ANSIBLE_INVENTORY_FILENAME = 'inventory.yml'
+MNG_PRIVATE_KEY_FILENAME = 'pool_mng_key'
+USER_PRIVATE_KEY_FILENAME = 'user_key'
+USER_PUBLIC_KEY_FILENAME = 'user_key.pub'
+
+LOG = structlog.get_logger()
 
 
 class StageHandler:
@@ -38,6 +46,27 @@ class StageHandler:
             stage.end = timezone.now()
             stage.save()
 
+    @staticmethod
+    def delete_job(job_id):
+        Job.fetch(job_id).delete(delete_dependents=True)
+
+    @staticmethod
+    def lock_job(timeout=60, step=5):
+        job = rq.get_current_job()
+        stage = job.kwargs.get('stage')
+        elapsed = 0
+
+        while elapsed <= timeout:
+            job.refresh()
+            locked = job.meta.get('locked', True)
+            if not locked:
+                LOG.debug('Stage unlocked.', stage=stage)
+                break
+            else:
+                LOG.debug('Wait until the stage is unlocked.', stage=stage)
+                time.sleep(step)
+                elapsed += step
+
 
 class StackStageHandler(StageHandler):
     def __init__(self, stage_name=None):
@@ -52,7 +81,7 @@ class StackStageHandler(StageHandler):
 
     def build(self, stage: StackAllocationStage, sandbox: Sandbox) -> None:
         try:
-            lock_job()
+            self.lock_job()
         except Exception as ex:
             stage.mark_failed(ex)
             stage.end = timezone.now()
@@ -63,7 +92,7 @@ class StackStageHandler(StageHandler):
 
     def stop(self, stage: StackAllocationStage) -> None:
         # TODO: check existence of sb and job
-        delete_job(stage.process.process_id)
+        self.delete_job(stage.process.process_id)
         if stage.start:
             self.delete_sandbox(stage.request.allocation_unit, wait=False)
 
@@ -146,7 +175,7 @@ class AnsibleStageHandler(StageHandler):
 
     def stop(self, stage: AnsibleAllocationStage) -> None:
         # TODO: check existence of container and job
-        delete_job(stage.process.process_id)
+        self.delete_job(stage.process.process_id)
         if stage.start:
             ansible_service.delete_docker_container(stage.container.container_id)
 
