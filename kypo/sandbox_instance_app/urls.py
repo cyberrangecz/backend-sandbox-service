@@ -20,8 +20,8 @@ urlpatterns = [
          views.SandboxAllocationRequestList.as_view(), name='allocation-request-list'),
     path('sandbox-allocation-units/<int:unit_id>/allocation-requests/<int:request_id>/',
          views.SandboxAllocationRequestDetail.as_view(), name='allocation-request-detail'),
-    path('sandbox-allocation-units/<int:unit_id>/allocation-requests/<int:request_id>/stop/',
-         views.SandboxAllocationRequestStop.as_view(), name='allocation-request-stop/'),
+    path('sandbox-allocation-units/<int:unit_id>/allocation-requests/<int:request_id>/cancel/',
+         views.SandboxAllocationRequestCancel.as_view(), name='allocation-request-cancel/'),
     path('sandbox-allocation-units/<int:unit_id>/allocation-requests/<int:request_id>/stages/',
          views.SandboxAllocationRequestStageList.as_view(), name='allocation-request-stage-list'),
     # Cleanup request

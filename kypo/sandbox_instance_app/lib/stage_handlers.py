@@ -88,7 +88,7 @@ class StackStageHandler(StageHandler):
 
         self.run_stage(stage_name, self.build_stack, stage, sandbox)
 
-    def stop(self, stage: StackAllocationStage) -> None:
+    def cancel(self, stage: StackAllocationStage) -> None:
         """Stop running stage."""
         self.delete_job(stage.process.process_id)
         if stage.start:
@@ -169,7 +169,7 @@ class AnsibleStageHandler(StageHandler):
         """Run the stage."""
         self.run_stage(stage_name, self.run_docker_container, stage, sandbox)
 
-    def stop(self, stage: AnsibleAllocationStage) -> None:
+    def cancel(self, stage: AnsibleAllocationStage) -> None:
         """Stop running stage."""
         self.delete_job(stage.process.process_id)
         try:
@@ -178,7 +178,7 @@ class AnsibleStageHandler(StageHandler):
                 AnsibleDockerRunner().delete_container(container.container_id)
                 container.delete()
         except docker.errors.NotFound as ex:
-            LOG.warning('Stopping Ansible', exception=str(ex), stage=stage)
+            LOG.warning('Cancelling Ansible', exception=str(ex), stage=stage)
         stage.failed = True
         stage.save()
 

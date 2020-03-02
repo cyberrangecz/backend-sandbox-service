@@ -26,7 +26,7 @@ def cleanup_sandbox_request(allocation_unit: SandboxAllocationUnit) -> CleanupRe
     if not allocation_unit.allocation_request.is_finished:
         raise exceptions.ValidationError(
             f'Create sandbox allocation request ID={allocation_unit.allocation_request.id}'
-            f' has not finished yet. You need to stop it first.'
+            f' has not finished yet. You need to cancel it first.'
         )
 
     request = CleanupRequest.objects.create(allocation_unit=allocation_unit)
@@ -77,13 +77,13 @@ def delete_allocation_unit(allocation_unit: SandboxAllocationUnit) -> None:
     LOG.info('Allocation Unit deleted from DB', allocation_unit=allocation_unit)
 
 
-def stop_allocation_request(alloc_req: AllocationRequest):
-    """(Soft) stop all stages of Allocation Request."""
+def cancel_allocation_request(alloc_req: AllocationRequest):
+    """(Soft) cancel all stages of Allocation Request."""
     stages = alloc_req.stages.all().select_subclasses()
     if alloc_req.is_finished:
         raise exceptions.ValidationError(
-            f'Allocation request ID {alloc_req.id} is finished and does not need stopping.'
+            f'Allocation request ID {alloc_req.id} is finished and does not need cancelling.'
         )
-    AnsibleStageHandler().stop(stages[2])
-    AnsibleStageHandler().stop(stages[1])
-    StackStageHandler().stop(stages[0])
+    AnsibleStageHandler().cancel(stages[2])
+    AnsibleStageHandler().cancel(stages[1])
+    StackStageHandler().cancel(stages[0])

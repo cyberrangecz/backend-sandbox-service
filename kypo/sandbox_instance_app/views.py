@@ -144,13 +144,13 @@ class SandboxAllocationRequestDetail(generics.RetrieveAPIView):
     lookup_url_kwarg = "request_id"
 
 
-class SandboxAllocationRequestStop(generics.GenericAPIView):
+class SandboxAllocationRequestCancel(generics.GenericAPIView):
     serializer_class = serializers.AllocationRequestSerializer
     queryset = AllocationRequest.objects.all()
     lookup_url_kwarg = "request_id"
 
     def patch(self, request, unit_id, request_id):
-        sandbox_destructor.stop_allocation_request(self.get_object())
+        sandbox_destructor.cancel_allocation_request(self.get_object())
         return Response()
 
 
