@@ -132,21 +132,21 @@ class StackStageHandler(StageHandler):
         """Delete given sandbox. Wait for completion if `wait` is True."""
         stack_name = allocation_unit.get_stack_name()
 
-        LOG.debug('Starting Stack delete in OpenStack',
-                  stack_name=stack_name, allocation_unit=allocation_unit)
+        LOG.debug('Starting Stack delete in OpenStack', stack_name=stack_name,
+                  allocation_unit=allocation_unit)
 
         try:
             self.client.delete_sandbox(stack_name)
         except KypoException as ex:
-            LOG.warning('Stopping sandbox', exception=str(ex), allocation_unit=allocation_unit)
+            # Sandbox is already deleted.
+            LOG.warning('Deleting sandbox failed', exception=str(ex),
+                        allocation_unit=allocation_unit)
             return
-
-        self.client.delete_sandbox(stack_name)
 
         if wait:
             self.wait_for_stack_deletion(stack_name)
-            LOG.info('Stack deleted successfully from OpenStack',
-                     stack_name=stack_name, allocation_unit=allocation_unit)
+            LOG.debug('Stack deleted successfully from OpenStack',
+                      stack_name=stack_name, allocation_unit=allocation_unit)
 
     def wait_for_stack_deletion(self, stack_name: str) -> None:
         """Wait for stack deletion."""
