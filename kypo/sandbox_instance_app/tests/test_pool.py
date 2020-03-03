@@ -35,7 +35,7 @@ class TestCreateSandboxesInPool:
     @pytest.fixture(autouse=True)
     def set_up(self, mocker):
         self.create_mock = mocker.patch(
-            "kypo.sandbox_instance_app.lib.sandbox_creator.enqueue_requests")
+            "kypo.sandbox_instance_app.lib.sandbox_creator.enqueue_allocation_request")
         yield
 
     def test_create_sandboxes_in_pool_success_one(self):
