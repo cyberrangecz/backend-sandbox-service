@@ -1,3 +1,5 @@
+from typing import List
+
 import django_rq
 import structlog
 from django.core.exceptions import ObjectDoesNotExist
@@ -13,7 +15,7 @@ from kypo.sandbox_ansible_app.models import AnsibleCleanupStage
 LOG = structlog.get_logger()
 
 
-def cleanup_sandbox_request(allocation_unit: SandboxAllocationUnit) -> CleanupRequest:
+def create_cleanup_request(allocation_unit: SandboxAllocationUnit) -> CleanupRequest:
     """Create cleanup request and enqueue it. Immediately delete sandbox from database."""
     try:
         sandbox = allocation_unit.sandbox
@@ -36,12 +38,17 @@ def cleanup_sandbox_request(allocation_unit: SandboxAllocationUnit) -> CleanupRe
     if sandbox:
         sandbox.delete()
 
-    enqueue_request(request, allocation_unit)
+    enqueue_cleanup_request(request, allocation_unit)
     return request
 
 
-def enqueue_request(request: CleanupRequest,
-                    allocation_unit: SandboxAllocationUnit) -> None:
+def create_cleanup_requests(allocation_units: List[SandboxAllocationUnit]) -> List[CleanupRequest]:
+    """Batch version of create_cleanup_request."""
+    return [create_cleanup_request(unit) for unit in allocation_units]
+
+
+def enqueue_cleanup_request(request: CleanupRequest,
+                            allocation_unit: SandboxAllocationUnit) -> None:
     """Enqueue given request."""
     alloc_stages = allocation_unit.allocation_request.stages.all().select_subclasses()
 

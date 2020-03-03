@@ -173,7 +173,7 @@ class SandboxCleanupRequestList(mixins.ListModelMixin, generics.GenericAPIView):
     def post(self, request, unit_id):
         """ Create cleanup request.."""
         unit = get_object_or_404(SandboxAllocationUnit, pk=unit_id)
-        cleanup_req = sandbox_destructor.cleanup_sandbox_request(unit)
+        cleanup_req = sandbox_destructor.create_cleanup_request(unit)
         serializer = self.serializer_class(cleanup_req)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 

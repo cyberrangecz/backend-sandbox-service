@@ -97,13 +97,13 @@ def create_sandboxes_in_pool(pool: Pool, count: int = None) -> List[SandboxAlloc
                     curr=current_size, max=pool.max_size, count=count)
                 )
 
-        return sandbox_creator.create_sandbox_requests(pool, count)
+        return sandbox_creator.create_allocations_requests(pool, count)
 
 
 def delete_allocation_units(pool: Pool) -> List[CleanupRequest]:
     """Delete all sandboxes in given pool."""
     units = pool.allocation_units.all()
-    return [sandbox_destructor.cleanup_sandbox_request(unit) for unit in units]
+    return sandbox_destructor.create_cleanup_requests(units)
 
 
 def get_unlocked_sandbox(pool: Pool) -> Optional[Sandbox]:
