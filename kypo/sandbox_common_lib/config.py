@@ -78,6 +78,12 @@ class KypoConfiguration(Object):
             obj = super().load(*args, **kwargs)
         except YamlizingError as ex:
             raise ImproperlyConfigured(ex)
+
+        # Key-paths need to be absolute
+        obj.git_private_key = os.path.abspath(obj.git_private_key)
+        if obj.proxy_jump_to_man:
+            obj.proxy_jump_to_man.IdentityFile = os.path.abspath(obj.proxy_jump_to_man.IdentityFile)
+
         os.environ['REQUESTS_CA_BUNDLE'] = obj.ssl_ca_certificate_verify
         return obj
 
