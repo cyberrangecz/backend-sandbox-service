@@ -80,9 +80,10 @@ class KypoConfiguration(Object):
             raise ImproperlyConfigured(ex)
 
         # Key-paths need to be absolute
-        obj.git_private_key = os.path.abspath(obj.git_private_key)
+        obj.git_private_key = os.path.abspath(os.path.expanduser(obj.git_private_key))
         if obj.proxy_jump_to_man:
-            obj.proxy_jump_to_man.IdentityFile = os.path.abspath(obj.proxy_jump_to_man.IdentityFile)
+            obj.proxy_jump_to_man.IdentityFile = os.path.abspath(
+                os.path.expanduser(obj.proxy_jump_to_man.IdentityFile))
 
         os.environ['REQUESTS_CA_BUNDLE'] = obj.ssl_ca_certificate_verify
         return obj
