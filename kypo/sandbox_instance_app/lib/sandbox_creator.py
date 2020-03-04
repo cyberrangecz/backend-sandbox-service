@@ -4,13 +4,13 @@ from typing import List
 import django_rq
 import structlog
 from django.db import transaction
-from rq.job import Job
 from django.conf import settings
 
+from kypo.sandbox_common_lib import utils
+from kypo.sandbox_ansible_app.models import AnsibleAllocationStage
+from kypo.sandbox_instance_app.lib import jobs
 from kypo.sandbox_instance_app.models import Sandbox, Pool, SandboxAllocationUnit, \
     AllocationRequest, StackAllocationStage, SystemProcess
-from kypo.sandbox_ansible_app.models import AnsibleAllocationStage
-from kypo.sandbox_common_lib import utils
 from kypo.sandbox_instance_app.lib.stage_handlers import StackStageHandler, AnsibleStageHandler
 
 STACK_STATUS_CREATE_COMPLETE = "CREATE_COMPLETE"
@@ -75,15 +75,7 @@ def enqueue_allocation_request(request: AllocationRequest, sandbox: Sandbox) -> 
         queue_default = django_rq.get_queue()
         queue_default.enqueue(save_sandbox_to_database, sandbox=sandbox,
                               depends_on=job_user_ansible)
-        transaction.on_commit(partial(unlock_job, job_stack))
-
-
-def unlock_job(job: Job):
-    stage = job.kwargs.get('stage')
-    if job.meta.get('locked', True):
-        LOG.debug('Unlocking stage.', stage=stage)
-    job.meta['locked'] = False
-    job.save_meta()
+        transaction.on_commit(partial(jobs.unlock_job, job_stack))
 
 
 def save_sandbox_to_database(sandbox):

@@ -1,5 +1,4 @@
 import os
-import time
 from typing import Callable
 
 import docker.errors
@@ -8,16 +7,14 @@ import structlog
 from django.conf import settings
 from django.utils import timezone
 from kypo.openstack_driver.exceptions import KypoException
-from redis import Redis
 from requests import exceptions as requests_exceptions
-from rq.exceptions import NoSuchJobError
-from rq.job import Job
 
 from kypo.sandbox_ansible_app.lib.ansible_service import AnsibleDockerRunner
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage, AnsibleCleanupStage,\
     DockerContainer, AnsibleOutput
 from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_definition_app.lib import definition_service
+from kypo.sandbox_instance_app.lib import jobs
 from kypo.sandbox_instance_app.models import StackAllocationStage, Sandbox, StackCleanupStage,\
     HeatStack, SandboxAllocationUnit, Stage
 
@@ -42,28 +39,9 @@ class StageHandler:
             stage.save()
 
     @staticmethod
-    def delete_job(job_id):
-        try:
-            Job.fetch(job_id, connection=Redis()).delete(delete_dependents=True)
-        except NoSuchJobError:  # Job already deleted
-            pass
-
-    @staticmethod
     def lock_job(timeout=60, step=5):
         job = rq.get_current_job()
-        stage = job.kwargs.get('stage')
-        elapsed = 0
-
-        while elapsed <= timeout:
-            job.refresh()
-            locked = job.meta.get('locked', True)
-            if not locked:
-                LOG.debug('Stage unlocked.', stage=stage)
-                break
-            else:
-                LOG.debug('Wait until the stage is unlocked.', stage=stage)
-                time.sleep(step)
-                elapsed += step
+        jobs.lock_job(job, timeout, step)
 
 
 class StackStageHandler(StageHandler):
@@ -90,7 +68,7 @@ class StackStageHandler(StageHandler):
 
     def cancel(self, stage: StackAllocationStage) -> None:
         """Stop running stage."""
-        self.delete_job(stage.process.process_id)
+        jobs.delete_job(stage.process.process_id)
         if stage.start:
             self.delete_sandbox(stage.request.allocation_unit, wait=False)
         stage.mark_failed()
@@ -169,9 +147,10 @@ class AnsibleStageHandler(StageHandler):
         """Run the stage."""
         self.run_stage(stage_name, self.run_docker_container, stage, sandbox)
 
+    # noinspection PyMethodMayBeStatic
     def cancel(self, stage: AnsibleAllocationStage) -> None:
         """Stop running stage."""
-        self.delete_job(stage.process.process_id)
+        jobs.delete_job(stage.process.process_id)
         try:
             if hasattr(stage, 'container'):
                 container = stage.container
