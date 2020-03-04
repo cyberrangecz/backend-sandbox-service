@@ -34,7 +34,7 @@ class Topology:
 
     def create(self) -> None:
         """Retrieves data from cloud and parses topology data for given sandbox"""
-        stack_name = self.sandbox.get_stack_name()
+        stack_name = self.sandbox.allocation_unit.get_stack_name()
         client = utils.get_ostack_client()
         stack = client.get_sandbox(stack_name)
 
@@ -80,5 +80,5 @@ class Topology:
         # Delete links
         stack.links = [link for link in stack.links
                        if link.node.name not in mng_nodes
-                       and not link.node.name in hidden
+                       and link.node.name not in hidden
                        and link.network.name not in mng_networks]
