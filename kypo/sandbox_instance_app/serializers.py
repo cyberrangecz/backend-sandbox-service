@@ -19,11 +19,12 @@ MAX_SANDBOXES_PER_POOL = 64
 
 class PoolSerializer(serializers.ModelSerializer):
     size = serializers.SerializerMethodField()
+    lock = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Pool
-        fields = ('id', 'definition', 'size', 'max_size')
-        read_only_fields = ('id', 'size')
+        fields = ('id', 'definition', 'size', 'max_size', 'lock')
+        read_only_fields = ('id', 'size', 'lock')
 
     @staticmethod
     def validate_max_size(value):
@@ -37,6 +38,10 @@ class PoolSerializer(serializers.ModelSerializer):
     @staticmethod
     def get_size(obj: models.Pool) -> int:
         return pools.get_pool_size(obj)
+
+    @staticmethod
+    def get_lock(obj) -> Optional[int]:
+        return obj.lock.id if hasattr(obj, 'lock') else None
 
 
 class AllocationRequestSerializer(serializers.ModelSerializer):
@@ -112,11 +117,18 @@ class SandboxSerializer(serializers.ModelSerializer):
         return obj.lock.id if hasattr(obj, 'lock') else None
 
 
-class LockSerializer(serializers.ModelSerializer):
+class SandboxLockSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.Lock
+        model = models.SandboxLock
         fields = ('id', 'sandbox',)
         read_only_fields = ('id', 'sandbox',)
+
+
+class PoolLockSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.PoolLock
+        fields = ('id', 'pool',)
+        read_only_fields = ('id', 'pool',)
 
 
 class NodeActionSerializer(serializers.Serializer):

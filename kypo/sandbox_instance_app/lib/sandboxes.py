@@ -10,7 +10,7 @@ from django.conf import settings
 
 from kypo.sandbox_instance_app.lib.sshconfig import KypoSSHConfig
 from kypo.sandbox_instance_app.lib.topology import Topology
-from kypo.sandbox_instance_app.models import Sandbox, Lock
+from kypo.sandbox_instance_app.models import Sandbox, SandboxLock
 from kypo.sandbox_common_lib import exceptions, utils
 
 LOG = structlog.getLogger()
@@ -18,8 +18,8 @@ LOG = structlog.getLogger()
 
 def get_sandbox(sb_pk: int) -> Sandbox:
     """
-    Retrieves sandbox instance from DB (or raises 404)
-    and possibly updates its state.
+    Retrieve sandbox instance from DB (or raises 404)
+    and possibly update its state.
 
     :param sb_pk: Sandbox primary key (ID)
     :return: Sandbox instance from DB
@@ -28,13 +28,13 @@ def get_sandbox(sb_pk: int) -> Sandbox:
     return get_object_or_404(Sandbox, pk=sb_pk)
 
 
-def lock_sandbox(sandbox: Sandbox):
-    """Locks given sandbox. Raise ValidationError if already locked."""
+def lock_sandbox(sandbox: Sandbox) -> SandboxLock:
+    """Lock given sandbox. Raise ValidationError if already locked."""
     with transaction.atomic():
         sandbox = Sandbox.objects.select_for_update().get(pk=sandbox.id)
         if hasattr(sandbox, 'lock'):
             raise exceptions.ValidationError("Sandbox already locked.")
-        return Lock.objects.create(sandbox=sandbox)
+        return SandboxLock.objects.create(sandbox=sandbox)
 
 
 def get_sandbox_topology(sandbox: Sandbox) -> Topology:
