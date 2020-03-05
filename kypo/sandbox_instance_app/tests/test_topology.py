@@ -8,7 +8,7 @@ pytestmark = pytest.mark.django_db
 
 class TestTopology:
     def test_create_success(self, mocker, stack, topology, topology_definition):
-        mocker.patch('kypo.sandbox_definition_app.lib.definition_service.get_definition',
+        mocker.patch('kypo.sandbox_definition_app.lib.definitions.get_definition',
                      mocker.Mock(return_value=topology_definition))
         mock_client = mocker.patch('kypo.sandbox_common_lib.utils.get_ostack_client')
         client = mock_client.return_value
@@ -34,7 +34,7 @@ class TestTopology:
         for host in topology_definition.hosts:
             if host.name == 'server':
                 host.hidden = True
-        mocker.patch('kypo.sandbox_definition_app.lib.definition_service.get_definition',
+        mocker.patch('kypo.sandbox_definition_app.lib.definitions.get_definition',
                      mocker.Mock(return_value=topology_definition))
         mock_client = mocker.patch('kypo.sandbox_common_lib.utils.get_ostack_client')
         client = mock_client.return_value

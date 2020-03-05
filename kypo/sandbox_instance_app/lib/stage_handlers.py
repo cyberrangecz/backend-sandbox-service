@@ -9,11 +9,11 @@ from django.utils import timezone
 from kypo.openstack_driver.exceptions import KypoException
 from requests import exceptions as requests_exceptions
 
-from kypo.sandbox_ansible_app.lib.ansible_service import AnsibleDockerRunner
+from kypo.sandbox_ansible_app.lib.ansible import AnsibleDockerRunner
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage, AnsibleCleanupStage,\
     DockerContainer, AnsibleOutput
 from kypo.sandbox_common_lib import utils, exceptions
-from kypo.sandbox_definition_app.lib import definition_service
+from kypo.sandbox_definition_app.lib import definitions
 from kypo.sandbox_instance_app.lib import jobs
 from kypo.sandbox_instance_app.models import StackAllocationStage, Sandbox, StackCleanupStage,\
     HeatStack, SandboxAllocationUnit, Stage
@@ -82,7 +82,7 @@ class StackStageHandler(StageHandler):
     def build_stack(self, stage: StackAllocationStage, sandbox: Sandbox) -> None:
         """Build sandbox in OpenStack."""
         definition = sandbox.allocation_unit.pool.definition
-        top_def = definition_service.get_definition(
+        top_def = definitions.get_definition(
             definition.url, definition.rev,
             'rev-{0}_stage-{1}'.format(definition.rev, stage.id)
         )
@@ -175,7 +175,7 @@ class AnsibleStageHandler(StageHandler):
                                 f'{stage.id}-{utils.get_simple_uuid()}')
         runner = AnsibleDockerRunner()
         ssh_directory = runner.prepare_ssh_dir(dir_path, stage, sandbox, settings.KYPO_CONFIG)
-        top_def = definition_service.get_definition(
+        top_def = definitions.get_definition(
             stage.request.allocation_unit.pool.definition.url,
             stage.request.allocation_unit.pool.definition.rev,
             f'rev-{stage.request.allocation_unit.pool.definition.rev}_stage-{stage.id}')

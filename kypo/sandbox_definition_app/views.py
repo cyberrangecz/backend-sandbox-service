@@ -3,7 +3,7 @@ from rest_framework.response import Response
 
 from kypo.sandbox_definition_app.models import Definition
 from kypo.sandbox_definition_app import serializers
-from kypo.sandbox_definition_app.lib import definition_service
+from kypo.sandbox_definition_app.lib import definitions
 
 
 class DefinitionList(mixins.ListModelMixin,
@@ -21,7 +21,7 @@ class DefinitionList(mixins.ListModelMixin,
         """
         url = request.data.get('url')
         rev = request.data.get('rev', "master")
-        definition = definition_service.create_definition(url, rev)
+        definition = definitions.create_definition(url, rev)
         serializer = self.serializer_class(definition)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
