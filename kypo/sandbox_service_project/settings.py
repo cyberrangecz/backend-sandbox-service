@@ -202,8 +202,8 @@ CACHES = {
     }
 }
 
-KYPO_DJANGO_OPENSTACK_CONFIG_PATH = os.path.join(BASE_DIR, 'config.yml')
-KYPO_CONFIG = KypoConfiguration.from_file(KYPO_DJANGO_OPENSTACK_CONFIG_PATH)
+KYPO_SANDBOX_SERVICE_CONFIG_PATH = os.path.join(BASE_DIR, 'config.yml')
+KYPO_CONFIG = KypoConfiguration.from_file(KYPO_SANDBOX_SERVICE_CONFIG_PATH)
 
 RQ_QUEUES = {
     'default': {
