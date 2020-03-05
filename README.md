@@ -52,7 +52,6 @@ Django application. It contains several modules.
 
 
 ## Register roles
->>>>>>> fix readme
 To register user roles set the appropriase settings for `CSIRTMU_UAG_AUTH`
 in `settings.py` file and run the following command.
 ```

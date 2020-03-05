@@ -11,7 +11,7 @@ from rest_framework import status
 from rq import SimpleWorker
 from django.conf import settings
 
-from kypo.sandbox_ansible_app.lib import ansible_service
+from kypo.sandbox_ansible_app.lib.ansible_service import AnsibleDockerRunner
 from kypo.sandbox_ansible_app.models import AnsibleOutput, DockerContainer
 from kypo.sandbox_common_lib import utils
 from kypo.sandbox_instance_app.lib.sandbox_creator import OPENSTACK_QUEUE, ANSIBLE_QUEUE
@@ -141,7 +141,7 @@ class TestIntegration:
         if response.status_code != status.HTTP_201_CREATED:
             LOG.info('Ansible output',
                      output=[str(x) for x in AnsibleOutput.objects.all()],
-                     logs=[ansible_service.get_logs(x.container_id)
+                     logs=[AnsibleDockerRunner().get_container(x.container_id).logs()
                            for x in DockerContainer.objects.all()]
                      )
         assert response.status_code == status.HTTP_201_CREATED

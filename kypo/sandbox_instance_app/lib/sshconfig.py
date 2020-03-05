@@ -12,8 +12,6 @@ LOG = structlog.getLogger()
 SSH_PROXY_USERNAME = 'user-access'
 SSH_PROXY_KEY = '<path to proxy jump private key>'
 
-Hostname = Union[str, List[str]]
-
 # Add missing SSH Options to ssh_config.Host.attrs
 Host.attrs += (
     ('UserKnownHostsFile', str),

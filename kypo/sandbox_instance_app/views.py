@@ -12,9 +12,11 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from kypo.sandbox_instance_app.lib.stage_handlers import StackStageHandler
+from kypo.sandbox_instance_app.lib import unit_service
 from kypo.sandbox_instance_app import serializers
 from kypo.sandbox_instance_app.lib import pool_service, sandbox_service, node_service,\
-    sandbox_creator, sandbox_destructor
+    sandbox_destructor
 from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit, AllocationRequest, \
     AllocationStage, StackAllocationStage, CleanupRequest, StackCleanupStage, CleanupStage, Lock
 from kypo.sandbox_common_lib import exceptions
@@ -142,6 +144,16 @@ class SandboxAllocationRequestDetail(generics.RetrieveAPIView):
     lookup_url_kwarg = "request_id"
 
 
+class SandboxAllocationRequestCancel(generics.GenericAPIView):
+    serializer_class = serializers.AllocationRequestSerializer
+    queryset = AllocationRequest.objects.all()
+    lookup_url_kwarg = "request_id"
+
+    def patch(self, request, unit_id, request_id):
+        sandbox_destructor.cancel_allocation_request(self.get_object())
+        return Response()
+
+
 class SandboxAllocationRequestStageList(generics.ListAPIView):
     """get: List sandbox Allocation stages."""
     serializer_class = serializers.AllocationStageSerializer
@@ -160,8 +172,8 @@ class SandboxCleanupRequestList(mixins.ListModelMixin, generics.GenericAPIView):
 
     def post(self, request, unit_id):
         """ Create cleanup request.."""
-        unit = SandboxAllocationUnit.objects.get(pk=unit_id)
-        cleanup_req = sandbox_destructor.cleanup_sandbox_request(unit)
+        unit = get_object_or_404(SandboxAllocationUnit, pk=unit_id)
+        cleanup_req = sandbox_destructor.create_cleanup_request(unit)
         serializer = self.serializer_class(cleanup_req)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -197,7 +209,7 @@ class OpenstackAllocationStageDetail(generics.GenericAPIView):
     def get(self, request, stage_id):
         """Retrieve an `openstack` stage."""
         stage = self.get_object()
-        updated = sandbox_creator.StackAllocationStageManager().update_stage(stage)
+        updated = StackStageHandler().update_allocation_stage(stage)
         serializer = self.get_serializer(updated)
         return Response(serializer.data)
 
@@ -216,7 +228,7 @@ class SandboxEventList(generics.ListAPIView):
     def get_queryset(self):
         unit_id = self.kwargs.get('unit_id')
         unit = get_object_or_404(SandboxAllocationUnit, pk=unit_id)
-        return sandbox_creator.get_stack_events(unit.get_stack_name())
+        return unit_service.get_stack_events(unit)
 
 
 class SandboxResourceList(generics.ListAPIView):
@@ -226,7 +238,7 @@ class SandboxResourceList(generics.ListAPIView):
     def get_queryset(self):
         unit_id = self.kwargs.get('unit_id')
         unit = get_object_or_404(SandboxAllocationUnit, pk=unit_id)
-        return sandbox_creator.get_stack_resources(unit.get_stack_name())
+        return unit_service.get_stack_resources(unit)
 
 
 #########################################

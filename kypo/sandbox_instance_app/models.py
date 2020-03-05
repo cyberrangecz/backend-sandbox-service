@@ -62,10 +62,6 @@ class Sandbox(models.Model):
         return f"ID: {self.id}, ALLOCATION_UNIT: {self.allocation_unit.id}, " \
                f"LOCK: {self.lock.id if hasattr(self, 'lock') else None}"
 
-    def get_stack_name(self) -> str:
-        """Returns a name of the stack for this sandbox"""
-        return self.allocation_unit.get_stack_name()
-
 
 class Lock(models.Model):
     sandbox = models.OneToOneField(
@@ -90,9 +86,13 @@ class SandboxRequest(models.Model):
         return "ID: {0.id}, ALLOCATION_UNIT: {0.allocation_unit.id}, CREATED: {0.created}"\
             .format(self)
 
-    def get_stack_name(self) -> str:
-        """Returns a name of the stack for this sandbox"""
-        return self.allocation_unit.get_stack_name()
+    @property
+    def is_running(self):
+        return any([stage.is_running for stage in self.stages.all()])
+
+    @property
+    def is_finished(self):
+        return all([stage.is_finished for stage in self.stages.all()])
 
 
 class AllocationRequest(SandboxRequest):
@@ -121,7 +121,7 @@ class Stage(models.Model):
 
     @property
     def is_finished(self):
-        return self.end is not None
+        return self.end is not None or self.failed
 
     @property
     def is_running(self):
@@ -188,10 +188,10 @@ class CleanupStage(Stage):
 class StackCleanupStage(CleanupStage):
     type = StageType.OPENSTACK
 
-    allocation_stage = models.OneToOneField(
+    allocation_stage = models.ForeignKey(
         StackAllocationStage,
         on_delete=models.CASCADE,
-        related_name='cleanup_stage',
+        related_name='cleanup_stages',
     )
 
     def __str__(self):
@@ -211,7 +211,20 @@ class HeatStack(ExternalDependency):
         primary_key=True,
         related_name='heatstack',
     )
+    stack_id = models.TextField()
+
+    def __str__(self):
+        return "STAGE: {0.stage.id}, STACK: {0.stack_id}".format(self)
 
 
-class SystemProcesses(ExternalDependency):
-    pass
+class SystemProcess(ExternalDependency):
+    stage = models.OneToOneField(
+        AllocationStage,
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name='process',
+    )
+    process_id = models.TextField()
+
+    def __str__(self):
+        return "STAGE: {0.stage.id}, PROCESS: {0.process_id}".format(self)
