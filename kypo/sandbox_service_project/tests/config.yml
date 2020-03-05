@@ -7,7 +7,7 @@ os_application_credential_id: ""
 # The secret string of APPLICATION_CREDENTIAL_ID.
 os_application_credential_secret: ""
 
-# The path to kypo2-django-openstack log file.
+# The path to project log file.
 log_file: /dev/null
 
 # The level of log verbosity. One of: NOTSET, DEBUG, INFO, WARNING, ERROR, FATAL, CRITICAL.
