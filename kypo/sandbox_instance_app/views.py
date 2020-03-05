@@ -207,7 +207,9 @@ class OpenstackAllocationStageDetail(generics.GenericAPIView):
 
     # noinspection PyUnusedLocal
     def get(self, request, stage_id):
-        """Retrieve an `openstack` stage."""
+        """Retrieve an `openstack` stage.
+        Null `status` and `status_reason` attributes mean, that stack does not have them;
+        AKA it does not exist in OpenStack."""
         stage = self.get_object()
         updated = StackStageHandler().update_allocation_stage(stage)
         serializer = self.get_serializer(updated)
