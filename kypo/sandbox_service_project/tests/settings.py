@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
 import os
-from kypo.sandbox_common_lib.config import KypoConfiguration
+from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -45,9 +45,9 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_rq',
 
-    'kypo.sandbox_ansible_app.apps.KypoSandboxAnsibleRunsConfig',
-    'kypo.sandbox_definition_app.apps.KypoSandboxDefinitionsConfig',
-    'kypo.sandbox_instance_app.apps.KypoSandboxInstancesConfig',
+    'kypo.sandbox_ansible_app.apps.KypoSandboxAnsibleAppConfig',
+    'kypo.sandbox_definition_app.apps.KypoSandboxDefinitionAppConfig',
+    'kypo.sandbox_instance_app.apps.KypoSandboxInstanceAppConfig',
 ]
 
 MIDDLEWARE = [
@@ -156,8 +156,8 @@ CACHES = {
     }
 }
 
-KYPO_DJANGO_OPENSTACK_CONFIG_PATH = os.path.join(BASE_DIR, 'tests/config.yml')
-KYPO_CONFIG = KypoConfiguration.from_file(KYPO_DJANGO_OPENSTACK_CONFIG_PATH)
+KYPO_SANDBOX_SERVICE_CONFIG_PATH = os.path.join(BASE_DIR, 'tests/config.yml')
+KYPO_CONFIG = KypoConfiguration.from_file(KYPO_SANDBOX_SERVICE_CONFIG_PATH)
 
 RQ_QUEUES = {
     'default': {

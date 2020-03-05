@@ -9,7 +9,7 @@ from yamlize import Attribute, Object, YamlizingError
 
 from kypo.sandbox_common_lib.exceptions import ImproperlyConfigured
 
-LOG_FILE = 'django-openstack.log'
+LOG_FILE = 'kypo-sandbox-service.log'
 LOG_LEVEL = 'INFO'
 GIT_SERVER = 'gitlab.ics.muni.cz'
 GIT_USER = 'git'

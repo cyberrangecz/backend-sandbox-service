@@ -1,7 +1,7 @@
 import pytest
 from rest_framework.exceptions import ValidationError
 
-from kypo.sandbox_definition_app.lib import definition_service
+from kypo.sandbox_definition_app.lib import definitions
 from kypo.sandbox_definition_app.models import Definition
 
 pytestmark = pytest.mark.django_db
@@ -17,10 +17,10 @@ class TestCreateDefinition:
                      ".validate_sandbox_definition")
         mock = mocker.Mock()
         mock.configure_mock(name='def-name')
-        mocker.patch("kypo.sandbox_definition_app.lib.definition_service.get_definition",
+        mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_definition",
                      return_value=mock)
 
-        definition_service.create_definition(url=self.url, rev=self.rev)
+        definitions.create_definition(url=self.url, rev=self.rev)
 
         # Definition name is tested by get
         database_definition = Definition.objects.get(name=self.name)
@@ -32,9 +32,9 @@ class TestCreateDefinition:
                      ".validate_sandbox_definition")
         mock = mocker.Mock()
         mock.configure_mock(name='def-name')
-        mocker.patch("kypo.sandbox_definition_app.lib.definition_service.get_definition",
+        mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_definition",
                      return_value=mock)
 
-        definition_service.create_definition(url=self.url, rev=self.rev)
+        definitions.create_definition(url=self.url, rev=self.rev)
         with pytest.raises(ValidationError):
-            definition_service.create_definition(url=self.url, rev=self.rev)
+            definitions.create_definition(url=self.url, rev=self.rev)

@@ -3,7 +3,7 @@ from django.apps import AppConfig
 from kypo.sandbox_common_lib import utils
 
 
-class KypoSandboxDefinitionsConfig(AppConfig):
+class KypoSandboxDefinitionAppConfig(AppConfig):
     name = __package__
 
     def ready(self):

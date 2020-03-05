@@ -4,7 +4,7 @@ from kypo.openstack_driver.sandbox_topology import SandboxTopology as Stack,\
 
 from kypo.sandbox_instance_app.models import Sandbox
 from kypo.sandbox_common_lib import utils
-from kypo.sandbox_definition_app.lib import definition_service
+from kypo.sandbox_definition_app.lib import definitions
 
 LOG = structlog.getLogger()
 
@@ -61,7 +61,7 @@ class Topology:
 
         # Delete hidden host
         definition = sandbox.allocation_unit.pool.definition
-        top_def = definition_service.get_definition(url=definition.url,
+        top_def = definitions.get_definition(url=definition.url,
                                                     rev=definition.rev)
 
         hidden = []
