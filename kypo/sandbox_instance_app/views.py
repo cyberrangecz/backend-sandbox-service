@@ -13,9 +13,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from kypo.sandbox_instance_app.lib.stage_handlers import StackStageHandler
-from kypo.sandbox_instance_app.lib import unit_service
 from kypo.sandbox_instance_app import serializers
-from kypo.sandbox_instance_app.lib import pool_service, sandbox_service, node_service,\
+from kypo.sandbox_instance_app.lib import units, pools, sandboxes, nodes,\
     sandbox_destructor
 from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit, AllocationRequest, \
     AllocationStage, StackAllocationStage, CleanupRequest, StackCleanupStage, CleanupStage, Lock
@@ -42,7 +41,7 @@ class PoolList(mixins.ListModelMixin,
         It is then used as management key for this pool. That means that
         the management key-pair is the same for each sandbox in the pool.
         """
-        pool = pool_service.create_pool(request.data)
+        pool = pools.create_pool(request.data)
         serializer = serializers.PoolSerializer(pool)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -64,7 +63,7 @@ class PoolDetail(mixins.RetrieveModelMixin,
         First delete all sandboxes in given Pool.
         """
         pool = self.get_object()
-        pool_service.delete_pool(pool)
+        pools.delete_pool(pool)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -88,7 +87,7 @@ class SandboxAllocationUnitList(mixins.ListModelMixin, generics.GenericAPIView):
         Query Parameters:
         - *count:* How many sandboxes to build. Optional (defaults to max_size - current size).
         """
-        pool = pool_service.get_pool(pool_id)
+        pool = pools.get_pool(pool_id)
         count = request.GET.get('count')
         if count is not None:
             try:
@@ -96,7 +95,7 @@ class SandboxAllocationUnitList(mixins.ListModelMixin, generics.GenericAPIView):
             except ValueError:
                 raise exceptions.ValidationError("Invalid parameter count: %s" % count)
 
-        requests = pool_service.create_sandboxes_in_pool(pool, count=count)
+        requests = pools.create_sandboxes_in_pool(pool, count=count)
         serializer = self.serializer_class(requests, many=True)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -112,8 +111,8 @@ class SandboxAllocationUnitList(mixins.ListModelMixin, generics.GenericAPIView):
         __NOTE:__ The sandboxes associated with the Allocation units cannot be locked,
         or the call fails.
         """
-        pool = pool_service.get_pool(pool_id)
-        requests = pool_service.delete_allocation_units(pool)
+        pool = pools.get_pool(pool_id)
+        requests = pools.delete_allocation_units(pool)
         serializer = serializers.CleanupRequestSerializer(requests, many=True)
         return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
 
@@ -149,6 +148,7 @@ class SandboxAllocationRequestCancel(generics.GenericAPIView):
     queryset = AllocationRequest.objects.all()
     lookup_url_kwarg = "request_id"
 
+    # noinspection PyUnusedLocal
     def patch(self, request, unit_id, request_id):
         sandbox_destructor.cancel_allocation_request(self.get_object())
         return Response()
@@ -228,7 +228,7 @@ class SandboxEventList(generics.ListAPIView):
     def get_queryset(self):
         unit_id = self.kwargs.get('unit_id')
         unit = get_object_or_404(SandboxAllocationUnit, pk=unit_id)
-        return unit_service.get_stack_events(unit)
+        return units.get_stack_events(unit)
 
 
 class SandboxResourceList(generics.ListAPIView):
@@ -238,7 +238,7 @@ class SandboxResourceList(generics.ListAPIView):
     def get_queryset(self):
         unit_id = self.kwargs.get('unit_id')
         unit = get_object_or_404(SandboxAllocationUnit, pk=unit_id)
-        return unit_service.get_stack_resources(unit)
+        return units.get_stack_resources(unit)
 
 
 #########################################
@@ -255,14 +255,14 @@ class PoolSandboxList(generics.GenericAPIView):
     # noinspection PyUnusedLocal
     def get(self, request, pool_id):
         """Get a list of sandboxes in given pool."""
-        sandboxes = pool_service.get_sandboxes_in_pool(self.get_object())
+        sb_list = pools.get_sandboxes_in_pool(self.get_object())
 
-        page = self.paginate_queryset(sandboxes)
+        page = self.paginate_queryset(sb_list)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
 
-        serializer = self.get_serializer(sandboxes, many=True)
+        serializer = self.get_serializer(sb_list, many=True)
         return Response(serializer.data)
 
 
@@ -286,8 +286,8 @@ class SandboxGetAndLock(generics.GenericAPIView):
          responses={status.HTTP_200_OK: serializers.SandboxSerializer()})
     def get(self, request, pool_id):
         """Get unlocked sandbox in given pool and lock it. Return 409 if all are locked."""
-        pool = pool_service.get_pool(pool_id)
-        sandbox = pool_service.get_unlocked_sandbox(pool)
+        pool = pools.get_pool(pool_id)
+        sandbox = pools.get_unlocked_sandbox(pool)
         if not sandbox:
             return Response({'detail': 'All sandboxes are already locked.'},
                             status=status.HTTP_409_CONFLICT)
@@ -311,8 +311,8 @@ class SandboxLockList(mixins.ListModelMixin, generics.GenericAPIView):
 
     def post(self, request, sandbox_id):
         """Lock given sandbox."""
-        sandbox = sandbox_service.get_sandbox(sandbox_id)
-        lock = sandbox_service.lock_sandbox(sandbox)
+        sandbox = sandboxes.get_sandbox(sandbox_id)
+        lock = sandboxes.lock_sandbox(sandbox)
         return Response(self.serializer_class(lock).data, status=status.HTTP_201_CREATED)
 
     def get(self, request, *args, **kwargs):
@@ -347,7 +347,7 @@ class SandboxTopology(generics.GenericAPIView):
         __NOTE:__ this endpoint is cached indefinitely.
         So the topology can be accessed even when the sandbox is long deleted.
         """
-        topology = sandbox_service.Topology(self.get_object())
+        topology = sandboxes.Topology(self.get_object())
         topology.create()
         return Response(self.serializer_class(topology).data)
 
@@ -367,7 +367,7 @@ class SandboxVMDetail(generics.GenericAPIView):
         - ... https://developer.openstack.org/api-guide/compute/server_concepts.html#server-status
         """
         sandbox = self.get_object()
-        node = node_service.get_node(sandbox, vm_name)
+        node = nodes.get_node(sandbox, vm_name)
         return Response(serializers.NodeSerializer(node).data)
 
     # noinspection PyUnusedLocal
@@ -385,7 +385,7 @@ class SandboxVMDetail(generics.GenericAPIView):
             action = request.data['action']
         except KeyError:
             raise exceptions.ValidationError("No action specified!")
-        node_service.node_action(sandbox, vm_name, action)
+        nodes.node_action(sandbox, vm_name, action)
         return Response()
 
 
@@ -401,7 +401,7 @@ class SandboxVMConsole(generics.GenericAPIView):
         But when the connection is active, it does not disconnect.
         """
         sandbox = self.get_object()
-        console = node_service.get_console_url(sandbox, vm_name)
+        console = nodes.get_console_url(sandbox, vm_name)
         return Response({'url': console})
 
 
@@ -412,8 +412,8 @@ class SandboxUserSSHConfig(APIView):
     def get(request, sandbox_id):
         """Generate SSH config for User access to this sandbox.
         Some values are user specific, the config contains placeholders for them."""
-        sandbox = sandbox_service.get_sandbox(sandbox_id)
-        ssh_config = sandbox_service.get_user_sshconfig(sandbox)
+        sandbox = sandboxes.get_sandbox(sandbox_id)
+        ssh_config = sandboxes.get_user_sshconfig(sandbox)
         response = HttpResponse(FileWrapper(io.StringIO(ssh_config.serialize())),
                                 content_type='application/txt')
         response['Content-Disposition'] = "attachment; filename=config"
@@ -427,8 +427,8 @@ class SandboxManagementSSHConfig(APIView):
     def get(request, sandbox_id):
         """Generate SSH config for Management access to this sandbox.
         Some values are user specific, the config contains placeholders for them."""
-        sandbox = sandbox_service.get_sandbox(sandbox_id)
-        ssh_config = sandbox_service.get_management_sshconfig(sandbox)
+        sandbox = sandboxes.get_sandbox(sandbox_id)
+        ssh_config = sandboxes.get_management_sshconfig(sandbox)
         response = HttpResponse(FileWrapper(io.StringIO(ssh_config.serialize())),
                                 content_type='application/txt')
         response['Content-Disposition'] = "attachment; filename=config"

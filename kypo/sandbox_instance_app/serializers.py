@@ -12,7 +12,7 @@ from typing import Optional
 from rest_framework import serializers
 
 from kypo.sandbox_instance_app import models
-from kypo.sandbox_instance_app.lib import pool_service
+from kypo.sandbox_instance_app.lib import pools
 
 MAX_SANDBOXES_PER_POOL = 64
 
@@ -36,7 +36,7 @@ class PoolSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_size(obj: models.Pool) -> int:
-        return pool_service.get_pool_size(obj)
+        return pools.get_pool_size(obj)
 
 
 class AllocationRequestSerializer(serializers.ModelSerializer):

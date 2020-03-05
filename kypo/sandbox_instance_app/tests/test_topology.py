@@ -1,9 +1,7 @@
-import json
-
 import pytest
 
 from kypo.sandbox_instance_app import serializers
-from kypo.sandbox_instance_app.lib import sandbox_service
+from kypo.sandbox_instance_app.lib import sandboxes
 
 pytestmark = pytest.mark.django_db
 
@@ -21,7 +19,7 @@ class TestTopology:
         sandbox = mocker.MagicMock()
         sandbox.pool.definition.content = 'name: name'
 
-        topo = sandbox_service.Topology(sandbox)
+        topo = sandboxes.Topology(sandbox)
         topo.create()
         result = serializers.TopologySerializer(topo).data
 
@@ -47,7 +45,7 @@ class TestTopology:
         sandbox = mocker.MagicMock()
         sandbox.pool.definition.content = 'name: name'
 
-        topo = sandbox_service.Topology(sandbox)
+        topo = sandboxes.Topology(sandbox)
         topo.create()
         result = serializers.TopologySerializer(topo).data
 

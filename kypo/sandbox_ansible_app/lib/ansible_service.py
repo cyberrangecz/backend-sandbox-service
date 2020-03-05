@@ -13,7 +13,7 @@ from kypo.sandbox_common_lib import utils
 from kypo.sandbox_common_lib.config import KypoConfiguration
 from kypo.sandbox_instance_app.models import Sandbox
 from kypo.sandbox_ansible_app.lib.inventory import Inventory
-from kypo.sandbox_instance_app.lib import sandbox_service
+from kypo.sandbox_instance_app.lib import sandboxes
 
 LOG = structlog.get_logger()
 
@@ -90,7 +90,7 @@ class AnsibleDockerRunner:
         if config.proxy_jump_to_man:
             proxy_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
                                      os.path.basename(config.proxy_jump_to_man.IdentityFile))
-        ans_ssh_config = sandbox_service.get_ansible_sshconfig(sandbox, mng_key, git_key, proxy_key)
+        ans_ssh_config = sandboxes.get_ansible_sshconfig(sandbox, mng_key, git_key, proxy_key)
 
         identity_file = config.proxy_jump_to_man.IdentityFile
         shutil.copy(identity_file, os.path.join(ssh_directory,
