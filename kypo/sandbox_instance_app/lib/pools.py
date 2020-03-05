@@ -2,7 +2,6 @@
 Pool Service module for Pool management.
 """
 from typing import List, Dict, Optional
-
 import structlog
 from django.db import transaction
 from django.db.models import QuerySet
@@ -10,7 +9,8 @@ from django.shortcuts import get_object_or_404
 
 from kypo.sandbox_instance_app.lib import sandbox_creator, sandbox_destructor
 from kypo.sandbox_instance_app import serializers
-from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit, CleanupRequest, Lock
+from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit, CleanupRequest, \
+    SandboxLock, PoolLock
 from kypo.sandbox_common_lib import utils, exceptions
 
 LOG = structlog.get_logger()
@@ -121,5 +121,14 @@ def get_unlocked_sandbox(pool: Pool) -> Optional[Sandbox]:
             .first()
         if not sandbox:
             return None
-        Lock.objects.create(sandbox=sandbox)
+        SandboxLock.objects.create(sandbox=sandbox)
         return sandbox
+
+
+def lock_pool(pool: Pool) -> PoolLock:
+    """Lock given Pool. Raise ValidationError if already locked."""
+    with transaction.atomic():
+        pool = Pool.objects.select_for_update().get(pk=pool.id)
+        if hasattr(pool, 'lock'):
+            raise exceptions.ValidationError("Pool already locked.")
+        return PoolLock.objects.create(pool=pool)
