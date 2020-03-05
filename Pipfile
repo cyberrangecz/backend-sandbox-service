@@ -44,6 +44,7 @@ django-rq = "*"
 redis = "*"
 docker = "*"
 ssh_config = "*"
+python-gitlab = "*"
 
 # Project dependencies
 django-cors-headers = "*"
