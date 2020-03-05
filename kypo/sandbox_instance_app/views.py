@@ -70,13 +70,18 @@ class PoolDetail(mixins.RetrieveModelMixin,
 
 
 class PoolLockList(mixins.ListModelMixin, generics.GenericAPIView):
-    queryset = PoolLock.objects.all()
     serializer_class = serializers.PoolLockSerializer
+
+    def get_queryset(self):
+        pool_id = self.kwargs.get('pool_id')
+        # check that given pool exists
+        get_object_or_404(Pool, pk=pool_id)
+        return PoolLock.objects.filter(pool=pool_id)
 
     def post(self, request, pool_id):
         """Lock given pool."""
-        pool = pool_service.get_pool(pool_id)
-        lock = pool_service.lock_pool(pool_id)
+        pool = pools.get_pool(pool_id)
+        lock = pools.lock_pool(pool)
         return Response(self.serializer_class(lock).data, status=status.HTTP_201_CREATED)
 
     def get(self, request, *args, **kwargs):
@@ -84,7 +89,7 @@ class PoolLockList(mixins.ListModelMixin, generics.GenericAPIView):
         return self.list(request, *args, **kwargs)
 
 
-class PoolLockDetail(generics.DestroyAPIView):
+class PoolLockDetail(generics.RetrieveDestroyAPIView):
     """delete: Delete given lock."""
     queryset = PoolLock.objects.all()
     lookup_url_kwarg = "lock_id"
@@ -330,8 +335,13 @@ class SandboxDetail(generics.GenericAPIView):
 
 
 class SandboxLockList(mixins.ListModelMixin, generics.GenericAPIView):
-    queryset = SandboxLock.objects.all()
     serializer_class = serializers.SandboxLockSerializer
+
+    def get_queryset(self):
+        sandbox_id = self.kwargs.get('sandbox_id')
+        # check that given sandbox exists
+        get_object_or_404(Sandbox, pk=sandbox_id)
+        return SandboxLock.objects.filter(sandbox=sandbox_id)
 
     def post(self, request, sandbox_id):
         """Lock given sandbox."""
@@ -344,7 +354,7 @@ class SandboxLockList(mixins.ListModelMixin, generics.GenericAPIView):
         return self.list(request, *args, **kwargs)
 
 
-class SandboxLockDetail(generics.DestroyAPIView):
+class SandboxLockDetail(generics.RetrieveDestroyAPIView):
     """delete: Delete given lock."""
     queryset = SandboxLock.objects.all()
     lookup_url_kwarg = "lock_id"

@@ -128,7 +128,7 @@ def get_unlocked_sandbox(pool: Pool) -> Optional[Sandbox]:
 def lock_pool(pool: Pool) -> PoolLock:
     """Lock given Pool. Raise ValidationError if already locked."""
     with transaction.atomic():
-        pool = Sandbox.objects.select_for_update().get(pk=pool.id)
+        pool = Pool.objects.select_for_update().get(pk=pool.id)
         if hasattr(pool, 'lock'):
             raise exceptions.ValidationError("Pool already locked.")
         return PoolLock.objects.create(pool=pool)
