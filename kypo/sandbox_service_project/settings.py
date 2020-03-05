@@ -47,9 +47,9 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_rq',
 
-    'kypo.sandbox_ansible_app.apps.KypoSandboxAnsibleRunsConfig',
-    'kypo.sandbox_definition_app.apps.KypoSandboxDefinitionsConfig',
-    'kypo.sandbox_instance_app.apps.KypoSandboxInstancesConfig',
+    'kypo.sandbox_ansible_app.apps.KypoSandboxAnsibleAppConfig',
+    'kypo.sandbox_definition_app.apps.KypoSandboxDefinitionAppConfig',
+    'kypo.sandbox_instance_app.apps.KypoSandboxInstanceAppConfig',
 ]
 
 MIDDLEWARE = [
