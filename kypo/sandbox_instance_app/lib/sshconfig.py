@@ -5,7 +5,7 @@ from ssh_config import Host, SSHConfig
 from kypo.openstack_driver.sandbox_topology import SandboxHost, SandboxRouter, \
     SandboxLink, SandboxExtraNode, UAN_NET_NAME, SandboxTopology
 
-from kypo.sandbox_common_lib.config import KypoConfiguration
+from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
 
 LOG = structlog.getLogger()
 

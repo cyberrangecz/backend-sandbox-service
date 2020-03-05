@@ -10,7 +10,7 @@ from kypo.topology_definition.models import TopologyDefinition
 from kypo.sandbox_common_lib.utils import AttrDict
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage
 from kypo.sandbox_common_lib import utils
-from kypo.sandbox_common_lib.config import KypoConfiguration
+from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
 from kypo.sandbox_instance_app.models import Sandbox
 from kypo.sandbox_ansible_app.lib.inventory import Inventory
 from kypo.sandbox_instance_app.lib import sandboxes
