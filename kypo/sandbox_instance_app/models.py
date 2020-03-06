@@ -22,12 +22,13 @@ class Pool(models.Model):
     private_management_key = models.TextField()
     public_management_key = models.TextField()
     uuid = models.TextField(default=utils.get_simple_uuid)
+    rev = models.TextField()
 
     class Meta:
         ordering = ['id']
 
     def __str__(self):
-        return "ID: {0.id}, DEFINITION: {0.definition.id}, MAX_SIZE: {0.max_size}".format(self)
+        return "ID: {0.id}, DEFINITION: {0.definition.id}, MAX_SIZE: {0.max_size}, REV: {0.rev}".format(self)
 
     def get_keypair_name(self) -> str:
         """Returns a name of the management key-pair for this pool."""

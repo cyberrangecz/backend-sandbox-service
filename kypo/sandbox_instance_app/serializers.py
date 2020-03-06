@@ -22,7 +22,7 @@ class PoolSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Pool
-        fields = ('id', 'definition', 'size', 'max_size')
+        fields = ('id', 'definition', 'size', 'max_size', 'rev')
         read_only_fields = ('id', 'size')
 
     @staticmethod

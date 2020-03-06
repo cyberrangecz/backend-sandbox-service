@@ -8,10 +8,13 @@ from django.db import transaction
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 
+from kypo.sandbox_common_lib import utils, exceptions
+from kypo.sandbox_definition_app.lib import definitions
+from kypo.sandbox_definition_app.models import Definition
+
 from kypo.sandbox_instance_app.lib import sandbox_creator, sandbox_destructor
 from kypo.sandbox_instance_app import serializers
 from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit, CleanupRequest, Lock
-from kypo.sandbox_common_lib import utils, exceptions
 
 LOG = structlog.get_logger()
 
@@ -35,19 +38,29 @@ def create_pool(data: Dict) -> Pool:
 
     :param data: dict of attributes to create model. Currently must contain:
         - definition: primary key (ID) of the Definition that new Pool instance is related to
+        - rev: rev of the definition for pool
         - max_size: max size of new Pool instance
     :return: new Pool instance
     """
+    definition = get_object_or_404(Definition, pk=data.get('definition'))
+    if 'rev' not in data:
+        data['rev'] = definition.rev
+
     serializer = serializers.PoolSerializer(data=data)
     serializer.is_valid(raise_exception=True)
     pool = serializer.save()
     try:
+        client = utils.get_ostack_client()
+
+        # Validate definition
+        top_def = definitions.get_definition(definition.url, pool.rev)
+        client.validate_sandbox_definition(top_def)
+
         private_key, public_key = utils.generate_ssh_keypair()
         pool.private_management_key = private_key
         pool.public_management_key = public_key
         pool.save()
 
-        client = utils.get_ostack_client()
         client.create_keypair(pool.get_keypair_name(), public_key)
 
     except Exception:
