@@ -1,4 +1,5 @@
 import pytest
+from django.http import Http404
 from rest_framework.exceptions import ValidationError
 
 from kypo.sandbox_common_lib.exceptions import ApiException
@@ -13,22 +14,33 @@ FULL_POOL_ID = 2
 
 class TestCreatePool:
     MAX_SIZE = 10
+    REV = "a1b2c3"
 
     @pytest.fixture(autouse=True)
     def set_up(self, mocker):
         self.client = mocker.patch("kypo.sandbox_common_lib.utils.get_ostack_client")
+        mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_definition")
         yield
 
     def test_create_pool_success(self):
         pool = pools.create_pool(dict(definition=DEFINITION_ID,
-                                             max_size=self.MAX_SIZE))
+                                      max_size=self.MAX_SIZE,
+                                      rev=self.REV))
         assert pool.max_size == self.MAX_SIZE
+        assert pool.rev == self.REV
         assert pool.definition.id == DEFINITION_ID
 
     def test_create_pool_invalid_definition(self):
-        with pytest.raises(ValidationError):
+        with pytest.raises(Http404):
             pools.create_pool(dict(definition=-1,
-                                          max_size=self.MAX_SIZE))
+                                   max_size=self.MAX_SIZE,
+                                   rev=self.REV))
+
+    def test_create_pool_invalid_size(self):
+        with pytest.raises(ValidationError):
+            pools.create_pool(dict(definition=1,
+                                   max_size=-10,
+                                   rev=self.REV))
 
 
 class TestCreateSandboxesInPool:

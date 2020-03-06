@@ -13,6 +13,7 @@
     private_management_key: -----RSA PRIVATE KEY-----
     public_management_key: ssh-rsa
     uuid: 0fb3160d
+    rev: rev_pool1
 
 - model: sandbox_instance_app.pool
   pk: 2
@@ -22,6 +23,7 @@
     private_management_key: -----RSA PRIVATE KEY-----
     public_management_key: ssh-rsa
     uuid: 0fb3160d
+    rev: rev_pool2
 
 - model: sandbox_instance_app.sandboxallocationunit
   pk: 1

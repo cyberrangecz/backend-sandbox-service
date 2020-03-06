@@ -7,6 +7,7 @@ import structlog
 from django.db import transaction
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
+from django.conf import settings
 
 from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_definition_app.lib import definitions
@@ -53,7 +54,7 @@ def create_pool(data: Dict) -> Pool:
         client = utils.get_ostack_client()
 
         # Validate definition
-        top_def = definitions.get_definition(definition.url, pool.rev)
+        top_def = definitions.get_definition(definition.url, pool.rev, settings.KYPO_CONFIG)
         client.validate_sandbox_definition(top_def)
 
         private_key, public_key = utils.generate_ssh_keypair()
