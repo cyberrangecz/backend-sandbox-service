@@ -15,7 +15,7 @@ def get_file_from_repo(url: str, rev: str, token: str, path: str) -> str:
         gl = gitlab.Gitlab(get_host_url(url), private_token=token)
         project = gl.projects.get(get_project_path(url))
         file = project.files.get(file_path=path, ref=rev)
-        return file.decode()
+        return file.decode().decode()  # One decode to get content, one from bytes to str
     except (requests.exceptions.RequestException, gitlab.exceptions.GitlabError) as ex:
         raise exceptions.GitError(ex)
 
