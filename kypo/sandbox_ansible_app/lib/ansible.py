@@ -1,5 +1,4 @@
 import os
-import re
 import shutil
 
 import docker
@@ -47,8 +46,8 @@ class AnsibleDockerRunner:
             ssh_dir: ANSIBLE_DOCKER_SSH_DIR,
             inventory_path: ANSIBLE_DOCKER_INVENTORY_PATH
         }
-        if utils.is_local_repo(url):
-            local_path = utils.local_repo_path(url)
+        if utils.GitRepo.is_local_repo(url):
+            local_path = utils.GitRepo.local_repo_path(url)
             volumes[local_path] = ANSIBLE_DOCKER_LOCAL_REPO
             volumes[local_path]['bind'] = local_path
 
@@ -79,7 +78,7 @@ class AnsibleDockerRunner:
         self.save_file(os.path.join(ssh_directory, MNG_PRIVATE_KEY_FILENAME),
                        stage.request.allocation_unit.pool.private_management_key)
 
-        if not utils.is_local_repo(stage.repo_url):
+        if not utils.GitRepo.is_local_repo(stage.repo_url):
             shutil.copy(config.git_private_key,
                         os.path.join(ssh_directory, os.path.basename(config.git_private_key)))
 

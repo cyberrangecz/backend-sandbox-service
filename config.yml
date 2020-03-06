@@ -22,8 +22,8 @@ os_application_credential_secret: ""
 # The SSH private key that kypo2-django-openstack uses to communicate with Git repository.
 #git_private_key: ~/.ssh/git_rsa_key
 
-# The path to local temporary directory
-#git_repositories: /tmp
+# The access token for Gitlab API
+git_access_token: ""
 
 # The URL of Ansible networking Git repository.
 ansible_networking_url: ""

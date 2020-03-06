@@ -79,6 +79,7 @@ def get_simple_uuid() -> str:
 
 
 class GitRepo:
+    GIT_REPOSITORIES = '/tmp'
     lock = multiprocessing.Lock()
 
     @classmethod
@@ -95,7 +96,7 @@ class GitRepo:
         with cls.lock:
             git_ssh_cmd = 'ssh -o StrictHostKeyChecking=no -i {0}'\
                 .format(settings.KYPO_CONFIG.git_private_key)
-            local_repository = os.path.join(settings.KYPO_CONFIG.git_repositories,
+            local_repository = os.path.join(cls.GIT_REPOSITORIES,
                                             url, name if name else rev).replace(":", "")
 
             if os.path.isdir(local_repository):
@@ -114,16 +115,16 @@ class GitRepo:
 
             return repo
 
+    @staticmethod
+    def is_local_repo(url: str) -> bool:
+        return url.startswith('file://')
+
+    @staticmethod
+    def local_repo_path(url: str) -> str:
+        return re.sub('^file://', '', url)
+
 
 class AttrDict(dict):
     def __init__(self, *args, **kwargs):
         super(AttrDict, self).__init__(*args, **kwargs)
         self.__dict__ = self
-
-
-def is_local_repo(url: str) -> bool:
-    return url.startswith('file://')
-
-
-def local_repo_path(url: str) -> str:
-    return re.sub('^file://', '', url)
