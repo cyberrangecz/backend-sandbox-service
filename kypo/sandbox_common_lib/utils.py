@@ -5,6 +5,7 @@ import json
 import logging
 import multiprocessing
 import os
+import re
 import uuid
 from typing import Tuple, Optional
 import git
@@ -118,3 +119,11 @@ class AttrDict(dict):
     def __init__(self, *args, **kwargs):
         super(AttrDict, self).__init__(*args, **kwargs)
         self.__dict__ = self
+
+
+def is_local_repo(url: str) -> bool:
+    return url.startswith('file://')
+
+
+def local_repo_path(url: str) -> str:
+    return re.sub('^file://', '', url)

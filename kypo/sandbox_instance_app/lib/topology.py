@@ -62,7 +62,7 @@ class Topology:
         # Delete hidden host
         definition = sandbox.allocation_unit.pool.definition
         top_def = definitions.get_definition(url=definition.url,
-                                                    rev=definition.rev)
+                                             rev=definition.rev)
 
         hidden = []
         for host in top_def.hosts:

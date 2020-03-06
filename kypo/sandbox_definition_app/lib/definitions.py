@@ -11,7 +11,7 @@ from kypo.topology_definition.models import TopologyDefinition
 
 from kypo.sandbox_definition_app import serializers
 from kypo.sandbox_definition_app.models import Definition
-from kypo.sandbox_common_lib import utils, exceptions
+from kypo.sandbox_common_lib import utils, exceptions, gitlab
 
 LOG = structlog.get_logger()
 
@@ -36,23 +36,25 @@ def create_definition(url: str, rev: str = None) -> Definition:
     return serializer.save()
 
 
-def get_definition(url: str, rev: str, name: Optional[str] = None) -> TopologyDefinition:
-    """
-    Get sandbox definition file content
+def get_definition(url: str, rev: str, token: Optional[str] = None) -> TopologyDefinition:
+    """Get sandbox definition file content as TopologyDefinition.
 
     :param url: URL of sandbox definition Git repository
     :param rev: Revision of the repository
-    :param name: The optional name of local repository
-    :return: Content of sandbox definition
-    :raise: git.exc.GitCommandError if revision is unknown to Git
-        or sandbox definition does not exist under this revision
+    :param token: Authentication token
+    :return: Topology definition
+    :raise: GitError if GIT error occurs, YamlizingError if definition is incorrect
     """
-    try:
-        repo = utils.GitRepo.get_git_repo(url, rev, name)
-        definition = repo.git.show('{0}:{1}'.format(rev, SANDBOX_DEFINITION_FILENAME))
-    except GitCommandError as ex:
-        raise exceptions.GitError("Failed to get sandbox definition file {}.\n"
-                                  .format(SANDBOX_DEFINITION_FILENAME) + str(ex))
+    if utils.is_local_repo(url):
+        try:
+            repo = utils.GitRepo.get_git_repo(url, rev)
+            definition = repo.git.show('{0}:{1}'.format(rev, SANDBOX_DEFINITION_FILENAME))
+        except GitCommandError as ex:
+            raise exceptions.GitError("Failed to get sandbox definition file {}.\n"
+                                      .format(SANDBOX_DEFINITION_FILENAME) + str(ex))
+    else:
+        definition = gitlab.get_file_from_repo(url, rev, token, SANDBOX_DEFINITION_FILENAME)
+
     try:
         return TopologyDefinition.load(io.StringIO(definition))
     except YamlizingError as ex:
