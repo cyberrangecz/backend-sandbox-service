@@ -135,9 +135,14 @@ class StackStageHandler(StageHandler):
     def update_allocation_stage(self, stage: StackAllocationStage) -> StackAllocationStage:
         """Update stage with current stack status from OpenStack."""
         sandboxes = self.client.list_sandboxes()
-        sb = sandboxes[stage.request.allocation_unit.get_stack_name()]
-        stage.status = sb.stack_status
-        stage.status_reason = sb.stack_status_reason
+        stack_name = stage.request.allocation_unit.get_stack_name()
+        if stack_name in sandboxes:
+            sb = sandboxes[stack_name]
+            stage.status = sb.stack_status
+            stage.status_reason = sb.stack_status_reason
+        else:
+            stage.status = None
+            stage.status_reason = None
         stage.save()
         return stage
 
