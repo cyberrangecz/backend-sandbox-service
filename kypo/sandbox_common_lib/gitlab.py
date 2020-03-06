@@ -20,6 +20,17 @@ def get_file_from_repo(url: str, rev: str, token: str, path: str) -> str:
         raise exceptions.GitError(ex)
 
 
+def get_revs(url: str, token: str):
+    try:
+        gl = gitlab.Gitlab(get_host_url(url), private_token=token)
+        project = gl.projects.get(get_project_path(url))
+        branches = project.branches.list()
+        tags = project.tags.list()
+        return branches + tags
+    except (requests.exceptions.RequestException, gitlab.exceptions.GitlabError) as ex:
+        raise exceptions.GitError(ex)
+
+
 def get_host_url(url: str, prot: str = 'http') -> str:
     """Return git host url."""
     address = url.replace('git@', '', 1).split(':')[0]
