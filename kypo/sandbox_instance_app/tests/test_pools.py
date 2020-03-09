@@ -20,6 +20,8 @@ class TestCreatePool:
     def set_up(self, mocker):
         self.client = mocker.patch("kypo.sandbox_common_lib.utils.get_ostack_client")
         mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_definition")
+        mock_repo = mocker.patch("kypo.sandbox_instance_app.lib.pools.Repo")
+        mock_repo.return_value.get_rev_sha = mocker.MagicMock(return_value='sha')
         yield
 
     def test_create_pool_success(self):

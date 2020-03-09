@@ -69,7 +69,8 @@ class TestIntegration:
         if not config.os_application_credential_id:
             config.os_application_credential_id = os.environ.get('OS_APPLICATION_CREDENTIAL_ID')
         if not config.os_application_credential_secret:
-            config.os_application_credential_secret = os.environ.get('OS_APPLICATION_CREDENTIAL_SECRET')
+            config.os_application_credential_secret = os.environ.get(
+                'OS_APPLICATION_CREDENTIAL_SECRET')
 
         if not config.ansible_networking_url:
             with tempfile.TemporaryDirectory() as tmpdir:
