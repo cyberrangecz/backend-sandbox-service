@@ -3,7 +3,7 @@ from rest_framework import status, generics, mixins
 from rest_framework.response import Response
 from django.conf import settings
 
-from kypo.sandbox_common_lib import gitlab
+from kypo.sandbox_common_lib.gitlab import Repo
 
 from kypo.sandbox_definition_app.models import Definition
 from kypo.sandbox_definition_app import serializers
@@ -42,7 +42,7 @@ class DefinitionDetail(generics.RetrieveDestroyAPIView):
     lookup_url_kwarg = "definition_id"
 
 
-class DefinitionRevs(generics.ListAPIView):
+class DefinitionRefs(generics.ListAPIView):
     """
     get: Retrieve list of definition revs.
     """
@@ -51,4 +51,4 @@ class DefinitionRevs(generics.ListAPIView):
     def get_queryset(self):
         def_id = self.kwargs.get('definition_id')
         definition = get_object_or_404(Definition, pk=def_id)  # check that given request exists
-        return gitlab.get_revs(definition.url, settings.KYPO_CONFIG.git_access_token)
+        return Repo(definition.url, settings.KYPO_CONFIG.git_access_token).get_refs()

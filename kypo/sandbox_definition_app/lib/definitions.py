@@ -11,8 +11,9 @@ from kypo.topology_definition.models import TopologyDefinition
 
 from kypo.sandbox_definition_app import serializers
 from kypo.sandbox_definition_app.models import Definition
-from kypo.sandbox_common_lib import utils, exceptions, gitlab
+from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
+from kypo.sandbox_common_lib.gitlab import Repo
 
 LOG = structlog.get_logger()
 
@@ -54,8 +55,8 @@ def get_definition(url: str, rev: str, config: KypoConfiguration) -> TopologyDef
             raise exceptions.GitError("Failed to get sandbox definition file {}.\n"
                                       .format(SANDBOX_DEFINITION_FILENAME) + str(ex))
     else:
-        definition = gitlab.get_file_from_repo(url, rev, config.git_access_token,
-                                               SANDBOX_DEFINITION_FILENAME)
+        definition = Repo(url, config.git_access_token).get_file(
+            SANDBOX_DEFINITION_FILENAME, rev)
     try:
         return TopologyDefinition.load(io.StringIO(definition))
     except YamlizingError as ex:
