@@ -16,6 +16,7 @@ from kypo.sandbox_instance_app.lib import pools
 
 MAX_SANDBOXES_PER_POOL = 64
 
+
 class PoolSerializer(serializers.ModelSerializer):
     size = serializers.SerializerMethodField()
 
