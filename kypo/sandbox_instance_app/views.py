@@ -40,6 +40,7 @@ class PoolList(mixins.ListModelMixin,
         Also creates a new key-pair in OpenStack for this pool.
         It is then used as management key for this pool. That means that
         the management key-pair is the same for each sandbox in the pool.
+        Parameter `rev` is optional. Defaults to definition rev.
         """
         pool = pools.create_pool(request.data)
         serializer = serializers.PoolSerializer(pool)

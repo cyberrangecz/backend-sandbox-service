@@ -38,7 +38,18 @@ class Repo:
             raise exceptions.GitError(ex)
 
     def get_refs(self):
-        return self.get_branches() + self.get_refs()
+        return self.get_branches() + self.get_tags()
+
+    def get_rev_sha(self, rev):
+        try:
+            for ref in self.get_refs():
+                if ref.name == rev:
+                    return ref.commit['id']
+            project = self.gl.projects.get(self.get_project_path(self.url))
+            commit = project.commits.get(rev)
+            return commit.id
+        except (requests.exceptions.RequestException, gitlab.exceptions.GitlabError) as ex:
+            raise exceptions.GitError('Failed to get sha of the GIT rev.', ex)
 
     @staticmethod
     def get_host_url(url: str, prot: str = 'http') -> str:

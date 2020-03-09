@@ -16,14 +16,13 @@ from kypo.sandbox_instance_app.lib import pools
 
 MAX_SANDBOXES_PER_POOL = 64
 
-
 class PoolSerializer(serializers.ModelSerializer):
     size = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Pool
-        fields = ('id', 'definition', 'size', 'max_size', 'rev')
-        read_only_fields = ('id', 'size')
+        fields = ('id', 'definition', 'size', 'max_size', 'rev', 'rev_sha')
+        read_only_fields = ('id', 'size', 'rev_sha')
 
     @staticmethod
     def validate_max_size(value):
@@ -37,6 +36,11 @@ class PoolSerializer(serializers.ModelSerializer):
     @staticmethod
     def get_size(obj: models.Pool) -> int:
         return pools.get_pool_size(obj)
+
+
+class PoolSerializerCreate(PoolSerializer):
+    class Meta(PoolSerializer.Meta):
+        read_only_fields = ('id', 'size')
 
 
 class AllocationRequestSerializer(serializers.ModelSerializer):

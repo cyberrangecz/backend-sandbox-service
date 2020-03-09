@@ -23,6 +23,7 @@ class Pool(models.Model):
     public_management_key = models.TextField()
     uuid = models.TextField(default=utils.get_simple_uuid)
     rev = models.TextField()
+    rev_sha = models.TextField()
 
     class Meta:
         ordering = ['id']
