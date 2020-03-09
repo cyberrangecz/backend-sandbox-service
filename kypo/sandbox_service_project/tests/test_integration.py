@@ -59,7 +59,7 @@ class TestIntegration:
     DEFINITION_URL = None
 
     @pytest.fixture(autouse=True)
-    def kypo_ostack_client(self):
+    def kypo_ostack_client(self, mocker):
         """Set config values. Config.yml overrides those values if set.
         Also extract the zip repositories to tmp directory.
         """
@@ -84,7 +84,10 @@ class TestIntegration:
                 config.ansible_networking_rev = ansible_networking_rev
                 name = DEFINITION_REPO_NAME.replace('.zip', "")
                 self.DEFINITION_URL = 'file://' + os.path.join(tmpdir, name)
-                yield
+
+        mock_repo = mocker.patch("kypo.sandbox_instance_app.lib.pools.Repo")
+        mock_repo.return_value.get_rev_sha = mocker.MagicMock(return_value=DEFINITION_REV)
+        yield
 
     def test_build_sandbox_full(self, client, jump_template):
         def_id = self.create_definition(client, self.DEFINITION_URL, DEFINITION_REV)
