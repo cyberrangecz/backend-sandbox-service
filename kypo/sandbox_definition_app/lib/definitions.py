@@ -31,6 +31,8 @@ def create_definition(url: str, rev: str = None) -> Definition:
 
     client = utils.get_ostack_client()
     client.validate_sandbox_definition(top_def)
+    if not utils.GitRepo.has_acces(url, settings.KYPO_CONFIG):
+        raise exceptions.ValidationError('Repository is not accessible using SSH key.')
 
     serializer = serializers.DefinitionSerializerCreate(
         data=dict(name=top_def.name, url=url, rev=rev))
@@ -49,7 +51,7 @@ def get_definition(url: str, rev: str, config: KypoConfiguration) -> TopologyDef
     """
     if utils.GitRepo.is_local_repo(url):
         try:
-            repo = utils.GitRepo.get_git_repo(url, rev)
+            repo = utils.GitRepo.get_git_repo(url, rev, settings.KYPO_CONFIG)
             definition = repo.git.show('{0}:{1}'.format(rev, SANDBOX_DEFINITION_FILENAME))
         except GitCommandError as ex:
             raise exceptions.GitError("Failed to get sandbox definition file {}.\n"

@@ -11,8 +11,12 @@ from typing import Tuple, Optional
 import git
 import structlog
 from Crypto.PublicKey import RSA
-from kypo.openstack_driver.ostack_client import KypoOstackClient
 from django.conf import settings
+
+from kypo.openstack_driver.ostack_client import KypoOstackClient
+
+from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
+
 
 # Create logger
 LOG = structlog.get_logger()
@@ -83,19 +87,21 @@ class GitRepo:
     lock = multiprocessing.Lock()
 
     @classmethod
-    def get_git_repo(cls, url: str, rev: str, name: Optional[str] = None) -> git.Repo:
+    def get_git_repo(cls, url: str, rev: str, config: KypoConfiguration,
+                     name: Optional[str] = None) -> git.Repo:
         """
         Clone remote repository or retrieve its local copy and checkout revision.
 
         :param url: URL of remote Git repository
         :param rev: Revision of the repository
+        :param config: Kypo config
         :param name: The optional name of local repository
         :return: Git Repo object
         :raise: git.exc.GitCommandError if the revision is unknown to Git
         """
         with cls.lock:
             git_ssh_cmd = 'ssh -o StrictHostKeyChecking=no -i {0}'\
-                .format(settings.KYPO_CONFIG.git_private_key)
+                .format(config.git_private_key)
             local_repository = os.path.join(cls.GIT_REPOSITORIES,
                                             url, name if name else rev).replace(":", "")
 
@@ -114,6 +120,17 @@ class GitRepo:
                 pass
 
             return repo
+
+    @staticmethod
+    def has_acces(url: str, config: KypoConfiguration) -> bool:
+        """Test whether the repo is accessible using SSH key."""
+        git_ssh_cmd = 'ssh -o StrictHostKeyChecking=no -i {0}' \
+            .format(config.git_private_key)
+        try:
+            git.cmd.Git().ls_remote(url, env={'GIT_SSH_COMMAND': git_ssh_cmd})
+            return True
+        except git.exc.GitCommandError:
+            return False
 
     @staticmethod
     def is_local_repo(url: str) -> bool:
