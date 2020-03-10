@@ -65,7 +65,7 @@ class Sandbox(models.Model):
                f"LOCK: {self.lock.id if hasattr(self, 'lock') else None}"
 
 
-class Lock(models.Model):
+class SandboxLock(models.Model):
     sandbox = models.OneToOneField(
         Sandbox,
         on_delete=models.PROTECT,
@@ -74,6 +74,17 @@ class Lock(models.Model):
 
     def __str__(self):
         return f"ID: {self.id}, Sandbox: {self.sandbox.id}"
+
+
+class PoolLock(models.Model):
+    pool = models.OneToOneField(
+        Pool,
+        on_delete=models.PROTECT,
+        related_name='lock',
+    )
+
+    def __str__(self):
+        return f"ID: {self.id}, Pool: {self.pool.id}"
 
 
 class SandboxRequest(models.Model):

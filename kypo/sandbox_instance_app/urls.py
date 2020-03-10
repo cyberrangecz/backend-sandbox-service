@@ -8,6 +8,9 @@ WEEK = 3600 * 24 * 7
 urlpatterns = [
     path('pools/', views.PoolList.as_view(), name='pool-list'),
     path('pools/<int:pool_id>/', views.PoolDetail.as_view(), name='pool-detail'),
+    path('pools/<int:pool_id>/locks/', views.PoolLockList.as_view(), name='pool-lock-list'),
+    path('pools/<int:pool_id>/locks/<int:lock_id>/', views.PoolLockDetail.as_view(),
+         name='pool-lock-detail'),
 
     path('pools/<int:pool_id>/sandbox-allocation-units/',
          views.SandboxAllocationUnitList.as_view(), name='sandbox-allocation-unit-list'),

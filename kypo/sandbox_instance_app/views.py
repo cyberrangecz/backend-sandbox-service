@@ -16,9 +16,10 @@ from kypo.sandbox_instance_app.lib.stage_handlers import StackStageHandler
 from kypo.sandbox_instance_app import serializers
 from kypo.sandbox_instance_app.lib import units, pools, sandboxes, nodes,\
     sandbox_destructor
-from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit,\
-    AllocationRequest, AllocationStage, StackAllocationStage, CleanupRequest,\
-    StackCleanupStage, CleanupStage, Lock
+from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit, \
+    AllocationRequest, \
+    AllocationStage, StackAllocationStage, CleanupRequest, StackCleanupStage, CleanupStage, \
+    SandboxLock, PoolLock
 from kypo.sandbox_common_lib import exceptions
 from kypo.sandbox_common_lib.permissions import AllowReadOnViewSandbox
 
@@ -68,6 +69,33 @@ class PoolDetail(mixins.RetrieveModelMixin,
         pool = self.get_object()
         pools.delete_pool(pool)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PoolLockList(mixins.ListModelMixin, generics.GenericAPIView):
+    serializer_class = serializers.PoolLockSerializer
+
+    def get_queryset(self):
+        pool_id = self.kwargs.get('pool_id')
+        # check that given pool exists
+        get_object_or_404(Pool, pk=pool_id)
+        return PoolLock.objects.filter(pool=pool_id)
+
+    def post(self, request, pool_id):
+        """Lock given pool."""
+        pool = pools.get_pool(pool_id)
+        lock = pools.lock_pool(pool)
+        return Response(self.serializer_class(lock).data, status=status.HTTP_201_CREATED)
+
+    def get(self, request, *args, **kwargs):
+        """List locks for given pool."""
+        return self.list(request, *args, **kwargs)
+
+
+class PoolLockDetail(generics.RetrieveDestroyAPIView):
+    """delete: Delete given lock."""
+    queryset = PoolLock.objects.all()
+    lookup_url_kwarg = "lock_id"
+    serializer_class = serializers.PoolLockSerializer
 
 
 class SandboxAllocationUnitList(mixins.ListModelMixin, generics.GenericAPIView):
@@ -210,7 +238,9 @@ class OpenstackAllocationStageDetail(generics.GenericAPIView):
 
     # noinspection PyUnusedLocal
     def get(self, request, stage_id):
-        """Retrieve an `openstack` stage."""
+        """Retrieve an `openstack` stage.
+        Null `status` and `status_reason` attributes mean, that stack does not have them;
+        AKA it does not exist in OpenStack."""
         stage = self.get_object()
         updated = StackStageHandler().update_allocation_stage(stage)
         serializer = self.get_serializer(updated)
@@ -309,8 +339,13 @@ class SandboxDetail(generics.GenericAPIView):
 
 
 class SandboxLockList(mixins.ListModelMixin, generics.GenericAPIView):
-    queryset = Lock.objects.all()
-    serializer_class = serializers.LockSerializer
+    serializer_class = serializers.SandboxLockSerializer
+
+    def get_queryset(self):
+        sandbox_id = self.kwargs.get('sandbox_id')
+        # check that given sandbox exists
+        get_object_or_404(Sandbox, pk=sandbox_id)
+        return SandboxLock.objects.filter(sandbox=sandbox_id)
 
     def post(self, request, sandbox_id):
         """Lock given sandbox."""
@@ -323,11 +358,11 @@ class SandboxLockList(mixins.ListModelMixin, generics.GenericAPIView):
         return self.list(request, *args, **kwargs)
 
 
-class SandboxLockDetail(generics.DestroyAPIView):
+class SandboxLockDetail(generics.RetrieveDestroyAPIView):
     """delete: Delete given lock."""
-    queryset = Lock.objects.all()
+    queryset = SandboxLock.objects.all()
     lookup_url_kwarg = "lock_id"
-    serializer_class = serializers.LockSerializer
+    serializer_class = serializers.SandboxLockSerializer
 
 
 class SandboxKeypairUser(generics.RetrieveAPIView):
