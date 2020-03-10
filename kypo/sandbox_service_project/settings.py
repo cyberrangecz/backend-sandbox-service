@@ -202,7 +202,7 @@ CACHES = {
     }
 }
 
-KYPO_SANDBOX_SERVICE_CONFIG_PATH = os.path.join(BASE_DIR, 'config.yml')
+KYPO_SANDBOX_SERVICE_CONFIG_PATH = os.path.join(BASE_DIR, 'devel-config.yml')
 KYPO_CONFIG = KypoConfiguration.from_file(KYPO_SANDBOX_SERVICE_CONFIG_PATH)
 
 RQ_QUEUES = {
