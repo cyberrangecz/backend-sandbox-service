@@ -14,7 +14,6 @@ LOG_LEVEL = 'INFO'
 GIT_SERVER = 'gitlab.ics.muni.cz'
 GIT_USER = 'git'
 GIT_PRIVATE_KEY = os.path.expanduser('~/.ssh/git_rsa_key')
-GIT_REPOSITORIES = '/tmp'
 ANSIBLE_NETWORKING_REV = 'master'
 SANDBOX_BUILD_TIMEOUT = 3600 * 2
 SANDBOX_DELETE_TIMEOUT = 3600

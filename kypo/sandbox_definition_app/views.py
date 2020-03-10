@@ -44,7 +44,7 @@ class DefinitionDetail(generics.RetrieveDestroyAPIView):
 
 class DefinitionRefs(generics.ListAPIView):
     """
-    get: Retrieve list of definition revs.
+    get: Retrieve list of definition refs (branches and tags).
     """
     serializer_class = serializers.DefinitionRevSerializer
 
