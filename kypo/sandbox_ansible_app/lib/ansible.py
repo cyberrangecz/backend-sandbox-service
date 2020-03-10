@@ -7,7 +7,6 @@ import structlog
 from docker.models.containers import Container
 from kypo.topology_definition.models import TopologyDefinition
 
-from kypo.sandbox_common_lib.utils import AttrDict
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage
 from kypo.sandbox_common_lib import utils
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
@@ -17,15 +16,22 @@ from kypo.sandbox_instance_app.lib import sandboxes
 
 LOG = structlog.get_logger()
 
-ANSIBLE_DOCKER_SSH_DIR = AttrDict(
+
+class DockerVolume:
+    def __init__(self, bind: str, mode: str):
+        self.bind = bind
+        self.mode = mode
+
+
+ANSIBLE_DOCKER_SSH_DIR = DockerVolume(
     bind='/root/.ssh',
     mode='rw'
 )
-ANSIBLE_DOCKER_INVENTORY_PATH = AttrDict(
+ANSIBLE_DOCKER_INVENTORY_PATH = DockerVolume(
     bind='/app/inventory.yml',
     mode='ro'
 )
-ANSIBLE_DOCKER_LOCAL_REPO = AttrDict(
+ANSIBLE_DOCKER_LOCAL_REPO = DockerVolume(
     bind='path',
     mode='ro'
 )
@@ -44,12 +50,12 @@ class AnsibleDockerRunner:
     def run_container(self, image, url, rev, ssh_dir, inventory_path):
         """Run Ansible in Docker container."""
         volumes = {
-            ssh_dir: ANSIBLE_DOCKER_SSH_DIR,
-            inventory_path: ANSIBLE_DOCKER_INVENTORY_PATH
+            ssh_dir: ANSIBLE_DOCKER_SSH_DIR.__dict__,
+            inventory_path: ANSIBLE_DOCKER_INVENTORY_PATH.__dict__
         }
         if self.is_local_repo(url):
             local_path = self.local_repo_path(url)
-            volumes[local_path] = ANSIBLE_DOCKER_LOCAL_REPO
+            volumes[local_path] = ANSIBLE_DOCKER_LOCAL_REPO.__dict__
             volumes[local_path]['bind'] = local_path
 
         command = ['-u', url, '-r', rev, '-i', ANSIBLE_DOCKER_INVENTORY_PATH.bind]
