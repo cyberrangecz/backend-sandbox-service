@@ -34,7 +34,7 @@ DEFINITION_REV = 'integration-test'
 # Heat stack and template values
 JUMP_STACK_NAME = 'integration_test_jump'
 TEMPLATE_DICT = dict(
-    PUBLIC_NETWORK='public-muni-147-251-124-GROUP',
+    PUBLIC_NETWORK='public-cesnet-78-128-251-GROUP',
     JUMP_IMAGE=settings.KYPO_CONFIG.trc.extra_nodes_image,
     JUMP_FLAVOR=settings.KYPO_CONFIG.trc.extra_nodes_flavor,
 )
@@ -72,6 +72,9 @@ class TestIntegration:
             config.os_application_credential_secret = os.environ.get(
                 'OS_APPLICATION_CREDENTIAL_SECRET')
 
+        mock_repo = mocker.patch("kypo.sandbox_instance_app.lib.pools.Repo")
+        mock_repo.return_value.get_rev_sha = mocker.MagicMock(return_value=DEFINITION_REV)
+
         if not config.ansible_networking_url:
             with tempfile.TemporaryDirectory() as tmpdir:
                 for archive in (DEFINITION_REPO_NAME, NETWORKING_REPO_NAME):
@@ -84,10 +87,7 @@ class TestIntegration:
                 config.ansible_networking_rev = ansible_networking_rev
                 name = DEFINITION_REPO_NAME.replace('.zip', "")
                 self.DEFINITION_URL = 'file://' + os.path.join(tmpdir, name)
-
-        mock_repo = mocker.patch("kypo.sandbox_instance_app.lib.pools.Repo")
-        mock_repo.return_value.get_rev_sha = mocker.MagicMock(return_value=DEFINITION_REV)
-        yield
+                yield
 
     def test_build_sandbox_full(self, client, jump_template):
         def_id = self.create_definition(client, self.DEFINITION_URL, DEFINITION_REV)
