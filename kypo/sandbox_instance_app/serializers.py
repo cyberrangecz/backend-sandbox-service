@@ -214,7 +214,7 @@ class NodeSerializer(serializers.Serializer):
     creation_time = serializers.DateTimeField()
     update_time = serializers.DateTimeField()
     image_id = serializers.CharField()
-    flavor_id = serializers.CharField()
+    flavor_name = serializers.CharField()
 
 
 class NodeConsoleSerializer(serializers.Serializer):
