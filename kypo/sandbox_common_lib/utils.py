@@ -139,9 +139,3 @@ class GitRepo:
     @staticmethod
     def local_repo_path(url: str) -> str:
         return re.sub('^file://', '', url)
-
-
-class AttrDict(dict):
-    def __init__(self, *args, **kwargs):
-        super(AttrDict, self).__init__(*args, **kwargs)
-        self.__dict__ = self
