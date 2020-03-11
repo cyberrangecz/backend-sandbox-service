@@ -13,6 +13,9 @@ log_file: /dev/null
 # The level of log verbosity. One of: NOTSET, DEBUG, INFO, WARNING, ERROR, FATAL, CRITICAL.
 #log_level: INFO
 
+# The access token for Gitlab API
+git_access_token: ""
+
 # The URL of Ansible networking Git repository.
 ansible_networking_url: ""
 

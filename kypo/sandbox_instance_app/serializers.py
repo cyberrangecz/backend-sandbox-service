@@ -23,8 +23,8 @@ class PoolSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Pool
-        fields = ('id', 'definition', 'size', 'max_size', 'lock')
-        read_only_fields = ('id', 'size', 'lock')
+        fields = ('id', 'definition', 'size', 'max_size', 'lock', 'rev', 'rev_sha')
+        read_only_fields = ('id', 'size', 'lock', 'rev_sha')
 
     @staticmethod
     def validate_max_size(value):
@@ -42,6 +42,11 @@ class PoolSerializer(serializers.ModelSerializer):
     @staticmethod
     def get_lock(obj) -> Optional[int]:
         return obj.lock.id if hasattr(obj, 'lock') else None
+
+
+class PoolSerializerCreate(PoolSerializer):
+    class Meta(PoolSerializer.Meta):
+        read_only_fields = ('id', 'size')
 
 
 class AllocationRequestSerializer(serializers.ModelSerializer):

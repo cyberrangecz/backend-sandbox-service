@@ -2,6 +2,7 @@ import structlog
 from kypo.openstack_driver.sandbox_topology import SandboxTopology as Stack,\
     BR_NET_NAME, UAN_NET_NAME
 
+from django.conf import settings
 from kypo.sandbox_instance_app.models import Sandbox
 from kypo.sandbox_common_lib import utils
 from kypo.sandbox_definition_app.lib import definitions
@@ -61,8 +62,7 @@ class Topology:
 
         # Delete hidden host
         definition = sandbox.allocation_unit.pool.definition
-        top_def = definitions.get_definition(url=definition.url,
-                                                    rev=definition.rev)
+        top_def = definitions.get_definition(definition.url, definition.rev, settings.KYPO_CONFIG)
 
         hidden = []
         for host in top_def.hosts:

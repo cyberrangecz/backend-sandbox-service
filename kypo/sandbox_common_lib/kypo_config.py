@@ -14,7 +14,6 @@ LOG_LEVEL = 'INFO'
 GIT_SERVER = 'gitlab.ics.muni.cz'
 GIT_USER = 'git'
 GIT_PRIVATE_KEY = os.path.expanduser('~/.ssh/git_rsa_key')
-GIT_REPOSITORIES = '/tmp'
 ANSIBLE_NETWORKING_REV = 'master'
 SANDBOX_BUILD_TIMEOUT = 3600 * 2
 SANDBOX_DELETE_TIMEOUT = 3600
@@ -45,10 +44,10 @@ class KypoConfiguration(Object):
     log_level = Attribute(type=str, default=LOG_LEVEL)
 
     # Sandbox creation configuration
+    git_access_token = Attribute(type=str)
     git_server = Attribute(type=str, default=GIT_SERVER)
     git_user = Attribute(type=str, default=GIT_USER)
     git_private_key = Attribute(type=str, default=GIT_PRIVATE_KEY)
-    git_repositories = Attribute(type=str, default=GIT_REPOSITORIES)
 
     ansible_networking_url = Attribute(type=str)
     ansible_networking_rev = Attribute(type=str, default=ANSIBLE_NETWORKING_REV)

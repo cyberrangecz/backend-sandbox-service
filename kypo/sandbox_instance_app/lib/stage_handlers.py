@@ -82,10 +82,7 @@ class StackStageHandler(StageHandler):
     def build_stack(self, stage: StackAllocationStage, sandbox: Sandbox) -> None:
         """Build sandbox in OpenStack."""
         definition = sandbox.allocation_unit.pool.definition
-        top_def = definitions.get_definition(
-            definition.url, definition.rev,
-            'rev-{0}_stage-{1}'.format(definition.rev, stage.id)
-        )
+        top_def = definitions.get_definition(definition.url, definition.rev, settings.KYPO_CONFIG)
         stack = self.client.create_sandbox(
             sandbox.allocation_unit.get_stack_name(), top_def,
             kp_name=stage.request.allocation_unit.pool.get_keypair_name())
@@ -183,7 +180,8 @@ class AnsibleStageHandler(StageHandler):
         top_def = definitions.get_definition(
             stage.request.allocation_unit.pool.definition.url,
             stage.request.allocation_unit.pool.definition.rev,
-            f'rev-{stage.request.allocation_unit.pool.definition.rev}_stage-{stage.id}')
+            settings.KYPO_CONFIG
+        )
         inventory_path = runner.prepare_inventory_file(
             dir_path, sandbox.allocation_unit.get_stack_name(), top_def)
 

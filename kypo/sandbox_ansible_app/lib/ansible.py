@@ -1,5 +1,4 @@
 import os
-import re
 import shutil
 
 import docker
@@ -53,10 +52,9 @@ class AnsibleDockerRunner:
             ssh_dir: ANSIBLE_DOCKER_SSH_DIR.__dict__,
             inventory_path: ANSIBLE_DOCKER_INVENTORY_PATH.__dict__
         }
-        if self.is_local_repo(url):
-            local_path = self.local_repo_path(url)
+        if utils.GitRepo.is_local_repo(url):
+            local_path = utils.GitRepo.local_repo_path(url)
             volumes[local_path] = ANSIBLE_DOCKER_LOCAL_REPO.__dict__
-            volumes[local_path]['bind'] = local_path
 
         command = ['-u', url, '-r', rev, '-i', ANSIBLE_DOCKER_INVENTORY_PATH.bind]
         LOG.debug("Ansible container options", command=command)
@@ -85,7 +83,7 @@ class AnsibleDockerRunner:
         self.save_file(os.path.join(ssh_directory, MNG_PRIVATE_KEY_FILENAME),
                        stage.request.allocation_unit.pool.private_management_key)
 
-        if not AnsibleDockerRunner.is_local_repo(stage.repo_url):
+        if not utils.GitRepo.is_local_repo(stage.repo_url):
             shutil.copy(config.git_private_key,
                         os.path.join(ssh_directory, os.path.basename(config.git_private_key)))
 
@@ -129,11 +127,3 @@ class AnsibleDockerRunner:
     def save_file(file_path: str, data: str) -> None:
         with open(file_path, 'w') as file:
             file.write(data)
-
-    @staticmethod
-    def is_local_repo(url: str) -> bool:
-        return url.startswith('file://')
-
-    @staticmethod
-    def local_repo_path(url: str) -> str:
-        return re.sub('^file://', '', url)

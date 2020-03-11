@@ -31,3 +31,7 @@ class DefinitionSerializerCreate(DefinitionSerializer):
     """The name needs to be a readable field, otherwise it is ignored."""
     class Meta(DefinitionSerializer.Meta):
         read_only_fields = ('id',)
+
+
+class DefinitionRevSerializer(serializers.Serializer):
+    name = serializers.CharField()

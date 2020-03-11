@@ -65,7 +65,7 @@ def enqueue_allocation_request(request: AllocationRequest, sandbox: Sandbox) -> 
 
         stage_user_ansible = AnsibleAllocationStage.objects.create(
             request=request, repo_url=request.allocation_unit.pool.definition.url,
-            rev=request.allocation_unit.pool.definition.rev
+            rev=request.allocation_unit.pool.rev_sha
         )
         job_user_ansible = queue_ansible.enqueue(
             AnsibleStageHandler().build, stage_name='Allocation User Ansible',

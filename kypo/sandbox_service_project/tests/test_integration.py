@@ -34,7 +34,7 @@ DEFINITION_REV = 'integration-test'
 # Heat stack and template values
 JUMP_STACK_NAME = 'integration_test_jump'
 TEMPLATE_DICT = dict(
-    PUBLIC_NETWORK='public-muni-147-251-124-GROUP',
+    PUBLIC_NETWORK='public-cesnet-78-128-251-GROUP',
     JUMP_IMAGE=settings.KYPO_CONFIG.trc.extra_nodes_image,
     JUMP_FLAVOR=settings.KYPO_CONFIG.trc.extra_nodes_flavor,
 )
@@ -59,7 +59,7 @@ class TestIntegration:
     DEFINITION_URL = None
 
     @pytest.fixture(autouse=True)
-    def kypo_ostack_client(self):
+    def kypo_ostack_client(self, mocker):
         """Set config values. Config.yml overrides those values if set.
         Also extract the zip repositories to tmp directory.
         """
@@ -69,7 +69,11 @@ class TestIntegration:
         if not config.os_application_credential_id:
             config.os_application_credential_id = os.environ.get('OS_APPLICATION_CREDENTIAL_ID')
         if not config.os_application_credential_secret:
-            config.os_application_credential_secret = os.environ.get('OS_APPLICATION_CREDENTIAL_SECRET')
+            config.os_application_credential_secret = os.environ.get(
+                'OS_APPLICATION_CREDENTIAL_SECRET')
+
+        mock_repo = mocker.patch("kypo.sandbox_instance_app.lib.pools.Repo")
+        mock_repo.return_value.get_rev_sha = mocker.MagicMock(return_value=DEFINITION_REV)
 
         if not config.ansible_networking_url:
             with tempfile.TemporaryDirectory() as tmpdir:
