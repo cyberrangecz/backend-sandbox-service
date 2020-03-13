@@ -53,7 +53,7 @@ def get_definition(url: str, rev: str, config: KypoConfiguration) -> TopologyDef
             provider = GenericProvider(url, settings.KYPO_CONFIG.git_private_key)
         else:
             provider = GitlabProvider(url, config.git_access_token)
-        definition = provider.get_file(rev, SANDBOX_DEFINITION_FILENAME)
+        definition = provider.get_file(SANDBOX_DEFINITION_FILENAME, rev)
     except exceptions.GitError as ex:
         raise exceptions.GitError("Failed to get sandbox definition file {}.\n"
                                   .format(SANDBOX_DEFINITION_FILENAME) + str(ex))
