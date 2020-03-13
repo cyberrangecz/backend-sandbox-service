@@ -5,7 +5,7 @@ import docker
 import structlog
 from docker.models.containers import Container
 
-import kypo.sandbox_definition_app.lib.definition_providers
+from kypo.sandbox_definition_app.lib.definition_providers import GenericProvider
 from kypo.topology_definition.models import TopologyDefinition
 
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage
@@ -54,8 +54,8 @@ class AnsibleDockerRunner:
             ssh_dir: ANSIBLE_DOCKER_SSH_DIR.__dict__,
             inventory_path: ANSIBLE_DOCKER_INVENTORY_PATH.__dict__
         }
-        if kypo.sandbox_definition_app.lib.definition_providers.GenericProvider.is_local_repo(url):
-            local_path = kypo.sandbox_definition_app.lib.definition_providers.GenericProvider.local_repo_path(url)
+        if GenericProvider.is_local_repo(url):
+            local_path = GenericProvider.get_local_repo_path(url)
             volumes[local_path] = ANSIBLE_DOCKER_LOCAL_REPO.__dict__
 
         command = ['-u', url, '-r', rev, '-i', ANSIBLE_DOCKER_INVENTORY_PATH.bind]

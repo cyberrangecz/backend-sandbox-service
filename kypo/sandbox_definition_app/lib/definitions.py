@@ -6,7 +6,6 @@ import structlog
 from yamlize import YamlizingError
 from django.conf import settings
 
-import kypo.sandbox_definition_app.lib.definition_providers
 from kypo.topology_definition.models import TopologyDefinition
 
 from kypo.sandbox_definition_app import serializers
@@ -31,7 +30,7 @@ def create_definition(url: str, rev: str = None) -> Definition:
 
     client = utils.get_ostack_client()
     client.validate_sandbox_definition(top_def)
-    if not kypo.sandbox_definition_app.lib.definition_providers.GitlabProvider.has_key_acces(url, settings.KYPO_CONFIG):
+    if not GitlabProvider.has_key_access(url, settings.KYPO_CONFIG):
         raise exceptions.ValidationError('Repository is not accessible using SSH key.')
 
     serializer = serializers.DefinitionSerializerCreate(

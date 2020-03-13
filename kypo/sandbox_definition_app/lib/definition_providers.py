@@ -68,7 +68,7 @@ class GitlabProvider(DefinitionProvider):
             raise exceptions.GitError('Failed to get sha of the GIT rev.', ex)
 
     @staticmethod
-    def has_key_acces(url: str, config: KypoConfiguration) -> bool:
+    def has_key_access(url: str, config: KypoConfiguration) -> bool:
         """Test whether the repo is accessible using SSH key."""
         git_ssh_cmd = 'ssh -o StrictHostKeyChecking=no -i {0}' \
             .format(config.git_private_key)
@@ -146,5 +146,5 @@ class GenericProvider(DefinitionProvider):
         return url.startswith('file://')
 
     @staticmethod
-    def local_repo_path(url: str) -> str:
+    def get_local_repo_path(url: str) -> str:
         return re.sub('^file://', '', url)

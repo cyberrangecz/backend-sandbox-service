@@ -72,7 +72,7 @@ class TestIntegration:
             config.os_application_credential_secret = os.environ.get(
                 'OS_APPLICATION_CREDENTIAL_SECRET')
 
-        mock_repo = mocker.patch("kypo.sandbox_instance_app.lib.pools.Repo")
+        mock_repo = mocker.patch("kypo.sandbox_instance_app.lib.pools.GitlabProvider")
         mock_repo.return_value.get_rev_sha = mocker.MagicMock(return_value=DEFINITION_REV)
 
         if not config.ansible_networking_url:
