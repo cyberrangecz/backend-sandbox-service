@@ -3,20 +3,13 @@ Simple utils module.
 """
 import json
 import logging
-import multiprocessing
-import os
-import re
 import uuid
-from typing import Tuple, Optional
-import git
+from typing import Tuple
 import structlog
 from Crypto.PublicKey import RSA
 from django.conf import settings
 
 from kypo.openstack_driver.ostack_client import KypoOstackClient
-
-from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
-
 
 # Create logger
 LOG = structlog.get_logger()
@@ -80,62 +73,3 @@ def get_ostack_client() -> KypoOstackClient:
 def get_simple_uuid() -> str:
     """First four bytes of UUID as string."""
     return str(uuid.uuid4()).split('-')[0]
-
-
-class GitRepo:
-    GIT_REPOSITORIES = '/tmp'
-    lock = multiprocessing.Lock()
-
-    @classmethod
-    def get_git_repo(cls, url: str, rev: str, config: KypoConfiguration,
-                     name: Optional[str] = None) -> git.Repo:
-        """
-        Clone remote repository or retrieve its local copy and checkout revision.
-
-        :param url: URL of remote Git repository
-        :param rev: Revision of the repository
-        :param config: Kypo config
-        :param name: The optional name of local repository
-        :return: Git Repo object
-        :raise: git.exc.GitCommandError if the revision is unknown to Git
-        """
-        with cls.lock:
-            git_ssh_cmd = 'ssh -o StrictHostKeyChecking=no -i {0}'\
-                .format(config.git_private_key)
-            local_repository = os.path.join(cls.GIT_REPOSITORIES,
-                                            url, name if name else rev).replace(":", "")
-
-            if os.path.isdir(local_repository):
-                repo = git.Repo(local_repository)
-            else:
-                os.makedirs(local_repository, exist_ok=True)
-                repo = git.Repo.clone_from(url, local_repository, env={'GIT_SSH_COMMAND': git_ssh_cmd})
-                repo.git.checkout(rev)
-            try:
-                # check if revision is branch
-                repo.git.show_ref('--verify', 'refs/heads/{0}'.format(rev))
-                repo.remote().pull(env={'GIT_SSH_COMMAND': git_ssh_cmd})
-            except git.exc.GitCommandError as ex:
-                LOG.warning("Git pull failed", exception=str(ex))
-                pass
-
-            return repo
-
-    @staticmethod
-    def has_acces(url: str, config: KypoConfiguration) -> bool:
-        """Test whether the repo is accessible using SSH key."""
-        git_ssh_cmd = 'ssh -o StrictHostKeyChecking=no -i {0}' \
-            .format(config.git_private_key)
-        try:
-            git.cmd.Git().ls_remote(url, env={'GIT_SSH_COMMAND': git_ssh_cmd})
-            return True
-        except git.exc.GitCommandError:
-            return False
-
-    @staticmethod
-    def is_local_repo(url: str) -> bool:
-        return url.startswith('file://')
-
-    @staticmethod
-    def local_repo_path(url: str) -> str:
-        return re.sub('^file://', '', url)

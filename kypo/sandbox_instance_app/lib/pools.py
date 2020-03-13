@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404
 from django.conf import settings
 
 from kypo.sandbox_common_lib import utils, exceptions
-from kypo.sandbox_common_lib.gitlab import Repo
+from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider
 from kypo.sandbox_definition_app.lib import definitions
 from kypo.sandbox_definition_app.models import Definition
 
@@ -47,7 +47,7 @@ def create_pool(data: Dict) -> Pool:
     definition = get_object_or_404(Definition, pk=data.get('definition'))
     if 'rev' not in data:
         data['rev'] = definition.rev
-    repo = Repo(definition.url, settings.KYPO_CONFIG.git_access_token)
+    repo = GitlabProvider(definition.url, settings.KYPO_CONFIG.git_access_token)
     data['rev_sha'] = repo.get_rev_sha(data['rev'])
 
     serializer = serializers.PoolSerializerCreate(data=data)
