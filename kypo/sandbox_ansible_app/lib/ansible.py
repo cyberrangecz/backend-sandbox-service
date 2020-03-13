@@ -85,7 +85,7 @@ class AnsibleDockerRunner:
         self.save_file(os.path.join(ssh_directory, MNG_PRIVATE_KEY_FILENAME),
                        stage.request.allocation_unit.pool.private_management_key)
 
-        if not kypo.sandbox_definition_app.lib.definition_providers.GenericProvider.is_local_repo(stage.repo_url):
+        if not GenericProvider.is_local_repo(stage.repo_url):
             shutil.copy(config.git_private_key,
                         os.path.join(ssh_directory, os.path.basename(config.git_private_key)))
 
