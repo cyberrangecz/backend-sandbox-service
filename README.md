@@ -71,6 +71,11 @@ OS_AUTH_URL
 OS_APPLICATION_CREDENTIAL_ID
 OS_APPLICATION_CREDENTIAL_SECRET
 ```
+You should also set the following environment variable,
+so that the tests know which public network to use.
+```
+PUBLIC_NETWORK
+```
 Then run the following command.
 ```bash
 pipevn run tox -- -m integration

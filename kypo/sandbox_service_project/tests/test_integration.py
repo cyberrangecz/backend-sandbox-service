@@ -33,8 +33,9 @@ DEFINITION_REV = 'integration-test'
 
 # Heat stack and template values
 JUMP_STACK_NAME = 'integration_test_jump'
+DEFAULT_PUBLIC_NETWORK = 'public-cesnet-78-128-251-GROUP'
 TEMPLATE_DICT = dict(
-    PUBLIC_NETWORK='public-cesnet-78-128-251-GROUP',
+    PUBLIC_NETWORK=os.environ.get('PUBLIC_NETWORK', DEFAULT_PUBLIC_NETWORK),
     JUMP_IMAGE=settings.KYPO_CONFIG.trc.extra_nodes_image,
     JUMP_FLAVOR=settings.KYPO_CONFIG.trc.extra_nodes_flavor,
 )
