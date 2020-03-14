@@ -57,6 +57,7 @@ class AnsibleDockerRunner:
         if GenericProvider.is_local_repo(url):
             local_path = GenericProvider.get_local_repo_path(url)
             volumes[local_path] = ANSIBLE_DOCKER_LOCAL_REPO.__dict__
+            volumes[local_path]['bind'] = local_path
 
         command = ['-u', url, '-r', rev, '-i', ANSIBLE_DOCKER_INVENTORY_PATH.bind]
         LOG.debug("Ansible container options", command=command)
