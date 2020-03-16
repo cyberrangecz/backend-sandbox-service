@@ -1,4 +1,4 @@
-from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider, GenericProvider
+from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider, GitProvider
 
 
 class TestGitlabProvider:
@@ -17,8 +17,8 @@ class TestGenericProvider:
     URL = 'file:///path/to/repo/kypo-sandbox-service.git'
 
     def test_is_local_repo(self):
-        assert GenericProvider.is_local_repo(self.URL)
-        assert not GenericProvider.is_local_repo(TestGitlabProvider.URL)
+        assert GitProvider.is_local_repo(self.URL)
+        assert not GitProvider.is_local_repo(TestGitlabProvider.URL)
 
     def test_get_local_repo_path(self):
-        assert GenericProvider.get_local_repo_path(self.URL) == '/path/to/repo/kypo-sandbox-service.git'
+        assert GitProvider.get_local_repo_path(self.URL) == '/path/to/repo/kypo-sandbox-service.git'

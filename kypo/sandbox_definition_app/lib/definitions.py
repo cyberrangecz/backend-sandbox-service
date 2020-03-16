@@ -10,7 +10,7 @@ from kypo.topology_definition.models import TopologyDefinition
 
 from kypo.sandbox_definition_app import serializers
 from kypo.sandbox_definition_app.models import Definition
-from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider, GenericProvider
+from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider, GitProvider
 from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
 
@@ -49,8 +49,8 @@ def get_definition(url: str, rev: str, config: KypoConfiguration) -> TopologyDef
     :raise: GitError if GIT error occurs, ValidationError if definition is incorrect
     """
     try:
-        if GenericProvider.is_local_repo(url):
-            provider = GenericProvider(url, settings.KYPO_CONFIG.git_private_key)
+        if GitProvider.is_local_repo(url):
+            provider = GitProvider(url, settings.KYPO_CONFIG.git_private_key)
         else:
             provider = GitlabProvider(url, config.git_access_token)
         definition = provider.get_file(SANDBOX_DEFINITION_FILENAME, rev)

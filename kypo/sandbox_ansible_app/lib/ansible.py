@@ -5,7 +5,7 @@ import docker
 import structlog
 from docker.models.containers import Container
 
-from kypo.sandbox_definition_app.lib.definition_providers import GenericProvider
+from kypo.sandbox_definition_app.lib.definition_providers import GitProvider
 from kypo.topology_definition.models import TopologyDefinition
 
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage
@@ -54,8 +54,8 @@ class AnsibleDockerRunner:
             ssh_dir: ANSIBLE_DOCKER_SSH_DIR.__dict__,
             inventory_path: ANSIBLE_DOCKER_INVENTORY_PATH.__dict__
         }
-        if GenericProvider.is_local_repo(url):
-            local_path = GenericProvider.get_local_repo_path(url)
+        if GitProvider.is_local_repo(url):
+            local_path = GitProvider.get_local_repo_path(url)
             volumes[local_path] = ANSIBLE_DOCKER_LOCAL_REPO.__dict__
             volumes[local_path]['bind'] = local_path
 
@@ -86,7 +86,7 @@ class AnsibleDockerRunner:
         self.save_file(os.path.join(ssh_directory, MNG_PRIVATE_KEY_FILENAME),
                        stage.request.allocation_unit.pool.private_management_key)
 
-        if not GenericProvider.is_local_repo(stage.repo_url):
+        if not GitProvider.is_local_repo(stage.repo_url):
             shutil.copy(config.git_private_key,
                         os.path.join(ssh_directory, os.path.basename(config.git_private_key)))
 

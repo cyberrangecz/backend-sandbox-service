@@ -28,6 +28,14 @@ class DefinitionProvider(ABC):
         """Returns True if the url target can be provided by this provider class."""
         pass
 
+    @staticmethod
+    def is_local_repo(url: str) -> bool:
+        return url.startswith('file://')
+
+    @staticmethod
+    def get_local_repo_path(url: str) -> str:
+        return re.sub('^file://', '', url)
+
 
 class GitlabProvider(DefinitionProvider):
     """Definition provider for Gitlab API."""
@@ -103,7 +111,7 @@ class GitlabProvider(DefinitionProvider):
         return quoted_path
 
 
-class GenericProvider(DefinitionProvider):
+class GitProvider(DefinitionProvider):
     """Generic Definition provider. Uses directly GIT commands. Should therefore
     work with any git server, if the repo is accessible using SSH key.
     Can handle even local bare repositories.
@@ -156,11 +164,3 @@ class GenericProvider(DefinitionProvider):
     def is_providable(url: str) -> bool:
         """Any GIT url is providable using the general provider."""
         return True
-
-    @staticmethod
-    def is_local_repo(url: str) -> bool:
-        return url.startswith('file://')
-
-    @staticmethod
-    def get_local_repo_path(url: str) -> str:
-        return re.sub('^file://', '', url)
