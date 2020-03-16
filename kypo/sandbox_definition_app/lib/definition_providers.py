@@ -176,7 +176,7 @@ class GitProvider(DefinitionProvider):
 
     def get_refs(self):
         repo = self.get_git_repo(self.url, 'master', self.key_path)
-        return repo.references
+        return list(repo.references)
 
     def get_rev_sha(self, rev: str) -> str:
         repo = self.get_git_repo(self.url, rev, self.key_path)
