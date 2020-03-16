@@ -22,6 +22,12 @@ class DefinitionProvider(ABC):
         """Get file from repo as a string."""
         pass
 
+    @staticmethod
+    @abstractmethod
+    def is_providable(url: str) -> bool:
+        """Returns True if the url target can be provided by this provider class."""
+        pass
+
 
 class GitlabProvider(DefinitionProvider):
     """Definition provider for Gitlab API."""
@@ -38,6 +44,11 @@ class GitlabProvider(DefinitionProvider):
             return file.decode().decode()  # One decode to get content, one from bytes to str
         except (requests.exceptions.RequestException, gitlab.exceptions.GitlabError) as ex:
             raise exceptions.GitError(ex)
+
+    @staticmethod
+    def is_providable(url: str) -> bool:
+        """Return True if url is Gitlab url."""
+        return url.startswith('git@gitlab')
 
     def get_branches(self):
         try:
@@ -140,6 +151,11 @@ class GenericProvider(DefinitionProvider):
             return repo.git.show(f'{rev}:{path}')
         except git.exc.GitCommandError as ex:
             raise exceptions.GitError(ex)
+
+    @staticmethod
+    def is_providable(url: str) -> bool:
+        """Any GIT url is providable using the general provider."""
+        return True
 
     @staticmethod
     def is_local_repo(url: str) -> bool:
