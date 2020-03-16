@@ -10,7 +10,8 @@ from kypo.topology_definition.models import TopologyDefinition
 
 from kypo.sandbox_definition_app import serializers
 from kypo.sandbox_definition_app.models import Definition
-from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider, GitProvider
+from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider, GitProvider, \
+    DefinitionProvider
 from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
 
@@ -30,7 +31,7 @@ def create_definition(url: str, rev: str = None) -> Definition:
 
     client = utils.get_ostack_client()
     client.validate_sandbox_definition(top_def)
-    if not GitlabProvider.has_key_access(url, settings.KYPO_CONFIG):
+    if not DefinitionProvider.has_key_access(url, settings.KYPO_CONFIG):
         raise exceptions.ValidationError('Repository is not accessible using SSH key.')
 
     serializer = serializers.DefinitionSerializerCreate(

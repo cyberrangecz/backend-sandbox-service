@@ -25,8 +25,28 @@ class DefinitionProvider(ABC):
     @staticmethod
     @abstractmethod
     def is_providable(url: str) -> bool:
-        """Returns True if the url target can be provided by this provider class."""
+        """Return True if the url target can be provided by this provider class."""
         pass
+
+    @abstractmethod
+    def get_refs(self):
+        """Get a list of refs (branches + tags)."""
+        pass
+
+    @abstractmethod
+    def get_rev_sha(self, rev: str) -> str:
+        """Get a sha of a rev."""
+
+    @staticmethod
+    def has_key_access(url: str, config: KypoConfiguration) -> bool:
+        """Test whether the repo is accessible using SSH key."""
+        git_ssh_cmd = 'ssh -o StrictHostKeyChecking=no -i {0}' \
+            .format(config.git_private_key)
+        try:
+            git.cmd.Git().ls_remote(url, env={'GIT_SSH_COMMAND': git_ssh_cmd})
+            return True
+        except git.exc.GitCommandError:
+            return False
 
     @staticmethod
     def is_local_repo(url: str) -> bool:
@@ -85,17 +105,6 @@ class GitlabProvider(DefinitionProvider):
             return commit.id
         except (requests.exceptions.RequestException, gitlab.exceptions.GitlabError) as ex:
             raise exceptions.GitError('Failed to get sha of the GIT rev.', ex)
-
-    @staticmethod
-    def has_key_access(url: str, config: KypoConfiguration) -> bool:
-        """Test whether the repo is accessible using SSH key."""
-        git_ssh_cmd = 'ssh -o StrictHostKeyChecking=no -i {0}' \
-            .format(config.git_private_key)
-        try:
-            git.cmd.Git().ls_remote(url, env={'GIT_SSH_COMMAND': git_ssh_cmd})
-            return True
-        except git.exc.GitCommandError:
-            return False
 
     @staticmethod
     def get_host_url(url: str, prot: str = 'http') -> str:
@@ -164,3 +173,12 @@ class GitProvider(DefinitionProvider):
     def is_providable(url: str) -> bool:
         """Any GIT url is providable using the general provider."""
         return True
+
+    def get_refs(self):
+        repo = self.get_git_repo(self.url, 'master', self.key_path)
+        return repo.references
+
+    def get_rev_sha(self, rev: str) -> str:
+        repo = self.get_git_repo(self.url, rev, self.key_path)
+        commit = repo.commit(rev)
+        return commit.hexsha
