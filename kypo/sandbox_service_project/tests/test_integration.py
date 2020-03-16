@@ -59,7 +59,7 @@ class TestIntegration:
     DEFINITION_URL = None
 
     @pytest.fixture(autouse=True)
-    def kypo_ostack_client(self, mocker):
+    def kypo_ostack_client(self):
         """Set config values. Config.yml overrides those values if set.
         Also extract the zip repositories to tmp directory.
         """
@@ -71,9 +71,6 @@ class TestIntegration:
         if not config.os_application_credential_secret:
             config.os_application_credential_secret = os.environ.get(
                 'OS_APPLICATION_CREDENTIAL_SECRET')
-
-        mock_repo = mocker.patch("kypo.sandbox_instance_app.lib.pools.GitlabProvider")
-        mock_repo.return_value.get_rev_sha = mocker.MagicMock(return_value=DEFINITION_REV)
 
         if not config.ansible_networking_url:
             with tempfile.TemporaryDirectory() as tmpdir:

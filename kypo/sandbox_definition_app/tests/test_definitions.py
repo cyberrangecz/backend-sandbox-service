@@ -13,7 +13,7 @@ class TestCreateDefinition:
     name = 'def-name'
 
     def test_create_definition_success(self, mocker):
-        mocker.patch("kypo.sandbox_definition_app.lib.definitions.GitlabProvider")
+        mocker.patch("kypo.sandbox_definition_app.lib.definitions.DefinitionProvider")
         mocker.patch("kypo.openstack_driver.ostack_client.KypoOstackClient"
                      ".validate_sandbox_definition")
         mock = mocker.Mock()
@@ -29,7 +29,7 @@ class TestCreateDefinition:
         assert database_definition.rev == self.rev
 
     def test_create_definition_nonunique(self, mocker):
-        mocker.patch("kypo.sandbox_definition_app.lib.definitions.GitlabProvider")
+        mocker.patch("kypo.sandbox_definition_app.lib.definitions.DefinitionProvider")
         mocker.patch("kypo.openstack_driver.ostack_client.KypoOstackClient"
                      ".validate_sandbox_definition")
         mock = mocker.Mock()
