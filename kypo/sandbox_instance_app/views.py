@@ -12,6 +12,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from kypo.sandbox_definition_app.serializers import DefinitionSerializer
 from kypo.sandbox_instance_app.lib.stage_handlers import StackStageHandler
 from kypo.sandbox_instance_app import serializers
 from kypo.sandbox_instance_app.lib import units, pools, sandboxes, nodes,\
@@ -69,6 +70,17 @@ class PoolDetail(mixins.RetrieveModelMixin,
         pool = self.get_object()
         pools.delete_pool(pool)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PoolDefinition(mixins.RetrieveModelMixin, generics.GenericAPIView):
+    serializer_class = DefinitionSerializer
+
+    def get(self, request, pool_id):
+        """Retrieve the definition associate with a pool."""
+        pool_id = self.kwargs.get('pool_id')
+        pool = get_object_or_404(Pool, pk=pool_id)
+        serializer = self.get_serializer(pool.definition)
+        return Response(serializer.data)
 
 
 class PoolLockList(mixins.ListModelMixin, generics.GenericAPIView):
