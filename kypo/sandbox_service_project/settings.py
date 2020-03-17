@@ -236,7 +236,7 @@ LOGGING = {
     },
     "handlers": {
         "rq_console": {
-            "level": "DEBUG",
+            "level": KYPO_CONFIG.log_level,
             "class": "rq.utils.ColorizingStreamHandler",
             "formatter": "rq_console",
             "exclude": ["%(asctime)s"],
@@ -245,7 +245,7 @@ LOGGING = {
     'loggers': {
         "rq.worker": {
             "handlers": ["rq_console"],
-            "level": "DEBUG"
+            "level": KYPO_CONFIG.log_level,
         },
     }
 }
