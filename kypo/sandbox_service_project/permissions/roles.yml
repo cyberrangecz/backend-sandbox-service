@@ -31,10 +31,15 @@
     - change_sandbox
     - delete_sandbox
 
-    - view_lock
-    - add_lock
-    - change_lock
-    - delete_lock
+    - view_poollock
+    - add_poollock
+    - change_poollock
+    - delete_poollock
+
+    - view_sandboxlock
+    - add_sandboxlock
+    - change_sandboxlock
+    - delete_sandboxlock
 
     # Allocation Stages
     - view_stackallocationstage
@@ -99,10 +104,15 @@
     - change_sandbox
     - delete_sandbox
 
-    - view_lock
-    - add_lock
-    - change_lock
-    - delete_lock
+    - view_poollock
+    - add_poollock
+    - change_poollock
+    - delete_poollock
+
+    - view_sandboxlock
+    - add_sandboxlock
+    - change_sandboxlock
+    - delete_sandboxlock
 
     # Allocation Stages
     - view_stackallocationstage
