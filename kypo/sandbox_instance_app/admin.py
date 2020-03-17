@@ -11,6 +11,7 @@ class ShowIdAdmin(admin.ModelAdmin):
 admin.site.register(models.Pool, ShowIdAdmin)
 admin.site.register(models.SandboxAllocationUnit, ShowIdAdmin)
 admin.site.register(models.SandboxLock, ShowIdAdmin)
+admin.site.register(models.PoolLock, ShowIdAdmin)
 admin.site.register(models.Sandbox, ShowIdAdmin)
 admin.site.register(models.AllocationRequest, ShowIdAdmin)
 admin.site.register(models.CleanupRequest, ShowIdAdmin)
@@ -20,5 +21,4 @@ admin.site.register(models.StackAllocationStage, ShowIdAdmin)
 admin.site.register(models.CleanupStage, ShowIdAdmin)
 admin.site.register(models.StackCleanupStage, ShowIdAdmin)
 
-# admin.site.register(models.HeatStack, ShowIdAdmin)
 admin.site.register(models.HeatStack)
