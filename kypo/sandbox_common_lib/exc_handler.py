@@ -35,8 +35,8 @@ def custom_exception_handler(exc, context):
                 'parameters': context['kwargs']
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    exec_info = not isinstance(exc, (Http404, PermissionDenied))
-    LOG.error(repr(exc), data=response.data if response else None, exc_info=exec_info)
+    exc_info = not isinstance(exc, (Http404, PermissionDenied))
+    LOG.error(repr(exc), data=response.data if response else None, exc_info=exc_info)
     return response
 
 
