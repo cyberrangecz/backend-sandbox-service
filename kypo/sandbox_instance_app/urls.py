@@ -24,10 +24,8 @@ urlpatterns = [
     path('sandbox-allocation-units/<int:unit_id>/',
          views.SandboxAllocationUnitDetail.as_view(), name='sandbox-allocation-unit-detail'),
     # Allocation request
-    path('sandbox-allocation-units/<int:unit_id>/allocation-requests/',
-         views.SandboxAllocationRequestList.as_view(), name='allocation-request-list'),
-    path('sandbox-allocation-units/<int:unit_id>/allocation-requests/<int:request_id>/',
-         views.SandboxAllocationRequestDetail.as_view(), name='allocation-request-detail'),
+    path('sandbox-allocation-units/<int:unit_id>/allocation-request/',
+         views.SandboxAllocationRequest.as_view(), name='allocation-request'),
     path('sandbox-allocation-units/<int:unit_id>/allocation-requests/<int:request_id>/cancel/',
          views.SandboxAllocationRequestCancel.as_view(), name='allocation-request-cancel/'),
     path('sandbox-allocation-units/<int:unit_id>/allocation-requests/<int:request_id>/stages/',

@@ -3,7 +3,7 @@ from wsgiref.util import FileWrapper
 
 import structlog
 from django.conf import settings
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
 from django.utils.module_loading import import_string
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -187,23 +187,21 @@ class SandboxAllocationUnitDetail(generics.RetrieveAPIView, generics.GenericAPIV
     lookup_url_kwarg = "unit_id"
 
 
-class SandboxAllocationRequestList(generics.ListAPIView):
+class SandboxAllocationRequest(mixins.RetrieveModelMixin, generics.GenericAPIView):
     """get: List a Sandbox Allocation Requests.
-    Each Allocation Unit has at most one Allocation Request."""
+    Each Allocation Unit has exactly one Allocation Request.
+    (There may a be a situation where it has none, then it returns 404.)
+    """
     serializer_class = serializers.AllocationRequestSerializer
 
-    def get_queryset(self):
-        unit_id = self.kwargs.get('unit_id')
-        # check that given request exists
-        get_object_or_404(SandboxAllocationUnit, pk=unit_id)
-        return AllocationRequest.objects.filter(allocation_unit=unit_id)
-
-
-class SandboxAllocationRequestDetail(generics.RetrieveAPIView):
-    """get: Retrieve a Sandbox Allocation Request."""
-    serializer_class = serializers.AllocationRequestSerializer
-    queryset = AllocationRequest.objects.all()
-    lookup_url_kwarg = "request_id"
+    def get(self, request, unit_id):
+        unit = get_object_or_404(SandboxAllocationUnit, pk=unit_id)
+        try:
+            request = unit.allocation_request
+        except AttributeError:
+            raise Http404
+        serializer = self.get_serializer(request)
+        return Response(serializer.data)
 
 
 class SandboxAllocationRequestCancel(generics.GenericAPIView):
