@@ -110,6 +110,26 @@ class PoolLockDetail(generics.RetrieveDestroyAPIView):
     serializer_class = serializers.PoolLockSerializer
 
 
+class PoolAllocationRequestList(generics.ListAPIView):
+    """get: List Allocation Request for this pool."""
+    serializer_class = serializers.AllocationRequestSerializer
+
+    def get_queryset(self):
+        pool_id = self.kwargs.get('pool_id')
+        pool = get_object_or_404(Pool, pk=pool_id)
+        return AllocationRequest.objects.filter(allocation_unit__in=pool.allocation_units.all())
+
+
+class PoolCleanupRequestList(generics.ListAPIView):
+    """get: List Cleanup Request for this pool."""
+    serializer_class = serializers.CleanupRequestSerializer
+
+    def get_queryset(self):
+        pool_id = self.kwargs.get('pool_id')
+        pool = get_object_or_404(Pool, pk=pool_id)
+        return CleanupRequest.objects.filter(allocation_unit__in=pool.allocation_units.all())
+
+
 class SandboxAllocationUnitList(mixins.ListModelMixin, generics.GenericAPIView):
     serializer_class = serializers.SandboxAllocationUnitSerializer
 
