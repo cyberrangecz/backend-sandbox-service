@@ -42,6 +42,11 @@
     - delete_sandboxlock
 
     # Allocation Stages
+    - view_allocationstage
+    - add_allocationstage
+    - change_allocationstage
+    - delete_allocationstage
+
     - view_stackallocationstage
     - add_stackallocationstage
     - change_stackallocationstage
@@ -58,6 +63,11 @@
     - delete_ansibleoutput
 
     # Cleanup Stages
+    - view_cleanupstage
+    - add_cleanupstage
+    - change_cleanupstage
+    - delete_cleanupstage
+
     - view_stackcleanupstage
     - add_stackcleanupstage
     - change_stackcleanupstage
@@ -115,6 +125,11 @@
     - delete_sandboxlock
 
     # Allocation Stages
+    - view_allocationstage
+    - add_allocationstage
+    - change_allocationstage
+    - delete_allocationstage
+
     - view_stackallocationstage
     - add_stackallocationstage
     - change_stackallocationstage
@@ -131,6 +146,11 @@
     - delete_ansibleoutput
 
     # Cleanup Stages
+    - view_cleanupstage
+    - add_cleanupstage
+    - change_cleanupstage
+    - delete_cleanupstage
+
     - view_stackcleanupstage
     - add_stackcleanupstage
     - change_stackcleanupstage
