@@ -1,5 +1,6 @@
 import structlog
 from django.conf import settings
+from django.http import Http404
 from kypo.openstack_driver.exceptions import KypoException
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -34,7 +35,8 @@ def custom_exception_handler(exc, context):
                 'parameters': context['kwargs']
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    LOG.error(repr(exc), data=response.data if response else None, exc_info=True)
+    exc_info = not isinstance(exc, (Http404, PermissionDenied))
+    LOG.error(repr(exc), data=response.data if response else None, exc_info=exc_info)
     return response
 
 

@@ -38,7 +38,7 @@ def configure_logging() -> None:
         wrapper_class=structlog.stdlib.BoundLogger,
         cache_logger_on_first_use=True,
     )
-    LOG.info("Logging is set and ready to use.")
+    LOG.debug("Logging is set and ready to use.")
 
 
 def json_pretty_print(data: dict) -> str:
