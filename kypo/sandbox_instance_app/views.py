@@ -12,6 +12,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from kypo.sandbox_definition_app.models import Definition
 from kypo.sandbox_definition_app.serializers import DefinitionSerializer
 from kypo.sandbox_instance_app.lib.stage_handlers import StackStageHandler
 from kypo.sandbox_instance_app import serializers
@@ -73,6 +74,7 @@ class PoolDetail(mixins.RetrieveModelMixin,
 
 
 class PoolDefinition(mixins.RetrieveModelMixin, generics.GenericAPIView):
+    queryset = Definition.objects.none()  # Required for DjangoModelPermissions
     serializer_class = DefinitionSerializer
 
     def get(self, request, pool_id):
@@ -192,6 +194,7 @@ class SandboxAllocationRequest(mixins.RetrieveModelMixin, generics.GenericAPIVie
     Each Allocation Unit has exactly one Allocation Request.
     (There may occur a situation where it has none, then it returns 404.)
     """
+    queryset = AllocationRequest.objects.none()  # Required for DjangoModelPermissions
     serializer_class = serializers.AllocationRequestSerializer
 
     def get(self, request, unit_id):
