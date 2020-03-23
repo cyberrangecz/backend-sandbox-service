@@ -188,9 +188,9 @@ class SandboxAllocationUnitDetail(generics.RetrieveAPIView, generics.GenericAPIV
 
 
 class SandboxAllocationRequest(mixins.RetrieveModelMixin, generics.GenericAPIView):
-    """get: List a Sandbox Allocation Requests.
+    """get: Retrieve a Sandbox Allocation Request for an Allocation Unit.
     Each Allocation Unit has exactly one Allocation Request.
-    (There may a be a situation where it has none, then it returns 404.)
+    (There may occur a situation where it has none, then it returns 404.)
     """
     serializer_class = serializers.AllocationRequestSerializer
 
