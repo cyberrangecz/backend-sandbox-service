@@ -363,7 +363,7 @@ class SandboxGetAndLock(generics.GenericAPIView):
 # SANDBOX MANIPULATION VIEWS #
 #######################################
 
-class SandboxDetail(generics.GenericAPIView):
+class SandboxDetail(generics.RetrieveAPIView):
     """get: Retrieve a sandbox."""
     serializer_class = serializers.SandboxSerializer
     lookup_url_kwarg = "sandbox_id"
