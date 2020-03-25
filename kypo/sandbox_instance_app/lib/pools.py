@@ -44,7 +44,7 @@ def create_pool(data: Dict) -> Pool:
         - max_size: max size of new Pool instance
     :return: new Pool instance
     """
-    definition = get_object_or_404(Definition, pk=data.get('definition'))
+    definition = get_object_or_404(Definition, pk=data.get('definition_id'))
     if 'rev' not in data:
         data['rev'] = definition.rev
     if GitlabProvider.is_providable(definition.url):

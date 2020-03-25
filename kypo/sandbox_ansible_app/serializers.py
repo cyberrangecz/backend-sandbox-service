@@ -9,6 +9,7 @@ Swagger can utilise type hints to determine type, so use them in your own method
 """
 from rest_framework import serializers
 
+from kypo.sandbox_instance_app.models import AllocationStage
 from kypo.sandbox_instance_app.serializers import AllocationStageSerializer, CleanupStageSerializer
 
 from kypo.sandbox_ansible_app import models
@@ -22,9 +23,12 @@ class AnsibleAllocationStageSerializer(AllocationStageSerializer):
 
 
 class AnsibleCleanupStageSerializer(CleanupStageSerializer):
+    allocation_stage_id = serializers.PrimaryKeyRelatedField(
+        source='allocation_stage', queryset=AllocationStage.objects.all())
+
     class Meta:
         model = models.AnsibleCleanupStage
-        fields = CleanupStageSerializer.Meta.fields + ('allocation_stage',)
+        fields = CleanupStageSerializer.Meta.fields + ('allocation_stage_id',)
         read_only_fields = fields
 
 
