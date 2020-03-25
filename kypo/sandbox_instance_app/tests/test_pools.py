@@ -25,7 +25,7 @@ class TestCreatePool:
         yield
 
     def test_create_pool_success(self):
-        pool = pools.create_pool(dict(definition=DEFINITION_ID,
+        pool = pools.create_pool(dict(definition_id=DEFINITION_ID,
                                       max_size=self.MAX_SIZE,
                                       rev=self.REV))
         assert pool.max_size == self.MAX_SIZE
@@ -34,13 +34,13 @@ class TestCreatePool:
 
     def test_create_pool_invalid_definition(self):
         with pytest.raises(Http404):
-            pools.create_pool(dict(definition=-1,
+            pools.create_pool(dict(definition_id=-1,
                                    max_size=self.MAX_SIZE,
                                    rev=self.REV))
 
     def test_create_pool_invalid_size(self):
         with pytest.raises(ValidationError):
-            pools.create_pool(dict(definition=1,
+            pools.create_pool(dict(definition_id=1,
                                    max_size=-10,
                                    rev=self.REV))
 
