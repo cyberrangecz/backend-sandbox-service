@@ -126,10 +126,10 @@ class TestIntegration:
     def create_pool(client, def_id):
         LOG.info("Creating Pool")
         max_size = 10
-        data = {'definition': def_id, 'max_size': max_size}
+        data = {'definition_id': def_id, 'max_size': max_size}
         response = client.post(reverse(POOL_LIST), data, 'application/json')
         assert response.status_code == status.HTTP_201_CREATED
-        assert response.data['definition'] == def_id
+        assert response.data['definition_id'] == def_id
         assert response.data['size'] == 0
         assert response.data['max_size'] == max_size
         return response.data['id']
@@ -147,13 +147,13 @@ class TestIntegration:
                            for x in DockerContainer.objects.all()]
                      )
         assert response.status_code == status.HTTP_201_CREATED
-        assert response.data[0]['pool'] == pool_id
+        assert response.data[0]['pool_id'] == pool_id
 
         cls.run_worker()
         assert len(Sandbox.objects.all()) == 1
 
         unit_id = response.data[0]['id']
-        alloc_req_id = response.data[0]['allocation_request']
+        alloc_req_id = response.data[0]['allocation_request_id']
         return unit_id, alloc_req_id
 
     @classmethod
@@ -163,7 +163,7 @@ class TestIntegration:
                                        kwargs={'unit_id': unit_id}))
 
         assert response.status_code == status.HTTP_201_CREATED
-        assert response.data['allocation_unit'] == unit_id
+        assert response.data['allocation_unit_id'] == unit_id
 
         cls.run_worker()
 
@@ -175,7 +175,7 @@ class TestIntegration:
         assert response.status_code == status.HTTP_200_OK
         assert response.data['lock'] is not None
         sb_id = response.data['id']
-        lock_id = response.data['lock']
+        lock_id = response.data['lock_id']
         return sb_id, lock_id
 
     @staticmethod
