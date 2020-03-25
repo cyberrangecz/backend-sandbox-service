@@ -153,7 +153,7 @@ class TestIntegration:
         assert len(Sandbox.objects.all()) == 1
 
         unit_id = response.data[0]['id']
-        alloc_req_id = response.data[0]['allocation_request_id']
+        alloc_req_id = response.data[0]['allocation_request']['id']
         return unit_id, alloc_req_id
 
     @classmethod
@@ -173,7 +173,7 @@ class TestIntegration:
         response = client.get(reverse(SANDBOX_GET_AND_LOCK,
                                       kwargs={'pool_id': pool_id}))
         assert response.status_code == status.HTTP_200_OK
-        assert response.data['lock'] is not None
+        assert response.data['lock_id'] is not None
         sb_id = response.data['id']
         lock_id = response.data['lock_id']
         return sb_id, lock_id
