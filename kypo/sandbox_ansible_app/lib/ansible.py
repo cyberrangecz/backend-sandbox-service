@@ -97,11 +97,10 @@ class AnsibleDockerRunner:
         if config.proxy_jump_to_man:
             proxy_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
                                      os.path.basename(config.proxy_jump_to_man.IdentityFile))
-        ans_ssh_config = sandboxes.get_ansible_sshconfig(sandbox, mng_key, git_key, proxy_key)
+            shutil.copy(config.proxy_jump_to_man.IdentityFile, os.path.join(
+                ssh_directory, os.path.basename(config.proxy_jump_to_man.IdentityFile)))
 
-        identity_file = config.proxy_jump_to_man.IdentityFile
-        shutil.copy(identity_file, os.path.join(ssh_directory,
-                                                os.path.basename(identity_file)))
+        ans_ssh_config = sandboxes.get_ansible_sshconfig(sandbox, mng_key, git_key, proxy_key)
         self.save_file(os.path.join(ssh_directory, 'config'), str(ans_ssh_config))
 
         return ssh_directory
