@@ -213,7 +213,9 @@ class SandboxAllocationRequestCancel(generics.GenericAPIView):
     lookup_url_kwarg = "request_id"
 
     # noinspection PyUnusedLocal
+    @swagger_auto_schema(responses={status.HTTP_200_OK: serializers.serializers.Serializer()})
     def patch(self, request, unit_id, request_id):
+        """Cancel given Allocation Request. Returns no data if OK (200)."""
         sandbox_destructor.cancel_allocation_request(self.get_object())
         return Response()
 
@@ -260,7 +262,7 @@ class SandboxCleanupRequestStageList(generics.ListAPIView):
     def get_queryset(self):
         request_id = self.kwargs.get('request_id')
         get_object_or_404(CleanupRequest, pk=request_id)  # check that given request exists
-        return CleanupStage.objects.filter(request_id=request_id)
+        return CleanupStage.objects.filter(request_id=request_id).select_subclasses()
 
 
 class OpenstackAllocationStageDetail(generics.GenericAPIView):
@@ -364,7 +366,7 @@ class SandboxGetAndLock(generics.GenericAPIView):
 # SANDBOX MANIPULATION VIEWS #
 #######################################
 
-class SandboxDetail(generics.GenericAPIView):
+class SandboxDetail(generics.RetrieveAPIView):
     """get: Retrieve a sandbox."""
     serializer_class = serializers.SandboxSerializer
     lookup_url_kwarg = "sandbox_id"
