@@ -8,6 +8,9 @@ from typing import Tuple
 import structlog
 from Crypto.PublicKey import RSA
 from django.conf import settings
+from rest_framework import status
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework import serializers
 
 from kypo.openstack_driver.ostack_client import KypoOstackClient
 
@@ -73,3 +76,25 @@ def get_ostack_client() -> KypoOstackClient:
 def get_simple_uuid() -> str:
     """First four bytes of UUID as string."""
     return str(uuid.uuid4()).split('-')[0]
+
+
+class ErrorSerilizer(serializers.Serializer):
+    """Serializer for error reponses."""
+    detail = serializers.CharField()
+
+
+ERROR_RESPONSES = {status.HTTP_401_UNAUTHORIZED: ErrorSerilizer(),
+                   status.HTTP_403_FORBIDDEN: ErrorSerilizer()}
+
+
+def add_error_responses(cls):
+    class Decor(cls):
+        pass
+
+    for method_name in 'get', 'post', 'put', 'patch', 'delete':
+        if hasattr(Decor, method_name):
+            method = getattr(Decor, method_name)
+            LOG.error(f'{str(cls)}, {cls.__name__}, {method_name}')
+            setattr(Decor, method_name, swagger_auto_schema(responses=ERROR_RESPONSES)(method))
+
+    return Decor
