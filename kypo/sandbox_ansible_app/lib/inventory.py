@@ -31,7 +31,9 @@ class Inventory:
 
         groups.update(self.create_user_groups(top_def))
 
-        self.data = {'all': {'children': groups}}
+        ans_vars = self._get_vars(stack)
+        self.data = {'all': {'children': groups,
+                             'vars': ans_vars}}
 
     def __str__(self):
         return self.serialize()
@@ -185,3 +187,10 @@ class Inventory:
         """Creates dict of `Node name: management IP`."""
         return {link.node.name: link.ip
                 for link in stack.get_network_links(stack.mng_net)}
+
+    @staticmethod
+    def _get_vars(stack: Stack) -> Dict[str, str]:
+        return dict(
+            sandbox_name=stack.name,
+            sandbox_ip=stack.ip
+        )

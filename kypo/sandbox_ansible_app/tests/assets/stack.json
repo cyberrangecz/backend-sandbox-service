@@ -329,7 +329,7 @@
     "mng_net": {
         "py/id": 6
     },
-    "name": "small-stanek-19",
+    "name": "small-test-sb",
     "networks": {
         "br-network": {
             "py/id": 23
