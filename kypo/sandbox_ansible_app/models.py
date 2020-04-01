@@ -6,13 +6,13 @@ from kypo.sandbox_instance_app.models import ExternalDependency, AllocationStage
 class AnsibleAllocationStage(AllocationStage):
     type = StageType.ANSIBLE
 
-    repo_url = models.TextField()
-    rev = models.TextField()
+    repo_url = models.TextField(help_text='URL of the Ansible repository.')
+    rev = models.TextField(help_text='Revision of the Ansible repository.')
 
     def __str__(self):
 
         return super().__str__() + \
-               ", REPO_URL: {0.repo_url}, REV: {0.rev}".format(self)
+               ', REPO_URL: {0.repo_url}, REV: {0.rev}'.format(self)
 
 
 class AnsibleCleanupStage(CleanupStage):
@@ -26,7 +26,7 @@ class AnsibleCleanupStage(CleanupStage):
 
     def __str__(self):
         return super().__str__() + \
-               ", ALLOCATION_STAGE: {0.allocation_stage}".format(self)
+               ', ALLOCATION_STAGE: {0.allocation_stage}'.format(self)
 
 
 class AnsibleOutput(models.Model):
@@ -41,7 +41,7 @@ class AnsibleOutput(models.Model):
         ordering = ['id']
 
     def __str__(self):
-        return "ID: {0.id}, STAGE: {0.stage.id}, CONTENT: {0.content}".format(self)
+        return 'ID: {0.id}, STAGE: {0.stage.id}, CONTENT: {0.content}'.format(self)
 
 
 class DockerContainer(ExternalDependency):
@@ -54,4 +54,4 @@ class DockerContainer(ExternalDependency):
     container_id = models.TextField()
 
     def __str__(self):
-        return "STAGE: {0.stage.id}, CONTAINER: {0.container_id}".format(self)
+        return 'STAGE: {0.stage.id}, CONTAINER: {0.container_id}'.format(self)
