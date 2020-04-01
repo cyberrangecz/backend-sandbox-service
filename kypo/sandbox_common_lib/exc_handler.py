@@ -30,10 +30,7 @@ def custom_exception_handler(exc, context):
         if response is None:
             response = Response({
                 'detail': str(exc),
-                'parameters': context['kwargs']
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        else:
-            response.data['parameters'] = context['kwargs']
 
     exc_info = settings.DEBUG or not isinstance(exc, (Http404,
                                                       PermissionDenied,
@@ -46,7 +43,6 @@ def handle_kypo_exception(exc, context):
     """Handle OpenStack lib and this project exceptions."""
     return Response({
         'detail': str(exc),
-        'parameters': context.get('kwargs')
     }, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -58,16 +54,12 @@ def handle_permission_denied(exc, context):
     except KeyError:
         user_groups = None
     return Response({
-        'detail': str(exc),
-        'parameters': {
-            'user_roles': user_groups
-        }.update(context.get('kwargs')),
-    }, status=status.HTTP_403_FORBIDDEN)
+        'detail': f'{str(exc)} User roles: {str(user_groups)}'
+    },status=status.HTTP_403_FORBIDDEN)
 
 
 def handle_model_validation_error(exc, context):
     """Fix error message in model validation error."""
     return Response({
         'detail': exc.detail,
-        'parameters': context.get('kwargs'),
     }, status=status.HTTP_400_BAD_REQUEST)

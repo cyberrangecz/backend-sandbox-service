@@ -83,7 +83,6 @@ def get_simple_uuid() -> str:
 class ErrorSerilizer(serializers.Serializer):
     """Serializer for error reponses."""
     detail = serializers.CharField()
-    parameters = serializers.JSONField()
 
 
 ERROR_RESPONSES = {
