@@ -22,12 +22,12 @@ class DefinitionList(mixins.ListModelMixin,
     serializer_class = serializers.DefinitionSerializer
 
     def get(self, request, *args, **kwargs):
-        """Retrieve list of sandbox definitions."""
+        """Retrieve a list of sandbox definitions."""
         return self.list(request, *args, **kwargs)
 
     def post(self, request):
         """
-        Create new sandbox definition. Optional parameter *rev* defaults to master.
+        Create a new sandbox definition. Optional parameter *rev* defaults to master.
         """
         url = request.data.get('url')
         rev = request.data.get('rev', "master")
@@ -53,7 +53,7 @@ class DefinitionDetail(generics.RetrieveDestroyAPIView):
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class DefinitionRefs(generics.ListAPIView):
     """
-    get: Retrieve list of definition refs (branches and tags).
+    get: Retrieve a list of definition refs (branches and tags).
     """
     serializer_class = serializers.DefinitionRevSerializer
 
