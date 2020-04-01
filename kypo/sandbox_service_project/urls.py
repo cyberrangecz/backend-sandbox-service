@@ -38,7 +38,7 @@ __Error JSON__
 {
     detail: error message,
     parameters: {
-        Dictionary of call parameters
+        JSON objects of call parameters or extra data; useful for debugging
         name: value
     }
 }

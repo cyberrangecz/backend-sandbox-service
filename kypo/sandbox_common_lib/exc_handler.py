@@ -27,13 +27,13 @@ def custom_exception_handler(exc, context):
         # Handles only Django Errors.
         response = exception_handler(exc, context)
 
-        # Django DEBUG mode does better job on unhandled exceptions.
-        # That's why this is used only in production mode.
-        if not settings.DEBUG and response is None:
+        if response is None:
             response = Response({
                 'detail': str(exc),
                 'parameters': context['kwargs']
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            response.data['parameters'] = context['kwargs']
 
     exc_info = settings.DEBUG or not isinstance(exc, (Http404,
                                                       PermissionDenied,
