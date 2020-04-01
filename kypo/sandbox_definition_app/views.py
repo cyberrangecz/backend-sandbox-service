@@ -4,6 +4,7 @@ from rest_framework import status, generics, mixins
 from rest_framework.response import Response
 from django.conf import settings
 
+from kypo.sandbox_common_lib import utils
 from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider, GitProvider
 
 from kypo.sandbox_definition_app.models import Definition
@@ -13,6 +14,8 @@ from kypo.sandbox_definition_app.lib import definitions
 LOG = structlog.get_logger()
 
 
+@utils.add_error_responses_doc('get', [401, 403, 500])
+@utils.add_error_responses_doc('post', [400, 401, 403, 500])
 class DefinitionList(mixins.ListModelMixin,
                      generics.GenericAPIView):
     queryset = Definition.objects.all()
@@ -33,6 +36,8 @@ class DefinitionList(mixins.ListModelMixin,
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
+@utils.add_error_responses_doc('delete', [401, 403, 404, 500])
 class DefinitionDetail(generics.RetrieveDestroyAPIView):
     """
     get: Retrieve the definition.
@@ -45,6 +50,7 @@ class DefinitionDetail(generics.RetrieveDestroyAPIView):
     lookup_url_kwarg = "definition_id"
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class DefinitionRefs(generics.ListAPIView):
     """
     get: Retrieve list of definition refs (branches and tags).
