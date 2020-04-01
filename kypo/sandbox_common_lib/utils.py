@@ -4,10 +4,12 @@ Simple utils module.
 import json
 import logging
 import uuid
-from typing import Tuple
+from typing import Tuple, Union, Iterable
 import structlog
 from Crypto.PublicKey import RSA
 from django.conf import settings
+from django.utils.decorators import method_decorator
+from drf_yasg import openapi
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import serializers
@@ -81,20 +83,34 @@ def get_simple_uuid() -> str:
 class ErrorSerilizer(serializers.Serializer):
     """Serializer for error reponses."""
     detail = serializers.CharField()
+    parameters = serializers.JSONField()
 
 
-ERROR_RESPONSES = {status.HTTP_401_UNAUTHORIZED: ErrorSerilizer(),
-                   status.HTTP_403_FORBIDDEN: ErrorSerilizer()}
+ERROR_RESPONSES = {
+    status.HTTP_400_BAD_REQUEST:
+        openapi.Response('Client sent invalid data.', ErrorSerilizer()),
+    status.HTTP_401_UNAUTHORIZED:
+        openapi.Response('Authentication failed.', ErrorSerilizer()),
+    status.HTTP_403_FORBIDDEN:
+        openapi.Response('You do not have permission to perform this action.', ErrorSerilizer()),
+    status.HTTP_404_NOT_FOUND:
+        openapi.Response('Resource not found.', ErrorSerilizer()),
+    status.HTTP_500_INTERNAL_SERVER_ERROR:
+        openapi.Response('Server encountered an unexpected error.', ErrorSerilizer()),
+}
 
 
-def add_error_responses(cls):
-    class Decor(cls):
-        pass
-
-    for method_name in 'get', 'post', 'put', 'patch', 'delete':
-        if hasattr(Decor, method_name):
-            method = getattr(Decor, method_name)
-            LOG.error(f'{str(cls)}, {cls.__name__}, {method_name}')
-            setattr(Decor, method_name, swagger_auto_schema(responses=ERROR_RESPONSES)(method))
-
-    return Decor
+def add_error_responses_doc(method: str, statuses: Iterable[Union[int, str]]):
+    """Decorator to include error responses into documentation.
+    Can be used only if the method responses are not already decorated with
+    a swagger_auto_schema decorator.
+    Otherwise the error responses must be added to already used swagger_auto_schema
+    decorator.
+    """
+    def decorate(cls):
+        method_decorator(name=method, decorator=swagger_auto_schema(
+            responses={k: v for k, v in ERROR_RESPONSES.items()
+                       if k in statuses}
+        ))(cls)
+        return cls
+    return decorate
