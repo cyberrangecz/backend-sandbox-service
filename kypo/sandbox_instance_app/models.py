@@ -18,18 +18,28 @@ class Pool(models.Model):
         Definition,
         on_delete=models.PROTECT
     )
-    max_size = models.IntegerField()
-    private_management_key = models.TextField()
-    public_management_key = models.TextField()
+    max_size = models.IntegerField(
+        help_text='Maximum amount of Allocation Units associated with this pool.')
+    private_management_key = models.TextField(
+        help_text='Private key for management access.'
+    )
+    public_management_key = models.TextField(
+        help_text='Public key for management access.'
+    )
     uuid = models.TextField(default=utils.get_simple_uuid)
-    rev = models.TextField()
-    rev_sha = models.TextField()
+    rev = models.TextField(
+        help_text='Definition revision used for sandboxes.'
+    )
+    rev_sha = models.TextField(
+        help_text='SHA of the Definition revision.'
+    )
 
     class Meta:
         ordering = ['id']
 
     def __str__(self):
-        return "ID: {0.id}, DEFINITION: {0.definition.id}, MAX_SIZE: {0.max_size}, REV: {0.rev}".format(self)
+        return 'ID: {0.id}, DEFINITION: {0.definition.id}, MAX_SIZE: {0.max_size}, ' \
+               'REV: {0.rev}'.format(self)
 
     def get_keypair_name(self) -> str:
         """Returns a name of the management key-pair for this pool."""
@@ -54,15 +64,19 @@ class Sandbox(models.Model):
         on_delete=models.PROTECT,
         related_name='sandbox',
     )
-    private_user_key = models.TextField()
-    public_user_key = models.TextField()
+    private_user_key = models.TextField(
+        help_text='Private key for user access.'
+    )
+    public_user_key = models.TextField(
+        help_text='Public key for management access.'
+    )
 
     class Meta:
         ordering = ['id']
 
     def __str__(self):
-        return f"ID: {self.id}, ALLOCATION_UNIT: {self.allocation_unit.id}, " \
-               f"LOCK: {self.lock.id if hasattr(self, 'lock') else None}"
+        return f'ID: {self.id}, ALLOCATION_UNIT: {self.allocation_unit.id}, ' \
+               f'LOCK: {self.lock.id if hasattr(self, "lock") else None}'
 
 
 class SandboxLock(models.Model):
@@ -73,7 +87,7 @@ class SandboxLock(models.Model):
     )
 
     def __str__(self):
-        return f"ID: {self.id}, Sandbox: {self.sandbox.id}"
+        return f'ID: {self.id}, Sandbox: {self.sandbox.id}'
 
 
 class PoolLock(models.Model):
@@ -84,7 +98,7 @@ class PoolLock(models.Model):
     )
 
     def __str__(self):
-        return f"ID: {self.id}, Pool: {self.pool.id}"
+        return f'ID: {self.id}, Pool: {self.pool.id}'
 
 
 class SandboxRequest(models.Model):
@@ -96,7 +110,7 @@ class SandboxRequest(models.Model):
         ordering = ['created']
 
     def __str__(self):
-        return "ID: {0.id}, ALLOCATION_UNIT: {0.allocation_unit.id}, CREATED: {0.created}"\
+        return 'ID: {0.id}, ALLOCATION_UNIT: {0.allocation_unit.id}, CREATED: {0.created}'\
             .format(self)
 
     @property
@@ -126,11 +140,14 @@ class CleanupRequest(SandboxRequest):
 
 class Stage(models.Model):
     """Abstract base class for stages."""
-    start = models.DateTimeField(null=True, default=None)
-    end = models.DateTimeField(null=True, default=None)
-
-    failed = models.BooleanField(default=False)
-    error_message = models.TextField(null=True)
+    start = models.DateTimeField(null=True, default=None,
+                                 help_text='Timestamp indicating when the stage execution started.')
+    end = models.DateTimeField(null=True, default=None,
+                               help_text='Timestamp indicating when the stage execution ended.')
+    failed = models.BooleanField(default=False,
+                                 help_text='Indicates whether the stage execution failed.')
+    error_message = models.TextField(null=True, default=None,
+                                     help_text='Error message describing the potential error.')
 
     @property
     def is_finished(self):
@@ -145,7 +162,7 @@ class Stage(models.Model):
         ordering = ['id']
 
     def __str__(self):
-        return "START: {0.start}, END: {0.end} FAILED: {0.failed}".format(self)
+        return 'START: {0.start}, END: {0.end} FAILED: {0.failed}'.format(self)
 
     def mark_failed(self, exception=None):
         self.failed = True
@@ -166,18 +183,18 @@ class AllocationStage(Stage):
     objects = InheritanceManager()
 
     def __str__(self):
-        return "{0.id}, ".format(self) + super().__str__()
+        return '{0.id}, '.format(self) + super().__str__()
 
 
 class StackAllocationStage(AllocationStage):
     type = StageType.OPENSTACK
 
-    status = models.CharField(null=True, max_length=30)
-    status_reason = models.TextField(null=True)
+    status = models.CharField(null=True, max_length=30, help_text='Stack status')
+    status_reason = models.TextField(null=True, help_text='Stack status reason')
 
     def __str__(self):
         return super().__str__() + \
-               ", STATUS: {0.status}, STATUS_REASON: {0.status_reason}".format(self)
+               ', STATUS: {0.status}, STATUS_REASON: {0.status_reason}'.format(self)
 
 
 class CleanupStage(Stage):
@@ -195,7 +212,7 @@ class CleanupStage(Stage):
         ordering = ['id']
 
     def __str__(self):
-        return "{0.id}, ".format(self) + super().__str__()
+        return '{0.id}, '.format(self) + super().__str__()
 
 
 class StackCleanupStage(CleanupStage):
@@ -209,7 +226,7 @@ class StackCleanupStage(CleanupStage):
 
     def __str__(self):
         return super().__str__() + \
-               ", ALLOCATION_STAGE: {0.allocation_stage}".format(self)
+               ', ALLOCATION_STAGE: {0.allocation_stage}'.format(self)
 
 
 class ExternalDependency(models.Model):
@@ -227,7 +244,7 @@ class HeatStack(ExternalDependency):
     stack_id = models.TextField()
 
     def __str__(self):
-        return "STAGE: {0.stage.id}, STACK: {0.stack_id}".format(self)
+        return 'STAGE: {0.stage.id}, STACK: {0.stack_id}'.format(self)
 
 
 class SystemProcess(ExternalDependency):
@@ -240,4 +257,4 @@ class SystemProcess(ExternalDependency):
     process_id = models.TextField()
 
     def __str__(self):
-        return "STAGE: {0.stage.id}, PROCESS: {0.process_id}".format(self)
+        return 'STAGE: {0.stage.id}, PROCESS: {0.process_id}'.format(self)

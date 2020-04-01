@@ -8,7 +8,6 @@ Validators validate single fields or entire objects.
 Swagger can utilise type hints to determine type, so use them in your own methods.
 """
 from typing import Optional
-
 from rest_framework import serializers
 
 from kypo.sandbox_definition_app.models import Definition
@@ -21,7 +20,8 @@ MAX_SANDBOXES_PER_POOL = 64
 
 
 class PoolSerializer(serializers.ModelSerializer):
-    size = serializers.SerializerMethodField()
+    size = serializers.SerializerMethodField(
+        help_text="Number of allocation units associated with this pool.")
     lock_id = serializers.SerializerMethodField()
     definition_id = serializers.PrimaryKeyRelatedField(
         source='definition', queryset=Definition.objects.all())
@@ -80,7 +80,7 @@ class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
 
 
 class AllocationStageSerializer(serializers.ModelSerializer):
-    type = serializers.SerializerMethodField()
+    type = serializers.SerializerMethodField(help_text='Type of the stage.')
     request_id = serializers.PrimaryKeyRelatedField(
         source='request', queryset=AllocationRequest.objects.all())
 
@@ -102,7 +102,7 @@ class OpenstackAllocationStageSerializer(AllocationStageSerializer):
 
 
 class CleanupStageSerializer(serializers.ModelSerializer):
-    type = serializers.SerializerMethodField()
+    type = serializers.SerializerMethodField(help_text='Type of the stage.')
     request_id = serializers.PrimaryKeyRelatedField(
         source='request', queryset=CleanupRequest.objects.all())
 
@@ -167,7 +167,8 @@ class NodeActionSerializer(serializers.Serializer):
     ACTION_CHOICES = ("suspend",
                       "resume",
                       "reboot")
-    action = serializers.ChoiceField(choices=ACTION_CHOICES)
+    action = serializers.ChoiceField(choices=ACTION_CHOICES,
+                                     help_text='Action you with to perform on the node.')
 
 
 class PoolKeypairSerializer(serializers.ModelSerializer):
