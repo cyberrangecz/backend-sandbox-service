@@ -84,5 +84,5 @@ all:
         home-router: null
 
   vars:
-    sandbox_name: small-test-sb
-    sandbox_ip: 201.201.2.133
+    kypo_global_sandbox_name: small-test-sb
+    kypo_global_sandbox_ip: 201.201.2.133

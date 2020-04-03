@@ -12,8 +12,8 @@ class Inventory:
 
     Use `data` attribute to access the inventory as a dictionary.
     The inventory `vars` section contains by default following attributes:
-    - `sandbox_name`
-    - `sandbox_ip`
+    - `kypo_global_sandbox_name`
+    - `kypo_global_sandbox_ip`
     If you need any extra data in the vars section, pass them as the
     `extra_vars` dictionary to constructor.
     """
@@ -199,7 +199,7 @@ class Inventory:
         if extra_vars is None:
             extra_vars = {}
         return dict(
-            sandbox_name=stack.name,
-            sandbox_ip=stack.ip,
+            kypo_global_sandbox_name=stack.name,
+            kypo_global_sandbox_ip=stack.ip,
             **extra_vars
         )
