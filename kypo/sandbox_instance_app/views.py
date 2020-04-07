@@ -521,8 +521,7 @@ class SandboxVMConsole(generics.GenericAPIView):
 class SandboxUserSSHConfig(APIView):
     queryset = Sandbox.objects.none()  # Required for DjangoModelPermissions
 
-    @staticmethod
-    def get(request, sandbox_id):
+    def get(self, request, sandbox_id):
         """Generate SSH config for User access to this sandbox.
         Some values are user specific, the config contains placeholders for them."""
         sandbox = sandboxes.get_sandbox(sandbox_id)
@@ -537,8 +536,7 @@ class SandboxUserSSHConfig(APIView):
 class SandboxManagementSSHConfig(APIView):
     queryset = Sandbox.objects.none()  # Required for DjangoModelPermissions
 
-    @staticmethod
-    def get(request, sandbox_id):
+    def get(self, request, sandbox_id):
         """Generate SSH config for Management access to this sandbox.
         Some values are user specific, the config contains placeholders for them."""
         sandbox = sandboxes.get_sandbox(sandbox_id)
