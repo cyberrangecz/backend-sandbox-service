@@ -182,8 +182,7 @@ class AnsibleStageHandler(StageHandler):
             stage.request.allocation_unit.pool.definition.rev,
             settings.KYPO_CONFIG
         )
-        inventory_path = runner.prepare_inventory_file(
-            dir_path, sandbox.allocation_unit.get_stack_name(), top_def)
+        inventory_path = runner.prepare_inventory_file(dir_path, sandbox, top_def)
 
         try:
             container = AnsibleDockerRunner().run_container(

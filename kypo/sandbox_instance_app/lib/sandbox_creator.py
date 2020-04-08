@@ -29,7 +29,7 @@ def create_allocation_request(pool: Pool) -> SandboxAllocationUnit:
     unit = SandboxAllocationUnit.objects.create(pool=pool)
     request = AllocationRequest.objects.create(allocation_unit=unit)
     pri_key, pub_key = utils.generate_ssh_keypair()
-    sandbox = Sandbox(id=request.id, allocation_unit=unit,
+    sandbox = Sandbox(id=unit.id, allocation_unit=unit,
                       private_user_key=pri_key, public_user_key=pub_key)
     enqueue_allocation_request(request, sandbox)
     return unit

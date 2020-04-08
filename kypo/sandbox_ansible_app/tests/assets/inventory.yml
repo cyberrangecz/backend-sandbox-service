@@ -82,3 +82,7 @@ all:
       hosts:
         home: null
         home-router: null
+
+  vars:
+    kypo_global_sandbox_name: small-test-sb
+    kypo_global_sandbox_ip: 201.201.2.133

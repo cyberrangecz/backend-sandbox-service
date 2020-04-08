@@ -11,7 +11,7 @@ from kypo.topology_definition.models import TopologyDefinition
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage
 from kypo.sandbox_common_lib import utils
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
-from kypo.sandbox_instance_app.models import Sandbox
+from kypo.sandbox_instance_app.models import Sandbox, StageType
 from kypo.sandbox_ansible_app.lib.inventory import Inventory
 from kypo.sandbox_instance_app.lib import sandboxes
 
@@ -105,17 +105,24 @@ class AnsibleDockerRunner:
 
         return ssh_directory
 
-    def prepare_inventory_file(self, dir_path: str, stack_name: str,
+    def prepare_inventory_file(self, dir_path: str, sandbox: Sandbox,
                                top_def: TopologyDefinition) -> str:
         """Prepare inventory file and save it to given directory."""
         client = utils.get_ostack_client()
-        stack = client.get_sandbox(stack_name)
+        stack = client.get_sandbox(sandbox.allocation_unit.get_stack_name())
         user_private_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
                                         USER_PRIVATE_KEY_FILENAME)
         user_public_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
                                        USER_PUBLIC_KEY_FILENAME)
-        inventory = Inventory(stack, top_def, user_private_key, user_public_key)
-
+        heatstack = None
+        for stg in sandbox.allocation_unit.allocation_request.stages.all().select_subclasses():
+            if stg.type == StageType.OPENSTACK:
+                heatstack = stg.heatstack
+        inventory = Inventory(
+            stack, top_def, user_private_key, user_public_key,
+            {'kypo_global_sandbox_allocation_unit_id': sandbox.allocation_unit.id,
+             'kypo_global_openstack_stack_id': heatstack.stack_id}
+        )
         inventory_path = os.path.join(dir_path, ANSIBLE_INVENTORY_FILENAME)
         self.save_file(inventory_path, inventory.serialize())
 

@@ -9,11 +9,17 @@ from kypo.openstack_driver.sandbox_topology import SandboxTopology as Stack
 
 class Inventory:
     """This class represents Ansible inventory.
+
     Use `data` attribute to access the inventory as a dictionary.
+    The inventory `vars` section contains by default following attributes:
+    - `kypo_global_sandbox_name`
+    - `kypo_global_sandbox_ip`
+    If you need any extra data in the vars section, pass them as the
+    `extra_vars` dictionary to constructor.
     """
 
-    def __init__(self, stack: Stack, top_def: TopologyDefinition,
-                 user_priv_key_path: str, user_pub_key_path: str):
+    def __init__(self, stack: Stack, top_def: TopologyDefinition, user_priv_key_path: str,
+                 user_pub_key_path: str, extra_vars: Optional[Dict[str, Any]] = None):
         router_group, man_routes, br_interfaces = self.create_routers_group(stack, top_def)
         mng_group = self.create_management_group(stack, br_interfaces, man_routes,
                                                  user_priv_key_path, user_pub_key_path)
@@ -31,7 +37,9 @@ class Inventory:
 
         groups.update(self.create_user_groups(top_def))
 
-        self.data = {'all': {'children': groups}}
+        ans_vars = self._get_vars(stack, extra_vars)
+        self.data = {'all': {'children': groups,
+                             'vars': ans_vars}}
 
     def __str__(self):
         return self.serialize()
@@ -185,3 +193,13 @@ class Inventory:
         """Creates dict of `Node name: management IP`."""
         return {link.node.name: link.ip
                 for link in stack.get_network_links(stack.mng_net)}
+
+    @staticmethod
+    def _get_vars(stack: Stack, extra_vars: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
+        if extra_vars is None:
+            extra_vars = {}
+        return dict(
+            kypo_global_sandbox_name=stack.name,
+            kypo_global_sandbox_ip=stack.ip,
+            **extra_vars
+        )
