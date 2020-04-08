@@ -141,6 +141,8 @@ def simple_cache_page(timeout: Optional[int]):
                         response.add_post_render_callback(
                             lambda r: cache.set(key, r, timeout)
                         )
+                    else:
+                        cache.set(key, response, timeout)
             return response
         return cached_method
     return decorate

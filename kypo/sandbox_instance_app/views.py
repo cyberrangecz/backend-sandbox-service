@@ -456,8 +456,6 @@ class SandboxTopology(generics.GenericAPIView):
     def get(self, request, sandbox_id):
         """Get topology data for given sandbox.
         Hosts specified as hidden are filtered out, but the network is still visible.
-        __NOTE:__ this endpoint is cached indefinitely.
-        So the topology can be accessed even when the sandbox is long deleted.
         """
         topology = sandboxes.get_sandbox_topology(self.get_object())
         return Response(self.serializer_class(topology).data)
