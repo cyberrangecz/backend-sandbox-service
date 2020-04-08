@@ -12,6 +12,8 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from kypo.sandbox_common_lib import exceptions, utils
+from kypo.sandbox_common_lib.permissions import AllowReadOnViewSandbox
 from kypo.sandbox_definition_app.models import Definition
 from kypo.sandbox_definition_app.serializers import DefinitionSerializer
 from kypo.sandbox_instance_app.lib.stage_handlers import StackStageHandler
@@ -22,13 +24,12 @@ from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUni
     AllocationRequest, \
     AllocationStage, StackAllocationStage, CleanupRequest, StackCleanupStage, CleanupStage, \
     SandboxLock, PoolLock
-from kypo.sandbox_common_lib import exceptions
-from kypo.sandbox_common_lib.permissions import AllowReadOnViewSandbox
 
-# Create logger and configure logging
 LOG = structlog.get_logger()
 
 
+@utils.add_error_responses_doc('get', [401, 403, 500])
+@utils.add_error_responses_doc('post', [400, 401, 403, 404, 500])
 class PoolList(mixins.ListModelMixin,
                generics.GenericAPIView):
     queryset = Pool.objects.all()
@@ -38,8 +39,7 @@ class PoolList(mixins.ListModelMixin,
         """Get a list of pools."""
         return self.list(request, *args, **kwargs)
 
-    @staticmethod
-    def post(request):
+    def post(self, request):
         """Creates new pool.
         Also creates a new key-pair in OpenStack for this pool.
         It is then used as management key for this pool. That means that
@@ -48,10 +48,12 @@ class PoolList(mixins.ListModelMixin,
         If ref is a branch, uses current HEAD.
         """
         pool = pools.create_pool(request.data)
-        serializer = serializers.PoolSerializer(pool)
+        serializer = self.serializer_class(pool)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
+@utils.add_error_responses_doc('delete', [401, 403, 404, 500])
 class PoolDetail(mixins.RetrieveModelMixin,
                  mixins.DestroyModelMixin,
                  generics.GenericAPIView):
@@ -73,10 +75,12 @@ class PoolDetail(mixins.RetrieveModelMixin,
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class PoolDefinition(mixins.RetrieveModelMixin, generics.GenericAPIView):
     queryset = Definition.objects.none()  # Required for DjangoModelPermissions
     serializer_class = DefinitionSerializer
 
+    # noinspection PyUnusedLocal
     def get(self, request, pool_id):
         """Retrieve the definition associate with a pool."""
         pool_id = self.kwargs.get('pool_id')
@@ -85,6 +89,8 @@ class PoolDefinition(mixins.RetrieveModelMixin, generics.GenericAPIView):
         return Response(serializer.data)
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
+@utils.add_error_responses_doc('post', [400, 401, 403, 404, 500])
 class PoolLockList(mixins.ListModelMixin, generics.GenericAPIView):
     serializer_class = serializers.PoolLockSerializer
 
@@ -105,6 +111,7 @@ class PoolLockList(mixins.ListModelMixin, generics.GenericAPIView):
         return self.list(request, *args, **kwargs)
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class PoolLockDetail(generics.RetrieveDestroyAPIView):
     """delete: Delete given lock."""
     queryset = PoolLock.objects.all()
@@ -112,6 +119,7 @@ class PoolLockDetail(generics.RetrieveDestroyAPIView):
     serializer_class = serializers.PoolLockSerializer
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class PoolAllocationRequestList(generics.ListAPIView):
     """get: List Allocation Request for this pool."""
     serializer_class = serializers.AllocationRequestSerializer
@@ -122,6 +130,7 @@ class PoolAllocationRequestList(generics.ListAPIView):
         return AllocationRequest.objects.filter(allocation_unit__in=pool.allocation_units.all())
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class PoolCleanupRequestList(generics.ListAPIView):
     """get: List Cleanup Request for this pool."""
     serializer_class = serializers.CleanupRequestSerializer
@@ -132,19 +141,21 @@ class PoolCleanupRequestList(generics.ListAPIView):
         return CleanupRequest.objects.filter(allocation_unit__in=pool.allocation_units.all())
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class SandboxAllocationUnitList(mixins.ListModelMixin, generics.GenericAPIView):
     serializer_class = serializers.SandboxAllocationUnitSerializer
 
     def get_queryset(self):
         return SandboxAllocationUnit.objects.filter(pool_id=self.kwargs.get('pool_id'))
 
-    # noinspection PyUnusedLocal
     @swagger_auto_schema(
         manual_parameters=[
             openapi.Parameter('count', openapi.IN_QUERY,
                               description="Sandbox count parameter", type=openapi.TYPE_INTEGER),
         ],
-        responses={status.HTTP_201_CREATED: serializers.SandboxAllocationUnitSerializer(many=True)})
+        responses={status.HTTP_201_CREATED: serializers.SandboxAllocationUnitSerializer(many=True),
+                   **{k: v for k, v in utils.ERROR_RESPONSES.items()
+                      if k in [400, 401, 403, 404, 500]}})
     def post(self, request, pool_id):
         """Create Sandbox Allocation Unit.
         For each Allocation Unit the Allocation Request is created in given pool.
@@ -168,9 +179,9 @@ class SandboxAllocationUnitList(mixins.ListModelMixin, generics.GenericAPIView):
         """Get a list of Sandbox Allocation Units."""
         return self.list(request, *args, **kwargs)
 
-    # noinspection PyUnusedLocal
-    @swagger_auto_schema(responses={status.HTTP_202_ACCEPTED:
-                                    serializers.CleanupRequestSerializer(many=True)})
+    @swagger_auto_schema(
+        responses={status.HTTP_202_ACCEPTED: serializers.CleanupRequestSerializer(many=True),
+                   **{k: v for k, v in utils.ERROR_RESPONSES.items() if k in [401, 403, 404, 500]}})
     def delete(self, request, pool_id):
         """Delete all Sandbox Allocation Units in pool.
         __NOTE:__ The sandboxes associated with the Allocation units cannot be locked,
@@ -182,13 +193,15 @@ class SandboxAllocationUnitList(mixins.ListModelMixin, generics.GenericAPIView):
         return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
 
 
-class SandboxAllocationUnitDetail(generics.RetrieveAPIView, generics.GenericAPIView):
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
+class SandboxAllocationUnitDetail(generics.RetrieveAPIView):
     """get: Retrieve a Sandbox Allocation Unit."""
     serializer_class = serializers.SandboxAllocationUnitSerializer
     queryset = SandboxAllocationUnit.objects.all()
     lookup_url_kwarg = "unit_id"
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class SandboxAllocationRequest(mixins.RetrieveModelMixin, generics.GenericAPIView):
     """get: Retrieve a Sandbox Allocation Request for an Allocation Unit.
     Each Allocation Unit has exactly one Allocation Request.
@@ -207,6 +220,7 @@ class SandboxAllocationRequest(mixins.RetrieveModelMixin, generics.GenericAPIVie
         return Response(serializer.data)
 
 
+@utils.add_error_responses_doc('patch', [401, 403, 404, 500])
 class SandboxAllocationRequestCancel(generics.GenericAPIView):
     serializer_class = serializers.AllocationRequestSerializer
     queryset = AllocationRequest.objects.all()
@@ -220,6 +234,7 @@ class SandboxAllocationRequestCancel(generics.GenericAPIView):
         return Response()
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class SandboxAllocationRequestStageList(generics.ListAPIView):
     """get: List sandbox Allocation stages."""
     serializer_class = serializers.AllocationStageSerializer
@@ -230,6 +245,8 @@ class SandboxAllocationRequestStageList(generics.ListAPIView):
         return AllocationStage.objects.filter(request_id=request_id).select_subclasses()
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
+@utils.add_error_responses_doc('post', [401, 403, 404, 500])
 class SandboxCleanupRequestList(mixins.ListModelMixin, generics.GenericAPIView):
     serializer_class = serializers.CleanupRequestSerializer
 
@@ -248,6 +265,7 @@ class SandboxCleanupRequestList(mixins.ListModelMixin, generics.GenericAPIView):
         return self.list(request, *args, **kwargs)
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class SandboxCleanupRequestDetail(generics.RetrieveAPIView):
     """get: Retrieve a Sandbox Cleanup Request."""
     serializer_class = serializers.CleanupRequestSerializer
@@ -255,6 +273,7 @@ class SandboxCleanupRequestDetail(generics.RetrieveAPIView):
     lookup_url_kwarg = "request_id"
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class SandboxCleanupRequestStageList(generics.ListAPIView):
     """get: List sandbox Cleanup stages."""
     serializer_class = serializers.CleanupStageSerializer
@@ -265,6 +284,7 @@ class SandboxCleanupRequestStageList(generics.ListAPIView):
         return CleanupStage.objects.filter(request_id=request_id).select_subclasses()
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class OpenstackAllocationStageDetail(generics.GenericAPIView):
     serializer_class = serializers.OpenstackAllocationStageSerializer
     queryset = StackAllocationStage.objects.all()
@@ -282,6 +302,7 @@ class OpenstackAllocationStageDetail(generics.GenericAPIView):
         return Response(serializer.data)
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class OpenstackCleanupStageDetail(generics.RetrieveAPIView):
     """get: Retrieve an `openstack` Cleanup stage."""
     serializer_class = serializers.OpenstackCleanupStageSerializer
@@ -289,6 +310,7 @@ class OpenstackCleanupStageDetail(generics.RetrieveAPIView):
     lookup_url_kwarg = "stage_id"
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class SandboxEventList(generics.ListAPIView):
     """get: List sandbox Events."""
     serializer_class = serializers.SandboxEventSerializer
@@ -299,6 +321,7 @@ class SandboxEventList(generics.ListAPIView):
         return units.get_stack_events(unit)
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class SandboxResourceList(generics.ListAPIView):
     """get: List sandbox Resources."""
     serializer_class = serializers.SandboxResourceSerializer
@@ -313,6 +336,7 @@ class SandboxResourceList(generics.ListAPIView):
 # POOLS OF SANDBOXES MANIPULATION VIEWS #
 #########################################
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class PoolSandboxList(generics.GenericAPIView):
     queryset = Pool.objects.all()
     serializer_class = serializers.SandboxSerializer
@@ -334,6 +358,7 @@ class PoolSandboxList(generics.GenericAPIView):
         return Response(serializer.data)
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class PoolKeypairManagement(generics.RetrieveAPIView):
     """
     get: Retrieve management key-pair.
@@ -344,14 +369,18 @@ class PoolKeypairManagement(generics.RetrieveAPIView):
     serializer_class = serializers.PoolKeypairSerializer
 
 
-class SandboxGetAndLock(generics.GenericAPIView):
+class SandboxGetAndLock(mixins.RetrieveModelMixin, generics.GenericAPIView):
     serializer_class = serializers.SandboxSerializer
     queryset = Sandbox.objects.all()
     lookup_url_kwarg = "pool_id"
     pagination_class = None
 
     @swagger_auto_schema(
-         responses={status.HTTP_200_OK: serializers.SandboxSerializer()})
+        responses={status.HTTP_409_CONFLICT:
+                   openapi.Response('No free sandboxes; all sandboxes are locked.',
+                                    utils.ErrorSerilizer()),
+                   **{k: v for k, v in utils.ERROR_RESPONSES.items() if
+                      k in [400, 401, 403, 404, 500]}})
     def get(self, request, pool_id):
         """Get unlocked sandbox in given pool and lock it. Return 409 if all are locked."""
         pool = pools.get_pool(pool_id)
@@ -366,6 +395,7 @@ class SandboxGetAndLock(generics.GenericAPIView):
 # SANDBOX MANIPULATION VIEWS #
 #######################################
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class SandboxDetail(generics.RetrieveAPIView):
     """get: Retrieve a sandbox."""
     serializer_class = serializers.SandboxSerializer
@@ -373,6 +403,8 @@ class SandboxDetail(generics.RetrieveAPIView):
     queryset = Sandbox.objects.all()
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
+@utils.add_error_responses_doc('post', [400, 401, 403, 404, 500])
 class SandboxLockList(mixins.ListModelMixin, generics.GenericAPIView):
     serializer_class = serializers.SandboxLockSerializer
 
@@ -393,6 +425,7 @@ class SandboxLockList(mixins.ListModelMixin, generics.GenericAPIView):
         return self.list(request, *args, **kwargs)
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class SandboxLockDetail(generics.RetrieveDestroyAPIView):
     """delete: Delete given lock."""
     queryset = SandboxLock.objects.all()
@@ -400,6 +433,7 @@ class SandboxLockDetail(generics.RetrieveDestroyAPIView):
     serializer_class = serializers.SandboxLockSerializer
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class SandboxKeypairUser(generics.RetrieveAPIView):
     """get: Retrieve user key-pair. It is unique for each sandbox."""
     queryset = Sandbox.objects.all()
@@ -407,6 +441,7 @@ class SandboxKeypairUser(generics.RetrieveAPIView):
     serializer_class = serializers.SandboxKeypairSerializer
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class SandboxTopology(generics.GenericAPIView):
     queryset = Sandbox.objects.all()
     lookup_url_kwarg = "sandbox_id"
@@ -425,6 +460,7 @@ class SandboxTopology(generics.GenericAPIView):
         return Response(self.serializer_class(topology).data)
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class SandboxVMDetail(generics.GenericAPIView):
     queryset = Sandbox.objects.all()
     lookup_url_kwarg = "sandbox_id"
@@ -445,7 +481,9 @@ class SandboxVMDetail(generics.GenericAPIView):
 
     # noinspection PyUnusedLocal
     @swagger_auto_schema(request_body=serializers.NodeActionSerializer(),
-                         responses={status.HTTP_200_OK: serializers.serializers.Serializer()})
+                         responses={status.HTTP_200_OK: serializers.serializers.Serializer(),
+                         **{k: v for k, v in utils.ERROR_RESPONSES.items() if
+                            k in [400, 401, 403, 404, 500]}})
     def patch(self, request, sandbox_id, vm_name):
         """Perform specified action on given VM.
         Available actions are:
@@ -462,6 +500,7 @@ class SandboxVMDetail(generics.GenericAPIView):
         return Response()
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class SandboxVMConsole(generics.GenericAPIView):
     queryset = Sandbox.objects.all()
     lookup_url_kwarg = "sandbox_id"
@@ -478,11 +517,11 @@ class SandboxVMConsole(generics.GenericAPIView):
         return Response({'url': console})
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class SandboxUserSSHConfig(APIView):
     queryset = Sandbox.objects.none()  # Required for DjangoModelPermissions
 
-    @staticmethod
-    def get(request, sandbox_id):
+    def get(self, request, sandbox_id):
         """Generate SSH config for User access to this sandbox.
         Some values are user specific, the config contains placeholders for them."""
         sandbox = sandboxes.get_sandbox(sandbox_id)
@@ -493,11 +532,11 @@ class SandboxUserSSHConfig(APIView):
         return response
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class SandboxManagementSSHConfig(APIView):
     queryset = Sandbox.objects.none()  # Required for DjangoModelPermissions
 
-    @staticmethod
-    def get(request, sandbox_id):
+    def get(self, request, sandbox_id):
         """Generate SSH config for Management access to this sandbox.
         Some values are user specific, the config contains placeholders for them."""
         sandbox = sandboxes.get_sandbox(sandbox_id)

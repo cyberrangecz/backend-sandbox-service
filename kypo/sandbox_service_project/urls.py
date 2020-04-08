@@ -23,33 +23,11 @@ PROJECT_NAME = 'kypo-sandbox-service'
 VERSION = 'v1'
 URL_PREFIX = f'{PROJECT_NAME}/api/{VERSION}/'
 
-HEADER = """
-## Specification of REST responses
-
-__Success JSON__
-```json
-{
-    Requested data or empty if no data requested.
-}
-```
-
-__Error JSON__
-```json
-{
-    detail: error message,
-    parameters: {
-        Dictionary of call parameters
-        name: value
-    }
-}
-```
-"""
-
 schema_view = get_schema_view(
     openapi.Info(
         title="KYPO2 OpenStack REST API documentation",
         default_version=VERSION,
-        description=HEADER,
+        description="",
     ),
     validators=[],
     public=True,

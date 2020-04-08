@@ -27,12 +27,9 @@ def custom_exception_handler(exc, context):
         # Handles only Django Errors.
         response = exception_handler(exc, context)
 
-        # Django DEBUG mode does better job on unhandled exceptions.
-        # That's why this is used only in production mode.
-        if not settings.DEBUG and response is None:
+        if response is None:
             response = Response({
                 'detail': str(exc),
-                'parameters': context['kwargs']
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     exc_info = settings.DEBUG or not isinstance(exc, (Http404,
@@ -46,7 +43,6 @@ def handle_kypo_exception(exc, context):
     """Handle OpenStack lib and this project exceptions."""
     return Response({
         'detail': str(exc),
-        'parameters': context.get('kwargs')
     }, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -58,16 +54,12 @@ def handle_permission_denied(exc, context):
     except KeyError:
         user_groups = None
     return Response({
-        'detail': str(exc),
-        'parameters': {
-            'user_roles': user_groups
-        }.update(context.get('kwargs')),
-    }, status=status.HTTP_403_FORBIDDEN)
+        'detail': f'{str(exc)} User roles: {str(user_groups)}'
+    },status=status.HTTP_403_FORBIDDEN)
 
 
 def handle_model_validation_error(exc, context):
     """Fix error message in model validation error."""
     return Response({
         'detail': exc.detail,
-        'parameters': context.get('kwargs'),
     }, status=status.HTTP_400_BAD_REQUEST)

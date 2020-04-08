@@ -35,7 +35,7 @@ sandbox_build_timeout: 1200
 sandbox_delete_timeout : 1200
 
 # Timeout for Ansible.
-sandbox_ansible_timeout: 1200
+sandbox_ansible_timeout: 1800
 
 sandbox_configuration:
     # The name or ID of network in OpenStack where all sandboxes will be deployed.
