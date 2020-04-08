@@ -4,15 +4,17 @@ Simple utils module.
 import json
 import logging
 import uuid
-from typing import Tuple, Union, Iterable
+from typing import Tuple, Union, Iterable, Optional
 import structlog
 from Crypto.PublicKey import RSA
 from django.conf import settings
+from django.urls import reverse
 from django.utils.decorators import method_decorator
 from drf_yasg import openapi
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import serializers
+from django.core.cache import cache
 
 from kypo.openstack_driver.ostack_client import KypoOstackClient
 
@@ -112,4 +114,33 @@ def add_error_responses_doc(method: str, statuses: Iterable[Union[int, str]]):
                        if k in statuses}
         ))(cls)
         return cls
+    return decorate
+
+
+def get_cache_key(view_name: str, **kwargs) -> str:
+    """Return key to custom view cache."""
+    return reverse(view_name, kwargs=kwargs)
+
+
+def simple_cache_page(timeout: Optional[int]):
+    """Simpler clone of django `cache_page` decorator.
+
+    `timeout` is passed directly to the underlying cache.
+    The view is required to have a view_name set for cache key resolution."""
+    def decorate(func):
+        def cached_method(self, request, *args, **kwargs):
+            assert hasattr(self, 'view_name'), \
+                'simple_cache_page requires a view_name attribute to bes set on the view.'
+            key = get_cache_key(self.view_name, **kwargs)
+            response = cache.get(key)
+
+            if not response:
+                response = func(self, request, *args, **kwargs)
+                if response.status_code == status.HTTP_200_OK:
+                    if hasattr(response, 'render') and callable(response.render):
+                        response.add_post_render_callback(
+                            lambda r: cache.set(key, r, timeout)
+                        )
+            return response
+        return cached_method
     return decorate
