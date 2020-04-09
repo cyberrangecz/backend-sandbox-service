@@ -10,7 +10,7 @@ from kypo.sandbox_common_lib import utils
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage
 from kypo.sandbox_instance_app.lib import jobs
 from kypo.sandbox_instance_app.models import Sandbox, Pool, SandboxAllocationUnit, \
-    AllocationRequest, StackAllocationStage, SystemProcess
+    AllocationRequest, StackAllocationStage, SystemProcess, StageType
 from kypo.sandbox_instance_app.lib.stage_handlers import StackStageHandler, AnsibleStageHandler
 
 STACK_STATUS_CREATE_COMPLETE = "CREATE_COMPLETE"
@@ -42,7 +42,7 @@ def create_allocations_requests(pool: Pool, count: int) -> List[SandboxAllocatio
 
 def enqueue_allocation_request(request: AllocationRequest, sandbox: Sandbox) -> None:
     with transaction.atomic():
-        stage_stack = StackAllocationStage.objects.create(request=request)
+        stage_stack = StackAllocationStage.objects.create(request=request, type=StageType.OPENSTACK)
         queue_stack = django_rq.get_queue(
             OPENSTACK_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_build_timeout)
         job_stack = queue_stack.enqueue(
@@ -53,7 +53,7 @@ def enqueue_allocation_request(request: AllocationRequest, sandbox: Sandbox) -> 
 
         stage_networking = AnsibleAllocationStage.objects.create(
             request=request, repo_url=settings.KYPO_CONFIG.ansible_networking_url,
-            rev=settings.KYPO_CONFIG.ansible_networking_rev
+            rev=settings.KYPO_CONFIG.ansible_networking_rev, type=StageType.ANSIBLE
         )
         queue_ansible = django_rq.get_queue(
             ANSIBLE_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_ansible_timeout)
@@ -65,7 +65,8 @@ def enqueue_allocation_request(request: AllocationRequest, sandbox: Sandbox) -> 
 
         stage_user_ansible = AnsibleAllocationStage.objects.create(
             request=request, repo_url=request.allocation_unit.pool.definition.url,
-            rev=request.allocation_unit.pool.rev_sha
+            rev=request.allocation_unit.pool.rev_sha, type=StageType.ANSIBLE
+
         )
         job_user_ansible = queue_ansible.enqueue(
             AnsibleStageHandler().build, stage_name='Allocation User Ansible',

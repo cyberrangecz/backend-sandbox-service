@@ -114,10 +114,10 @@ class AnsibleDockerRunner:
                                         USER_PRIVATE_KEY_FILENAME)
         user_public_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
                                        USER_PUBLIC_KEY_FILENAME)
-        heatstack = None
-        for stg in sandbox.allocation_unit.allocation_request.stages.all().select_subclasses():
-            if stg.type == StageType.OPENSTACK:
-                heatstack = stg.heatstack
+        os_stage = sandbox.allocation_unit.allocation_request.stages \
+            .filter(type=StageType.OPENSTACK.value).select_subclasses().first()
+        heatstack = os_stage.heatstack
+
         inventory = Inventory(
             stack, top_def, user_private_key, user_public_key,
             {'kypo_global_sandbox_allocation_unit_id': sandbox.allocation_unit.id,
