@@ -9,7 +9,7 @@ from kypo.sandbox_definition_app.lib.definition_providers import GitProvider
 from kypo.topology_definition.models import TopologyDefinition
 
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage
-from kypo.sandbox_common_lib import utils
+from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
 from kypo.sandbox_instance_app.models import Sandbox, StageType
 from kypo.sandbox_ansible_app.lib.inventory import Inventory
@@ -116,6 +116,9 @@ class AnsibleDockerRunner:
                                        USER_PUBLIC_KEY_FILENAME)
         os_stage = sandbox.allocation_unit.allocation_request.stages \
             .filter(type=StageType.OPENSTACK.value).select_subclasses().first()
+        if not hasattr(os_stage, 'heatstack'):
+            raise exceptions.ApiException(f'The openstack stage ID={os_stage.id} '
+                                          'does not have any HeatStack intance.')
         heatstack = os_stage.heatstack
 
         inventory = Inventory(
