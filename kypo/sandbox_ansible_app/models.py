@@ -1,11 +1,16 @@
 from django.db import models
 
-from kypo.sandbox_instance_app.models import ExternalDependency, AllocationStage, CleanupStage, StageType
+from kypo.sandbox_instance_app.models import ExternalDependency, AllocationStage, \
+    CleanupStage, StageType
 
 
 class AnsibleAllocationStage(AllocationStage):
     repo_url = models.TextField(help_text='URL of the Ansible repository.')
     rev = models.TextField(help_text='Revision of the Ansible repository.')
+
+    def save(self, *args, **kwargs):
+        self.type = StageType.ANSIBLE.value
+        super().save(*args, **kwargs)
 
     def __str__(self):
 
@@ -19,6 +24,10 @@ class AnsibleCleanupStage(CleanupStage):
         on_delete=models.CASCADE,
         related_name='cleanup_stages',
     )
+
+    def save(self, *args, **kwargs):
+        self.type = StageType.ANSIBLE.value
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return super().__str__() + \

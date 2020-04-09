@@ -192,6 +192,10 @@ class StackAllocationStage(AllocationStage):
     status = models.CharField(null=True, max_length=30, help_text='Stack status')
     status_reason = models.TextField(null=True, help_text='Stack status reason')
 
+    def save(self, *args, **kwargs):
+        self.type = StageType.OPENSTACK.value
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return super().__str__() + \
                ', STATUS: {0.status}, STATUS_REASON: {0.status_reason}'.format(self)
@@ -219,6 +223,10 @@ class StackCleanupStage(CleanupStage):
         on_delete=models.CASCADE,
         related_name='cleanup_stages',
     )
+
+    def save(self, *args, **kwargs):
+        self.type = StageType.OPENSTACK.value
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return super().__str__() + \
