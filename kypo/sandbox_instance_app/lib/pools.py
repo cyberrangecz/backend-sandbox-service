@@ -129,6 +129,7 @@ def delete_allocation_units(pool: Pool) -> List[CleanupRequest]:
 
 def get_unlocked_sandbox(pool: Pool) -> Optional[Sandbox]:
     """Return unlocked sandbox."""
+    # TODO: Create Locks immediately on Sandbox creation
     with transaction.atomic():
         sb_queryset = Sandbox.objects\
             .select_for_update()\
@@ -136,11 +137,12 @@ def get_unlocked_sandbox(pool: Pool) -> Optional[Sandbox]:
             .filter(allocation_unit__pool=pool)
         # Lock filtering needs to be done in Python.
         # FOR UPDATE cannot be applied to the nullable side of a relation.
-        sandboxes = [sb for sb in sb_queryset if not hasattr(sb, 'lock')]
-        if not sandboxes:
+        for sandbox in sb_queryset:
+            if not hasattr(sandbox, 'lock'):
+                break
+        else:
             return None
 
-        sandbox = sandboxes[0]
         SandboxLock.objects.create(sandbox=sandbox)
         return sandbox
 
