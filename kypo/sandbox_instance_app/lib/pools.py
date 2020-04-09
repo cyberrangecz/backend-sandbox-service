@@ -137,12 +137,9 @@ def get_unlocked_sandbox(pool: Pool) -> Optional[Sandbox]:
             .filter(allocation_unit__pool=pool)
         # Lock filtering needs to be done in Python.
         # FOR UPDATE cannot be applied to the nullable side of a relation.
-        for sandbox in sb_queryset:
-            if not hasattr(sandbox, 'lock'):
-                break
-        else:
+        sandbox = next((sb for sb in sb_queryset if not hasattr(sb, 'lock')), None)
+        if not sandbox:
             return None
-
         SandboxLock.objects.create(sandbox=sandbox)
         return sandbox
 
