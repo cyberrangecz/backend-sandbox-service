@@ -4,8 +4,6 @@ from kypo.sandbox_instance_app.models import ExternalDependency, AllocationStage
 
 
 class AnsibleAllocationStage(AllocationStage):
-    type = StageType.ANSIBLE
-
     repo_url = models.TextField(help_text='URL of the Ansible repository.')
     rev = models.TextField(help_text='Revision of the Ansible repository.')
 
@@ -16,8 +14,6 @@ class AnsibleAllocationStage(AllocationStage):
 
 
 class AnsibleCleanupStage(CleanupStage):
-    type = StageType.ANSIBLE
-
     allocation_stage = models.ForeignKey(
         AnsibleAllocationStage,
         on_delete=models.CASCADE,

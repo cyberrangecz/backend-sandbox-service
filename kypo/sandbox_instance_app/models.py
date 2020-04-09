@@ -140,6 +140,10 @@ class CleanupRequest(SandboxRequest):
 
 class Stage(models.Model):
     """Abstract base class for stages."""
+    STAGE_CHOICES = [(stg_type.value, stg_type.value) for stg_type in StageType]
+    type = models.CharField(choices=STAGE_CHOICES, max_length=32,
+                            help_text='Type of the stage')
+
     start = models.DateTimeField(null=True, default=None,
                                  help_text='Timestamp indicating when the stage execution started.')
     end = models.DateTimeField(null=True, default=None,
@@ -172,8 +176,6 @@ class Stage(models.Model):
 
 
 class AllocationStage(Stage):
-    type = 'unknown'
-
     request = models.ForeignKey(
         AllocationRequest,
         on_delete=models.CASCADE,
@@ -187,8 +189,6 @@ class AllocationStage(Stage):
 
 
 class StackAllocationStage(AllocationStage):
-    type = StageType.OPENSTACK
-
     status = models.CharField(null=True, max_length=30, help_text='Stack status')
     status_reason = models.TextField(null=True, help_text='Stack status reason')
 
@@ -198,8 +198,6 @@ class StackAllocationStage(AllocationStage):
 
 
 class CleanupStage(Stage):
-    type = 'unknown'
-
     request = models.ForeignKey(
         CleanupRequest,
         on_delete=models.CASCADE,
@@ -216,8 +214,6 @@ class CleanupStage(Stage):
 
 
 class StackCleanupStage(CleanupStage):
-    type = StageType.OPENSTACK
-
     allocation_stage = models.ForeignKey(
         StackAllocationStage,
         on_delete=models.CASCADE,
