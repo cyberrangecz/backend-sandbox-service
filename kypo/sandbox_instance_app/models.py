@@ -166,7 +166,7 @@ class Stage(models.Model):
         ordering = ['id']
 
     def __str__(self):
-        return 'START: {0.start}, END: {0.end} FAILED: {0.failed}'.format(self)
+        return 'START: {0.start}, END: {0.end}, FAILED: {0.failed}, TYPE: {0.type}'.format(self)
 
     def mark_failed(self, exception=None):
         self.failed = True

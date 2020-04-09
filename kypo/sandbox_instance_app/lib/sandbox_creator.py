@@ -42,7 +42,8 @@ def create_allocations_requests(pool: Pool, count: int) -> List[SandboxAllocatio
 
 def enqueue_allocation_request(request: AllocationRequest, sandbox: Sandbox) -> None:
     with transaction.atomic():
-        stage_stack = StackAllocationStage.objects.create(request=request, type=StageType.OPENSTACK)
+        stage_stack = StackAllocationStage.objects.create(request=request,
+                                                          type=StageType.OPENSTACK.value)
         queue_stack = django_rq.get_queue(
             OPENSTACK_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_build_timeout)
         job_stack = queue_stack.enqueue(
@@ -53,7 +54,7 @@ def enqueue_allocation_request(request: AllocationRequest, sandbox: Sandbox) -> 
 
         stage_networking = AnsibleAllocationStage.objects.create(
             request=request, repo_url=settings.KYPO_CONFIG.ansible_networking_url,
-            rev=settings.KYPO_CONFIG.ansible_networking_rev, type=StageType.ANSIBLE
+            rev=settings.KYPO_CONFIG.ansible_networking_rev, type=StageType.ANSIBLE.value
         )
         queue_ansible = django_rq.get_queue(
             ANSIBLE_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_ansible_timeout)
@@ -65,8 +66,7 @@ def enqueue_allocation_request(request: AllocationRequest, sandbox: Sandbox) -> 
 
         stage_user_ansible = AnsibleAllocationStage.objects.create(
             request=request, repo_url=request.allocation_unit.pool.definition.url,
-            rev=request.allocation_unit.pool.rev_sha, type=StageType.ANSIBLE
-
+            rev=request.allocation_unit.pool.rev_sha, type=StageType.ANSIBLE.value
         )
         job_user_ansible = queue_ansible.enqueue(
             AnsibleStageHandler().build, stage_name='Allocation User Ansible',
