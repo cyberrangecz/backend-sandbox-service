@@ -316,9 +316,9 @@ class SandboxEventList(generics.ListAPIView):
     serializer_class = serializers.SandboxEventSerializer
 
     def get_queryset(self):
-        unit_id = self.kwargs.get('unit_id')
-        unit = get_object_or_404(SandboxAllocationUnit, pk=unit_id)
-        return units.get_stack_events(unit)
+        stage_id = self.kwargs.get('stage_id')
+        stage = get_object_or_404(StackAllocationStage, pk=stage_id)
+        return units.get_stack_events(stage.request.allocation_unit)
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
@@ -327,9 +327,9 @@ class SandboxResourceList(generics.ListAPIView):
     serializer_class = serializers.SandboxResourceSerializer
 
     def get_queryset(self):
-        unit_id = self.kwargs.get('unit_id')
-        unit = get_object_or_404(SandboxAllocationUnit, pk=unit_id)
-        return units.get_stack_resources(unit)
+        stage_id = self.kwargs.get('stage_id')
+        stage = get_object_or_404(StackAllocationStage, pk=stage_id)
+        return units.get_stack_resources(stage.request.allocation_unit)
 
 
 #########################################
