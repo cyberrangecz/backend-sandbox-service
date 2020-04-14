@@ -7,7 +7,6 @@ from model_utils.managers import InheritanceManager
 from kypo.sandbox_common_lib import utils
 from kypo.sandbox_definition_app.models import Definition
 
-
 class StageType(Enum):
     OPENSTACK = 'openstack'
     ANSIBLE = 'ansible'
@@ -192,9 +191,10 @@ class StackAllocationStage(AllocationStage):
     status = models.CharField(null=True, max_length=30, help_text='Stack status')
     status_reason = models.TextField(null=True, help_text='Stack status reason')
 
-    def save(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
+        """Custom constructor that sets the correct stage type."""
+        super().__init__(*args, **kwargs)
         self.type = StageType.OPENSTACK.value
-        super().save(*args, **kwargs)
 
     def __str__(self):
         return super().__str__() + \
@@ -224,9 +224,10 @@ class StackCleanupStage(CleanupStage):
         related_name='cleanup_stages',
     )
 
-    def save(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
+        """Custom constructor that sets the correct stage type."""
+        super().__init__(*args, **kwargs)
         self.type = StageType.OPENSTACK.value
-        super().save(*args, **kwargs)
 
     def __str__(self):
         return super().__str__() + \

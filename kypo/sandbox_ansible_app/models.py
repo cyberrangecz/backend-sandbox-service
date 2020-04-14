@@ -8,12 +8,12 @@ class AnsibleAllocationStage(AllocationStage):
     repo_url = models.TextField(help_text='URL of the Ansible repository.')
     rev = models.TextField(help_text='Revision of the Ansible repository.')
 
-    def save(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
+        """Custom constructor that sets the correct stage type."""
+        super().__init__(*args, **kwargs)
         self.type = StageType.ANSIBLE.value
-        super().save(*args, **kwargs)
 
     def __str__(self):
-
         return super().__str__() + \
                ', REPO_URL: {0.repo_url}, REV: {0.rev}'.format(self)
 
@@ -25,9 +25,10 @@ class AnsibleCleanupStage(CleanupStage):
         related_name='cleanup_stages',
     )
 
-    def save(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
+        """Custom constructor that sets the correct stage type."""
+        super().__init__(*args, **kwargs)
         self.type = StageType.ANSIBLE.value
-        super().save(*args, **kwargs)
 
     def __str__(self):
         return super().__str__() + \
