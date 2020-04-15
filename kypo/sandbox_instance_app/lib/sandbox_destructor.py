@@ -7,7 +7,7 @@ from django.conf import settings
 
 from kypo.sandbox_instance_app.lib.stage_handlers import StackStageHandler, AnsibleStageHandler
 from kypo.sandbox_instance_app.models import CleanupRequest, SandboxAllocationUnit, \
-    StackCleanupStage, AllocationRequest
+    StackCleanupStage, AllocationRequest, StageType
 from kypo.sandbox_instance_app.lib.sandbox_creator import OPENSTACK_QUEUE, ANSIBLE_QUEUE
 from kypo.sandbox_common_lib import exceptions
 from kypo.sandbox_ansible_app.models import AnsibleCleanupStage
@@ -52,21 +52,24 @@ def enqueue_cleanup_request(request: CleanupRequest,
     """Enqueue given request."""
     alloc_stages = allocation_unit.allocation_request.stages.all().select_subclasses()
 
-    stage_user_ans = AnsibleCleanupStage.objects.create(request=request,
-                                                        allocation_stage=alloc_stages[2])
+    stage_user_ans = AnsibleCleanupStage.objects.create(
+        request=request, allocation_stage=alloc_stages[2]
+    )
     queue_ansible = django_rq.get_queue(ANSIBLE_QUEUE)
     job_user_ans = queue_ansible.enqueue(
         AnsibleStageHandler().cleanup, stage_name='Cleanup User Ansible',
         stage=stage_user_ans)
 
-    stage_networking = AnsibleCleanupStage.objects.create(request=request,
-                                                          allocation_stage=alloc_stages[1])
+    stage_networking = AnsibleCleanupStage.objects.create(
+        request=request, allocation_stage=alloc_stages[1]
+    )
     job_networking = queue_ansible.enqueue(
-        AnsibleStageHandler().cleanup,  stage_name='Cleanup Networking Ansible',
+        AnsibleStageHandler().cleanup, stage_name='Cleanup Networking Ansible',
         stage=stage_networking, depends_on=job_user_ans)
 
-    stage_stack = StackCleanupStage.objects.create(request=request,
-                                                   allocation_stage=alloc_stages[0])
+    stage_stack = StackCleanupStage.objects.create(
+        request=request, allocation_stage=alloc_stages[0]
+    )
     queue_stack = django_rq.get_queue(OPENSTACK_QUEUE,
                                       default_timeout=settings.KYPO_CONFIG.sandbox_delete_timeout)
     job_stack = queue_stack.enqueue(

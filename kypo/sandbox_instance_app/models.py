@@ -7,7 +7,6 @@ from model_utils.managers import InheritanceManager
 from kypo.sandbox_common_lib import utils
 from kypo.sandbox_definition_app.models import Definition
 
-
 class StageType(Enum):
     OPENSTACK = 'openstack'
     ANSIBLE = 'ansible'
@@ -140,6 +139,10 @@ class CleanupRequest(SandboxRequest):
 
 class Stage(models.Model):
     """Abstract base class for stages."""
+    STAGE_CHOICES = [(stg_type.value, stg_type.value) for stg_type in StageType]
+    type = models.CharField(choices=STAGE_CHOICES, max_length=32,
+                            help_text='Type of the stage')
+
     start = models.DateTimeField(null=True, default=None,
                                  help_text='Timestamp indicating when the stage execution started.')
     end = models.DateTimeField(null=True, default=None,
@@ -162,7 +165,7 @@ class Stage(models.Model):
         ordering = ['id']
 
     def __str__(self):
-        return 'START: {0.start}, END: {0.end} FAILED: {0.failed}'.format(self)
+        return 'START: {0.start}, END: {0.end}, FAILED: {0.failed}, TYPE: {0.type}'.format(self)
 
     def mark_failed(self, exception=None):
         self.failed = True
@@ -172,8 +175,6 @@ class Stage(models.Model):
 
 
 class AllocationStage(Stage):
-    type = 'unknown'
-
     request = models.ForeignKey(
         AllocationRequest,
         on_delete=models.CASCADE,
@@ -187,10 +188,13 @@ class AllocationStage(Stage):
 
 
 class StackAllocationStage(AllocationStage):
-    type = StageType.OPENSTACK
-
     status = models.CharField(null=True, max_length=30, help_text='Stack status')
     status_reason = models.TextField(null=True, help_text='Stack status reason')
+
+    def __init__(self, *args, **kwargs):
+        """Custom constructor that sets the correct stage type."""
+        super().__init__(*args, **kwargs)
+        self.type = StageType.OPENSTACK.value
 
     def __str__(self):
         return super().__str__() + \
@@ -198,8 +202,6 @@ class StackAllocationStage(AllocationStage):
 
 
 class CleanupStage(Stage):
-    type = 'unknown'
-
     request = models.ForeignKey(
         CleanupRequest,
         on_delete=models.CASCADE,
@@ -216,13 +218,16 @@ class CleanupStage(Stage):
 
 
 class StackCleanupStage(CleanupStage):
-    type = StageType.OPENSTACK
-
     allocation_stage = models.ForeignKey(
         StackAllocationStage,
         on_delete=models.CASCADE,
         related_name='cleanup_stages',
     )
+
+    def __init__(self, *args, **kwargs):
+        """Custom constructor that sets the correct stage type."""
+        super().__init__(*args, **kwargs)
+        self.type = StageType.OPENSTACK.value
 
     def __str__(self):
         return super().__str__() + \

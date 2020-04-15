@@ -1,28 +1,34 @@
 from django.db import models
 
-from kypo.sandbox_instance_app.models import ExternalDependency, AllocationStage, CleanupStage, StageType
+from kypo.sandbox_instance_app.models import ExternalDependency, AllocationStage, \
+    CleanupStage, StageType
 
 
 class AnsibleAllocationStage(AllocationStage):
-    type = StageType.ANSIBLE
-
     repo_url = models.TextField(help_text='URL of the Ansible repository.')
     rev = models.TextField(help_text='Revision of the Ansible repository.')
 
-    def __str__(self):
+    def __init__(self, *args, **kwargs):
+        """Custom constructor that sets the correct stage type."""
+        super().__init__(*args, **kwargs)
+        self.type = StageType.ANSIBLE.value
 
+    def __str__(self):
         return super().__str__() + \
                ', REPO_URL: {0.repo_url}, REV: {0.rev}'.format(self)
 
 
 class AnsibleCleanupStage(CleanupStage):
-    type = StageType.ANSIBLE
-
     allocation_stage = models.ForeignKey(
         AnsibleAllocationStage,
         on_delete=models.CASCADE,
         related_name='cleanup_stages',
     )
+
+    def __init__(self, *args, **kwargs):
+        """Custom constructor that sets the correct stage type."""
+        super().__init__(*args, **kwargs)
+        self.type = StageType.ANSIBLE.value
 
     def __str__(self):
         return super().__str__() + \

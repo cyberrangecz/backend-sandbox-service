@@ -80,7 +80,6 @@ class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
 
 
 class AllocationStageSerializer(serializers.ModelSerializer):
-    type = serializers.SerializerMethodField(help_text='Type of the stage.')
     request_id = serializers.PrimaryKeyRelatedField(
         source='request', queryset=AllocationRequest.objects.all())
 
@@ -88,10 +87,6 @@ class AllocationStageSerializer(serializers.ModelSerializer):
         model = models.AllocationStage
         fields = ('id', 'request_id', 'type', 'start', 'end', 'failed', 'error_message')
         read_only_fields = fields
-
-    @staticmethod
-    def get_type(obj) -> str:
-        return obj.type.value
 
 
 class OpenstackAllocationStageSerializer(AllocationStageSerializer):
@@ -102,7 +97,6 @@ class OpenstackAllocationStageSerializer(AllocationStageSerializer):
 
 
 class CleanupStageSerializer(serializers.ModelSerializer):
-    type = serializers.SerializerMethodField(help_text='Type of the stage.')
     request_id = serializers.PrimaryKeyRelatedField(
         source='request', queryset=CleanupRequest.objects.all())
 
@@ -110,10 +104,6 @@ class CleanupStageSerializer(serializers.ModelSerializer):
         model = models.CleanupStage
         fields = ('id', 'request_id', 'type', 'start', 'end', 'failed', 'error_message')
         read_only_fields = fields
-
-    @staticmethod
-    def get_type(obj) -> str:
-        return obj.type.value
 
 
 class OpenstackCleanupStageSerializer(CleanupStageSerializer):

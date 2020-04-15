@@ -10,7 +10,7 @@ from kypo.sandbox_common_lib import utils
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage
 from kypo.sandbox_instance_app.lib import jobs
 from kypo.sandbox_instance_app.models import Sandbox, Pool, SandboxAllocationUnit, \
-    AllocationRequest, StackAllocationStage, SystemProcess
+    AllocationRequest, StackAllocationStage, SystemProcess, StageType
 from kypo.sandbox_instance_app.lib.stage_handlers import StackStageHandler, AnsibleStageHandler
 
 STACK_STATUS_CREATE_COMPLETE = "CREATE_COMPLETE"
