@@ -455,8 +455,7 @@ class SandboxTopology(generics.GenericAPIView):
         __NOTE:__ this endpoint is cached indefinitely.
         So the topology can be accessed even when the sandbox is long deleted.
         """
-        topology = sandboxes.Topology(self.get_object())
-        topology.create()
+        topology = sandboxes.get_sandbox_topology(self.get_object())
         return Response(self.serializer_class(topology).data)
 
 

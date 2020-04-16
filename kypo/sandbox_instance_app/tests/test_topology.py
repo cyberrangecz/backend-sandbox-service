@@ -10,17 +10,10 @@ class TestTopology:
     def test_create_success(self, mocker, stack, topology, topology_definition):
         mocker.patch('kypo.sandbox_definition_app.lib.definitions.get_definition',
                      mocker.Mock(return_value=topology_definition))
-        mock_client = mocker.patch('kypo.sandbox_common_lib.utils.get_ostack_client')
-        client = mock_client.return_value
-        client.get_sandbox.return_value = stack
-        client.get_spice_console.return_value = 'console_url'
-        client.pool.definition.content = ''
-
         sandbox = mocker.MagicMock()
         sandbox.pool.definition.content = 'name: name'
 
-        topo = sandboxes.Topology(sandbox)
-        topo.create()
+        topo = sandboxes.Topology(sandbox, stack)
         result = serializers.TopologySerializer(topo).data
 
         for item in ['hosts', 'routers', 'switches', 'ports']:
@@ -36,17 +29,11 @@ class TestTopology:
                 host.hidden = True
         mocker.patch('kypo.sandbox_definition_app.lib.definitions.get_definition',
                      mocker.Mock(return_value=topology_definition))
-        mock_client = mocker.patch('kypo.sandbox_common_lib.utils.get_ostack_client')
-        client = mock_client.return_value
-        client.get_sandbox.return_value = stack
-        client.get_spice_console.return_value = 'console_url'
-        client.pool.definition.content = ''
 
         sandbox = mocker.MagicMock()
         sandbox.pool.definition.content = 'name: name'
 
-        topo = sandboxes.Topology(sandbox)
-        topo.create()
+        topo = sandboxes.Topology(sandbox, stack)
         result = serializers.TopologySerializer(topo).data
 
         for item in ['hosts', 'routers', 'switches', 'ports']:
