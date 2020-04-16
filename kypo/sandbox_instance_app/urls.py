@@ -61,7 +61,7 @@ urlpatterns = [
     path('sandboxes/<int:sandbox_id>/locks/<int:lock_id>', views.SandboxLockDetail.as_view(),
          name='sandbox-lock-detail'),
     path('sandboxes/<int:sandbox_id>/topology',
-         views.SandboxTopology.as_view(), name=views.SandboxTopology.view_name),
+         views.SandboxTopology.as_view(), name='sandbox-topology'),
 
     path('sandboxes/<int:sandbox_id>/key-pairs/user',
          views.SandboxKeypairUser.as_view(), name='sandbox-user-key-pair'),
@@ -73,8 +73,8 @@ urlpatterns = [
 
     path('sandboxes/<int:sandbox_id>/user-ssh-config',
          views.SandboxUserSSHConfig.as_view(),
-         name=views.SandboxUserSSHConfig.view_name),
+         name='sandbox-user-ssh-config'),
     path('sandboxes/<int:sandbox_id>/management-ssh-config',
          views.SandboxManagementSSHConfig.as_view(),
-         name=views.SandboxManagementSSHConfig.view_name),
+         name='sandbox-management-ssh-config'),
 ]

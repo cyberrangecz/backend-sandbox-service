@@ -25,7 +25,6 @@ from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUni
     AllocationStage, StackAllocationStage, CleanupRequest, StackCleanupStage, CleanupStage, \
     SandboxLock, PoolLock
 
-WEEK = 3600 * 24 * 7
 
 LOG = structlog.get_logger()
 
@@ -449,10 +448,8 @@ class SandboxTopology(generics.GenericAPIView):
     lookup_url_kwarg = "sandbox_id"
     serializer_class = serializers.TopologySerializer
     pagination_class = None
-    view_name = 'sandbox-topology'
 
     # noinspection PyUnusedLocal
-    @utils.simple_cache_page(None)
     def get(self, request, sandbox_id):
         """Get topology data for given sandbox.
         Hosts specified as hidden are filtered out, but the network is still visible.
@@ -521,9 +518,8 @@ class SandboxVMConsole(generics.GenericAPIView):
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class SandboxUserSSHConfig(APIView):
     queryset = Sandbox.objects.none()  # Required for DjangoModelPermissions
-    view_name = 'sandbox-user-ssh-config'
 
-    @utils.simple_cache_page(WEEK)
+    # noinspection PyMethodMayBeStatic
     def get(self, request, sandbox_id):
         """Generate SSH config for User access to this sandbox.
         Some values are user specific, the config contains placeholders for them."""
@@ -538,9 +534,8 @@ class SandboxUserSSHConfig(APIView):
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class SandboxManagementSSHConfig(APIView):
     queryset = Sandbox.objects.none()  # Required for DjangoModelPermissions
-    view_name = 'sandbox-management-ssh-config'
 
-    @utils.simple_cache_page(WEEK)
+    # noinspection PyMethodMayBeStatic
     def get(self, request, sandbox_id):
         """Generate SSH config for Management access to this sandbox.
         Some values are user specific, the config contains placeholders for them."""

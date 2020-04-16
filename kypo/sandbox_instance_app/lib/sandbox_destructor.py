@@ -2,19 +2,16 @@ from typing import List, Iterable
 
 import django_rq
 import structlog
-from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
 
+from kypo.sandbox_instance_app.lib import sandboxes
 from kypo.sandbox_instance_app.lib.stage_handlers import StackStageHandler, AnsibleStageHandler
 from kypo.sandbox_instance_app.models import CleanupRequest, SandboxAllocationUnit, \
     StackCleanupStage, AllocationRequest, Sandbox
 from kypo.sandbox_instance_app.lib.sandbox_creator import OPENSTACK_QUEUE, ANSIBLE_QUEUE
 from kypo.sandbox_common_lib import exceptions, utils
 from kypo.sandbox_ansible_app.models import AnsibleCleanupStage
-
-CACHED_VIEWS = ('sandbox-topology', 'sandbox-user-ssh-config', 'sandbox-management-ssh-config')
-
 
 LOG = structlog.get_logger()
 
@@ -41,7 +38,7 @@ def create_cleanup_request(allocation_unit: SandboxAllocationUnit) -> CleanupReq
 
     if sandbox:
         sandbox.delete()
-        clear_cache(sandbox, CACHED_VIEWS)
+        sandboxes.clear_cache(sandbox)
 
     enqueue_cleanup_request(request, allocation_unit)
     return request
@@ -102,11 +99,3 @@ def cancel_allocation_request(alloc_req: AllocationRequest):
     AnsibleStageHandler().cancel(stages[2])
     AnsibleStageHandler().cancel(stages[1])
     StackStageHandler().cancel(stages[0])
-
-
-def clear_cache(sandbox: Sandbox, view_names: Iterable[str]) -> None:
-    """Delete cached entries for this sandbox."""
-    for view_name in view_names:
-        key = utils.get_cache_key(view_name, sandbox_id=sandbox.id)
-        if cache.get(key):
-            cache.set(key, None, 0)
