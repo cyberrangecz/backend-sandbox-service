@@ -14,7 +14,6 @@ from kypo.sandbox_instance_app.lib.topology import Topology
 from kypo.sandbox_instance_app.models import Sandbox, SandboxLock
 from kypo.sandbox_common_lib import exceptions, utils
 
-SANDBOX_CACHE_PREFIX = 'sandbox'
 SANDBOX_CACHE_TIMEOUT = None  # Cache indefinitely
 
 LOG = structlog.getLogger()
@@ -43,8 +42,7 @@ def lock_sandbox(sandbox: Sandbox) -> SandboxLock:
 
 def get_sandbox_topology(sandbox: Sandbox) -> Topology:
     """Get sandbox topology."""
-    client = utils.get_ostack_client()
-    stack = client.get_sandbox(sandbox.allocation_unit.get_stack_name())
+    stack = get_stack(sandbox)
     topology = Topology(sandbox, stack)
     return topology
 
@@ -69,19 +67,10 @@ def get_ansible_sshconfig(sandbox: Sandbox, mng_key: str, git_key: str,
                                                mng_key, git_key, proxy_key)
 
 
-def get_cache_key(sandbox: Sandbox, prefix: str = '') -> str:
-    """Return key to a cache with given prefix."""
-    if prefix:
-        return f'{prefix}_{sandbox.id}'
-    return str(sandbox.id)
-
-
-def get_stack(sandbox: Sandbox, prefix: str = SANDBOX_CACHE_PREFIX,
-              timeout: Optional[int] = SANDBOX_CACHE_TIMEOUT) -> Stack:
+def get_stack(sandbox: Sandbox, timeout: Optional[int] = SANDBOX_CACHE_TIMEOUT) -> Stack:
     """Get stack object. This function is cached."""
-    key = get_cache_key(sandbox, prefix)
     client = utils.get_ostack_client()
-    stack = cache.get_or_set(key,
+    stack = cache.get_or_set(str(sandbox.id),
                              lambda: client.get_sandbox(sandbox.allocation_unit.get_stack_name()),
                              timeout)
     return stack
@@ -89,6 +78,4 @@ def get_stack(sandbox: Sandbox, prefix: str = SANDBOX_CACHE_PREFIX,
 
 def clear_cache(sandbox: Sandbox) -> None:
     """Delete cached entries for this sandbox."""
-    key = get_cache_key(sandbox, SANDBOX_CACHE_PREFIX)
-    if cache.get(key):
-        cache.delete(key)
+    cache.delete(str(sandbox.id))
