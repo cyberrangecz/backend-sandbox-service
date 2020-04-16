@@ -4,7 +4,6 @@ from kypo.openstack_driver.sandbox_topology import SandboxTopology as Stack,\
 
 from django.conf import settings
 from kypo.sandbox_instance_app.models import Sandbox
-from kypo.sandbox_common_lib import utils
 from kypo.sandbox_definition_app.lib import definitions
 
 LOG = structlog.getLogger()
@@ -25,21 +24,14 @@ class Topology:
             self.real_port = real_port
             self.dummy_port = dummy_port
 
-    def __init__(self, sandbox: Sandbox):
-        self.sandbox = sandbox
+    def __init__(self, sandbox: Sandbox, stack: Stack):
         self.hosts = []
         self.routers = []
         self.switches = []
         self.links = []
         self.ports = []
 
-    def create(self) -> None:
-        """Retrieves data from cloud and parses topology data for given sandbox"""
-        stack_name = self.sandbox.allocation_unit.get_stack_name()
-        client = utils.get_ostack_client()
-        stack = client.get_sandbox(stack_name)
-
-        self._remove_hidden_data_from_stack(self.sandbox, stack)
+        self._remove_hidden_data_from_stack(sandbox, stack)
 
         self.hosts = stack.hosts.values()
         self.routers = stack.routers.values()

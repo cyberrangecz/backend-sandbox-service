@@ -39,8 +39,9 @@ def lock_sandbox(sandbox: Sandbox) -> SandboxLock:
 
 def get_sandbox_topology(sandbox: Sandbox) -> Topology:
     """Get sandbox topology."""
-    topology = Topology(sandbox)
-    topology.create()
+    client = utils.get_ostack_client()
+    stack = client.get_sandbox(sandbox.allocation_unit.get_stack_name())
+    topology = Topology(sandbox, stack)
     return topology
 
 
