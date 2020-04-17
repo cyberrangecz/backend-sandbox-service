@@ -1,9 +1,6 @@
 from django.urls import path
-from django.views.decorators.cache import cache_page
 
 from kypo.sandbox_instance_app import views
-
-WEEK = 3600 * 24 * 7
 
 urlpatterns = [
     path('pools', views.PoolList.as_view(), name='pool-list'),
@@ -64,7 +61,7 @@ urlpatterns = [
     path('sandboxes/<int:sandbox_id>/locks/<int:lock_id>', views.SandboxLockDetail.as_view(),
          name='sandbox-lock-detail'),
     path('sandboxes/<int:sandbox_id>/topology',
-         cache_page(None)(views.SandboxTopology.as_view()), name='sandbox-topology'),
+         views.SandboxTopology.as_view(), name='sandbox-topology'),
 
     path('sandboxes/<int:sandbox_id>/key-pairs/user',
          views.SandboxKeypairUser.as_view(), name='sandbox-user-key-pair'),
@@ -75,9 +72,9 @@ urlpatterns = [
          views.SandboxVMConsole.as_view(), name='sandbox-vm-console'),
 
     path('sandboxes/<int:sandbox_id>/user-ssh-config',
-         cache_page(WEEK)(views.SandboxUserSSHConfig.as_view()),
+         views.SandboxUserSSHConfig.as_view(),
          name='sandbox-user-ssh-config'),
     path('sandboxes/<int:sandbox_id>/management-ssh-config',
-         cache_page(WEEK)(views.SandboxManagementSSHConfig.as_view()),
+         views.SandboxManagementSSHConfig.as_view(),
          name='sandbox-management-ssh-config'),
 ]

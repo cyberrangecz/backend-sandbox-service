@@ -1,13 +1,13 @@
 from typing import List
-
 import django_rq
 import structlog
 from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
 
+from kypo.sandbox_instance_app.lib import sandboxes
 from kypo.sandbox_instance_app.lib.stage_handlers import StackStageHandler, AnsibleStageHandler
 from kypo.sandbox_instance_app.models import CleanupRequest, SandboxAllocationUnit, \
-    StackCleanupStage, AllocationRequest, StageType
+    StackCleanupStage, AllocationRequest
 from kypo.sandbox_instance_app.lib.sandbox_creator import OPENSTACK_QUEUE, ANSIBLE_QUEUE
 from kypo.sandbox_common_lib import exceptions
 from kypo.sandbox_ansible_app.models import AnsibleCleanupStage
@@ -37,6 +37,7 @@ def create_cleanup_request(allocation_unit: SandboxAllocationUnit) -> CleanupReq
 
     if sandbox:
         sandbox.delete()
+        sandboxes.clear_cache(sandbox)
 
     enqueue_cleanup_request(request, allocation_unit)
     return request
