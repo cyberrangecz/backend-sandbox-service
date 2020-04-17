@@ -35,14 +35,14 @@ urlpatterns = [
     path('sandbox-allocation-units/<int:unit_id>/cleanup-requests/<int:request_id>/stages',
          views.SandboxCleanupRequestStageList.as_view(), name='allocation-request-stage-list'),
 
-    path('sandbox-allocation-units/<int:unit_id>/events',
-         views.SandboxEventList.as_view(), name='sandbox-events'),
-    path('sandbox-allocation-units/<int:unit_id>/resources',
-         views.SandboxResourceList.as_view(), name='sandbox-resources'),
-
     # Stages
     path('stages/allocation/<int:stage_id>/openstack',
          views.OpenstackAllocationStageDetail.as_view(), name='openstack-allocation-stage'),
+    path('stages/allocation/<int:stage_id>/openstack/events',
+         views.SandboxEventList.as_view(), name='sandbox-events'),
+    path('stages/allocation/<int:stage_id>/openstack/resources',
+         views.SandboxResourceList.as_view(), name='sandbox-resources'),
+
     path('stages/cleanup/<int:stage_id>/openstack',
          views.OpenstackCleanupStageDetail.as_view(), name='ansible-cleanup-stage'),
 
