@@ -4,31 +4,28 @@ ENV DJANGO_ADMIN_USER "admin"
 ENV DJANGO_ADMIN_PASSWORD "admin"
 ENV DJANGO_ADMIN_EMAIL "admin@example.com"
 
-RUN apk update && apk add make gcc git python3 python3-dev musl-dev libffi-dev postgresql-dev
+RUN apk update && apk add make gcc git python3 python3-dev musl-dev libffi-dev redis postgresql postgresql-dev openssh-client docker
 
 ENV PYTHONUNBUFFERED 1
-RUN pip install pipenv
+RUN pip install pip --upgrade && pip install pipenv supervisor
 
-RUN mkdir -p /opt/kypo-django-openstack
-COPY . /opt/kypo-django-openstack
+RUN mkdir -p /var/log/supervisor
 
-WORKDIR /opt/kypo-django-openstack
+ENV PGDATA "/var/lib/postgresql/data"
+ENV PGUSER "postgres"
+RUN mkdir -p /run/postgresql && \
+    chown ${PGUSER}:${PGUSER} /run/postgresql && \
+    mkdir -p ${PGDATA} && \
+    chown ${PGUSER}:${PGUSER} ${PGDATA} && \
+    su -c "initdb ${PGDATA}" ${PGUSER}
 
-RUN pipenv sync
-RUN pipenv run pip install gunicorn
+COPY . /app
+WORKDIR /app
 
-# these files must be served from proxy server later, expose them via volume bind
+RUN pipenv sync && \
+    pipenv run pip install gunicorn
+# static files must be served from proxy server, expose them via volume bind
 RUN pipenv run python manage.py collectstatic --no-input -v 2
 
 EXPOSE 8000
-
-CMD bin/gunicorn_prod.sh
-
-# BUILD
-# docker build . -t kypo/django-sandbox
-
-# PROD
-# docker run -it -p 8000:8000 kypo/django-sandbox
-
-# DEVEL
-# docker run -it -p 8000:8000 kypo/django-sandbox bin/runserver_dev.sh
+CMD supervisord -c supervisord.conf
