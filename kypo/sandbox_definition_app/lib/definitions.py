@@ -30,7 +30,7 @@ def create_definition(url: str, rev: str = None) -> Definition:
     top_def = get_definition(url, rev, settings.KYPO_CONFIG)
 
     client = utils.get_ostack_client()
-    client.validate_sandbox_definition(top_def)
+    client.validate_topology_definition(top_def)
     if not DefinitionProvider.has_key_access(url, settings.KYPO_CONFIG):
         raise exceptions.ValidationError('Repository is not accessible using SSH key.')
 
