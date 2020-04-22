@@ -62,7 +62,7 @@ def create_pool(data: Dict) -> Pool:
 
         # Validate definition
         top_def = definitions.get_definition(definition.url, pool.rev, settings.KYPO_CONFIG)
-        client.validate_sandbox_definition(top_def)
+        client.validate_topology_definition(top_def)
 
         private_key, public_key = utils.generate_ssh_keypair()
         pool.private_management_key = private_key

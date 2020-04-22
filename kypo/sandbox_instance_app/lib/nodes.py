@@ -1,7 +1,7 @@
 """
 VM Service module for VM management.
 """
-from kypo.openstack_driver.instance import Instance
+from kypo.openstack_driver.ostack_general_proxy import OpenStackInstance
 
 from kypo.sandbox_instance_app.models import Sandbox
 from kypo.sandbox_common_lib import utils, exceptions
@@ -21,7 +21,7 @@ def node_action(sandbox: Sandbox, node_name: str, action: str) -> None:
         raise exceptions.ValidationError("Unknown action: '%s'" % action)
 
 
-def get_node(sandbox: Sandbox, node_name: str) -> Instance:
+def get_node(sandbox: Sandbox, node_name: str) -> OpenStackInstance:
     """Retrieve Instance from OpenStack."""
     client = utils.get_ostack_client()
     return client.get_node(sandbox.allocation_unit.get_stack_name(), node_name)

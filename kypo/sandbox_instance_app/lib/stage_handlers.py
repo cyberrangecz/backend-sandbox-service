@@ -83,7 +83,7 @@ class StackStageHandler(StageHandler):
         """Build sandbox in OpenStack."""
         definition = sandbox.allocation_unit.pool.definition
         top_def = definitions.get_definition(definition.url, definition.rev, settings.KYPO_CONFIG)
-        stack = self.client.create_sandbox(
+        stack = self.client.create_stack(
             sandbox.allocation_unit.get_stack_name(), top_def,
             kp_name=stage.request.allocation_unit.pool.get_keypair_name())
 
@@ -111,7 +111,7 @@ class StackStageHandler(StageHandler):
                   allocation_unit=allocation_unit)
 
         try:
-            self.client.delete_sandbox(stack_name)
+            self.client.delete_stack(stack_name)
         except KypoException as ex:
             # Sandbox is already deleted.
             LOG.warning('Deleting sandbox failed', exception=str(ex),
@@ -131,10 +131,10 @@ class StackStageHandler(StageHandler):
 
     def update_allocation_stage(self, stage: StackAllocationStage) -> StackAllocationStage:
         """Update stage with current stack status from OpenStack."""
-        sandboxes = self.client.list_sandboxes()
+        stacks = self.client.list_stacks()
         stack_name = stage.request.allocation_unit.get_stack_name()
-        if stack_name in sandboxes:
-            sb = sandboxes[stack_name]
+        if stack_name in stacks:
+            sb = stacks[stack_name]
             stage.status = sb.stack_status
             stage.status_reason = sb.stack_status_reason
         else:
