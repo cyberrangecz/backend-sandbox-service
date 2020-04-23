@@ -8,7 +8,7 @@ from kypo.topology_definition.models import TopologyDefinition
 
 TESTING_DATA_DIR = 'assets'
 
-TESTING_STACK = 'stack.json'
+TESTING_TOPOLOGY_INSTANCE = 'topology_instance.json'
 TESTING_INVENTORY = 'inventory.yml'
 TESTING_DEFINITION = 'definition.yml'
 TESTING_DATABASE = 'database.yaml'
@@ -25,9 +25,9 @@ def django_db_setup(django_db_setup, django_db_blocker):
 
 
 @pytest.fixture
-def stack():
-    """Creates example Stack normally returned by KYPO lib."""
-    with open(data_path_join(TESTING_STACK)) as f:
+def top_ins():
+    """Creates example topology instance."""
+    with open(data_path_join(TESTING_TOPOLOGY_INSTANCE)) as f:
         return jsonpickle.decode(f.read())
 
 

@@ -3,86 +3,85 @@ all:
     hosts:
       hosts:
         home:
-          ansible_host: 172.16.2.230
+          ansible_host: 192.168.129.65
           ansible_user: debian
         server:
-          ansible_host: 172.16.2.13
+          ansible_host: 192.168.128.252
           ansible_user: debian
     management:
       hosts:
-        br:
-          ansible_host: 172.16.0.216
+        border-router:
+          ansible_host: 192.168.131.49
           ansible_user: debian
           interfaces:
-          - def_gw_ip: 203.203.203.206
-            mac: fa:16:3e:bb:d5:0a
+          - def_gw_ip: 192.168.0.3
+            mac: fa:16:3e:15:cd:25
             routes: []
           - def_gw_ip: null
-            mac: fa:16:3e:6a:dd:57
+            mac: fa:16:3e:3a:18:ba
             routes:
             - gw: 100.100.100.3
               mask: 255.255.255.0
               net: 10.10.20.0
           - def_gw_ip: null
-            mac: fa:16:3e:5c:3c:41
+            mac: fa:16:3e:7b:26:1c
             routes:
-            - gw: 200.100.100.3
+            - gw: 200.100.100.2
               mask: 255.255.255.0
               net: 10.10.30.0
           ip_forward: true
         man:
-          ansible_host: 201.201.2.133
+          ansible_host: 192.168.64.13
           ansible_user: debian
           interfaces:
           - def_gw_ip: null
-            mac: fa:16:3e:ee:1d:33
+            mac: fa:16:3e:4e:5c:20
             routes:
-            - gw: 203.203.203.111
+            - gw: 192.168.0.14
               mask: 255.255.255.248
               net: 100.100.100.0
-            - gw: 203.203.203.111
+            - gw: 192.168.0.14
               mask: 255.255.255.0
               net: 10.10.20.0
-            - gw: 203.203.203.111
+            - gw: 192.168.0.14
               mask: 255.255.255.248
               net: 200.100.100.0
-            - gw: 203.203.203.111
+            - gw: 192.168.0.14
               mask: 255.255.255.0
               net: 10.10.30.0
           ip_forward: true
           user_private_key_path: /root/user_key
           user_public_key_path: /root/user_key.pub
         uan:
-          ansible_host: 172.16.2.3
+          ansible_host: 192.168.130.57
           ansible_user: debian
           interfaces:
-          - def_gw_ip: 202.202.202.194
-            mac: fa:16:3e:b1:86:44
+          - def_gw_ip: 192.168.0.24
+            mac: fa:16:3e:d0:c4:99
             routes: []
           ip_forward: false
     routers:
       hosts:
         home-router:
-          ansible_host: 172.16.1.228
+          ansible_host: 192.168.128.238
           ansible_user: debian
           interfaces:
           - def_gw_ip: 200.100.100.4
-            mac: fa:16:3e:0b:17:ed
+            mac: fa:16:3e:68:29:02
             routes: []
           ip_forward: true
         server-router:
-          ansible_host: 172.16.0.21
+          ansible_host: 192.168.129.224
           ansible_user: debian
           interfaces:
-          - def_gw_ip: 100.100.100.4
-            mac: fa:16:3e:1b:38:6a
+          - def_gw_ip: 100.100.100.2
+            mac: fa:16:3e:54:d4:c7
             routes: []
           ip_forward: true
     user-accessible:
       hosts:
         home: null
         home-router: null
-
   vars:
-    kypo_global_sandbox_name: small-test-sb
-    kypo_global_sandbox_ip: 201.201.2.133
+    kypo_global_sandbox_ip: 192.168.64.13
+    kypo_global_sandbox_name: small-sandbox-integration-1
