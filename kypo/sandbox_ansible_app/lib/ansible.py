@@ -4,9 +4,9 @@ import shutil
 import docker
 import structlog
 from docker.models.containers import Container
+from kypo.openstack_driver.topology_instance import TopologyInstance
 
 from kypo.sandbox_definition_app.lib.definition_providers import GitProvider
-from kypo.topology_definition.models import TopologyDefinition
 
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage
 from kypo.sandbox_common_lib import exceptions
@@ -106,17 +106,8 @@ class AnsibleDockerRunner:
         return ssh_directory
 
     def prepare_inventory_file(self, dir_path: str, sandbox: Sandbox,
-                               top_def: TopologyDefinition) -> str:
+                               top_ins: TopologyInstance) -> str:
         """Prepare inventory file and save it to given directory."""
-        top_ins = sandboxes.get_topology_instance(sandbox)
-
-        import jsonpickle
-        try:
-            with open("ti.json", "w") as f:
-                f.write(jsonpickle.dumps(top_ins, indent=2))
-        except Exception as ex:
-            LOG.error("failed", str(ex))
-
         user_private_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
                                         USER_PRIVATE_KEY_FILENAME)
         user_public_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
@@ -129,7 +120,7 @@ class AnsibleDockerRunner:
         heatstack = os_stage.heatstack
 
         inventory = Inventory(
-            top_ins, top_def, user_private_key, user_public_key,
+            top_ins, user_private_key, user_public_key,
             {'kypo_global_sandbox_allocation_unit_id': sandbox.allocation_unit.id,
              'kypo_global_openstack_stack_id': heatstack.stack_id}
         )

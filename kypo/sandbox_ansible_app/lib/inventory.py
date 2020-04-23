@@ -1,9 +1,8 @@
+from ipaddress import ip_network
 from typing import Dict, Tuple, List, Optional, Any
 import yaml
 
 from kypo.openstack_driver.topology_instance import TopologyInstance
-
-from kypo.topology_definition.models import TopologyDefinition
 
 
 class Inventory:
@@ -17,10 +16,9 @@ class Inventory:
     `extra_vars` dictionary to constructor.
     """
 
-    def __init__(self, top_ins: TopologyInstance, top_def: TopologyDefinition,
-                 user_priv_key_path: str, user_pub_key_path: str,
+    def __init__(self, top_ins: TopologyInstance, user_priv_key_path: str, user_pub_key_path: str,
                  extra_vars: Optional[Dict[str, Any]] = None):
-        router_group, man_routes, br_interfaces = self.create_routers_group(top_ins, top_def)
+        router_group, man_routes, br_interfaces = self.create_routers_group(top_ins)
         mng_group = self.create_management_group(top_ins, br_interfaces, man_routes,
                                                  user_priv_key_path, user_pub_key_path)
         host_group = self.create_host_group(top_ins)
@@ -35,7 +33,7 @@ class Inventory:
         # set MAN ip to outer IP, not in MNG network
         groups['management']['hosts'][top_ins.man.name]['ansible_host'] = top_ins.ip
 
-        groups.update(self.create_user_groups(top_def))
+        groups.update(self.create_user_groups(top_ins))
 
         ans_vars = self._get_vars(top_ins, extra_vars)
         self.data = {'all': {'children': groups,
@@ -99,10 +97,9 @@ class Inventory:
         return group
 
     @classmethod
-    def create_routers_group(cls, top_ins: TopologyInstance, top_def: TopologyDefinition)\
-            -> Tuple[Dict, List, List]:
+    def create_routers_group(cls, top_ins: TopologyInstance) -> Tuple[Dict, List, List]:
         """Get routing information for routers and MAN routes and BR interfaces."""
-        net_to_router = cls._get_net_to_router(top_def)
+        net_to_router = cls._get_net_to_router(top_ins)
         group = dict()
         man_br_link_pair = top_ins.get_link_pair_man_to_br_over_br_network()
         man_br_link, br_man_link = man_br_link_pair.first, man_br_link_pair.second
@@ -114,7 +111,7 @@ class Inventory:
                                and link is not br_man_link]
         for br_link in br_links_to_routers:
             for r_link in top_ins.get_network_links(br_link.network):
-                if r_link.node.name not in top_ins.get_routers():  # link back to MAN
+                if r_link.node not in top_ins.get_routers():  # link back to MAN
                     continue
                 group[r_link.node.name] = cls.router(True,
                                                      [cls.interface(r_link.mac, br_link.ip, [])],
@@ -133,12 +130,12 @@ class Inventory:
         return group
 
     @staticmethod
-    def create_user_groups(top_def: TopologyDefinition) -> Dict[str, Dict[str, Dict[str, None]]]:
+    def create_user_groups(top_ins: TopologyInstance) -> Dict[str, Dict[str, Dict[str, None]]]:
         """Parses user groups from _validated_ definition.
         Return Dict of user groups.
         """
         return {g.name: {'hosts': {node: None for node in g.nodes}}
-                for g in top_def.groups}
+                for g in top_ins.get_groups()}
 
     @classmethod
     def add_management_ips(cls, top_ins: TopologyInstance, groups: Dict[str, Any]) -> None:
@@ -153,12 +150,13 @@ class Inventory:
     ###################################
 
     @staticmethod
-    def _get_net_to_router(top_def: TopologyDefinition) -> Dict[str, str]:
+    def _get_net_to_router(top_ins: TopologyInstance) -> Dict[str, str]:
         """Return Dict[net_name, router_name].
         Prefers router which is first in alphabetical order.
         """
         net_to_router = {}
-        mapping = sorted(top_def.router_mappings, key=lambda x: x.router, reverse=True)
+        mapping = sorted(top_ins.topology_definition.router_mappings,
+                         key=lambda x: x.router, reverse=True)
         for mapp in mapping:
             net_to_router[mapp.network] = mapp.router
         return net_to_router
@@ -168,16 +166,18 @@ class Inventory:
                                              br_man_link, br_link, net_to_router) -> None:
         br_routes = []
         man_routes.append(
-            cls.route(r_link.network.cidr, r_link.network.mask, br_man_link.ip))
+            cls.route(r_link.network.cidr, cls.get_mask_to_cidr(r_link.network.cidr),
+                      br_man_link.ip))
         for net_link in top_ins.get_node_links(r_link.node):
             if net_link.network is not top_ins.man_network and \
                     net_link.network is not r_link.network \
                     and net_to_router[net_link.network.name] == r_link.node.name:
                 br_routes.append(
-                    cls.route(net_link.network.cidr, net_link.network.mask, r_link.ip)
+                    cls.route(net_link.network.cidr,
+                              cls.get_mask_to_cidr(net_link.network.cidr), r_link.ip)
                 )
                 man_routes.append(
-                    cls.route(net_link.network.cidr, net_link.network.mask,
+                    cls.route(net_link.network.cidr, cls.get_mask_to_cidr(net_link.network.cidr),
                               br_man_link.ip)
                 )
         br_interfaces.append(cls.interface(br_link.mac, None, br_routes))
@@ -198,3 +198,7 @@ class Inventory:
             kypo_global_sandbox_ip=top_ins.ip,
             **extra_vars
         )
+
+    @staticmethod
+    def get_mask_to_cidr(cidr: str) -> str:
+        return str(ip_network(cidr).netmask)
