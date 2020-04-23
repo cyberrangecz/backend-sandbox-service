@@ -14,7 +14,7 @@ from kypo.sandbox_ansible_app.models import AnsibleAllocationStage, AnsibleClean
     DockerContainer, AnsibleOutput
 from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_definition_app.lib import definitions
-from kypo.sandbox_instance_app.lib import jobs
+from kypo.sandbox_instance_app.lib import jobs, sandboxes
 from kypo.sandbox_instance_app.models import StackAllocationStage, Sandbox, StackCleanupStage,\
     HeatStack, SandboxAllocationUnit, Stage
 
@@ -177,12 +177,8 @@ class AnsibleStageHandler(StageHandler):
                                 f'{stage.id}-{utils.get_simple_uuid()}')
         runner = AnsibleDockerRunner()
         ssh_directory = runner.prepare_ssh_dir(dir_path, stage, sandbox, settings.KYPO_CONFIG)
-        top_def = definitions.get_definition(
-            stage.request.allocation_unit.pool.definition.url,
-            stage.request.allocation_unit.pool.definition.rev,
-            settings.KYPO_CONFIG
-        )
-        inventory_path = runner.prepare_inventory_file(dir_path, sandbox, top_def)
+        top_ins = sandboxes.get_topology_instance(sandbox)
+        inventory_path = runner.prepare_inventory_file(dir_path, sandbox, top_ins)
 
         try:
             container = AnsibleDockerRunner().run_container(
