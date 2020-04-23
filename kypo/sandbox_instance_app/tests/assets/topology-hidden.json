@@ -6,18 +6,18 @@
   ],
   "routers": [
     {
-      "name": "home-router",
-      "cidr": "200.100.100.0/29"
-    },
-    {
       "name": "server-router",
       "cidr": "100.100.100.0/29"
+    },
+    {
+      "name": "home-router",
+      "cidr": "200.100.100.0/29"
     }
   ],
   "switches": [
     {
-      "name": "home-router-network",
-      "cidr": "200.100.100.0/29"
+      "name": "server-switch",
+      "cidr": "10.10.20.0/24"
     },
     {
       "name": "home-switch",
@@ -28,84 +28,72 @@
       "cidr": "100.100.100.0/29"
     },
     {
-      "name": "server-switch",
-      "cidr": "10.10.20.0/24"
+      "name": "home-router-network",
+      "cidr": "200.100.100.0/29"
     }
   ],
   "links": [
     {
-      "port_a": "link-17_home",
-      "port_b": "link-17_home-switch"
+      "port_a": "link-11_home",
+      "port_b": "link-11_home-switch"
     },
     {
-      "port_a": "link-14_home-router",
-      "port_b": "link-14_home-router-network"
+      "port_a": "link-13_server-router",
+      "port_b": "link-13_server-router-network"
     },
     {
-      "port_a": "link-19_home-router",
-      "port_b": "link-19_home-switch"
-    },
-    {
-      "port_a": "link-11_server-router",
-      "port_b": "link-11_server-router-network"
+      "port_a": "link-16_home-router",
+      "port_b": "link-16_home-router-network"
     },
     {
       "port_a": "link-18_server-router",
       "port_b": "link-18_server-switch"
+    },
+    {
+      "port_a": "link-19_home-router",
+      "port_b": "link-19_home-switch"
     }
   ],
   "ports": [
     {
       "ip": "10.10.30.5",
-      "mac": "fa:16:3e:f9:ac:20",
+      "mac": "fa:16:3e:aa:8c:72",
       "parent": "home",
-      "name": "link-17_home"
+      "name": "link-11_home"
     },
     {
       "ip": null,
       "mac": null,
       "parent": "home-switch",
-      "name": "link-17_home-switch"
-    },
-    {
-      "ip": "200.100.100.3",
-      "mac": "fa:16:3e:0b:17:ed",
-      "parent": "home-router",
-      "name": "link-14_home-router"
-    },
-    {
-      "ip": null,
-      "mac": null,
-      "parent": "home-router-network",
-      "name": "link-14_home-router-network"
-    },
-    {
-      "ip": "10.10.30.1",
-      "mac": "fa:16:3e:75:92:d3",
-      "parent": "home-router",
-      "name": "link-19_home-router"
-    },
-    {
-      "ip": null,
-      "mac": null,
-      "parent": "home-switch",
-      "name": "link-19_home-switch"
+      "name": "link-11_home-switch"
     },
     {
       "ip": "100.100.100.3",
-      "mac": "fa:16:3e:1b:38:6a",
+      "mac": "fa:16:3e:54:d4:c7",
       "parent": "server-router",
-      "name": "link-11_server-router"
+      "name": "link-13_server-router"
     },
     {
       "ip": null,
       "mac": null,
       "parent": "server-router-network",
-      "name": "link-11_server-router-network"
+      "name": "link-13_server-router-network"
+    },
+    {
+      "ip": "200.100.100.2",
+      "mac": "fa:16:3e:68:29:02",
+      "parent": "home-router",
+      "name": "link-16_home-router"
+    },
+    {
+      "ip": null,
+      "mac": null,
+      "parent": "home-router-network",
+      "name": "link-16_home-router-network"
     },
     {
       "ip": "10.10.20.1",
-      "mac": "fa:16:3e:22:b7:1b",
+      "mac": "fa:16:3e:34:ed:18",
       "parent": "server-router",
       "name": "link-18_server-router"
     },
@@ -114,6 +102,18 @@
       "mac": null,
       "parent": "server-switch",
       "name": "link-18_server-switch"
+    },
+    {
+      "ip": "10.10.30.1",
+      "mac": "fa:16:3e:76:e7:2d",
+      "parent": "home-router",
+      "name": "link-19_home-router"
+    },
+    {
+      "ip": null,
+      "mac": null,
+      "parent": "home-switch",
+      "name": "link-19_home-switch"
     }
   ]
 }
