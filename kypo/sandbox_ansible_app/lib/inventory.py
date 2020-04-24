@@ -166,10 +166,11 @@ class Inventory:
         man_routes.append(
             cls.route(r_link.network.cidr, cls.get_mask_from_cidr(r_link.network.cidr),
                       br_man_link.ip))
-        for net_link in top_ins.get_node_links(r_link.node):
-            if net_link.network is not top_ins.man_network and \
-                    net_link.network is not r_link.network \
-                    and net_to_router[net_link.network.name] == r_link.node.name:
+
+        r_links_to_hosts = {x.first for x in top_ins.get_node_to_nodes_link_pairs(
+            r_link.node, top_ins.get_hosts_networks())}
+        for net_link in r_links_to_hosts:
+            if net_to_router[net_link.network.name] == r_link.node.name:
                 br_routes.append(
                     cls.route(net_link.network.cidr,
                               cls.get_mask_from_cidr(net_link.network.cidr), r_link.ip)
