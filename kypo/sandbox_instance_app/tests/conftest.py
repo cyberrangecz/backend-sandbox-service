@@ -10,7 +10,7 @@ from kypo.topology_definition.models import TopologyDefinition
 TESTING_DATA_DIR = 'assets'
 
 TESTING_DATABASE = 'database.yaml'
-TESTING_STACK = 'stack.json'
+TESTING_TOPOLOGY_INSTANCE = 'topology_instance.json'
 TESTING_SSH_CONFIG_USER = 'ssh_config_user'
 TESTING_SSH_CONFIG_MANAGEMENT = 'ssh_config_management'
 TESTING_SSH_CONFIG_ANSIBLE = 'ssh_config_ansible'
@@ -30,9 +30,9 @@ def django_db_setup(django_db_setup, django_db_blocker):
 
 
 @pytest.fixture
-def stack():
-    """Creates example Stack normally returned by KYPO lib."""
-    with open(data_path_join(TESTING_STACK)) as f:
+def top_ins():
+    """Creates example topology instance."""
+    with open(data_path_join(TESTING_TOPOLOGY_INSTANCE)) as f:
         return jsonpickle.decode(f.read())
 
 
@@ -72,7 +72,7 @@ def topology_hidden():
 
 
 @pytest.fixture
-def topology_definition():
+def top_def():
     """Creates example topology definition for a sandbox."""
     with open(data_path_join(TESTING_DEFINITION)) as f:
         return TopologyDefinition.load(f)

@@ -205,19 +205,19 @@ class TestIntegration:
         LOG.info(f'Creating jump host {JUMP_STACK_NAME}')
         template = string.Template(jump_template)
         client = utils.get_ostack_client()
-        client.stacks.create_stack_from_template(
+        client.heat_proxy.create_stack_from_template(
             template.safe_substitute(**TEMPLATE_DICT), JUMP_STACK_NAME)
 
         succ, msg = client.wait_for_stack_create_action(JUMP_STACK_NAME)
         assert succ
 
-        return client.stacks.get_outputs(JUMP_STACK_NAME)
+        return client.heat_proxy.get_outputs(JUMP_STACK_NAME)
 
     @staticmethod
     def delete_jump_host():
         LOG.info("Deleting Jump Host")
         client = utils.get_ostack_client()
-        client.delete_sandbox(JUMP_STACK_NAME)
+        client.delete_stack(JUMP_STACK_NAME)
 
     @staticmethod
     def set_jump_host_config(host, private_key):

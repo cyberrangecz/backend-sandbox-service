@@ -1,4 +1,5 @@
 import pytest
+from kypo.openstack_driver.topology_instance import TopologyInstance
 
 from kypo.sandbox_instance_app import serializers
 from kypo.sandbox_instance_app.lib import sandboxes
@@ -7,13 +8,8 @@ pytestmark = pytest.mark.django_db
 
 
 class TestTopology:
-    def test_create_success(self, mocker, stack, topology, topology_definition):
-        mocker.patch('kypo.sandbox_definition_app.lib.definitions.get_definition',
-                     mocker.Mock(return_value=topology_definition))
-        sandbox = mocker.MagicMock()
-        sandbox.pool.definition.content = 'name: name'
-
-        topo = sandboxes.Topology(sandbox, stack)
+    def test_topology_success(self, top_ins, topology):
+        topo = sandboxes.Topology(top_ins)
         result = serializers.TopologySerializer(topo).data
 
         for item in ['hosts', 'routers', 'switches', 'ports']:
@@ -23,17 +19,9 @@ class TestTopology:
             assert sorted(topology[item], key=lambda x: x['port_a']) == \
                    sorted(result[item], key=lambda x: x['port_a'])
 
-    def test_create_hidden(self, mocker, stack, topology_hidden, topology_definition):
-        for host in topology_definition.hosts:
-            if host.name == 'server':
-                host.hidden = True
-        mocker.patch('kypo.sandbox_definition_app.lib.definitions.get_definition',
-                     mocker.Mock(return_value=topology_definition))
-
-        sandbox = mocker.MagicMock()
-        sandbox.pool.definition.content = 'name: name'
-
-        topo = sandboxes.Topology(sandbox, stack)
+    def test_topology_hidden_hosts(self, top_ins: TopologyInstance, topology_hidden):
+        top_ins.get_node('server').hidden = True
+        topo = sandboxes.Topology(top_ins)
         result = serializers.TopologySerializer(topo).data
 
         for item in ['hosts', 'routers', 'switches', 'ports']:

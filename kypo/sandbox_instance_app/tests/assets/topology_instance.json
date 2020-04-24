@@ -1,0 +1,1021 @@
+{
+  "py/object": "kypo.openstack_driver.topology_instance.TopologyInstance",
+  "topology_definition": {
+    "py/object": "kypo.topology_definition.models.TopologyDefinition",
+    "py/state": {
+      "_yamlized_provider": {
+        "py/reduce": [
+          {
+            "py/type": "kypo.topology_definition.models.Provider"
+          },
+          {
+            "py/tuple": [
+              1
+            ]
+          }
+        ]
+      },
+      "_yamlized_name": "small-sandbox-integration",
+      "_yamlized_hosts": {
+        "py/object": "kypo.topology_definition.models.HostList",
+        "py/state": [
+          {
+            "py/object": "kypo.topology_definition.models.Host",
+            "py/state": {
+              "_yamlized_name": "server",
+              "_yamlized_base_box": {
+                "py/object": "kypo.topology_definition.models.BaseBox",
+                "py/state": {
+                  "_yamlized_image": "debian-9-x86_64",
+                  "_yamlized_man_user": "debian",
+                  "_Object__round_trip_data": {
+                    "py/reduce": [
+                      {
+                        "py/type": "yamlize.round_trip_data.RoundTripData"
+                      },
+                      {
+                        "py/tuple": [
+                          null
+                        ]
+                      }
+                    ]
+                  }
+                }
+              },
+              "_yamlized_flavor": "csirtmu.tiny1x2",
+              "_yamlized_hidden": false,
+              "_Object__round_trip_data": {
+                "py/reduce": [
+                  {
+                    "py/type": "yamlize.round_trip_data.RoundTripData"
+                  },
+                  {
+                    "py/tuple": [
+                      null
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "py/object": "kypo.topology_definition.models.Host",
+            "py/state": {
+              "_yamlized_name": "home",
+              "_yamlized_base_box": {
+                "py/object": "kypo.topology_definition.models.BaseBox",
+                "py/state": {
+                  "_yamlized_image": "debian-9-x86_64",
+                  "_yamlized_man_user": "debian",
+                  "_Object__round_trip_data": {
+                    "py/reduce": [
+                      {
+                        "py/type": "yamlize.round_trip_data.RoundTripData"
+                      },
+                      {
+                        "py/tuple": [
+                          null
+                        ]
+                      }
+                    ]
+                  }
+                }
+              },
+              "_yamlized_flavor": "csirtmu.tiny1x2",
+              "_Object__round_trip_data": {
+                "py/reduce": [
+                  {
+                    "py/type": "yamlize.round_trip_data.RoundTripData"
+                  },
+                  {
+                    "py/tuple": [
+                      null
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "_yamlized_routers": {
+        "py/object": "kypo.topology_definition.models.RouterList",
+        "py/state": [
+          {
+            "py/object": "kypo.topology_definition.models.Router",
+            "py/state": {
+              "_yamlized_name": "server-router",
+              "_yamlized_cidr": "100.100.100.0/29",
+              "_yamlized_base_box": {
+                "py/object": "kypo.topology_definition.models.BaseBox",
+                "py/state": {
+                  "_yamlized_image": "debian-9-x86_64",
+                  "_yamlized_man_user": "debian",
+                  "_Object__round_trip_data": {
+                    "py/reduce": [
+                      {
+                        "py/type": "yamlize.round_trip_data.RoundTripData"
+                      },
+                      {
+                        "py/tuple": [
+                          null
+                        ]
+                      }
+                    ]
+                  }
+                }
+              },
+              "_yamlized_flavor": "csirtmu.tiny1x2",
+              "_Object__round_trip_data": {
+                "py/reduce": [
+                  {
+                    "py/type": "yamlize.round_trip_data.RoundTripData"
+                  },
+                  {
+                    "py/tuple": [
+                      null
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "py/object": "kypo.topology_definition.models.Router",
+            "py/state": {
+              "_yamlized_name": "home-router",
+              "_yamlized_base_box": {
+                "py/object": "kypo.topology_definition.models.BaseBox",
+                "py/state": {
+                  "_yamlized_image": "debian-9-x86_64",
+                  "_yamlized_man_user": "debian",
+                  "_Object__round_trip_data": {
+                    "py/reduce": [
+                      {
+                        "py/type": "yamlize.round_trip_data.RoundTripData"
+                      },
+                      {
+                        "py/tuple": [
+                          null
+                        ]
+                      }
+                    ]
+                  }
+                }
+              },
+              "_yamlized_cidr": "200.100.100.0/29",
+              "_yamlized_flavor": "csirtmu.tiny1x2",
+              "_Object__round_trip_data": {
+                "py/reduce": [
+                  {
+                    "py/type": "yamlize.round_trip_data.RoundTripData"
+                  },
+                  {
+                    "py/tuple": [
+                      null
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "_yamlized_networks": {
+        "py/object": "kypo.topology_definition.models.NetworkList",
+        "py/state": [
+          {
+            "py/object": "kypo.topology_definition.models.Network",
+            "py/state": {
+              "_yamlized_name": "server-switch",
+              "_yamlized_cidr": "10.10.20.0/24",
+              "default_gateway": "server-router",
+              "_Object__round_trip_data": {
+                "py/reduce": [
+                  {
+                    "py/type": "yamlize.round_trip_data.RoundTripData"
+                  },
+                  {
+                    "py/tuple": [
+                      null
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "py/object": "kypo.topology_definition.models.Network",
+            "py/state": {
+              "_yamlized_name": "home-switch",
+              "_yamlized_cidr": "10.10.30.0/24",
+              "default_gateway": "home-router",
+              "_Object__round_trip_data": {
+                "py/reduce": [
+                  {
+                    "py/type": "yamlize.round_trip_data.RoundTripData"
+                  },
+                  {
+                    "py/tuple": [
+                      null
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "_hosts_index": {
+        "server": {
+          "py/id": 5
+        },
+        "home": {
+          "py/id": 9
+        }
+      },
+      "_routers_index": {
+        "server-router": {
+          "py/id": 15
+        },
+        "home-router": {
+          "py/id": 19
+        }
+      },
+      "_networks_index": {
+        "server-switch": {
+          "py/id": 25
+        },
+        "home-switch": {
+          "py/id": 27
+        }
+      },
+      "_yamlized_net_mappings": {
+        "py/object": "kypo.topology_definition.models.NetworkMappingList",
+        "py/state": [
+          {
+            "py/object": "kypo.topology_definition.models.NetworkMapping",
+            "py/state": {
+              "_yamlized_host": "server",
+              "_yamlized_network": "server-switch",
+              "_yamlized_ip": "10.10.20.5",
+              "_Object__round_trip_data": {
+                "py/reduce": [
+                  {
+                    "py/type": "yamlize.round_trip_data.RoundTripData"
+                  },
+                  {
+                    "py/tuple": [
+                      null
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "py/object": "kypo.topology_definition.models.NetworkMapping",
+            "py/state": {
+              "_yamlized_host": "home",
+              "_yamlized_network": "home-switch",
+              "_yamlized_ip": "10.10.30.5",
+              "_Object__round_trip_data": {
+                "py/reduce": [
+                  {
+                    "py/type": "yamlize.round_trip_data.RoundTripData"
+                  },
+                  {
+                    "py/tuple": [
+                      null
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "_yamlized_router_mappings": {
+        "py/object": "kypo.topology_definition.models.RouterMappingList",
+        "py/state": [
+          {
+            "py/object": "kypo.topology_definition.models.RouterMapping",
+            "py/state": {
+              "_yamlized_router": "server-router",
+              "_yamlized_network": "server-switch",
+              "_yamlized_ip": "10.10.20.1",
+              "_Object__round_trip_data": {
+                "py/reduce": [
+                  {
+                    "py/type": "yamlize.round_trip_data.RoundTripData"
+                  },
+                  {
+                    "py/tuple": [
+                      null
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "py/object": "kypo.topology_definition.models.RouterMapping",
+            "py/state": {
+              "_yamlized_router": "home-router",
+              "_yamlized_network": "home-switch",
+              "_yamlized_ip": "10.10.30.1",
+              "_Object__round_trip_data": {
+                "py/reduce": [
+                  {
+                    "py/type": "yamlize.round_trip_data.RoundTripData"
+                  },
+                  {
+                    "py/tuple": [
+                      null
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "_yamlized_groups": {
+        "py/object": "kypo.topology_definition.models.GroupList",
+        "py/state": [
+          {
+            "py/object": "kypo.topology_definition.models.Group",
+            "py/state": {
+              "_yamlized_name": "user-accessible",
+              "_yamlized_nodes": {
+                "py/object": "yamlize.sequences.StrList",
+                "py/state": [
+                  "home",
+                  "home-router"
+                ]
+              },
+              "_Object__round_trip_data": {
+                "py/reduce": [
+                  {
+                    "py/type": "yamlize.round_trip_data.RoundTripData"
+                  },
+                  {
+                    "py/tuple": [
+                      null
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "_Object__round_trip_data": {
+        "py/reduce": [
+          {
+            "py/type": "yamlize.round_trip_data.RoundTripData"
+          },
+          {
+            "py/tuple": [
+              null
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "name": "small-sandbox-integration-1",
+  "ip": "192.168.64.13",
+  "man": {
+    "py/object": "kypo.openstack_driver.topology_elements.MAN",
+    "name": "man",
+    "flavor": "csirtmu.tiny1x2",
+    "base_box": {
+      "py/object": "kypo.topology_definition.models.BaseBox",
+      "py/state": {
+        "_yamlized_image": "debian-9-x86_64",
+        "_yamlized_man_user": "debian",
+        "_Object__round_trip_data": {
+          "py/reduce": [
+            {
+              "py/type": "yamlize.round_trip_data.RoundTripData"
+            },
+            {
+              "py/tuple": [
+                null
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "uan": {
+    "py/object": "kypo.openstack_driver.topology_elements.UAN",
+    "name": "uan",
+    "flavor": "csirtmu.tiny1x2",
+    "base_box": {
+      "py/object": "kypo.topology_definition.models.BaseBox",
+      "py/state": {
+        "_yamlized_image": "debian-9-x86_64",
+        "_yamlized_man_user": "debian",
+        "_Object__round_trip_data": {
+          "py/reduce": [
+            {
+              "py/type": "yamlize.round_trip_data.RoundTripData"
+            },
+            {
+              "py/tuple": [
+                null
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "br": {
+    "py/object": "kypo.openstack_driver.topology_elements.BR",
+    "name": "border-router",
+    "flavor": "csirtmu.tiny1x2",
+    "base_box": {
+      "py/object": "kypo.topology_definition.models.BaseBox",
+      "py/state": {
+        "_yamlized_image": "debian-9-x86_64",
+        "_yamlized_man_user": "debian",
+        "_Object__round_trip_data": {
+          "py/reduce": [
+            {
+              "py/type": "yamlize.round_trip_data.RoundTripData"
+            },
+            {
+              "py/tuple": [
+                null
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "man_network": {
+    "py/object": "kypo.topology_definition.models.Network",
+    "py/state": {
+      "_yamlized_name": "man-network",
+      "_yamlized_cidr": "192.168.128.0/17",
+      "_yamlized_accessible_by_user": false,
+      "_Object__round_trip_data": {
+        "py/reduce": [
+          {
+            "py/type": "yamlize.round_trip_data.RoundTripData"
+          },
+          {
+            "py/tuple": [
+              null
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "uan_network": {
+    "py/object": "kypo.topology_definition.models.Network",
+    "py/state": {
+      "_yamlized_name": "uan-network",
+      "_yamlized_cidr": "192.168.0.16/28",
+      "_yamlized_accessible_by_user": false,
+      "_Object__round_trip_data": {
+        "py/reduce": [
+          {
+            "py/type": "yamlize.round_trip_data.RoundTripData"
+          },
+          {
+            "py/tuple": [
+              null
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "br_network": {
+    "py/object": "kypo.topology_definition.models.Network",
+    "py/state": {
+      "_yamlized_name": "border-router-network",
+      "_yamlized_cidr": "192.168.0.0/28",
+      "_yamlized_accessible_by_user": false,
+      "_Object__round_trip_data": {
+        "py/reduce": [
+          {
+            "py/type": "yamlize.round_trip_data.RoundTripData"
+          },
+          {
+            "py/tuple": [
+              null
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "routers_networks": {
+    "server-router-network": {
+      "py/object": "kypo.topology_definition.models.Network",
+      "py/state": {
+        "_yamlized_name": "server-router-network",
+        "_yamlized_cidr": "100.100.100.0/29",
+        "_yamlized_accessible_by_user": false,
+        "_Object__round_trip_data": {
+          "py/reduce": [
+            {
+              "py/type": "yamlize.round_trip_data.RoundTripData"
+            },
+            {
+              "py/tuple": [
+                null
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "home-router-network": {
+      "py/object": "kypo.topology_definition.models.Network",
+      "py/state": {
+        "_yamlized_name": "home-router-network",
+        "_yamlized_cidr": "200.100.100.0/29",
+        "_yamlized_accessible_by_user": false,
+        "_Object__round_trip_data": {
+          "py/reduce": [
+            {
+              "py/type": "yamlize.round_trip_data.RoundTripData"
+            },
+            {
+              "py/tuple": [
+                null
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "links": {
+    "link-1": {
+      "py/object": "kypo.openstack_driver.topology_elements.Link",
+      "name": "link-1",
+      "node": {
+        "py/id": 48
+      },
+      "network": {
+        "py/id": 57
+      },
+      "ip": "192.168.130.52",
+      "mac": "fa:16:3e:13:25:f3"
+    },
+    "link-2": {
+      "py/object": "kypo.openstack_driver.topology_elements.Link",
+      "name": "link-2",
+      "node": {
+        "py/id": 48
+      },
+      "network": {
+        "py/id": 59
+      },
+      "ip": "192.168.0.24",
+      "mac": "fa:16:3e:27:ee:2b"
+    },
+    "link-3": {
+      "py/object": "kypo.openstack_driver.topology_elements.Link",
+      "name": "link-3",
+      "node": {
+        "py/id": 48
+      },
+      "network": {
+        "py/id": 61
+      },
+      "ip": "192.168.0.3",
+      "mac": "fa:16:3e:4e:5c:20"
+    },
+    "link-4": {
+      "py/object": "kypo.openstack_driver.topology_elements.Link",
+      "name": "link-4",
+      "node": {
+        "py/id": 51
+      },
+      "network": {
+        "py/id": 57
+      },
+      "ip": "192.168.130.57",
+      "mac": "fa:16:3e:e0:7c:23"
+    },
+    "link-5": {
+      "py/object": "kypo.openstack_driver.topology_elements.Link",
+      "name": "link-5",
+      "node": {
+        "py/id": 51
+      },
+      "network": {
+        "py/id": 59
+      },
+      "ip": "192.168.0.18",
+      "mac": "fa:16:3e:d0:c4:99"
+    },
+    "link-6": {
+      "py/object": "kypo.openstack_driver.topology_elements.Link",
+      "name": "link-6",
+      "node": {
+        "py/id": 54
+      },
+      "network": {
+        "py/id": 57
+      },
+      "ip": "192.168.131.49",
+      "mac": "fa:16:3e:97:ce:79"
+    },
+    "link-7": {
+      "py/object": "kypo.openstack_driver.topology_elements.Link",
+      "name": "link-7",
+      "node": {
+        "py/id": 54
+      },
+      "network": {
+        "py/id": 61
+      },
+      "ip": "192.168.0.14",
+      "mac": "fa:16:3e:15:cd:25"
+    },
+    "link-8": {
+      "py/object": "kypo.openstack_driver.topology_elements.Link",
+      "name": "link-8",
+      "node": {
+        "py/id": 5
+      },
+      "network": {
+        "py/id": 57
+      },
+      "ip": "192.168.128.252",
+      "mac": "fa:16:3e:18:4d:84"
+    },
+    "link-9": {
+      "py/object": "kypo.openstack_driver.topology_elements.Link",
+      "name": "link-9",
+      "node": {
+        "py/id": 9
+      },
+      "network": {
+        "py/id": 57
+      },
+      "ip": "192.168.129.65",
+      "mac": "fa:16:3e:ba:16:3f"
+    },
+    "link-10": {
+      "py/object": "kypo.openstack_driver.topology_elements.Link",
+      "name": "link-10",
+      "node": {
+        "py/id": 5
+      },
+      "network": {
+        "py/id": 25
+      },
+      "ip": "10.10.20.5",
+      "mac": "fa:16:3e:cd:b8:ae"
+    },
+    "link-11": {
+      "py/object": "kypo.openstack_driver.topology_elements.Link",
+      "name": "link-11",
+      "node": {
+        "py/id": 9
+      },
+      "network": {
+        "py/id": 27
+      },
+      "ip": "10.10.30.5",
+      "mac": "fa:16:3e:aa:8c:72"
+    },
+    "link-12": {
+      "py/object": "kypo.openstack_driver.topology_elements.Link",
+      "name": "link-12",
+      "node": {
+        "py/id": 15
+      },
+      "network": {
+        "py/id": 57
+      },
+      "ip": "192.168.129.224",
+      "mac": "fa:16:3e:d6:c2:f7"
+    },
+    "link-13": {
+      "py/object": "kypo.openstack_driver.topology_elements.Link",
+      "name": "link-13",
+      "node": {
+        "py/id": 15
+      },
+      "network": {
+        "py/id": 63
+      },
+      "ip": "100.100.100.3",
+      "mac": "fa:16:3e:54:d4:c7"
+    },
+    "link-14": {
+      "py/object": "kypo.openstack_driver.topology_elements.Link",
+      "name": "link-14",
+      "node": {
+        "py/id": 54
+      },
+      "network": {
+        "py/id": 63
+      },
+      "ip": "100.100.100.2",
+      "mac": "fa:16:3e:3a:18:ba"
+    },
+    "link-15": {
+      "py/object": "kypo.openstack_driver.topology_elements.Link",
+      "name": "link-15",
+      "node": {
+        "py/id": 19
+      },
+      "network": {
+        "py/id": 57
+      },
+      "ip": "192.168.128.238",
+      "mac": "fa:16:3e:8e:e1:cd"
+    },
+    "link-16": {
+      "py/object": "kypo.openstack_driver.topology_elements.Link",
+      "name": "link-16",
+      "node": {
+        "py/id": 19
+      },
+      "network": {
+        "py/id": 65
+      },
+      "ip": "200.100.100.2",
+      "mac": "fa:16:3e:68:29:02"
+    },
+    "link-17": {
+      "py/object": "kypo.openstack_driver.topology_elements.Link",
+      "name": "link-17",
+      "node": {
+        "py/id": 54
+      },
+      "network": {
+        "py/id": 65
+      },
+      "ip": "200.100.100.4",
+      "mac": "fa:16:3e:7b:26:1c"
+    },
+    "link-18": {
+      "py/object": "kypo.openstack_driver.topology_elements.Link",
+      "name": "link-18",
+      "node": {
+        "py/id": 15
+      },
+      "network": {
+        "py/id": 25
+      },
+      "ip": "10.10.20.1",
+      "mac": "fa:16:3e:34:ed:18"
+    },
+    "link-19": {
+      "py/object": "kypo.openstack_driver.topology_elements.Link",
+      "name": "link-19",
+      "node": {
+        "py/id": 19
+      },
+      "network": {
+        "py/id": 27
+      },
+      "ip": "10.10.30.1",
+      "mac": "fa:16:3e:76:e7:2d"
+    },
+    "link-20": {
+      "py/object": "kypo.openstack_driver.topology_elements.Link",
+      "name": "link-20",
+      "node": {
+        "py/id": 51
+      },
+      "network": {
+        "py/id": 25
+      },
+      "ip": "10.10.20.254",
+      "mac": "fa:16:3e:b3:75:21"
+    },
+    "link-21": {
+      "py/object": "kypo.openstack_driver.topology_elements.Link",
+      "name": "link-21",
+      "node": {
+        "py/id": 51
+      },
+      "network": {
+        "py/id": 27
+      },
+      "ip": "10.10.30.254",
+      "mac": "fa:16:3e:90:57:47"
+    }
+  },
+  "_nodes": {
+    "server": {
+      "py/id": 5
+    },
+    "home": {
+      "py/id": 9
+    },
+    "server-router": {
+      "py/id": 15
+    },
+    "home-router": {
+      "py/id": 19
+    },
+    "man": {
+      "py/id": 48
+    },
+    "uan": {
+      "py/id": 51
+    },
+    "border-router": {
+      "py/id": 54
+    }
+  },
+  "_networks": {
+    "server-switch": {
+      "py/id": 25
+    },
+    "home-switch": {
+      "py/id": 27
+    },
+    "server-router-network": {
+      "py/id": 63
+    },
+    "home-router-network": {
+      "py/id": 65
+    },
+    "man-network": {
+      "py/id": 57
+    },
+    "uan-network": {
+      "py/id": 59
+    },
+    "border-router-network": {
+      "py/id": 61
+    }
+  },
+  "_node_links": {
+    "server": [
+      {
+        "py/id": 74
+      },
+      {
+        "py/id": 76
+      }
+    ],
+    "home": [
+      {
+        "py/id": 75
+      },
+      {
+        "py/id": 77
+      }
+    ],
+    "server-router": [
+      {
+        "py/id": 78
+      },
+      {
+        "py/id": 79
+      },
+      {
+        "py/id": 84
+      }
+    ],
+    "home-router": [
+      {
+        "py/id": 81
+      },
+      {
+        "py/id": 82
+      },
+      {
+        "py/id": 85
+      }
+    ],
+    "man": [
+      {
+        "py/id": 67
+      },
+      {
+        "py/id": 68
+      },
+      {
+        "py/id": 69
+      }
+    ],
+    "uan": [
+      {
+        "py/id": 70
+      },
+      {
+        "py/id": 71
+      },
+      {
+        "py/id": 86
+      },
+      {
+        "py/id": 87
+      }
+    ],
+    "border-router": [
+      {
+        "py/id": 72
+      },
+      {
+        "py/id": 73
+      },
+      {
+        "py/id": 80
+      },
+      {
+        "py/id": 83
+      }
+    ]
+  },
+  "_network_links": {
+    "server-switch": [
+      {
+        "py/id": 76
+      },
+      {
+        "py/id": 84
+      },
+      {
+        "py/id": 86
+      }
+    ],
+    "home-switch": [
+      {
+        "py/id": 77
+      },
+      {
+        "py/id": 85
+      },
+      {
+        "py/id": 87
+      }
+    ],
+    "server-router-network": [
+      {
+        "py/id": 79
+      },
+      {
+        "py/id": 80
+      }
+    ],
+    "home-router-network": [
+      {
+        "py/id": 82
+      },
+      {
+        "py/id": 83
+      }
+    ],
+    "man-network": [
+      {
+        "py/id": 67
+      },
+      {
+        "py/id": 70
+      },
+      {
+        "py/id": 72
+      },
+      {
+        "py/id": 74
+      },
+      {
+        "py/id": 75
+      },
+      {
+        "py/id": 78
+      },
+      {
+        "py/id": 81
+      }
+    ],
+    "uan-network": [
+      {
+        "py/id": 68
+      },
+      {
+        "py/id": 71
+      }
+    ],
+    "border-router-network": [
+      {
+        "py/id": 69
+      },
+      {
+        "py/id": 73
+      }
+    ]
+  }
+}
