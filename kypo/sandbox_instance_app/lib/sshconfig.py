@@ -155,12 +155,14 @@ class KypoSSHConfig(SSHConfig):
 
     @classmethod
     def _get_uan_accessible_node_links(cls, top_ins: TopologyInstance) -> List[Link]:
+        """Get links for UAN-accessible nodes."""
         links = [link_pair.second for link_pair in
                  top_ins.get_link_pairs_uan_to_nodes_over_user_accessible_hosts_networks()]
         return cls._sorted_links(links)
 
     @classmethod
     def _get_man_accessible_node_links(cls, top_ins: TopologyInstance) -> List[Link]:
+        """Get links for MAN-accessible nodes using Management network."""
         links = [link_pair.second for link_pair in
                  top_ins.get_link_pairs_man_to_nodes_over_management_network()]
         return cls._sorted_links(links)
