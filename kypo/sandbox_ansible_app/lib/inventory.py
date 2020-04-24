@@ -1,8 +1,11 @@
 from ipaddress import ip_network
 from typing import Dict, Tuple, List, Optional, Any
+import structlog
 import yaml
 
 from kypo.openstack_driver.topology_instance import TopologyInstance
+
+LOG = structlog.get_logger()
 
 
 class Inventory:
@@ -106,18 +109,13 @@ class Inventory:
         man_routes = []
         br_interfaces = [cls.interface(br_man_link.mac, man_br_link.ip, [])]
 
-        br_links_to_routers = [link for link in top_ins.get_node_links(top_ins.br)
-                               if link.network is not top_ins.man_network
-                               and link is not br_man_link]
-        for br_link in br_links_to_routers:
-            for r_link in top_ins.get_network_links(br_link.network):
-                if r_link.node not in top_ins.get_routers():  # link back to MAN
-                    continue
-                group[r_link.node.name] = cls.router(True,
-                                                     [cls.interface(r_link.mac, br_link.ip, [])],
-                                                     r_link.node.base_box.man_user)
-                cls._update_man_routes_and_br_interfaces(
-                    man_routes, br_interfaces, top_ins, r_link, br_man_link, br_link, net_to_router)
+        for link_pair in top_ins.get_link_pairs_br_to_routers_over_routers_networks():
+            br_link, r_link = link_pair.first, link_pair.second
+            group[r_link.node.name] = cls.router(True,
+                                                 [cls.interface(r_link.mac, br_link.ip, [])],
+                                                 r_link.node.base_box.man_user)
+            cls._update_man_routes_and_br_interfaces(
+                man_routes, br_interfaces, top_ins, r_link, br_man_link, br_link, net_to_router)
 
         return group, man_routes, br_interfaces
 
@@ -166,7 +164,7 @@ class Inventory:
                                              br_man_link, br_link, net_to_router) -> None:
         br_routes = []
         man_routes.append(
-            cls.route(r_link.network.cidr, cls.get_mask_to_cidr(r_link.network.cidr),
+            cls.route(r_link.network.cidr, cls.get_mask_from_cidr(r_link.network.cidr),
                       br_man_link.ip))
         for net_link in top_ins.get_node_links(r_link.node):
             if net_link.network is not top_ins.man_network and \
@@ -174,10 +172,10 @@ class Inventory:
                     and net_to_router[net_link.network.name] == r_link.node.name:
                 br_routes.append(
                     cls.route(net_link.network.cidr,
-                              cls.get_mask_to_cidr(net_link.network.cidr), r_link.ip)
+                              cls.get_mask_from_cidr(net_link.network.cidr), r_link.ip)
                 )
                 man_routes.append(
-                    cls.route(net_link.network.cidr, cls.get_mask_to_cidr(net_link.network.cidr),
+                    cls.route(net_link.network.cidr, cls.get_mask_from_cidr(net_link.network.cidr),
                               br_man_link.ip)
                 )
         br_interfaces.append(cls.interface(br_link.mac, None, br_routes))
@@ -200,5 +198,5 @@ class Inventory:
         )
 
     @staticmethod
-    def get_mask_to_cidr(cidr: str) -> str:
+    def get_mask_from_cidr(cidr: str) -> str:
         return str(ip_network(cidr).netmask)
