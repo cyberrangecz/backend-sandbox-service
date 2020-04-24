@@ -151,27 +151,18 @@ class KypoSSHConfig(SSHConfig):
     @staticmethod
     def _get_uan_ip(top_ins: TopologyInstance) -> str:
         """Get IP of UAN in UAN_NETWORK."""
-        for link in top_ins.get_links():
-            if link.node == top_ins.uan and link.network.name == UAN_NET_NAME:
-                return link.ip
+        return top_ins.get_link_between_node_and_network(top_ins.uan, top_ins.uan_network).ip
 
     @classmethod
     def _get_uan_accessible_node_links(cls, top_ins: TopologyInstance) -> List[Link]:
-        # Only 'inner' networks UAN is connected to
-        networks = [link.network for link in top_ins.get_node_links(top_ins.uan)
-                    if link.network.name not in [UAN_NET_NAME, top_ins.man_network.name]]
-
-        links = [link for link in top_ins.get_links()
-                 if link.network in networks
-                 and link.node != top_ins.uan
-                 and (isinstance(link.node, SandboxHost) or isinstance(link.node, Router))]
-
+        links = [link_pair.second for link_pair in
+                 top_ins.get_link_pairs_uan_to_nodes_over_user_accessible_hosts_networks()]
         return cls._sorted_links(links)
 
     @classmethod
     def _get_man_accessible_node_links(cls, top_ins: TopologyInstance) -> List[Link]:
-        links = [link for link in top_ins.get_links()
-                 if link.network == top_ins.man_network and link.node != top_ins.man]
+        links = [link_pair.second for link_pair in
+                 top_ins.get_link_pairs_man_to_nodes_over_management_network()]
         return cls._sorted_links(links)
 
     @staticmethod
