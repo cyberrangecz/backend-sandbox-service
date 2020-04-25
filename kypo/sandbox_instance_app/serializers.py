@@ -13,8 +13,6 @@ from rest_framework import serializers
 from kypo.sandbox_definition_app.models import Definition
 from kypo.sandbox_instance_app import models
 from kypo.sandbox_instance_app.lib import pools
-from kypo.sandbox_instance_app.models import SandboxAllocationUnit, Pool, AllocationRequest, \
-    CleanupRequest, AllocationStage, Sandbox
 
 MAX_SANDBOXES_PER_POOL = 64
 
@@ -23,8 +21,7 @@ class PoolSerializer(serializers.ModelSerializer):
     size = serializers.SerializerMethodField(
         help_text="Number of allocation units associated with this pool.")
     lock_id = serializers.SerializerMethodField()
-    definition_id = serializers.PrimaryKeyRelatedField(
-        source='definition', queryset=Definition.objects.all())
+    definition_id = serializers.PrimaryKeyRelatedField(source='definition', read_only=True)
 
     class Meta:
         model = models.Pool
@@ -45,23 +42,27 @@ class PoolSerializer(serializers.ModelSerializer):
         return pools.get_pool_size(obj)
 
     @staticmethod
-    def get_lock_id(obj) -> Optional[int]:
+    def get_lock_id(obj: models.Pool) -> Optional[int]:
         return obj.lock.id if hasattr(obj, 'lock') else None
 
 
 class PoolSerializerCreate(PoolSerializer):
+    definition_id = serializers.PrimaryKeyRelatedField(
+        source='definition', queryset=Definition.objects.all()
+    )
+
     class Meta(PoolSerializer.Meta):
         read_only_fields = ('id', 'size')
 
 
 class AllocationRequestSerializer(serializers.ModelSerializer):
     allocation_unit_id = serializers.PrimaryKeyRelatedField(
-        source='allocation_unit', queryset=SandboxAllocationUnit.objects.all())
+        source='allocation_unit', read_only=True)
 
     class Meta:
         model = models.AllocationRequest
         fields = ('id', 'allocation_unit_id', 'created')
-        read_only_fields = fields
+        read_only_fields = ('id', 'allocation_unit_id', 'created')
 
 
 class CleanupRequestSerializer(AllocationRequestSerializer):
@@ -70,8 +71,7 @@ class CleanupRequestSerializer(AllocationRequestSerializer):
 
 class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
     allocation_request = AllocationRequestSerializer(read_only=True)
-    pool_id = serializers.PrimaryKeyRelatedField(
-        source='pool', queryset=Pool.objects.all())
+    pool_id = serializers.PrimaryKeyRelatedField(source='pool', read_only=True)
 
     class Meta:
         model = models.SandboxAllocationUnit
@@ -81,7 +81,7 @@ class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
 
 class AllocationStageSerializer(serializers.ModelSerializer):
     request_id = serializers.PrimaryKeyRelatedField(
-        source='request', queryset=AllocationRequest.objects.all())
+        source='request', read_only=True)
 
     class Meta:
         model = models.AllocationStage
@@ -98,7 +98,7 @@ class OpenstackAllocationStageSerializer(AllocationStageSerializer):
 
 class CleanupStageSerializer(serializers.ModelSerializer):
     request_id = serializers.PrimaryKeyRelatedField(
-        source='request', queryset=CleanupRequest.objects.all())
+        source='request', read_only=True)
 
     class Meta:
         model = models.CleanupStage
@@ -107,10 +107,8 @@ class CleanupStageSerializer(serializers.ModelSerializer):
 
 
 class OpenstackCleanupStageSerializer(CleanupStageSerializer):
-    request_id = serializers.PrimaryKeyRelatedField(
-        source='request', queryset=AllocationRequest.objects.all())
     allocation_stage_id = serializers.PrimaryKeyRelatedField(
-        source='allocation_stage', queryset=AllocationStage.objects.all())
+        source='allocation_stage', read_only=True)
 
     class Meta:
         model = models.StackCleanupStage
@@ -120,8 +118,8 @@ class OpenstackCleanupStageSerializer(CleanupStageSerializer):
 
 class SandboxSerializer(serializers.ModelSerializer):
     lock_id = serializers.SerializerMethodField()
-    allocation_unit_id = serializers.PrimaryKeyRelatedField(
-        source='allocation_unit', queryset=SandboxAllocationUnit.objects.all())
+    allocation_unit_id = serializers.PrimaryKeyRelatedField(source='allocation_unit',
+                                                            read_only=True)
 
     class Meta:
         model = models.Sandbox
@@ -129,13 +127,12 @@ class SandboxSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'lock', 'allocation_unit_id')
 
     @staticmethod
-    def get_lock_id(obj) -> Optional[int]:
+    def get_lock_id(obj: models.Sandbox) -> Optional[int]:
         return obj.lock.id if hasattr(obj, 'lock') else None
 
 
 class SandboxLockSerializer(serializers.ModelSerializer):
-    sandbox_id = serializers.PrimaryKeyRelatedField(
-        source='sandbox', queryset=Sandbox.objects.all())
+    sandbox_id = serializers.PrimaryKeyRelatedField(source='sandbox', read_only=True)
 
     class Meta:
         model = models.SandboxLock
@@ -144,13 +141,12 @@ class SandboxLockSerializer(serializers.ModelSerializer):
 
 
 class PoolLockSerializer(serializers.ModelSerializer):
-    pool_id = serializers.PrimaryKeyRelatedField(
-        source='pool', queryset=Pool.objects.all())
+    pool_id = serializers.PrimaryKeyRelatedField(source='pool', read_only=True)
 
     class Meta:
         model = models.PoolLock
-        fields = ('id', 'pool_id',)
-        read_only_fields = fields
+        fields = ('id', 'pool_id')
+        read_only_fields = ('id', 'pool_id')
 
 
 class NodeActionSerializer(serializers.Serializer):
