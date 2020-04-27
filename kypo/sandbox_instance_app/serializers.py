@@ -21,7 +21,9 @@ class PoolSerializer(serializers.ModelSerializer):
     size = serializers.SerializerMethodField(
         help_text="Number of allocation units associated with this pool.")
     lock_id = serializers.SerializerMethodField()
-    definition_id = serializers.PrimaryKeyRelatedField(source='definition', read_only=True)
+    definition_id = serializers.PrimaryKeyRelatedField(
+        source='definition', queryset=Definition.objects.all()
+    )
 
     class Meta:
         model = models.Pool
@@ -47,10 +49,6 @@ class PoolSerializer(serializers.ModelSerializer):
 
 
 class PoolSerializerCreate(PoolSerializer):
-    definition_id = serializers.PrimaryKeyRelatedField(
-        source='definition', queryset=Definition.objects.all()
-    )
-
     class Meta(PoolSerializer.Meta):
         read_only_fields = ('id', 'size')
 
