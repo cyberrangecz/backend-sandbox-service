@@ -11,7 +11,7 @@ from kypo.topology_definition.models import TopologyDefinition
 from kypo.sandbox_definition_app import serializers
 from kypo.sandbox_definition_app.models import Definition
 from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider, GitProvider, \
-    DefinitionProvider
+    DefinitionProvider, GithubCompatibleProvider
 from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
 
@@ -50,10 +50,7 @@ def get_definition(url: str, rev: str, config: KypoConfiguration) -> TopologyDef
     :raise: GitError if GIT error occurs, ValidationError if definition is incorrect
     """
     try:
-        if GitProvider.is_local_repo(url):
-            provider = GitProvider(url, settings.KYPO_CONFIG.git_private_key)
-        else:
-            provider = GitlabProvider(url, config.git_access_token)
+        provider = get_def_provider(url, config)
         definition = provider.get_file(SANDBOX_DEFINITION_FILENAME, rev)
     except exceptions.GitError as ex:
         raise exceptions.GitError("Failed to get sandbox definition file {}.\n"
@@ -62,3 +59,12 @@ def get_definition(url: str, rev: str, config: KypoConfiguration) -> TopologyDef
         return TopologyDefinition.load(io.StringIO(definition))
     except YamlizingError as ex:
         raise exceptions.ValidationError(ex)
+
+
+def get_def_provider(url: str, config: KypoConfiguration) -> DefinitionProvider:
+    """Return correct provider according to the rpository url."""
+    if GitlabProvider.is_providable(url):
+        return GitlabProvider(url, config.git_access_token)
+    if GithubCompatibleProvider.is_providable(url):
+        return GithubCompatibleProvider(url, config.git_server)
+    return GitProvider(url, settings.KYPO_CONFIG.git_private_key)
