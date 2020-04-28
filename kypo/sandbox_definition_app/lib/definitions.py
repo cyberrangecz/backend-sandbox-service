@@ -62,7 +62,7 @@ def get_definition(url: str, rev: str, config: KypoConfiguration) -> TopologyDef
 
 
 def get_def_provider(url: str, config: KypoConfiguration) -> DefinitionProvider:
-    """Return correct provider according to the rpository url."""
+    """Return correct provider according to the repository url."""
     if GitlabProvider.is_providable(url):
         return GitlabProvider(url, config.git_access_token)
     if GithubCompatibleProvider.is_providable(url):
