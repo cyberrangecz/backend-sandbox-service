@@ -132,7 +132,7 @@ class GithubCompatibleProvider(DefinitionProvider):
         try:
             url = f'{self.get_repo_url()}/raw/{rev}/{path}'
             resp = self.get_request(url)
-            return resp['sha']
+            return resp.text
         except (ConnectionError, requests.RequestException) as ex:
             raise exceptions.GitError(ex)
 
@@ -144,7 +144,7 @@ class GithubCompatibleProvider(DefinitionProvider):
     def get_branches(self):
         try:
             url = f'{self.get_repo_url()}/branches/'
-            resp = self.get_request(url)
+            resp = self.get_request(url).json()
             return resp
         except (ConnectionError, requests.RequestException) as ex:
             raise exceptions.GitError(ex)
@@ -152,7 +152,7 @@ class GithubCompatibleProvider(DefinitionProvider):
     def get_tags(self):
         try:
             url = f'{self.get_repo_url()}/tags/'
-            resp = self.get_request(url)
+            resp = self.get_request(url).json()
             return resp
         except (ConnectionError, requests.RequestException) as ex:
             raise exceptions.GitError(ex)
@@ -163,7 +163,7 @@ class GithubCompatibleProvider(DefinitionProvider):
     def get_rev_sha(self, rev):
         try:
             url = f'{self.get_repo_url()}/commits/{rev}'
-            resp = self.get_request(url)
+            resp = self.get_request(url).json()
             return resp['sha']
         except (ConnectionError, requests.RequestException) as ex:
             raise exceptions.GitError('Failed to get sha of the GIT rev.', ex)
@@ -178,7 +178,7 @@ class GithubCompatibleProvider(DefinitionProvider):
         """Ger response data as JSON from given URL."""
         response = requests.get(url)
         response.raise_for_status()
-        return response.json()
+        return response
 
 
 class GitProvider(DefinitionProvider):
