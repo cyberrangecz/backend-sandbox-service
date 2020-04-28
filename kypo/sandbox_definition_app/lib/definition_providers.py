@@ -130,7 +130,7 @@ class GithubCompatibleProvider(DefinitionProvider):
     def get_file(self, path: str, rev: str) -> str:
         """Get file from repo as a string."""
         try:
-            url = parse.urljoin(self.get_repo_url(), f'raw/{rev}/{path}')
+            url = f'{self.get_repo_url()}/raw/{rev}/{path}'
             resp = self.get_request(url)
             return resp['sha']
         except (ConnectionError, requests.RequestException) as ex:
@@ -143,7 +143,7 @@ class GithubCompatibleProvider(DefinitionProvider):
 
     def get_branches(self):
         try:
-            url = parse.urljoin(self.get_repo_url(), 'branches')
+            url = f'{self.get_repo_url()}/branches/'
             resp = self.get_request(url)
             return resp
         except (ConnectionError, requests.RequestException) as ex:
@@ -151,7 +151,7 @@ class GithubCompatibleProvider(DefinitionProvider):
 
     def get_tags(self):
         try:
-            url = parse.urljoin(self.get_repo_url(), 'tags')
+            url = f'{self.get_repo_url()}/tags/'
             resp = self.get_request(url)
             return resp
         except (ConnectionError, requests.RequestException) as ex:
