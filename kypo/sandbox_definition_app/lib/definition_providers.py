@@ -137,9 +137,9 @@ class GithubCompatibleProvider(DefinitionProvider):
             raise exceptions.GitError(ex)
 
     @staticmethod
-    def is_providable(url: str) -> bool:  # TODO
+    def is_providable(url: str) -> bool:
         """Return True if url is Gitlab url."""
-        return url.startswith('git@gitlab')
+        return url.startswith('ssh://git@')
 
     def get_branches(self):
         try:
