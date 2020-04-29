@@ -16,17 +16,17 @@ LOG = structlog.get_logger()
 
 class DefinitionProvider(ABC):
     """Abstract base class for definition providers."""
+    PROVIDABLE_SHCEMES = []
 
     @abstractmethod
     def get_file(self, path: str, rev: str) -> str:
         """Get file from repo as a string."""
         pass
 
-    @staticmethod
-    @abstractmethod
-    def is_providable(url: str) -> bool:
+    @classmethod
+    def is_providable(cls, url: str) -> bool:
         """Return True if the url target can be provided by this provider class."""
-        pass
+        return any(url.startswith(x) for x in cls.PROVIDABLE_SHCEMES)
 
     @abstractmethod
     def get_refs(self):
@@ -60,6 +60,8 @@ class DefinitionProvider(ABC):
 class GitlabProvider(DefinitionProvider):
     """Definition provider for Gitlab API."""
 
+    PROVIDABLE_SHCEMES = ['git@gitlab']
+
     def __init__(self, url: str, token: str):
         self.url = url
         self.gl = gitlab.Gitlab(self.get_host_url(url), private_token=token)
@@ -72,11 +74,6 @@ class GitlabProvider(DefinitionProvider):
             return file.decode().decode()  # One decode to get content, one from bytes to str
         except (requests.exceptions.RequestException, gitlab.exceptions.GitlabError) as ex:
             raise exceptions.GitError(ex)
-
-    @staticmethod
-    def is_providable(url: str) -> bool:
-        """Return True if url is Gitlab url."""
-        return url.startswith('git@gitlab')
 
     def get_branches(self):
         try:
@@ -123,6 +120,8 @@ class GitlabProvider(DefinitionProvider):
 class GithubCompatibleProvider(DefinitionProvider):
     """Definition provider for GitHub-like API."""
 
+    PROVIDABLE_SHCEMES = ['ssh://git@']
+
     def __init__(self, url: str, git_server: str):
         self.url = url
         self.git_server = git_server
@@ -135,11 +134,6 @@ class GithubCompatibleProvider(DefinitionProvider):
             return resp.text
         except (ConnectionError, requests.RequestException) as ex:
             raise exceptions.GitError(ex)
-
-    @staticmethod
-    def is_providable(url: str) -> bool:
-        """Return True if url is Gitlab url."""
-        return url.startswith('ssh://git@')
 
     def get_branches(self):
         try:
@@ -187,6 +181,8 @@ class GitProvider(DefinitionProvider):
     Can handle even local bare repositories.
     """
     GIT_REPOSITORIES = '/tmp'
+    PROVIDABLE_SHCEMES = ['file://', 'ssh://', 'git://', 'git@', 'http://', 'https://']
+
     lock = multiprocessing.Lock()
 
     def __init__(self, url: str, key_path: str):
@@ -230,14 +226,10 @@ class GitProvider(DefinitionProvider):
         except git.exc.GitCommandError as ex:
             raise exceptions.GitError(ex)
 
-    @staticmethod
-    def is_providable(url: str) -> bool:
+    @classmethod
+    def is_providable(cls, url: str) -> bool:
         """Any GIT url is providable using the general provider."""
-        providable_schemes = ['file://', 'ssh://', 'git://', 'git@', 'http://', 'https://']
-        for schema in providable_schemes:
-            if url.startswith(schema):
-                return True
-        return False
+        return any(url.startswith(x) for x in cls.PROVIDABLE_SHCEMES)
 
     def get_refs(self):
         repo = self.get_git_repo(self.url, 'master', self.key_path)
