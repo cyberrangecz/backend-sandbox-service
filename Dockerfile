@@ -4,6 +4,8 @@ ENV DJANGO_ADMIN_USER "admin"
 ENV DJANGO_ADMIN_PASSWORD "admin"
 ENV DJANGO_ADMIN_EMAIL "admin@example.com"
 
+ARG KYPO_NEXUS_URL="https://localhost.lan/repository"
+
 RUN apk update && apk add make gcc git python3 python3-dev musl-dev libffi-dev redis postgresql postgresql-dev openssh-client docker lighttpd
 
 ENV PYTHONUNBUFFERED 1
