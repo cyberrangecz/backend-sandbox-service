@@ -4,9 +4,9 @@ name = "pypi"
 verify_ssl = true
 
 [[source]]
-url = "http://kypo-storage.ics.muni.cz:8081/repository/pypi-group/simple"
+url = "$KYPO_NEXUS_URL/pypi-group/simple"
 name = "kypo"
-verify_ssl = false
+verify_ssl = true
 
 [requires]
 python_version = "3.6"
