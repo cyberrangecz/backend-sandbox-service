@@ -95,7 +95,7 @@ class GitlabProvider(DefinitionProvider):
     def get_refs(self):
         return self.get_branches() + self.get_tags()
 
-    def get_rev_sha(self, rev):
+    def get_rev_sha(self, rev: str) -> str:
         try:
             for ref in self.get_refs():
                 if ref.name == rev:
@@ -118,6 +118,67 @@ class GitlabProvider(DefinitionProvider):
         path = re.sub('.git$', '', url).split(':')[-1]
         quoted_path = parse.quote_plus(path)
         return quoted_path
+
+
+class GithubCompatibleProvider(DefinitionProvider):
+    """Definition provider for GitHub-like API."""
+
+    def __init__(self, url: str, git_server: str):
+        self.url = url
+        self.git_server = git_server
+
+    def get_file(self, path: str, rev: str) -> str:
+        """Get file from repo as a string."""
+        try:
+            url = f'{self.get_repo_url()}/raw/{rev}/{path}'
+            resp = self.get_request(url)
+            return resp.text
+        except (ConnectionError, requests.RequestException) as ex:
+            raise exceptions.GitError(ex)
+
+    @staticmethod
+    def is_providable(url: str) -> bool:
+        """Return True if url is Gitlab url."""
+        return url.startswith('ssh://git@')
+
+    def get_branches(self):
+        try:
+            url = f'{self.get_repo_url()}/branches/'
+            resp = self.get_request(url).json()
+            return resp
+        except (ConnectionError, requests.RequestException) as ex:
+            raise exceptions.GitError(ex)
+
+    def get_tags(self):
+        try:
+            url = f'{self.get_repo_url()}/tags/'
+            resp = self.get_request(url).json()
+            return resp
+        except (ConnectionError, requests.RequestException) as ex:
+            raise exceptions.GitError(ex)
+
+    def get_refs(self):
+        return self.get_branches() + self.get_tags()
+
+    def get_rev_sha(self, rev):
+        try:
+            url = f'{self.get_repo_url()}/commits/{rev}'
+            resp = self.get_request(url).json()
+            return resp['sha']
+        except (ConnectionError, requests.RequestException) as ex:
+            raise exceptions.GitError('Failed to get sha of the GIT rev.', ex)
+
+    def get_repo_url(self) -> str:
+        """Return URL of the repository."""
+        parsed = parse.urlparse(self.url)
+        return parse.urljoin(self.git_server, parsed.path)
+
+    @staticmethod
+    def get_request(url: str):
+        """Ger response data as JSON from given URL."""
+        response = requests.get(url)
+        response.raise_for_status()
+        return response
 
 
 class GitProvider(DefinitionProvider):
