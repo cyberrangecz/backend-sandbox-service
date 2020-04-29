@@ -53,7 +53,7 @@ def lock_sandbox(sandbox: Sandbox) -> SandboxLock:
 def get_sandbox_topology(sandbox: Sandbox) -> Topology:
     """Get sandbox topology."""
     ti = get_topology_instance(sandbox)
-    topology = Topology(sandbox, ti)
+    topology = Topology(ti)
     return topology
 
 
