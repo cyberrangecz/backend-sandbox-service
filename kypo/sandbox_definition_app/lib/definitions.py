@@ -67,4 +67,6 @@ def get_def_provider(url: str, config: KypoConfiguration) -> DefinitionProvider:
         return GitlabProvider(url, config.git_access_token)
     if GithubCompatibleProvider.is_providable(url):
         return GithubCompatibleProvider(url, config.git_server)
-    return GitProvider(url, settings.KYPO_CONFIG.git_private_key)
+    if GitProvider.is_providable(url):
+        return GitProvider(url, settings.KYPO_CONFIG.git_private_key)
+    raise exceptions.ValidationError(f"Unknown URI schema for Git repository '{url}'.")
