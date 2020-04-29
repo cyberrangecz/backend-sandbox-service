@@ -233,7 +233,11 @@ class GitProvider(DefinitionProvider):
     @staticmethod
     def is_providable(url: str) -> bool:
         """Any GIT url is providable using the general provider."""
-        return True
+        providable_schemes = ['file://', 'ssh://', 'git://', 'git@', 'http://', 'https://']
+        for schema in providable_schemes:
+            if url.startswith(schema):
+                return True
+        return False
 
     def get_refs(self):
         repo = self.get_git_repo(self.url, 'master', self.key_path)
