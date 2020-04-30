@@ -4,7 +4,7 @@ from rest_framework.exceptions import ValidationError
 from kypo.sandbox_common_lib import exceptions
 from kypo.sandbox_definition_app.lib import definitions
 from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider, \
-    GithubCompatibleProvider, GitProvider
+    InternalGitProvider, GitProvider
 from kypo.sandbox_definition_app.models import Definition
 
 pytestmark = pytest.mark.django_db
@@ -48,7 +48,7 @@ class TestCreateDefinition:
 class TestGetDefProvider:
     schema_to_provider = {
         'git@gitlab': GitlabProvider,
-        'ssh://git@': GithubCompatibleProvider,
+        'ssh://git@git-internal-ssh/': InternalGitProvider,
         'http://': GitProvider,
         'https://': GitProvider,
         'file://': GitProvider,

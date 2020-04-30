@@ -1,16 +1,24 @@
-from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider, GitProvider
+from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider, GitProvider, InternalGitProvider
 
 
 class TestGitlabProvider:
     URL = 'git@gitlab.ics.muni.cz:kypo-crp/backend-python/kypo-sandbox-service.git'
 
     def test_get_host_url(self):
-        assert GitlabProvider.get_host_url(self.URL) == 'http://gitlab.ics.muni.cz'
-        assert GitlabProvider.get_host_url('git@git.git.com:git@git/git') == 'http://git.git.com'
+        assert GitlabProvider.get_host_url(self.URL) == 'https://gitlab.ics.muni.cz'
+        assert GitlabProvider.get_host_url('git@git.git.com:git@git/git') == 'https://git.git.com'
 
     def test_get_project_path(self):
         assert GitlabProvider.get_project_path(self.URL) == 'kypo-crp%2Fbackend-python%2Fkypo-sandbox-service'
         assert GitlabProvider.get_project_path('example.com:kypo/git/.git/repo.git') == 'kypo%2Fgit%2F.git%2Frepo'
+
+
+class TestInternalGitProvider:
+    URL = 'ssh://git@localhost:22422/repos/myrepo.git'
+
+    def test_get_repo_url(self):
+        gp = InternalGitProvider.get_rest_url(self.URL, 'http://localhost:22422')
+        assert gp == 'http://localhost:22422/repos/myrepo.git'
 
 
 class TestGenericProvider:

@@ -1,22 +1,25 @@
 import multiprocessing
 import os
 import re
-from urllib import parse
 from abc import ABC, abstractmethod
+from urllib import parse
+
 import git
-import structlog
 import gitlab
 import requests
+import structlog
 
 from kypo.sandbox_common_lib import exceptions
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
 
 LOG = structlog.get_logger()
 
+# TODO refactor this, doesn't make sense anymore (Probably get rid of local repos altogether).
+
 
 class DefinitionProvider(ABC):
     """Abstract base class for definition providers."""
-    PROVIDABLE_SHCEMES = []
+    PROVIDABLE_SCHEMES = []
 
     @abstractmethod
     def get_file(self, path: str, rev: str) -> str:
@@ -26,7 +29,7 @@ class DefinitionProvider(ABC):
     @classmethod
     def is_providable(cls, url: str) -> bool:
         """Return True if the url target can be provided by this provider class."""
-        return any(url.startswith(x) for x in cls.PROVIDABLE_SHCEMES)
+        return any(url.startswith(x) for x in cls.PROVIDABLE_SCHEMES)
 
     @abstractmethod
     def get_refs(self):
@@ -60,7 +63,8 @@ class DefinitionProvider(ABC):
 class GitlabProvider(DefinitionProvider):
     """Definition provider for Gitlab API."""
 
-    PROVIDABLE_SHCEMES = ['git@gitlab']
+    PROVIDABLE_SCHEMES = ['git@gitlab']
+    DEFAULT_REST_PROTOCOL = 'https'
 
     def __init__(self, url: str, token: str):
         self.url = url
@@ -104,10 +108,11 @@ class GitlabProvider(DefinitionProvider):
             raise exceptions.GitError('Failed to get sha of the GIT rev.', ex)
 
     @staticmethod
-    def get_host_url(url: str, prot: str = 'http') -> str:
+    def get_host_url(url: str) -> str:
         """Return git host url."""
         address = url.replace('git@', '', 1).split(':')[0]
-        return f'{prot}://{address}'
+        protocol = GitlabProvider.DEFAULT_REST_PROTOCOL
+        return f'{protocol}://{address}'
 
     @staticmethod
     def get_project_path(url: str) -> str:
@@ -117,19 +122,20 @@ class GitlabProvider(DefinitionProvider):
         return quoted_path
 
 
-class GithubCompatibleProvider(DefinitionProvider):
+class InternalGitProvider(DefinitionProvider):
     """Definition provider for GitHub-like API."""
 
-    PROVIDABLE_SHCEMES = ['ssh://git@']
+    PROVIDABLE_SCHEMES = ['ssh://git@git-internal-ssh/']
+    INTERNAL_HTTP_URL = 'http://git-internal-rest:5000'
 
-    def __init__(self, url: str, git_server: str):
+    def __init__(self, url: str):
         self.url = url
-        self.git_server = git_server
+        self.rest_url = self.get_rest_url(url, self.INTERNAL_HTTP_URL)
 
     def get_file(self, path: str, rev: str) -> str:
         """Get file from repo as a string."""
         try:
-            url = f'{self.get_repo_url()}/raw/{rev}/{path}'
+            url = f'{self.rest_url}/raw/{rev}/{path}'
             resp = self.get_request(url)
             return resp.text
         except (ConnectionError, requests.RequestException) as ex:
@@ -137,7 +143,7 @@ class GithubCompatibleProvider(DefinitionProvider):
 
     def get_branches(self):
         try:
-            url = f'{self.get_repo_url()}/branches/'
+            url = f'{self.rest_url}/branches/'
             resp = self.get_request(url).json()
             return resp
         except (ConnectionError, requests.RequestException) as ex:
@@ -145,7 +151,7 @@ class GithubCompatibleProvider(DefinitionProvider):
 
     def get_tags(self):
         try:
-            url = f'{self.get_repo_url()}/tags/'
+            url = f'{self.rest_url}/tags/'
             resp = self.get_request(url).json()
             return resp
         except (ConnectionError, requests.RequestException) as ex:
@@ -156,16 +162,17 @@ class GithubCompatibleProvider(DefinitionProvider):
 
     def get_rev_sha(self, rev):
         try:
-            url = f'{self.get_repo_url()}/commits/{rev}'
+            url = f'{self.rest_url}/commits/{rev}'
             resp = self.get_request(url).json()
             return resp['sha']
         except (ConnectionError, requests.RequestException) as ex:
             raise exceptions.GitError('Failed to get sha of the GIT rev.', ex)
 
-    def get_repo_url(self) -> str:
+    @staticmethod
+    def get_rest_url(url: str, git_http_url: str) -> str:
         """Return URL of the repository."""
-        parsed = parse.urlparse(self.url)
-        return parse.urljoin(self.git_server, parsed.path)
+        parsed = parse.urlparse(url)
+        return parse.urljoin(git_http_url, parsed.path)
 
     @staticmethod
     def get_request(url: str):
@@ -181,7 +188,7 @@ class GitProvider(DefinitionProvider):
     Can handle even local bare repositories.
     """
     GIT_REPOSITORIES = '/tmp'
-    PROVIDABLE_SHCEMES = ['file://', 'ssh://', 'git://', 'git@', 'http://', 'https://']
+    PROVIDABLE_SCHEMES = ['file://', 'ssh://', 'git://', 'git@', 'http://', 'https://']
 
     lock = multiprocessing.Lock()
 
@@ -229,7 +236,7 @@ class GitProvider(DefinitionProvider):
     @classmethod
     def is_providable(cls, url: str) -> bool:
         """Any GIT url is providable using the general provider."""
-        return any(url.startswith(x) for x in cls.PROVIDABLE_SHCEMES)
+        return any(url.startswith(x) for x in cls.PROVIDABLE_SCHEMES)
 
     def get_refs(self):
         repo = self.get_git_repo(self.url, 'master', self.key_path)

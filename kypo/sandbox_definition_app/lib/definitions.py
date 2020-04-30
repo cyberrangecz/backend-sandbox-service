@@ -11,7 +11,7 @@ from kypo.topology_definition.models import TopologyDefinition
 from kypo.sandbox_definition_app import serializers
 from kypo.sandbox_definition_app.models import Definition
 from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider, GitProvider, \
-    DefinitionProvider, GithubCompatibleProvider
+    DefinitionProvider, InternalGitProvider
 from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
 
@@ -65,8 +65,8 @@ def get_def_provider(url: str, config: KypoConfiguration) -> DefinitionProvider:
     """Return correct provider according to the repository url."""
     if GitlabProvider.is_providable(url):
         return GitlabProvider(url, config.git_access_token)
-    if GithubCompatibleProvider.is_providable(url):
-        return GithubCompatibleProvider(url, config.git_server)
+    if InternalGitProvider.is_providable(url):
+        return InternalGitProvider(url)
     if GitProvider.is_providable(url):
         return GitProvider(url, settings.KYPO_CONFIG.git_private_key)
     raise exceptions.ValidationError(f"Unknown URI schema for Git repository '{url}'.")
