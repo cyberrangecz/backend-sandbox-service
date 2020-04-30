@@ -3,6 +3,9 @@ import shutil
 
 import docker
 import structlog
+
+from django.conf import settings
+
 from docker.models.containers import Container
 from kypo.openstack_driver.topology_instance import TopologyInstance
 
@@ -44,6 +47,7 @@ USER_PUBLIC_KEY_FILENAME = 'user_key.pub'
 
 
 class AnsibleDockerRunner:
+    DOCKER_NETWORK = settings.KYPO_CONFIG.ansible_docker_network
 
     def __init__(self):
         self.client = docker.from_env()
@@ -62,7 +66,7 @@ class AnsibleDockerRunner:
         command = ['-u', url, '-r', rev, '-i', ANSIBLE_DOCKER_INVENTORY_PATH.bind]
         LOG.debug("Ansible container options", command=command)
         return self.client.containers.run(image, detach=True,
-                                          command=command, volumes=volumes)
+                                          command=command, volumes=volumes, network=self.DOCKER_NETWORK)
 
     def get_container(self, container_id: str) -> Container:
         return self.client.containers.get(container_id)
