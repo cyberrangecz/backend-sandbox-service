@@ -52,6 +52,9 @@ ansible_networking_url: ""
 # The name of the Docker image that is able to run Ansible playbook.
 #ansible_docker_image: csirtmu/kypo-ansible-runner
 
+# The name of the Docker network that the Runner will use.
+#ansible_docker_image: bridge
+
 # A path to directory of CA certificates or file of CA certificates, i.e. CA bundle.
 # Use in case of self-signed certificates in related services.
 #ssl_ca_certificate_verify: ""

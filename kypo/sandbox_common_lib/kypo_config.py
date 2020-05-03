@@ -20,6 +20,7 @@ SANDBOX_DELETE_TIMEOUT = 3600
 SANDBOX_ANSIBLE_TIMEOUT = 3600 * 2
 ANSIBLE_DOCKER_VOLUMES = '/tmp/kypo'
 ANSIBLE_DOCKER_IMAGE = 'csirtmu/kypo-ansible-runner'
+ANSIBLE_DOCKER_NETWORK='bridge'
 PROXY_JUMP_TO_MAN = None
 SSL_CA_CERTIFICATE_VERIFY = ''
 
@@ -60,6 +61,7 @@ class KypoConfiguration(Object):
 
     ansible_docker_volumes = Attribute(type=str, default=ANSIBLE_DOCKER_VOLUMES)
     ansible_docker_image = Attribute(type=str, default=ANSIBLE_DOCKER_IMAGE)
+    ansible_docker_network = Attribute(type=str, default=ANSIBLE_DOCKER_NETWORK)
 
     ssl_ca_certificate_verify = Attribute(type=str, default=SSL_CA_CERTIFICATE_VERIFY)
 
