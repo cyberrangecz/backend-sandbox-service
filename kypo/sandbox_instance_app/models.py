@@ -252,6 +252,19 @@ class HeatStack(ExternalDependency):
         return 'STAGE: {0.stage.id}, STACK: {0.stack_id}'.format(self)
 
 
+class RQJob(ExternalDependency):
+    stage = models.OneToOneField(
+        AllocationStage,
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name='rq_job',
+    )
+    job_id = models.TextField()
+
+    def __str__(self):
+        return 'STAGE: {0.stage.id}, JOB_ID: {0.job_id}'.format(self)
+
+
 class SystemProcess(ExternalDependency):
     stage = models.OneToOneField(
         AllocationStage,

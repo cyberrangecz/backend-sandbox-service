@@ -84,18 +84,18 @@
     repo_url: git@gitlab.ics.muni.cz:kypo2/openstack/sandbox-definitions/small-sandbox.git
     rev: 04e97bb05456b37a74cd28732547b65f213e1b99
 
-- model: sandbox_instance_app.systemprocess
+- model: sandbox_instance_app.rqjob
   pk: 1
   fields:
-    process_id: fd9bc4e6-87ad-4922-b273-7ae89270b23f
-- model: sandbox_instance_app.systemprocess
+    job_id: fd9bc4e6-87ad-4922-b273-7ae89270b23f
+- model: sandbox_instance_app.rqjob
   pk: 2
   fields:
-    process_id: 93a2012d-97de-48c5-9533-0b995b652915
-- model: sandbox_instance_app.systemprocess
+    job_id: 93a2012d-97de-48c5-9533-0b995b652915
+- model: sandbox_instance_app.rqjob
   pk: 3
   fields:
-    process_id: d5ae9629-e8c2-4ff5-9c49-cca056556d2d
+    job_id: d5ae9629-e8c2-4ff5-9c49-cca056556d2d
 
 - model: sandbox_instance_app.heatstack
   pk: 1
