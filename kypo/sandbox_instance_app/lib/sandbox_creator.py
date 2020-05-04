@@ -10,7 +10,7 @@ from kypo.sandbox_common_lib import utils
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage
 from kypo.sandbox_instance_app.lib import jobs
 from kypo.sandbox_instance_app.models import Sandbox, Pool, SandboxAllocationUnit, \
-    AllocationRequest, StackAllocationStage, SystemProcess
+    AllocationRequest, StackAllocationStage, RQJob
 from kypo.sandbox_instance_app.lib.stage_handlers import StackStageHandler, AnsibleStageHandler
 
 STACK_STATUS_CREATE_COMPLETE = "CREATE_COMPLETE"
@@ -49,7 +49,7 @@ def enqueue_allocation_request(request: AllocationRequest, sandbox: Sandbox) -> 
             StackStageHandler().build, stage_name=stage_stack.__class__.__name__,
             stage=stage_stack, sandbox=sandbox, meta=dict(locked=True)
         )
-        SystemProcess.objects.create(stage=stage_stack, process_id=job_stack.id)
+        RQJob.objects.create(stage=stage_stack, job_id=job_stack.id)
 
         stage_networking = AnsibleAllocationStage.objects.create(
             request=request, repo_url=settings.KYPO_CONFIG.ansible_networking_url,
@@ -61,7 +61,7 @@ def enqueue_allocation_request(request: AllocationRequest, sandbox: Sandbox) -> 
             AnsibleStageHandler().build, stage_name='Allocation Networking Ansible',
             stage=stage_networking, sandbox=sandbox, depends_on=job_stack
         )
-        SystemProcess.objects.create(stage=stage_networking, process_id=job_networking.id)
+        RQJob.objects.create(stage=stage_networking, job_id=job_networking.id)
 
         stage_user_ansible = AnsibleAllocationStage.objects.create(
             request=request, repo_url=request.allocation_unit.pool.definition.url,
@@ -70,7 +70,7 @@ def enqueue_allocation_request(request: AllocationRequest, sandbox: Sandbox) -> 
         job_user_ansible = queue_ansible.enqueue(
             AnsibleStageHandler().build, stage_name='Allocation User Ansible',
             stage=stage_user_ansible, sandbox=sandbox, depends_on=job_networking)
-        SystemProcess.objects.create(stage=stage_user_ansible, process_id=job_user_ansible.id)
+        RQJob.objects.create(stage=stage_user_ansible, job_id=job_user_ansible.id)
 
         queue_default = django_rq.get_queue()
         queue_default.enqueue(save_sandbox_to_database, sandbox=sandbox,

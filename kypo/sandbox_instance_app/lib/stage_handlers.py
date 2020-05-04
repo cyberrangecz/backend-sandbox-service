@@ -68,7 +68,7 @@ class StackStageHandler(StageHandler):
 
     def cancel(self, stage: StackAllocationStage) -> None:
         """Stop running stage."""
-        jobs.delete_job(stage.process.process_id)
+        jobs.delete_job(stage.rq_job.job_id)
         if stage.start:
             self.delete_sandbox(stage.request.allocation_unit, wait=False)
         stage.mark_failed()
@@ -152,7 +152,7 @@ class AnsibleStageHandler(StageHandler):
     # noinspection PyMethodMayBeStatic
     def cancel(self, stage: AnsibleAllocationStage) -> None:
         """Stop running stage."""
-        jobs.delete_job(stage.process.process_id)
+        jobs.delete_job(stage.rq_job.job_id)
         try:
             if hasattr(stage, 'container'):
                 container = stage.container
