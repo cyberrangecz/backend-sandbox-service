@@ -11,9 +11,9 @@ def node_action(sandbox: Sandbox, node_name: str, action: str) -> None:
     """Perform action on given node."""
     client = utils.get_ostack_client()
     action_dict = {
-                  'suspend': client.suspend_node,
-                  'resume': client.resume_node,
-                  'reboot': client.reboot_node,
+        'suspend': client.suspend_node,
+        'resume': client.resume_node,
+        'reboot': client.reboot_node,
     }
     try:
         return action_dict[action](sandbox.allocation_unit.get_stack_name(), node_name)
