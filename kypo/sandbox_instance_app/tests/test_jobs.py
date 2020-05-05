@@ -8,8 +8,8 @@ class TestLockJob:
         mock_job = mocker.Mock()
         mock_job.meta.get.return_value = False
         jobs.lock_job(mock_job, timeout=1, step=2)
-        assert  mock_job.meta.get.called_once()
+        assert mock_job.meta.get.called_once()
 
-    def test_lock_job_raies(self, mocker):
+    def test_lock_job_raises(self, mocker):
         with pytest.raises(TimeoutError):
-            jobs.lock_job(mocker.Mock(), timeout=0.01, step=0.02)
+            jobs.lock_job(mocker.Mock(), timeout=1, step=1)
