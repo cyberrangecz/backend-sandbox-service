@@ -7,15 +7,15 @@ from rq.job import Job
 LOG = structlog.get_logger()
 
 
-def lock_job(job: Job, timeout: float = 60, step: float = 5) -> None:
+def lock_job(job: Job, timeout: int = 60, step: int = 5) -> None:
     """Lock given job; waits `timeout` seconds if not unlocked.
 
     @raise TimeoutError if timeout is exceeded.
     """
     stage = job.kwargs.get('stage')
-    elapsed = 0
+    timeout_deadline = time.time() + timeout
 
-    while elapsed < timeout:
+    while time.time() < timeout_deadline:
         job.refresh()
         locked = job.meta.get('locked', True)
         if not locked:
@@ -24,7 +24,7 @@ def lock_job(job: Job, timeout: float = 60, step: float = 5) -> None:
         else:
             LOG.debug('Wait until the stage is unlocked.', stage=stage)
             time.sleep(step)
-            elapsed += step
+
     raise TimeoutError(f'Waiting for unlock of Job {job} exceeded timeout of {timeout} seconds.')
 
 
