@@ -1,3 +1,5 @@
+"""Sandbox Instance App urls."""
+
 from django.urls import path
 
 from kypo.sandbox_instance_app import views

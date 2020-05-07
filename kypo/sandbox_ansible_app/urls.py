@@ -1,3 +1,5 @@
+"""Sandbox Ansible App urls."""
+
 from django.urls import path
 
 from kypo.sandbox_ansible_app import views

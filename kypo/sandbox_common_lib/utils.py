@@ -4,7 +4,7 @@ Simple utils module.
 import json
 import logging
 import uuid
-from typing import Tuple, Union, Iterable
+from typing import Tuple, Union, Iterable, Callable, Dict
 import structlog
 from Crypto.PublicKey import RSA
 from django.conf import settings
@@ -46,9 +46,9 @@ def configure_logging() -> None:
     LOG.debug("Logging is set and ready to use.")
 
 
-def json_pretty_print(data: dict) -> str:
-    """
-    Pretty print JSON as string. Used primarily for logging purposes.
+def json_pretty_print(data: Dict) -> str:
+    """Pretty print JSON as string. Used primarily for logging purposes.
+
     :param data: Mapping type of JSON
     :return: JSON string
     """
@@ -56,8 +56,7 @@ def json_pretty_print(data: dict) -> str:
 
 
 def generate_ssh_keypair(bits: int = 2048) -> Tuple[str, str]:
-    """
-    Generate SSH-RSA key pair.
+    """Generate SSH-RSA key pair.
 
     :return: Tuple of private and public key strings
     """
@@ -81,7 +80,7 @@ def get_simple_uuid() -> str:
 
 
 class ErrorSerilizer(serializers.Serializer):
-    """Serializer for error reponses."""
+    """Serializer for error responses."""
     detail = serializers.CharField(help_text='String message describing the error.')
 
 
@@ -99,7 +98,7 @@ ERROR_RESPONSES = {
 }
 
 
-def add_error_responses_doc(method: str, statuses: Iterable[Union[int, str]]):
+def add_error_responses_doc(method: str, statuses: Iterable[Union[int, str]]) -> Callable:
     """Decorator to include error responses into documentation.
     Can be used only if the method responses are not already decorated with
     a swagger_auto_schema decorator.
