@@ -47,11 +47,8 @@ def create_pool(data: Dict) -> Pool:
     definition = get_object_or_404(Definition, pk=data.get('definition_id'))
     if 'rev' not in data:
         data['rev'] = definition.rev
-    if GitlabProvider.is_providable(definition.url):
-        provider = GitlabProvider(definition.url, settings.KYPO_CONFIG.git_access_token)
-    else:
-        provider = GitProvider(definition.url, settings.KYPO_CONFIG.git_private_key)
 
+    provider = definitions.get_def_provider(definition.url, settings.KYPO_CONFIG)
     data['rev_sha'] = provider.get_rev_sha(data['rev'])
 
     serializer = serializers.PoolSerializerCreate(data=data)
