@@ -6,12 +6,15 @@ ENV DJANGO_ADMIN_EMAIL "admin@example.com"
 
 ARG KYPO_NEXUS_URL="https://localhost.lan/repository"
 
-RUN apk update && apk add make gcc git python3 python3-dev musl-dev libffi-dev redis postgresql postgresql-dev openssh-client docker lighttpd
+RUN apk update && apk add make gcc git python3 python3-dev musl-dev libffi-dev redis postgresql postgresql-dev openssh-client docker nginx supervisor
 
 ENV PYTHONUNBUFFERED 1
-RUN pip install pip --upgrade && pip install pipenv supervisor
+RUN pip install pip --upgrade && pip install pipenv
 
 RUN mkdir -p /var/log/supervisor
+RUN mkdir -p /run/nginx
+# remove default Nginx page for fallback URI
+RUN rm -rf /var/lib/nginx/html
 
 ENV PGDATA "/var/lib/postgresql/data"
 ENV PGUSER "postgres"
@@ -21,7 +24,13 @@ RUN mkdir -p /run/postgresql && \
     chown ${PGUSER}:${PGUSER} ${PGDATA} && \
     su -c "initdb ${PGDATA}" ${PGUSER}
 
-COPY . /app
+COPY supervisord.conf /etc/supervisord.conf
+COPY etc/nginx.conf /etc/nginx/conf.d/default.conf
+
+COPY bin/ /app/bin/
+COPY kypo/ /app/kypo/
+COPY config.yml manage.py Pipfile Pipfile.lock /app/
+
 WORKDIR /app
 
 RUN pipenv sync && \
@@ -30,4 +39,4 @@ RUN pipenv sync && \
 RUN pipenv run python manage.py collectstatic --no-input -v 2
 
 EXPOSE 8000
-CMD supervisord -c supervisord.conf
+ENTRYPOINT ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
