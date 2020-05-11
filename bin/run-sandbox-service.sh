@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 LISTEN_IP=0.0.0.0
-LISTEN_PORT=80
+LISTEN_PORT=3000
 
 CREATE_SUPERUSER="
 from django.contrib.auth.models import User
