@@ -1,6 +1,7 @@
 from enum import Enum
 
 from django.db import models
+from django.db.models import PositiveIntegerField
 from django.utils import timezone
 from model_utils.managers import InheritanceManager
 
@@ -58,6 +59,7 @@ class SandboxAllocationUnit(models.Model):
 
 
 class Sandbox(models.Model):
+    id = PositiveIntegerField(primary_key=True, auto_created=False, default=-1024)
     allocation_unit = models.OneToOneField(
         SandboxAllocationUnit,
         on_delete=models.PROTECT,
