@@ -131,7 +131,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-STATIC_URL = '/static/'
+STATIC_URL = f'/{KYPO_SERVICE_CONFIG.microservice_name}/static/'
 
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'kypo.sandbox_common_lib.exc_handler.custom_exception_handler',
