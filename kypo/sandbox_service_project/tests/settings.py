@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
 import os
-from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
+from kypo.sandbox_common_lib.kypo_service_config import KypoServiceConfig
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -19,19 +19,22 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
+KYPO_SANDBOX_SERVICE_CONFIG_PATH = os.path.join(BASE_DIR, 'tests/config.yml')
+KYPO_SERVICE_CONFIG = KypoServiceConfig.from_file(KYPO_SANDBOX_SERVICE_CONFIG_PATH)
+KYPO_CONFIG = KYPO_SERVICE_CONFIG.app_config
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = '-^mu0=6s@*x4jdbrz5yr!++p*02#%m$_4&0uw8h1)&r5u!v=12'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = KYPO_SERVICE_CONFIG.debug
 
-ALLOWED_HOSTS = ['*']  # Allow everyone
-
-AUTHENTICATED_REST_API = False
+ALLOWED_HOSTS = KYPO_SERVICE_CONFIG.allowed_hosts
 
 # Application definition
 
-CORS_ORIGIN_ALLOW_ALL = True
+CORS_ORIGIN_ALLOW_ALL = KYPO_SERVICE_CONFIG.cors_origin_allow_all
+CORS_ORIGIN_WHITELIST = KYPO_SERVICE_CONFIG.cors_origin_whitelist
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -156,9 +159,6 @@ CACHES = {
     }
 }
 
-KYPO_SANDBOX_SERVICE_CONFIG_PATH = os.path.join(BASE_DIR, 'tests/config.yml')
-KYPO_CONFIG = KypoConfiguration.from_file(KYPO_SANDBOX_SERVICE_CONFIG_PATH)
-
 RQ_QUEUES = {
     'default': {
         'HOST': 'localhost',
@@ -190,7 +190,7 @@ LOGGING = {
     },
     "handlers": {
         "rq_console": {
-            "level": "DEBUG",
+            "level": KYPO_CONFIG.log_level,
             "class": "rq.utils.ColorizingStreamHandler",
             "formatter": "rq_console",
             "exclude": ["%(asctime)s"],
@@ -199,7 +199,7 @@ LOGGING = {
     'loggers': {
         "rq.worker": {
             "handlers": ["rq_console"],
-            "level": "DEBUG"
+            "level": KYPO_CONFIG.log_level,
         },
     }
 }

@@ -8,6 +8,4 @@ class Command(BaseCommand):
     help = 'Register user roles to User and Group service.'
 
     def handle(self, **options):
-        import os
-        print(os. getcwd())
         auth.post_user_roles()

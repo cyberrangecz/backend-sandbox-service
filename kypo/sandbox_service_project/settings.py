@@ -11,8 +11,7 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
 import os
-
-from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
+from kypo.sandbox_common_lib.kypo_service_config import KypoServiceConfig
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(
@@ -21,19 +20,22 @@ BASE_DIR = os.path.dirname(
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
+KYPO_SANDBOX_SERVICE_CONFIG_PATH = os.path.join(BASE_DIR, 'config.yml')
+KYPO_SERVICE_CONFIG = KypoServiceConfig.from_file(KYPO_SANDBOX_SERVICE_CONFIG_PATH)
+KYPO_CONFIG = KYPO_SERVICE_CONFIG.app_config
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = '-^mu0=6s@*x4jdbrz5yr!++p*02#%m$_4&0uw8h1)&r5u!v=12'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = KYPO_SERVICE_CONFIG.debug
 
-ALLOWED_HOSTS = ['*']  # Allow everyone
-
-AUTHENTICATED_REST_API = False
+ALLOWED_HOSTS = KYPO_SERVICE_CONFIG.allowed_hosts
 
 # Application definition
 
-CORS_ORIGIN_ALLOW_ALL = True
+CORS_ORIGIN_ALLOW_ALL = KYPO_SERVICE_CONFIG.cors_origin_allow_all
+CORS_ORIGIN_WHITELIST = KYPO_SERVICE_CONFIG.cors_origin_whitelist
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -147,7 +149,7 @@ SWAGGER_SETTINGS = {
     ],
 }
 
-if AUTHENTICATED_REST_API:
+if KYPO_SERVICE_CONFIG.authentication.authenticated_rest_api:
     REST_FRAMEWORK.update({
         'DEFAULT_PERMISSION_CLASSES': (
             'kypo.sandbox_common_lib.permissions.ModelPermissions',
@@ -173,20 +175,20 @@ if AUTHENTICATED_REST_API:
         # Need to be set when using JWTAccessTokenAuthentication,
         # which supports multiple OIDC providers (parsing them from the token).
         # Only those listed here will be allowed.
-        'ALLOWED_OIDC_PROVIDERS': ('https://oidc.example.cz/oidc', ),
+        'ALLOWED_OIDC_PROVIDERS': KYPO_SERVICE_CONFIG.authentication.allowed_oidc_providers,
     }
 
     CSIRTMU_UAG_AUTH = {
         # User and Group roles registration endpoint URL
-        'ROLES_REGISTRATION_URL': 'https://example.com/kypo2-rest-user-and-group/api/v1/microservices',
+        'ROLES_REGISTRATION_URL': KYPO_SERVICE_CONFIG.authentication.roles_registration_url,
         # User and Group roles acquisition endpoint URL
-        'ROLES_ACQUISITION_URL': 'https://example.com/kypo2-rest-user-and-group/api/v1/users/info',
+        'ROLES_ACQUISITION_URL': KYPO_SERVICE_CONFIG.authentication.roles_acquisition_url,
         # Path to roles definition file
         'ROLES_DEFINITION_PATH': os.path.join(BASE_DIR,
                                               'kypo/sandbox_service_project/permissions/roles.yml'),
 
         # User and Group information configuration
-        'MICROSERVICE_NAME': __package__,
+        'MICROSERVICE_NAME': KYPO_SERVICE_CONFIG.microservice_name,
         'ROLE_PREFIX': "ROLE",
         'ENDPOINT': __package__,
     }
@@ -201,9 +203,6 @@ CACHES = {
         }
     }
 }
-
-KYPO_SANDBOX_SERVICE_CONFIG_PATH = os.path.join(BASE_DIR, 'config.yml')
-KYPO_CONFIG = KypoConfiguration.from_file(KYPO_SANDBOX_SERVICE_CONFIG_PATH)
 
 RQ_QUEUES = {
     'default': {
