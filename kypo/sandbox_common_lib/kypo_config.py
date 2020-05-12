@@ -1,5 +1,5 @@
 """
-REST API configuration file
+Django Apps configuration file
 """
 import os
 
@@ -20,7 +20,7 @@ SANDBOX_DELETE_TIMEOUT = 3600
 SANDBOX_ANSIBLE_TIMEOUT = 3600 * 2
 ANSIBLE_DOCKER_VOLUMES = '/tmp/kypo'
 ANSIBLE_DOCKER_IMAGE = 'csirtmu/kypo-ansible-runner'
-ANSIBLE_DOCKER_NETWORK='bridge'
+ANSIBLE_DOCKER_NETWORK = 'bridge'
 PROXY_JUMP_TO_MAN = None
 SSL_CA_CERTIFICATE_VERIFY = ''
 

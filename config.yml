@@ -1,86 +1,117 @@
-# The URL of OpenStack Identity service API.
-os_auth_url: ""
+# Name of the microservice.
+#microservice_name: kypo-sandbox-service
 
-# The ID of application credentials to authenticate at OpenStack cloud platform.
-os_application_credential_id: ""
+# A boolean that turns on/off debug mode.
+# SECURITY WARNING: don't run with debug turned on in production!
+debug: True
 
-# The secret string of APPLICATION_CREDENTIAL_ID.
-os_application_credential_secret: ""
+# A list of strings representing the host/domain names that this Django site can serve.
+#allowed_hosts: []
 
-# The path to project log file.
-#log_file: kypo-sandbox-service.log
+# If True, the whitelist will not be used and all origins will be accepted.
+#cors_origin_allow_all: True
 
-# The level of log verbosity. One of: NOTSET, DEBUG, INFO, WARNING, ERROR, FATAL, CRITICAL.
-#log_level: INFO
+# A list of origins that are authorized to make cross-site HTTP requests.
+#cors_origin_whitelist: []
 
-# The address of Git repository.
-#git_server: gitlab.ics.muni.cz
+authentication:
+    # Whether the REST API authentication is on.
+    # If set to False, other authentication variables are not used.
+    #authenticated_rest_api: False
 
-# The name of user used for communication with Git repository.
-#git_user: git
+    # List of OIDC provider host/domain names that are allowed.
+    allowed_oidc_providers: []
 
-# The SSH private key that kypo2-django-openstack uses to communicate with Git repository.
-#git_private_key: ~/.ssh/git_rsa_key
+    # User and Group roles registration endpoint URL.
+    roles_registration_url: ""
 
-# The access token for Gitlab API
-git_access_token: ""
+    # User and Group roles acquisition endpoint URL.
+    roles_acquisition_url: ""
 
-# The URL of Ansible networking Git repository.
-ansible_networking_url: ""
+application_configuration:
+    # The URL of OpenStack Identity service API.
+    os_auth_url: ""
 
-# The rev of Ansible networking Git repository.
-#ansible_networking_rev: master
+    # The ID of application credentials to authenticate at OpenStack cloud platform.
+    os_application_credential_id: ""
 
-# The object that represents SSH Host entry. Every attribute is one SSH option (see man page of ssh_config). If you do not use proxy jump, do not set this variable.
-#proxy_jump_to_man:
-#    Host: jumphost.example.com
-#    User: jump
-#    IdentityFile: ~/.ssh/id_rsa
+    # The secret string of APPLICATION_CREDENTIAL_ID.
+    os_application_credential_secret: ""
 
-# Timeout of sandbox (stack) creation in cloud in seconds.
-#sandbox_build_timeout: 7200
+    # The path to project log file.
+    #log_file: kypo-sandbox-service.log
 
-# Timeout of sandbox (stack) deletion in cloud in seconds.
-#sandbox_delete_timeout : 3600
+    # The level of log verbosity. One of: NOTSET, DEBUG, INFO, WARNING, ERROR, FATAL, CRITICAL.
+    #log_level: INFO
 
-# Timeout for Ansible.
-#sandbox_ansible_timeout: 7200
+    # The address of Git repository.
+    #git_server: gitlab.ics.muni.cz
 
-# The path to local temporary directory where KYPO will prepare Docker volumes.
-#ansible_docker_volumes: /tmp
+    # The name of user used for communication with Git repository.
+    #git_user: git
 
-# The name of the Docker image that is able to run Ansible playbook.
-#ansible_docker_image: csirtmu/kypo-ansible-runner
+    # The SSH private key that kypo2-django-openstack uses to communicate with Git repository.
+    #git_private_key: ~/.ssh/git_rsa_key
 
-# The name of the Docker network that the Runner will use.
-#ansible_docker_image: bridge
+    # The access token for Gitlab API
+    git_access_token: ""
 
-# A path to directory of CA certificates or file of CA certificates, i.e. CA bundle.
-# Use in case of self-signed certificates in related services.
-#ssl_ca_certificate_verify: ""
+    # The URL of Ansible networking Git repository.
+    ansible_networking_url: ""
 
-sandbox_configuration:
-    # The name or ID of network in OpenStack where all sandboxes will be deployed.
-    #base_network: base_network
+    # The rev of Ansible networking Git repository.
+    #ansible_networking_rev: master
 
-    # The name of the image in OpenStack that will be used for management nodes (MAN, UAN, BR).
-    extra_nodes_image: ""
+    # The object that represents SSH Host entry. Every attribute is one SSH option (see man page of ssh_config). If you do not use proxy jump, do not set this variable.
+    #proxy_jump_to_man:
+    #    Host: jumphost.example.com
+    #    User: jump
+    #    IdentityFile: ~/.ssh/id_rsa
 
-    # The name of user in MNG_IMAGE virtual machine.
-    extra_nodes_user: ""
+    # Timeout of sandbox (stack) creation in cloud in seconds.
+    #sandbox_build_timeout: 7200
 
-    # The name of the flavor in OpenStack that will be used for management nodes.
-    extra_nodes_flavor: ""
+    # Timeout of sandbox (stack) deletion in cloud in seconds.
+    #sandbox_delete_timeout : 3600
 
-    # The cidr notation of network between MAN and every other node in sandbox.
-    #sb_man_cidr: 192.168.128.0/17
+    # Timeout for Ansible.
+    #sandbox_ansible_timeout: 7200
 
-    # The cidr notation of network between UAN and MAN node.
-    #sb_uan_cidr: 192.168.0.0/28
+    # The path to local temporary directory where KYPO will prepare Docker volumes.
+    #ansible_docker_volumes: /tmp
 
-    # The cidr notation of network between BR and MAN node.
-    #sb_br_cidr: 192.168.0.16/28
+    # The name of the Docker image that is able to run Ansible playbook.
+    #ansible_docker_image: csirtmu/kypo-ansible-runner
 
-    # The list of IP addresses to custom DNS servers.
-    #dns_name_servers: []
+    # The name of the Docker network that the Runner will use.
+    #ansible_docker_image: bridge
+
+    # A path to directory of CA certificates or file of CA certificates, i.e. CA bundle.
+    # Use in case of self-signed certificates in related services.
+    #ssl_ca_certificate_verify: ""
+
+    sandbox_configuration:
+        # The name or ID of network in OpenStack where all sandboxes will be deployed.
+        #base_network: base_network
+
+        # The name of the image in OpenStack that will be used for management nodes (MAN, UAN, BR).
+        extra_nodes_image: ""
+
+        # The name of user in MNG_IMAGE virtual machine.
+        extra_nodes_user: ""
+
+        # The name of the flavor in OpenStack that will be used for management nodes.
+        extra_nodes_flavor: ""
+
+        # The cidr notation of network between MAN and every other node in sandbox.
+        #sb_man_cidr: 192.168.128.0/17
+
+        # The cidr notation of network between UAN and MAN node.
+        #sb_uan_cidr: 192.168.0.0/28
+
+        # The cidr notation of network between BR and MAN node.
+        #sb_br_cidr: 192.168.0.16/28
+
+        # The list of IP addresses to custom DNS servers.
+        #dns_name_servers: []
 
