@@ -1,5 +1,6 @@
 from enum import Enum
 
+from django.conf import settings
 from django.db import models
 from django.db.models import PositiveIntegerField
 from django.utils import timezone
@@ -55,7 +56,9 @@ class SandboxAllocationUnit(models.Model):
 
     def get_stack_name(self) -> str:
         """Returns a name of the stack for this sandbox"""
-        return self.pool.definition.name + '-' + str(self.id)
+        prefix = settings.KYPO_SERVICE_CONFIG.stack_name_prefix
+        pool_id = self.pool.id
+        return f'{prefix}-pool-id-{pool_id}-sau-id-{self.id}'
 
 
 class Sandbox(models.Model):
