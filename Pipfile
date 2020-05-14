@@ -14,16 +14,15 @@ python_version = "3.6"
 [dev-packages]
 # tox
 tox = "~=3.7.0"
-tox-pipenv = "*"
+tox-pipenv = "~=1.9.0"
 # pytest
 pytest = "*"
-pytest-cov = "*"
 pytest-mock = "*"
 pytest-django = "*"
 
 [packages]
 drf-oidc-auth = { index = "kypo", version = ">=2.0.1" }
-kypo-openstack-lib = { index = "kypo", version = ">=0.22.0" }
+kypo-openstack-lib = { index = "kypo", version = ">=0.23.0" }
 csirtmu-oidc-client = { index = "kypo", version = ">=0.1.4" }
 csirtmu-uag-auth = { index = "kypo", version = "*" }
 jsonpickle = "*"
