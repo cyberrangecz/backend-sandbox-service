@@ -6,6 +6,7 @@ from yamlize import Attribute, Object, YamlizingError, StrList
 from kypo.sandbox_common_lib.exceptions import ImproperlyConfigured
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
 
+STACK_NAME_PREFIX = 'default-prefix-0'
 MICROSERVICE_NAME = 'kypo-sandbox-service'
 DEBUG = True
 ALLOWED_HOSTS = ('*',)  # Allow everyone
@@ -30,6 +31,7 @@ class Authentication(Object):
 
 
 class KypoServiceConfig(Object):
+    stack_name_prefix = Attribute(type=str, default=STACK_NAME_PREFIX)
     microservice_name = Attribute(type=str, default=MICROSERVICE_NAME)
     debug = Attribute(type=bool, default=DEBUG)
     allowed_hosts = Attribute(type=StrList, default=ALLOWED_HOSTS)

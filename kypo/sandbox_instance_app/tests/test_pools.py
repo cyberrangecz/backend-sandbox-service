@@ -1,9 +1,11 @@
 import pytest
+from django.conf import settings
 from django.http import Http404
 from rest_framework.exceptions import ValidationError
 
 from kypo.sandbox_common_lib.exceptions import ApiException
 from kypo.sandbox_instance_app.lib import pools
+from kypo.sandbox_instance_app.models import SandboxAllocationUnit, Sandbox
 
 pytestmark = pytest.mark.django_db
 
@@ -43,6 +45,20 @@ class TestCreatePool:
             pools.create_pool(dict(definition_id=1,
                                    max_size=-10,
                                    rev=self.REV))
+
+
+class TestSandboxAllocationUnit:
+
+    def test_get_stack_name(self):
+        au: SandboxAllocationUnit = SandboxAllocationUnit.objects.get(id=1)
+        prefix = settings.KYPO_SERVICE_CONFIG.stack_name_prefix
+
+        expected_stack_name = f'{prefix}-pool-id-{au.pool.id}-sau-id-{au.id}'
+        assert au.get_stack_name() == expected_stack_name
+
+        sb: Sandbox = Sandbox.objects.get(id=1)
+        assert sb.allocation_unit.get_stack_name() == expected_stack_name
+
 
 
 class TestCreateSandboxesInPool:
