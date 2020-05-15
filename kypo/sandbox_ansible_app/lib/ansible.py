@@ -76,6 +76,7 @@ class AnsibleDockerRunner:
         container = self.get_container(container_id)
         container.remove(force=force)
 
+    # TODO review this and refactor so that the private keys are not copied around
     def prepare_ssh_dir(self, dir_path: str, stage: AnsibleAllocationStage, sandbox: Sandbox,
                         config: KypoConfiguration) -> str:
         """Prepare files that will be passed to docker container."""
