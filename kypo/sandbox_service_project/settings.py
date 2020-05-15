@@ -23,6 +23,7 @@ BASE_DIR = os.path.dirname(
 KYPO_SANDBOX_SERVICE_CONFIG_PATH = os.path.join(BASE_DIR, 'config.yml')
 KYPO_SERVICE_CONFIG = KypoServiceConfig.from_file(KYPO_SANDBOX_SERVICE_CONFIG_PATH)
 KYPO_CONFIG = KYPO_SERVICE_CONFIG.app_config
+os.environ['REQUESTS_CA_BUNDLE'] = KYPO_CONFIG.ssl_ca_certificate_verify
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = '-^mu0=6s@*x4jdbrz5yr!++p*02#%m$_4&0uw8h1)&r5u!v=12'
