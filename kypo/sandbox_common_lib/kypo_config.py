@@ -71,6 +71,7 @@ class KypoConfiguration(Object):
         for key, val in kwargs.items():
             setattr(self, key, val)
 
+    # TODO get rid of this horror
     # Override
     @classmethod
     def load(cls, *args, **kwargs) -> 'KypoConfiguration':
@@ -80,12 +81,14 @@ class KypoConfiguration(Object):
         except YamlizingError as ex:
             raise ImproperlyConfigured(ex)
 
+        # TODO deal with absolute paths in ProxyJump object validation
         # Key-paths need to be absolute
         obj.git_private_key = os.path.abspath(os.path.expanduser(obj.git_private_key))
         if obj.proxy_jump_to_man:
             obj.proxy_jump_to_man.IdentityFile = os.path.abspath(
                 os.path.expanduser(obj.proxy_jump_to_man.IdentityFile))
 
+        # TODO move this somewhere
         os.environ['REQUESTS_CA_BUNDLE'] = obj.ssl_ca_certificate_verify
         return obj
 
