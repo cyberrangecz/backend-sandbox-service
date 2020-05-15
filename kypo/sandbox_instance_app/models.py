@@ -117,10 +117,12 @@ class SandboxRequest(models.Model):
         return 'ID: {0.id}, ALLOCATION_UNIT: {0.allocation_unit.id}, CREATED: {0.created}'\
             .format(self)
 
+    # TODO rewrite properly into ORM
     @property
     def is_running(self):
         return any([stage.is_running for stage in self.stages.all()])
 
+    # TODO rewrite properly into ORM
     @property
     def is_finished(self):
         return all([stage.is_finished for stage in self.stages.all()])
@@ -142,6 +144,7 @@ class CleanupRequest(SandboxRequest):
     )
 
 
+# TODO revisit if it makes sense to model it generically
 class Stage(models.Model):
     """Abstract base class for stages."""
     STAGE_CHOICES = [(stg_type.value, stg_type.value) for stg_type in StageType]
