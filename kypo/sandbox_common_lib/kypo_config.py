@@ -22,7 +22,7 @@ ANSIBLE_DOCKER_VOLUMES = '/tmp/kypo'
 ANSIBLE_DOCKER_IMAGE = 'csirtmu/kypo-ansible-runner'
 ANSIBLE_DOCKER_NETWORK = 'bridge'
 PROXY_JUMP_TO_MAN = None
-SSL_CA_CERTIFICATE_VERIFY = ''
+SSL_CA_CERTIFICATE_VERIFY = '/etc/ssl/certs'
 
 
 class ProxyJump(Object):
