@@ -9,6 +9,7 @@ from model_utils.managers import InheritanceManager
 from kypo.sandbox_common_lib import utils
 from kypo.sandbox_definition_app.models import Definition
 
+
 class StageType(Enum):
     OPENSTACK = 'openstack'
     ANSIBLE = 'ansible'
