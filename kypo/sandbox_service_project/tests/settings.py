@@ -29,12 +29,12 @@ SECRET_KEY = '-^mu0=6s@*x4jdbrz5yr!++p*02#%m$_4&0uw8h1)&r5u!v=12'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = KYPO_SERVICE_CONFIG.debug
 
-ALLOWED_HOSTS = KYPO_SERVICE_CONFIG.allowed_hosts
+ALLOWED_HOSTS = tuple(KYPO_SERVICE_CONFIG.allowed_hosts)
 
 # Application definition
 
 CORS_ORIGIN_ALLOW_ALL = KYPO_SERVICE_CONFIG.cors_origin_allow_all
-CORS_ORIGIN_WHITELIST = KYPO_SERVICE_CONFIG.cors_origin_whitelist
+CORS_ORIGIN_WHITELIST = tuple(KYPO_SERVICE_CONFIG.cors_origin_whitelist)
 
 INSTALLED_APPS = [
     'django.contrib.admin',
