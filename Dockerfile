@@ -6,7 +6,7 @@ ENV DJANGO_ADMIN_EMAIL "admin@example.com"
 
 ARG KYPO_NEXUS_URL="https://localhost.lan/repository"
 
-RUN apk update && apk add make gcc git python3 python3-dev musl-dev libffi-dev redis postgresql postgresql-dev openssh-client docker nginx supervisor
+RUN apk update && apk add bash make gcc git python3 python3-dev musl-dev libffi-dev redis postgresql postgresql-dev openssh-client docker nginx supervisor
 
 ENV PYTHONUNBUFFERED 1
 RUN pip install pip --upgrade && pip install pipenv
