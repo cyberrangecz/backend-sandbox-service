@@ -1,4 +1,4 @@
-FROM python:3.6.8-alpine3.10
+FROM python:3.6-slim
 
 ENV DJANGO_ADMIN_USER "admin"
 ENV DJANGO_ADMIN_PASSWORD "admin"
@@ -6,16 +6,17 @@ ENV DJANGO_ADMIN_EMAIL "admin@example.com"
 
 ARG KYPO_NEXUS_URL="https://localhost.lan/repository"
 
-RUN apk update && apk add bash make gcc git python3 python3-dev musl-dev libffi-dev redis postgresql postgresql-dev openssh-client docker nginx supervisor
+RUN apt-get update && apt-get install -y python3 python3-pip python3-dev git redis libpq-dev docker nginx supervisor postgresql
 
 ENV PYTHONUNBUFFERED 1
-RUN pip install pip --upgrade && pip install pipenv
+RUN pip3 install pipenv
 
 RUN mkdir -p /var/log/supervisor
 RUN mkdir -p /run/nginx
 # remove default Nginx page for fallback URI
-RUN rm -rf /var/lib/nginx/html
+RUN rm -rf /usr/share/nginx/html
 
+ENV PATH="$PATH:/usr/lib/postgresql/11/bin"
 ENV PGDATA "/var/lib/postgresql/data"
 ENV PGUSER "postgres"
 RUN mkdir -p /run/postgresql && \
@@ -25,7 +26,7 @@ RUN mkdir -p /run/postgresql && \
     su -c "initdb ${PGDATA}" ${PGUSER}
 
 COPY supervisord.conf /etc/supervisord.conf
-COPY etc/nginx.conf /etc/nginx/conf.d/default.conf
+COPY etc/nginx.conf /etc/nginx/sites-available/default
 
 COPY bin/ /app/bin/
 COPY kypo/ /app/kypo/
@@ -34,9 +35,9 @@ COPY config.yml manage.py Pipfile Pipfile.lock /app/
 WORKDIR /app
 
 RUN pipenv sync && \
-    pipenv run pip install gunicorn
+    pipenv run pip3 install gunicorn
 # static files must be served from proxy server, expose them via volume bind
-RUN pipenv run python manage.py collectstatic --no-input -v 2
+RUN pipenv run python3 manage.py collectstatic --no-input -v 2
 
 EXPOSE 8000
 ENTRYPOINT ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
