@@ -4,7 +4,7 @@ name = "pypi"
 verify_ssl = true
 
 [[source]]
-url = "$KYPO_NEXUS_URL/pypi-group/simple"
+url = "$KYPO_NEXUS_URL"
 name = "kypo"
 verify_ssl = true
 
@@ -24,7 +24,7 @@ pytest-django = "*"
 drf-oidc-auth = { index = "kypo", version = ">=2.0.1" }
 kypo-openstack-lib = { index = "kypo", version = ">=0.23.0" }
 csirtmu-oidc-client = { index = "kypo", version = ">=0.1.4" }
-csirtmu-uag-auth = { index = "kypo", version = "*" }
+csirtmu-uag-auth = { index = "kypo", version = ">=0.1.3" }
 jsonpickle = "*"
 django = "*"
 djangorestframework = "*"
