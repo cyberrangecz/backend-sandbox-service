@@ -55,7 +55,7 @@ Host server 192.168.128.252
     StrictHostKeyChecking no
     IdentityFile /root/.ssh/pool_mng_key
 
-Host gitlab.ics.muni.cz
+Host 192.168.55.101
     User git
     IdentityFile /root/.ssh/git_rsa_key
     UserKnownHostsFile /dev/null

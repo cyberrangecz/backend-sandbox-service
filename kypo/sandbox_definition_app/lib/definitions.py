@@ -2,18 +2,17 @@
 Definition Service module for Definition management.
 """
 import io
+
 import structlog
-from yamlize import YamlizingError
 from django.conf import settings
-
 from kypo.topology_definition.models import TopologyDefinition
+from yamlize import YamlizingError
 
-from kypo.sandbox_definition_app import serializers
-from kypo.sandbox_definition_app.models import Definition
-from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider, GitProvider, \
-    DefinitionProvider, InternalGitProvider
 from kypo.sandbox_common_lib import utils, exceptions
-from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
+from kypo.sandbox_common_lib.kypo_config import KypoConfiguration, GitType
+from kypo.sandbox_definition_app import serializers
+from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider, DefinitionProvider, InternalGitProvider
+from kypo.sandbox_definition_app.models import Definition
 
 LOG = structlog.get_logger()
 
@@ -63,10 +62,8 @@ def get_definition(url: str, rev: str, config: KypoConfiguration) -> TopologyDef
 
 def get_def_provider(url: str, config: KypoConfiguration) -> DefinitionProvider:
     """Return correct provider according to the repository url."""
-    if GitlabProvider.is_providable(url):
-        return GitlabProvider(url, config.git_access_token)
-    if InternalGitProvider.is_providable(url):
-        return InternalGitProvider(url)
-    if GitProvider.is_providable(url):
-        return GitProvider(url, settings.KYPO_CONFIG.git_private_key)
-    raise exceptions.ValidationError(f"Unknown URI schema for Git repository '{url}'.")
+    if config.git_type == GitType.INTERNAL:
+        return InternalGitProvider(url, config)
+    if config.git_type == GitType.GITLAB:
+        return GitlabProvider(url, config)
+    raise exceptions.ImproperlyConfigured(f"Cannot determine provider type. provider_type={config.git_type}.")

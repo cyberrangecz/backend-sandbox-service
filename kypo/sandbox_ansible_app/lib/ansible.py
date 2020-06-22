@@ -3,20 +3,16 @@ import shutil
 
 import docker
 import structlog
-
 from django.conf import settings
-
 from docker.models.containers import Container
 from kypo.openstack_driver.topology_instance import TopologyInstance
 
-from kypo.sandbox_definition_app.lib.definition_providers import GitProvider
-
+from kypo.sandbox_ansible_app.lib.inventory import Inventory
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage
 from kypo.sandbox_common_lib import exceptions
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
-from kypo.sandbox_instance_app.models import Sandbox, StageType
-from kypo.sandbox_ansible_app.lib.inventory import Inventory
 from kypo.sandbox_instance_app.lib import sandboxes
+from kypo.sandbox_instance_app.models import Sandbox, StageType
 
 LOG = structlog.get_logger()
 
@@ -33,10 +29,6 @@ ANSIBLE_DOCKER_SSH_DIR = DockerVolume(
 )
 ANSIBLE_DOCKER_INVENTORY_PATH = DockerVolume(
     bind='/app/inventory.yml',
-    mode='ro'
-)
-ANSIBLE_DOCKER_LOCAL_REPO = DockerVolume(
-    bind='path',
     mode='ro'
 )
 
@@ -58,11 +50,6 @@ class AnsibleDockerRunner:
             ssh_dir: ANSIBLE_DOCKER_SSH_DIR.__dict__,
             inventory_path: ANSIBLE_DOCKER_INVENTORY_PATH.__dict__
         }
-        if GitProvider.is_local_repo(url):
-            local_path = GitProvider.get_local_repo_path(url)
-            volumes[local_path] = ANSIBLE_DOCKER_LOCAL_REPO.__dict__
-            volumes[local_path]['bind'] = local_path
-
         command = ['-u', url, '-r', rev, '-i', ANSIBLE_DOCKER_INVENTORY_PATH.bind]
         LOG.debug("Ansible container options", command=command)
         return self.client.containers.run(image, detach=True,
@@ -91,9 +78,7 @@ class AnsibleDockerRunner:
         self.save_file(os.path.join(ssh_directory, MNG_PRIVATE_KEY_FILENAME),
                        stage.request.allocation_unit.pool.private_management_key)
 
-        if not GitProvider.is_local_repo(stage.repo_url):
-            shutil.copy(config.git_private_key,
-                        os.path.join(ssh_directory, os.path.basename(config.git_private_key)))
+        shutil.copy(config.git_private_key, os.path.join(ssh_directory, os.path.basename(config.git_private_key)))
 
         mng_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind, MNG_PRIVATE_KEY_FILENAME)
         git_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,

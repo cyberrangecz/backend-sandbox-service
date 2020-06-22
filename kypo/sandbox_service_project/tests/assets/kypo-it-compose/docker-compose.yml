@@ -1,0 +1,40 @@
+version: '3.7'
+
+services:
+  git-ssh:
+    image: kypo-crp/ssh-git
+    container_name: kypo-it-git-ssh
+    volumes:
+      - ./git-keys/git-ssh-key.pub:/assets/keys/git-ssh-key.pub
+      - git_repos:/repos
+    networks:
+      kypo-platform-net-it:
+        ipv4_address: 192.168.55.101
+  git-rest:
+    image: kypo-crp/restfulgit
+    container_name: kypo-it-git-rest
+    volumes:
+      - git_repos:/repos
+    networks:
+      kypo-platform-net-it:
+        ipv4_address: 192.168.55.102
+    depends_on:
+      - git-ssh
+  redis:
+    image: redis
+    container_name: kypo-it-redis
+    networks:
+      - kypo-platform-net-it
+    ports:
+      - 127.0.0.1:6379:6379 # TODO fix to IP in the settings
+volumes:
+  git_repos:
+    name: kypo-it-git-local-repos
+networks:
+  kypo-platform-net-it:
+    name: kypo-platform-net-it
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.55.0/24

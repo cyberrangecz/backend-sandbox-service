@@ -1,32 +1,41 @@
-from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider, GitProvider, InternalGitProvider
+import pytest
+from django.conf import settings
+
+from kypo.sandbox_common_lib.exceptions import GitError
+from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
+from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider, InternalGitProvider
 
 
 class TestGitlabProvider:
     URL = 'git@gitlab.ics.muni.cz:kypo-crp/backend-python/kypo-sandbox-service.git'
-
-    def test_get_host_url(self):
-        assert GitlabProvider.get_host_url(self.URL) == 'https://gitlab.ics.muni.cz'
-        assert GitlabProvider.get_host_url('git@git.git.com:git@git/git') == 'https://git.git.com'
+    CFG = KypoConfiguration(git_server='gitlab.ics.muni.cz', git_rest_server='http://gitlab.ics.muni.cz:8081')
 
     def test_get_project_path(self):
-        assert GitlabProvider.get_project_path(self.URL) == 'kypo-crp%2Fbackend-python%2Fkypo-sandbox-service'
-        assert GitlabProvider.get_project_path('example.com:kypo/git/.git/repo.git') == 'kypo%2Fgit%2F.git%2Frepo'
+        provider = GitlabProvider(self.URL, self.CFG)
+        assert provider.project_path == 'kypo-crp%2Fbackend-python%2Fkypo-sandbox-service'
 
 
 class TestInternalGitProvider:
-    URL = 'ssh://git@localhost:22422/repos/myrepo.git'
+    URL1 = 'git@localhost.lan:/repos/nested-folder/myrepo.git'
+    URL2 = 'git@localhost.lan:repositories/nested-folder/next-folder/myrepo.git'
+    URL3 = 'ssh://git@localhost.lan/repos/myrepo.git'
+
+    CFG = KypoConfiguration(git_server='localhost.lan', git_rest_server='http://localhost.lan:8081')
 
     def test_get_repo_url(self):
-        gp = InternalGitProvider.get_rest_url(self.URL, 'http://localhost:22422')
-        assert gp == 'http://localhost:22422/repos/myrepo.git'
+        provider1 = InternalGitProvider(self.URL1, self.CFG)
+        assert provider1.rest_url == 'http://localhost.lan:8081/repos/nested-folder;myrepo.git'
+
+        provider2 = InternalGitProvider(self.URL2, self.CFG)
+        assert provider2.rest_url == 'http://localhost.lan:8081/repositories/nested-folder;next-folder;myrepo.git'
+
+    def test_invalid_path(self):
+        with pytest.raises(GitError):
+            InternalGitProvider(self.URL3, self.CFG)
 
 
-class TestGenericProvider:
-    URL = 'file:///path/to/repo/kypo-sandbox-service.git'
+@pytest.mark.integration
+class TestGitIntegration:
 
-    def test_is_local_repo(self):
-        assert GitProvider.is_local_repo(self.URL)
-        assert not GitProvider.is_local_repo(TestGitlabProvider.URL)
-
-    def test_get_local_repo_path(self):
-        assert GitProvider.get_local_repo_path(self.URL) == '/path/to/repo/kypo-sandbox-service.git'
+    def test_def_provider(self):
+        assert True
