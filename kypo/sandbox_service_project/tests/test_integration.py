@@ -1,15 +1,13 @@
 import os
 import string
-import tempfile
-from zipfile import ZipFile
 
 import pytest
 import structlog
+from django.conf import settings
 from django.urls import reverse
 from redis import Redis
 from rest_framework import status
 from rq import SimpleWorker
-from django.conf import settings
 
 from kypo.sandbox_ansible_app.lib.ansible import AnsibleDockerRunner
 from kypo.sandbox_ansible_app.models import AnsibleOutput, DockerContainer
@@ -19,17 +17,8 @@ from kypo.sandbox_instance_app.models import Sandbox
 
 LOG = structlog.get_logger()
 
-
-def get_asset_repo_path(name):
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                        f'assets/{name}')
-
-
-NETWORKING_REPO_NAME = 'kypo2-ansible-stage-one.git.zip'
-ansible_networking_rev = 'integration-test'
-
-DEFINITION_REPO_NAME = 'small-sandbox.git.zip'
-DEFINITION_REV = 'integration-test'
+DEFINITION_URL = 'git@192.168.55.101:/repos/small-sandbox.git'
+DEFINITION_REV = 'sandbox-service-it'
 
 # Heat stack and template values
 JUMP_STACK_NAME = 'integration_test_jump'
@@ -57,38 +46,9 @@ CLEANUP_REQUEST_LIST = 'sandbox-cleanup-request-list'
 class TestIntegration:
     pytestmark = pytest.mark.django_db(transaction=True)
     RQ_QUEUES = ('default', OPENSTACK_QUEUE, ANSIBLE_QUEUE)
-    DEFINITION_URL = None
-
-    @pytest.fixture(autouse=True)
-    def kypo_ostack_client(self):
-        """Set config values. Config.yml overrides those values if set.
-        Also extract the zip repositories to tmp directory.
-        """
-        config = settings.KYPO_CONFIG
-        if not config.os_auth_url:
-            config.os_auth_url = os.environ.get('OS_AUTH_URL')
-        if not config.os_application_credential_id:
-            config.os_application_credential_id = os.environ.get('OS_APPLICATION_CREDENTIAL_ID')
-        if not config.os_application_credential_secret:
-            config.os_application_credential_secret = os.environ.get(
-                'OS_APPLICATION_CREDENTIAL_SECRET')
-
-        if not config.ansible_networking_url:
-            with tempfile.TemporaryDirectory() as tmpdir:
-                for archive in (DEFINITION_REPO_NAME, NETWORKING_REPO_NAME):
-                    with ZipFile(get_asset_repo_path(archive)) as f:
-                        f.extractall(tmpdir)
-
-                name = NETWORKING_REPO_NAME.replace('.zip', "")
-                config.ansible_networking_url = 'file://' + os.path.join(tmpdir,
-                                                                         name)
-                config.ansible_networking_rev = ansible_networking_rev
-                name = DEFINITION_REPO_NAME.replace('.zip', "")
-                self.DEFINITION_URL = 'file://' + os.path.join(tmpdir, name)
-                yield
 
     def test_build_sandbox_full(self, client, jump_template):
-        def_id = self.create_definition(client, self.DEFINITION_URL, DEFINITION_REV)
+        def_id = self.create_definition(client, DEFINITION_URL, DEFINITION_REV)
         pool_id = self.create_pool(client, def_id)
         try:
             try:

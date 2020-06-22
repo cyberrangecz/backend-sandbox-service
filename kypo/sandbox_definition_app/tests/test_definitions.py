@@ -1,10 +1,7 @@
 import pytest
 from rest_framework.exceptions import ValidationError
 
-from kypo.sandbox_common_lib import exceptions
 from kypo.sandbox_definition_app.lib import definitions
-from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider, \
-    InternalGitProvider, GitProvider
 from kypo.sandbox_definition_app.models import Definition
 
 pytestmark = pytest.mark.django_db
@@ -43,22 +40,3 @@ class TestCreateDefinition:
         definitions.create_definition(url=self.url, rev=self.rev)
         with pytest.raises(ValidationError):
             definitions.create_definition(url=self.url, rev=self.rev)
-
-
-class TestGetDefProvider:
-    schema_to_provider = {
-        'git@gitlab': GitlabProvider,
-        'ssh://git@git-internal-ssh/': InternalGitProvider,
-        'http://': GitProvider,
-        'https://': GitProvider,
-        'file://': GitProvider,
-    }
-
-    def test_get_def_provider_success(self, mocker):
-        for url, exp_provider in self.schema_to_provider.items():
-            provider = definitions.get_def_provider(url, mocker.Mock())
-            assert isinstance(provider, exp_provider), url
-
-    def test_get_def_provider_invalid(self, mocker):
-        with pytest.raises(exceptions.ValidationError):
-            definitions.get_def_provider('nonsense:whatever', mocker.Mock())

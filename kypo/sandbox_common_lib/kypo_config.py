@@ -2,16 +2,19 @@
 Django Apps configuration file
 """
 import os
+from enum import Enum
 
-from kypo.openstack_driver.transformation_configuration import\
-    TransformationConfiguration
-from yamlize import Attribute, Object, YamlizingError
+from kypo.openstack_driver.transformation_configuration import TransformationConfiguration
+from yamlize import Attribute, Object, YamlizingError, Typed
 
+from kypo.sandbox_common_lib import kypo_config_validation
 from kypo.sandbox_common_lib.exceptions import ImproperlyConfigured
 
 LOG_FILE = 'kypo-sandbox-service.log'
 LOG_LEVEL = 'INFO'
+GIT_TOKEN = '<default_token>'
 GIT_SERVER = 'gitlab.ics.muni.cz'
+GIT_REST_SERVER = 'http://git-internal-rest:5000/'
 GIT_USER = 'git'
 GIT_PRIVATE_KEY = os.path.expanduser('~/.ssh/git_rsa_key')
 ANSIBLE_NETWORKING_REV = 'master'
@@ -36,6 +39,11 @@ class ProxyJump(Object):
         self.IdentityFile = identity_file
 
 
+class GitType(Enum):
+    GITLAB = 1
+    INTERNAL = 2
+
+
 class KypoConfiguration(Object):
     os_auth_url = Attribute(type=str)
     os_application_credential_id = Attribute(type=str)
@@ -45,10 +53,20 @@ class KypoConfiguration(Object):
     log_level = Attribute(type=str, default=LOG_LEVEL)
 
     # Sandbox creation configuration
-    git_access_token = Attribute(type=str)
+    git_access_token = Attribute(type=str, default=GIT_TOKEN)
     git_server = Attribute(type=str, default=GIT_SERVER)
+    git_rest_server = Attribute(type=str, default=GIT_REST_SERVER,
+                                validator=kypo_config_validation.validate_git_rest_url)
     git_user = Attribute(type=str, default=GIT_USER)
     git_private_key = Attribute(type=str, default=GIT_PRIVATE_KEY)
+    git_type = Attribute(
+        type=Typed(
+            GitType,
+            from_yaml=(lambda loader, node, rtd: GitType[loader.construct_object(node)]),
+            to_yaml=(lambda dumper, data, rtd: dumper.represent_data(data.name))
+        ),
+        default=GitType.INTERNAL
+    )
 
     ansible_networking_url = Attribute(type=str)
     ansible_networking_rev = Attribute(type=str, default=ANSIBLE_NETWORKING_REV)

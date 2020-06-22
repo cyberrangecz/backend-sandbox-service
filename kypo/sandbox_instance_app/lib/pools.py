@@ -9,7 +9,6 @@ from django.shortcuts import get_object_or_404
 from django.conf import settings
 
 from kypo.sandbox_common_lib import utils, exceptions
-from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider, GitProvider
 from kypo.sandbox_definition_app.lib import definitions
 from kypo.sandbox_definition_app.models import Definition
 
