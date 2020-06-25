@@ -47,8 +47,14 @@ application_configuration:
     # The level of log verbosity. One of: NOTSET, DEBUG, INFO, WARNING, ERROR, FATAL, CRITICAL.
     #log_level: INFO
 
+    # The type of Git repositories. One of: INTERNAL, GITLAB.
+    git_type: INTERNAL
+
     # The address of Git repository.
     #git_server: gitlab.ics.muni.cz
+
+    # The address of Git REST server with protocol (optionally port)
+    #git_rest_server: https://gitlab.ics.muni.cz/
 
     # The name of user used for communication with Git repository.
     #git_user: git
