@@ -1,4 +1,3 @@
-import os
 import re
 from abc import ABC, abstractmethod
 from urllib import parse
@@ -14,9 +13,6 @@ from kypo.sandbox_common_lib import exceptions
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
 
 LOG = structlog.get_logger()
-
-
-# TODO refactor this, doesn't make sense anymore (Probably get rid of local repos altogether).
 
 
 class DefinitionProvider(ABC):
