@@ -52,10 +52,15 @@
     - change_stackallocationstage
     - delete_stackallocationstage
 
-    - view_ansibleallocationstage
-    - add_ansibleallocationstage
-    - change_ansibleallocationstage
-    - delete_ansibleallocationstage
+    - view_networkingansibleallocationstage
+    - add_networkingansibleallocationstage
+    - change_networkingansibleallocationstage
+    - delete_networkingansibleallocationstage
+
+    - view_useransibleallocationstage
+    - add_useransibleallocationstage
+    - change_useransibleallocationstage
+    - delete_useransibleallocationstage
 
     - view_ansibleoutput
     - add_ansibleoutput
@@ -73,10 +78,15 @@
     - change_stackcleanupstage
     - delete_stackcleanupstage
 
-    - view_ansiblecleanupstage
-    - add_ansiblecleanupstage
-    - change_ansiblecleanupstage
-    - delete_ansiblecleanupstage
+    - view_networkingansiblecleanupstage
+    - add_networkingansiblecleanupstage
+    - change_networkingansiblecleanupstage
+    - delete_networkingansiblecleanupstage
+
+    - view_useransiblecleanupstage
+    - add_useransiblecleanupstage
+    - change_useransiblecleanupstage
+    - delete_useransiblecleanupstage
 
 - name: designer
   default: false
@@ -135,10 +145,15 @@
     - change_stackallocationstage
     - delete_stackallocationstage
 
-    - view_ansibleallocationstage
-    - add_ansibleallocationstage
-    - change_ansibleallocationstage
-    - delete_ansibleallocationstage
+    - view_networkingansibleallocationstage
+    - add_networkingansibleallocationstage
+    - change_networkingansibleallocationstage
+    - delete_networkingansibleallocationstage
+
+    - view_useransibleallocationstage
+    - add_useransibleallocationstage
+    - change_useransibleallocationstage
+    - delete_useransibleallocationstage
 
     - view_ansibleoutput
     - add_ansibleoutput
@@ -156,10 +171,15 @@
     - change_stackcleanupstage
     - delete_stackcleanupstage
 
-    - view_ansiblecleanupstage
-    - add_ansiblecleanupstage
-    - change_ansiblecleanupstage
-    - delete_ansiblecleanupstage
+    - view_networkingansiblecleanupstage
+    - add_networkingansiblecleanupstage
+    - change_networkingansiblecleanupstage
+    - delete_networkingansiblecleanupstage
+
+    - view_useransiblecleanupstage
+    - add_useransiblecleanupstage
+    - change_useransiblecleanupstage
+    - delete_useransiblecleanupstage
 
 - name: trainee
   default: true

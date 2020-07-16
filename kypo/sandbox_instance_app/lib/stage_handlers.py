@@ -32,10 +32,12 @@ class StageHandler:
             LOG.info(f'Stage {stage_name} started', stage=stage)
             func(stage, *args, **kwargs)
         except Exception as ex:
-            stage.mark_failed(ex)
+            stage.failed = True
+            stage.error_message = str(ex)
             raise
         finally:
             stage.end = timezone.now()
+            stage.finished = True
             stage.save()
 
     @staticmethod
@@ -54,30 +56,44 @@ class StackStageHandler(StageHandler):
             self._client = utils.get_ostack_client()
         return self._client
 
-    def build(self, stage_name: str, stage: StackAllocationStage, sandbox: Sandbox) -> None:
+    def allocate(self, stage_name: str, stage: StackAllocationStage, sandbox: Sandbox) -> None:
         """Run the stage."""
         try:
             self.lock_job()
         except Exception as ex:
-            stage.mark_failed(ex)
+            stage.failed = True
+            stage.error_message = str(ex)
             stage.end = timezone.now()
+            stage.finished = True
             stage.save()
             raise
 
         self.run_stage(stage_name, self.build_stack, stage, sandbox)
 
-    def cancel(self, stage: StackAllocationStage) -> None:
+    def cancel_allocation(self, stage: StackAllocationStage) -> None:
         """Stop running stage."""
         jobs.delete_job(stage.rq_job.job_id)
         if stage.start:
-            self.delete_sandbox(stage.request.allocation_unit, wait=False)
-        stage.mark_failed()
+            self.delete_sandbox(stage.allocation_request.allocation_unit, wait=False)
+        stage.failed = True
+        stage.end = timezone.now()
+        stage.finished = True
+        stage.save()
 
     def cleanup(self, stage_name: str, stage: StackCleanupStage) -> None:
         """Clean up stage resources."""
         self.run_stage(stage_name,
-                       lambda stg: self.delete_sandbox(stg.request.allocation_unit),
+                       lambda stg: self.delete_sandbox(stg.cleanup_request.allocation_unit),
                        stage)
+
+    # noinspection PyMethodMayBeStatic
+    def cancel_cleanup(self, stage: StackCleanupStage) -> None:
+        """Stop running stage."""
+        jobs.delete_job(stage.rq_job.job_id)
+        stage.failed = True
+        stage.end = timezone.now()
+        stage.finished = True
+        stage.save()
 
     def build_stack(self, stage: StackAllocationStage, sandbox: Sandbox) -> None:
         """Build sandbox in OpenStack."""
@@ -85,15 +101,15 @@ class StackStageHandler(StageHandler):
         top_def = definitions.get_definition(definition.url, definition.rev, settings.KYPO_CONFIG)
         stack = self.client.create_stack(
             sandbox.allocation_unit.get_stack_name(), top_def,
-            kp_name=stage.request.allocation_unit.pool.get_keypair_name())
+            kp_name=stage.allocation_request.allocation_unit.pool.get_keypair_name())
 
-        HeatStack.objects.create(stage=stage, stack_id=stack['stack']['id'])
+        HeatStack.objects.create(allocation_stage=stage, stack_id=stack['stack']['id'])
 
         self.wait_for_stack_creation(stage)
 
     def wait_for_stack_creation(self, stage: StackAllocationStage) -> None:
         """Wait for stack creation."""
-        name = stage.request.allocation_unit.get_stack_name()
+        name = stage.allocation_request.allocation_unit.get_stack_name()
         success, msg = self.client.wait_for_stack_create_action(name)
         if not success:
             roll_succ, roll_msg = self.client.wait_for_stack_rollback_action(name)
@@ -132,7 +148,7 @@ class StackStageHandler(StageHandler):
     def update_allocation_stage(self, stage: StackAllocationStage) -> StackAllocationStage:
         """Update stage with current stack status from OpenStack."""
         stacks = self.client.list_stacks()
-        stack_name = stage.request.allocation_unit.get_stack_name()
+        stack_name = stage.allocation_request.allocation_unit.get_stack_name()
         if stack_name in stacks:
             sb = stacks[stack_name]
             stage.status = sb.stack_status
@@ -145,22 +161,24 @@ class StackStageHandler(StageHandler):
 
 
 class AnsibleStageHandler(StageHandler):
-    def build(self, stage_name: str, stage: AnsibleAllocationStage, sandbox: Sandbox) -> None:
+    def allocate(self, stage_name: str, stage: AnsibleAllocationStage, sandbox: Sandbox) -> None:
         """Run the stage."""
         self.run_stage(stage_name, self.run_docker_container, stage, sandbox)
 
     # noinspection PyMethodMayBeStatic
-    def cancel(self, stage: AnsibleAllocationStage) -> None:
+    def cancel_allocation(self, stage: AnsibleAllocationStage) -> None:
         """Stop running stage."""
         jobs.delete_job(stage.rq_job.job_id)
         try:
-            if hasattr(stage, 'container'):
-                container = stage.container
+            if hasattr(stage, 'dockercontainer'):
+                container = stage.dockercontainer
                 AnsibleDockerRunner().delete_container(container.container_id)
                 container.delete()
         except docker.errors.NotFound as ex:
             LOG.warning('Cancelling Ansible', exception=str(ex), stage=stage)
         stage.failed = True
+        stage.end = timezone.now()
+        stage.finished = True
         stage.save()
 
     def cleanup(self, stage_name: str, stage: AnsibleCleanupStage):
@@ -168,6 +186,15 @@ class AnsibleStageHandler(StageHandler):
         only set the stage as finished.
         """
         self.run_stage(stage_name, lambda x: None, stage)
+
+    # noinspection PyMethodMayBeStatic
+    def cancel_cleanup(self, stage: AnsibleCleanupStage) -> None:
+        """Stop running stage."""
+        jobs.delete_job(stage.rq_job.job_id)
+        stage.failed = True
+        stage.end = timezone.now()
+        stage.finished = True
+        stage.save()
 
     @staticmethod
     def run_docker_container(stage: AnsibleAllocationStage, sandbox: Sandbox) -> None:
@@ -185,12 +212,12 @@ class AnsibleStageHandler(StageHandler):
                 settings.KYPO_CONFIG.ansible_docker_image, stage.repo_url,
                 stage.rev, ssh_directory, inventory_path
             )
-            DockerContainer.objects.create(stage=stage, container_id=container.id)
+            DockerContainer.objects.create(allocation_stage=stage, container_id=container.id)
 
             for output in container.logs(stream=True):
                 output = output.decode('utf-8')
                 output = output[:-1] if output[-1] == '\n' else output
-                AnsibleOutput.objects.create(stage=stage, content=output)
+                AnsibleOutput.objects.create(allocation_stage=stage, content=output)
 
             status = container.wait(timeout=60)
             container.remove()

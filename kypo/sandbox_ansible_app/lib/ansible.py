@@ -12,7 +12,7 @@ from kypo.sandbox_ansible_app.models import AnsibleAllocationStage
 from kypo.sandbox_common_lib import exceptions
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
 from kypo.sandbox_instance_app.lib import sandboxes
-from kypo.sandbox_instance_app.models import Sandbox, StageType
+from kypo.sandbox_instance_app.models import Sandbox
 
 LOG = structlog.get_logger()
 
@@ -53,7 +53,8 @@ class AnsibleDockerRunner:
         command = ['-u', url, '-r', rev, '-i', ANSIBLE_DOCKER_INVENTORY_PATH.bind]
         LOG.debug("Ansible container options", command=command)
         return self.client.containers.run(image, detach=True,
-                                          command=command, volumes=volumes, network=self.DOCKER_NETWORK)
+                                          command=command, volumes=volumes,
+                                          network=self.DOCKER_NETWORK)
 
     def get_container(self, container_id: str) -> Container:
         return self.client.containers.get(container_id)
@@ -76,7 +77,7 @@ class AnsibleDockerRunner:
         self.save_file(os.path.join(ssh_directory, USER_PUBLIC_KEY_FILENAME),
                        sandbox.public_user_key)
         self.save_file(os.path.join(ssh_directory, MNG_PRIVATE_KEY_FILENAME),
-                       stage.request.allocation_unit.pool.private_management_key)
+                       stage.allocation_request_fk_many.allocation_unit.pool.private_management_key)
 
         shutil.copy(config.git_private_key, os.path.join(ssh_directory, os.path.basename(config.git_private_key)))
 
@@ -102,12 +103,11 @@ class AnsibleDockerRunner:
                                         USER_PRIVATE_KEY_FILENAME)
         user_public_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
                                        USER_PUBLIC_KEY_FILENAME)
-        os_stage = sandbox.allocation_unit.allocation_request.stages \
-            .filter(type=StageType.OPENSTACK.value).select_subclasses().first()
-        if not hasattr(os_stage, 'heatstack'):
-            raise exceptions.ApiException(f'The openstack stage ID={os_stage.id} '
-                                          'does not have any HeatStack intance.')
-        heatstack = os_stage.heatstack
+        sas = sandbox.allocation_unit.allocation_request.stackallocationstage
+        if not hasattr(sas, 'heatstack'):
+            raise exceptions.ApiException(f'The SandboxAllocationUnit ID={sas.id} '
+                                          'does not have any HeatStack instance.')
+        heatstack = sas.heatstack
 
         inventory = Inventory(
             top_ins, user_private_key, user_public_key,

@@ -50,8 +50,7 @@
     end: null
     failed: true
     error_message: null
-    type: openstack
-    request: 1
+    allocation_request_fk_many: 1
 - model: sandbox_instance_app.allocationstage
   pk: 2
   fields:
@@ -59,8 +58,7 @@
     end: null
     failed: true
     error_message: null
-    type: ansible
-    request: 1
+    allocation_request_fk_many: 1
 - model: sandbox_instance_app.allocationstage
   pk: 3
   fields:
@@ -68,34 +66,36 @@
     end: null
     failed: true
     error_message: null
-    type: ansible
-    request: 1
+    allocation_request_fk_many: 1
 
 - model: sandbox_instance_app.stackallocationstage
   pk: 1
   fields:
     status: null
     status_reason: null
-- model: sandbox_ansible_app.ansibleallocationstage
+    allocation_request: 1
+- model: sandbox_ansible_app.networkingansibleallocationstage
   pk: 2
   fields:
     repo_url: git@gitlab.ics.muni.cz:kypo2/openstack/sandbox-definitions/small-sandbox.git
     rev: 04e97bb05456b37a74cd28732547b65f213e1b99
-- model: sandbox_ansible_app.ansibleallocationstage
+    allocation_request: 1
+- model: sandbox_ansible_app.useransibleallocationstage
   pk: 3
   fields:
     repo_url: git@gitlab.ics.muni.cz:kypo2/openstack/sandbox-definitions/small-sandbox.git
     rev: 04e97bb05456b37a74cd28732547b65f213e1b99
+    allocation_request: 1
 
-- model: sandbox_instance_app.rqjob
+- model: sandbox_instance_app.allocationrqjob
   pk: 1
   fields:
     job_id: fd9bc4e6-87ad-4922-b273-7ae89270b23f
-- model: sandbox_instance_app.rqjob
+- model: sandbox_instance_app.allocationrqjob
   pk: 2
   fields:
     job_id: 93a2012d-97de-48c5-9533-0b995b652915
-- model: sandbox_instance_app.rqjob
+- model: sandbox_instance_app.allocationrqjob
   pk: 3
   fields:
     job_id: d5ae9629-e8c2-4ff5-9c49-cca056556d2d
@@ -104,3 +104,4 @@
   pk: 1
   fields:
     stack_id: heatstack-stack-id
+    allocation_stage_id: 1

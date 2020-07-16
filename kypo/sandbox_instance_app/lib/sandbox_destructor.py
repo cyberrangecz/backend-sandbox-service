@@ -4,13 +4,15 @@ import structlog
 from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
 
+from kypo.sandbox_common_lib import exceptions
+from kypo.sandbox_ansible_app.models import NetworkingAnsibleCleanupStage,\
+    UserAnsibleCleanupStage
+
 from kypo.sandbox_instance_app.lib import sandboxes
 from kypo.sandbox_instance_app.lib.stage_handlers import StackStageHandler, AnsibleStageHandler
 from kypo.sandbox_instance_app.models import CleanupRequest, SandboxAllocationUnit, \
-    StackCleanupStage, AllocationRequest
+    StackCleanupStage, AllocationRequest, CleanupRQJob
 from kypo.sandbox_instance_app.lib.sandbox_creator import OPENSTACK_QUEUE, ANSIBLE_QUEUE
-from kypo.sandbox_common_lib import exceptions
-from kypo.sandbox_ansible_app.models import AnsibleCleanupStage
 
 LOG = structlog.get_logger()
 
@@ -23,7 +25,8 @@ def create_cleanup_request(allocation_unit: SandboxAllocationUnit) -> CleanupReq
         sandbox = None
     else:
         if hasattr(sandbox, 'lock'):
-            raise exceptions.ValidationError('Sandbox ID={} is locked.'.format(sandbox.id))
+            raise exceptions.ValidationError('Sandbox ID={} is locked. Unlock it first.'
+                                             .format(sandbox.id))
 
     if not allocation_unit.allocation_request.is_finished:
         raise exceptions.ValidationError(
@@ -31,8 +34,13 @@ def create_cleanup_request(allocation_unit: SandboxAllocationUnit) -> CleanupReq
             f' has not finished yet. You need to cancel it first.'
         )
 
+    if hasattr(allocation_unit, 'cleanup_request'):
+        raise exceptions.ValidationError(
+            f'Allocation unit ID={allocation_unit.id} already has a cleanup request '
+            f'ID={allocation_unit.cleanup_request.id}. Delete it first.')
+
     request = CleanupRequest.objects.create(allocation_unit=allocation_unit)
-    LOG.info('CleanupRequest created', request=request,
+    LOG.info('CleanupRequest created', cleanup_request=request,
              allocation_unit=allocation_unit, sandbox=sandbox)
 
     if sandbox:
@@ -48,28 +56,39 @@ def create_cleanup_requests(allocation_units: List[SandboxAllocationUnit]) -> Li
     return [create_cleanup_request(unit) for unit in allocation_units]
 
 
+def delete_cleanup_request(request: CleanupRequest) -> None:
+    """Delete given cleanup request."""
+    if not request.is_finished:
+        raise exceptions.ValidationError('The cleanup request is not finished. '
+                                         'You need to cancel it first.')
+    request.delete()
+
+
 def enqueue_cleanup_request(request: CleanupRequest,
                             allocation_unit: SandboxAllocationUnit) -> None:
     """Enqueue given request."""
-    alloc_stages = allocation_unit.allocation_request.stages.all().select_subclasses()
-
-    stage_user_ans = AnsibleCleanupStage.objects.create(
-        request=request, allocation_stage=alloc_stages[2]
+    stage_user_ans = UserAnsibleCleanupStage.objects.create(
+        cleanup_request=request,
+        cleanup_request_fk_many=request,
     )
     queue_ansible = django_rq.get_queue(ANSIBLE_QUEUE)
     job_user_ans = queue_ansible.enqueue(
         AnsibleStageHandler().cleanup, stage_name='Cleanup User Ansible',
         stage=stage_user_ans)
+    CleanupRQJob.objects.create(cleanup_stage=stage_user_ans, job_id=job_user_ans.id)
 
-    stage_networking = AnsibleCleanupStage.objects.create(
-        request=request, allocation_stage=alloc_stages[1]
+    stage_networking = NetworkingAnsibleCleanupStage.objects.create(
+        cleanup_request=request,
+        cleanup_request_fk_many=request,
     )
     job_networking = queue_ansible.enqueue(
         AnsibleStageHandler().cleanup, stage_name='Cleanup Networking Ansible',
         stage=stage_networking, depends_on=job_user_ans)
+    CleanupRQJob.objects.create(cleanup_stage=stage_networking, job_id=job_networking.id)
 
     stage_stack = StackCleanupStage.objects.create(
-        request=request, allocation_stage=alloc_stages[0]
+        cleanup_request=request,
+        cleanup_request_fk_many=request,
     )
     queue_stack = django_rq.get_queue(OPENSTACK_QUEUE,
                                       default_timeout=settings.KYPO_CONFIG.sandbox_delete_timeout)
@@ -77,6 +96,7 @@ def enqueue_cleanup_request(request: CleanupRequest,
         StackStageHandler().cleanup, stage_name=stage_stack.__class__.__name__,
         stage=stage_stack,
         depends_on=job_networking)
+    CleanupRQJob.objects.create(cleanup_stage=stage_stack, job_id=stage_stack.id)
 
     queue_default = django_rq.get_queue()
     queue_default.enqueue(delete_allocation_unit, allocation_unit=allocation_unit,
@@ -89,12 +109,22 @@ def delete_allocation_unit(allocation_unit: SandboxAllocationUnit) -> None:
 
 
 def cancel_allocation_request(alloc_req: AllocationRequest):
-    """(Soft) cancel all stages of Allocation Request."""
-    stages = alloc_req.stages.all().select_subclasses()
+    """(Soft) cancel all stages of the Allocation Request."""
     if alloc_req.is_finished:
         raise exceptions.ValidationError(
             f'Allocation request ID {alloc_req.id} is finished and does not need cancelling.'
         )
-    AnsibleStageHandler().cancel(stages[2])
-    AnsibleStageHandler().cancel(stages[1])
-    StackStageHandler().cancel(stages[0])
+    AnsibleStageHandler().cancel_allocation(alloc_req.useransibleallocationstage)
+    AnsibleStageHandler().cancel_allocation(alloc_req.networkingansibleallocationstage)
+    StackStageHandler().cancel_allocation(alloc_req.stackallocationstage)
+
+
+def cancel_cleanup_request(cleanup_req: CleanupRequest):
+    """(Soft) cancel all stages of the Cleanup Request."""
+    if cleanup_req.is_finished:
+        raise exceptions.ValidationError(
+            f'Cleanup request ID {cleanup_req.id} is finished and does not need cancelling.'
+        )
+    StackStageHandler().cancel_cleanup(cleanup_req.stackcleanupstage)
+    AnsibleStageHandler().cancel_cleanup(cleanup_req.networkingansiblecleanupstage)
+    AnsibleStageHandler().cancel_cleanup(cleanup_req.useransiblecleanupstage)

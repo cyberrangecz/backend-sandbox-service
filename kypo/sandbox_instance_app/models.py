@@ -1,18 +1,10 @@
-from enum import Enum
-
 from django.conf import settings
 from django.db import models
 from django.db.models import PositiveIntegerField
 from django.utils import timezone
-from model_utils.managers import InheritanceManager
 
 from kypo.sandbox_common_lib import utils
 from kypo.sandbox_definition_app.models import Definition
-
-
-class StageType(Enum):
-    OPENSTACK = 'openstack'
-    ANSIBLE = 'ansible'
 
 
 class Pool(models.Model):
@@ -115,18 +107,8 @@ class SandboxRequest(models.Model):
         ordering = ['created']
 
     def __str__(self):
-        return 'ID: {0.id}, ALLOCATION_UNIT: {0.allocation_unit.id}, CREATED: {0.created}'\
+        return 'ID: {0.id}, ALLOCATION_UNIT: {0.allocation_unit.id}, CREATED: {0.created}' \
             .format(self)
-
-    # TODO rewrite properly into ORM
-    @property
-    def is_running(self):
-        return any([stage.is_running for stage in self.stages.all()])
-
-    # TODO rewrite properly into ORM
-    @property
-    def is_finished(self):
-        return all([stage.is_finished for stage in self.stages.all()])
 
 
 class AllocationRequest(SandboxRequest):
@@ -136,22 +118,27 @@ class AllocationRequest(SandboxRequest):
         related_name='allocation_request',
     )
 
+    @property
+    def is_finished(self):
+        """Whether all stages are finished."""
+        return self.stages.filter(finished=False).count() == 0
+
 
 class CleanupRequest(SandboxRequest):
-    allocation_unit = models.ForeignKey(
+    allocation_unit = models.OneToOneField(
         SandboxAllocationUnit,
         on_delete=models.CASCADE,
-        related_name='cleanup_requests',
+        related_name='cleanup_request',
     )
 
+    @property
+    def is_finished(self):
+        """Whether all stages are finished."""
+        return self.stages.filter(finished=False).count() == 0
 
-# TODO revisit if it makes sense to model it generically
+
 class Stage(models.Model):
     """Abstract base class for stages."""
-    STAGE_CHOICES = [(stg_type.value, stg_type.value) for stg_type in StageType]
-    type = models.CharField(choices=STAGE_CHOICES, max_length=32,
-                            help_text='Type of the stage')
-
     start = models.DateTimeField(null=True, default=None,
                                  help_text='Timestamp indicating when the stage execution started.')
     end = models.DateTimeField(null=True, default=None,
@@ -160,127 +147,106 @@ class Stage(models.Model):
                                  help_text='Indicates whether the stage execution failed.')
     error_message = models.TextField(null=True, default=None,
                                      help_text='Error message describing the potential error.')
-
-    @property
-    def is_finished(self):
-        return self.end is not None or self.failed
-
-    @property
-    def is_running(self):
-        return self.start is not None and self.end is None
+    finished = models.BooleanField(default=False,
+                                   help_text='Indicates whether the stage execution has finished.')
 
     class Meta:
         abstract = True
         ordering = ['id']
 
     def __str__(self):
-        return 'START: {0.start}, END: {0.end}, FAILED: {0.failed}, TYPE: {0.type}'.format(self)
-
-    def mark_failed(self, exception=None):
-        self.failed = True
-        if exception:
-            self.error_message = str(exception)
-        self.save()
+        return 'ID: {0.id}, START: {0.start}, END: {0.end}, FAILED: {0.failed},' \
+               ' ERROR: {0.error_message}'.format(self)
 
 
 class AllocationStage(Stage):
-    request = models.ForeignKey(
+    allocation_request_fk_many = models.ForeignKey(
         AllocationRequest,
         on_delete=models.CASCADE,
-        related_name='stages',
+        related_name='stages'
     )
-
-    objects = InheritanceManager()
-
-    def __str__(self):
-        return '{0.id}, '.format(self) + super().__str__()
-
-
-class StackAllocationStage(AllocationStage):
-    status = models.CharField(null=True, max_length=30, help_text='Stack status')
-    status_reason = models.TextField(null=True, help_text='Stack status reason')
-
-    def __init__(self, *args, **kwargs):
-        """Custom constructor that sets the correct stage type."""
-        super().__init__(*args, **kwargs)
-        self.type = StageType.OPENSTACK.value
-
-    def __str__(self):
-        return super().__str__() + \
-               ', STATUS: {0.status}, STATUS_REASON: {0.status_reason}'.format(self)
 
 
 class CleanupStage(Stage):
-    request = models.ForeignKey(
+    cleanup_request_fk_many = models.ForeignKey(
         CleanupRequest,
         on_delete=models.CASCADE,
-        related_name='stages',
+        related_name='stages'
     )
 
-    objects = InheritanceManager()
 
-    class Meta:
-        ordering = ['id']
+class StackAllocationStage(AllocationStage):
+    allocation_request = models.OneToOneField(
+        AllocationRequest,
+        on_delete=models.CASCADE,
+    )
+    status = models.CharField(null=True, max_length=30, help_text='Stack status')
+    status_reason = models.TextField(null=True, help_text='Stack status reason')
 
     def __str__(self):
-        return '{0.id}, '.format(self) + super().__str__()
+        return super().__str__() + ', REQUEST: {0.allocation_request}, STATUS: {0.status},' \
+                                   ' STATUS_REASON: {0.status_reason}'.format(self)
 
 
 class StackCleanupStage(CleanupStage):
-    allocation_stage = models.ForeignKey(
-        StackAllocationStage,
+    cleanup_request = models.OneToOneField(
+        CleanupRequest,
         on_delete=models.CASCADE,
-        related_name='cleanup_stages',
     )
 
-    def __init__(self, *args, **kwargs):
-        """Custom constructor that sets the correct stage type."""
-        super().__init__(*args, **kwargs)
-        self.type = StageType.OPENSTACK.value
+    def __str__(self):
+        return super().__str__() + ', REQUEST: {0.cleanup_request}'.format(self)
+
+
+class RQJob(models.Model):
+    job_id = models.TextField()
+
+    class Meta:
+        abstract = True
+
+
+class AllocationRQJob(RQJob):
+    allocation_stage = models.OneToOneField(
+        AllocationStage,
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name='rq_job',
+    )
 
     def __str__(self):
-        return super().__str__() + \
-               ', ALLOCATION_STAGE: {0.allocation_stage}'.format(self)
+        return 'STAGE: {0.stage.id}, JOB_ID: {0.job_id}'.format(self)
+
+
+class CleanupRQJob(RQJob):
+    cleanup_stage = models.OneToOneField(
+        CleanupStage,
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name='rq_job',
+    )
+
+    def __str__(self):
+        return 'STAGE: {0.stage.id}, JOB_ID: {0.job_id}'.format(self)
 
 
 class ExternalDependency(models.Model):
+    allocation_stage = models.OneToOneField(
+        AllocationStage,
+        on_delete=models.CASCADE
+    )
+
     class Meta:
         abstract = True
 
 
 class HeatStack(ExternalDependency):
-    stage = models.OneToOneField(
-        StackAllocationStage,
-        on_delete=models.CASCADE,
-        primary_key=True,
-        related_name='heatstack',
-    )
     stack_id = models.TextField()
 
     def __str__(self):
         return 'STAGE: {0.stage.id}, STACK: {0.stack_id}'.format(self)
 
 
-class RQJob(ExternalDependency):
-    stage = models.OneToOneField(
-        AllocationStage,
-        on_delete=models.CASCADE,
-        primary_key=True,
-        related_name='rq_job',
-    )
-    job_id = models.TextField()
-
-    def __str__(self):
-        return 'STAGE: {0.stage.id}, JOB_ID: {0.job_id}'.format(self)
-
-
 class SystemProcess(ExternalDependency):
-    stage = models.OneToOneField(
-        AllocationStage,
-        on_delete=models.CASCADE,
-        primary_key=True,
-        related_name='process',
-    )
     process_id = models.TextField()
 
     def __str__(self):
