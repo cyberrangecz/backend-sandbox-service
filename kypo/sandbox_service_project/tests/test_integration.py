@@ -39,7 +39,14 @@ ALLOCATION_UNIT_DETAIL = 'sandbox-allocation-unit-detail'
 SANDBOX_LIST = 'pool-sandbox-list'
 SANDBOX_GET_AND_LOCK = 'pool-sandbox-get-and-lock'
 SANDBOX_LOCK_DETAIL = 'sandbox-lock-detail'
-CLEANUP_REQUEST_LIST = 'sandbox-cleanup-request-list'
+SANDBOX_CLEANUP_REQUEST = 'sandbox-cleanup-request'
+SANDBOX_CLEANUP_REQUEST_CANCEL = 'sandbox-cleanup-request-cancel'
+ALLOCATION_STAGE_OPENSTACK = 'openstack-allocation-stage'
+ALLOCATION_STAGE_NETWORKING_ANSIBLE = 'networking-ansible-allocation-stage'
+ALLOCATION_STAGE_USER_ANSIBLE = 'user-ansible-allocation-stage'
+CLEANUP_STAGE_OPENSTACK = 'openstack-cleanup-stage'
+CLEANUP_STAGE_NETWORKING_ANSIBLE = 'networking-ansible-cleanup-stage'
+CLEANUP_STAGE_USER_ANSIBLE = 'user-ansible-cleanup-stage'
 
 
 @pytest.mark.integration
@@ -59,6 +66,7 @@ class TestIntegration:
                 sb_id, lock_id = self.get_and_lock(client, pool_id)
                 self.unlock_sandbox(client, sb_id, lock_id)
 
+                self.create_cancel_delete_cleanup_request(client, unit_id)
                 self.create_cleanup_req(client, unit_id)
             finally:
                 self.delete_jump_host()
@@ -109,22 +117,76 @@ class TestIntegration:
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data[0]['pool_id'] == pool_id
 
+        unit_id = response.data[0]['id']
+        alloc_req_id = response.data[0]['allocation_request']['id']
+
+        cls.get_allocation_stages(client, alloc_req_id)
         cls.run_worker()
         assert len(Sandbox.objects.all()) == 1
 
-        unit_id = response.data[0]['id']
-        alloc_req_id = response.data[0]['allocation_request']['id']
         return unit_id, alloc_req_id
+
+    @staticmethod
+    def get_allocation_stages(client, request_id):
+        LOG.info("Retrieving Allocation stages.")
+
+        for stage_url in (ALLOCATION_STAGE_OPENSTACK,
+                          ALLOCATION_STAGE_NETWORKING_ANSIBLE,
+                          ALLOCATION_STAGE_USER_ANSIBLE):
+            base_url = reverse(stage_url, kwargs={'request_id': request_id})
+            response = client.get(base_url)
+            assert response.status_code == status.HTTP_200_OK
+            assert response.data['request_id'] == request_id
+
+    @staticmethod
+    def get_cleanup_stages(client, request_id):
+        LOG.info("Retrieving Cleanup stages.")
+
+        for stage_url in (CLEANUP_STAGE_OPENSTACK,
+                          CLEANUP_STAGE_NETWORKING_ANSIBLE,
+                          CLEANUP_STAGE_USER_ANSIBLE):
+            base_url = reverse(stage_url, kwargs={'request_id': request_id})
+            response = client.get(base_url)
+            assert response.status_code == status.HTTP_200_OK
+            assert response.data['request_id'] == request_id
+
+    @staticmethod
+    def create_cancel_delete_cleanup_request(client, unit_id):
+        LOG.info("Test Create, Cancel and Delete of Cleanup request")
+
+        # Create success
+        response = client.post(reverse(SANDBOX_CLEANUP_REQUEST, kwargs={'unit_id': unit_id}))
+        assert response.status_code == status.HTTP_201_CREATED
+        cleanup_req_id = response.data['id']
+
+        # Create duplicate fail
+        response = client.post(reverse(SANDBOX_CLEANUP_REQUEST, kwargs={'unit_id': unit_id}))
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+        # Delete fail
+        response = client.delete(reverse(SANDBOX_CLEANUP_REQUEST, kwargs={'unit_id': unit_id}))
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+        # Cancel
+        response = client.patch(reverse(SANDBOX_CLEANUP_REQUEST_CANCEL,
+                                        kwargs={'request_id': cleanup_req_id}))
+        assert response.status_code == status.HTTP_200_OK
+
+        # Delete success
+        response = client.delete(reverse(SANDBOX_CLEANUP_REQUEST, kwargs={'unit_id': unit_id}))
+        assert response.status_code == status.HTTP_204_NO_CONTENT
 
     @classmethod
     def create_cleanup_req(cls, client, unit_id):
-        LOG.info("Creating Cleanup Unit")
-        response = client.post(reverse(CLEANUP_REQUEST_LIST,
+        LOG.info("Creating Cleanup request")
+        response = client.post(reverse(SANDBOX_CLEANUP_REQUEST,
                                        kwargs={'unit_id': unit_id}))
 
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data['allocation_unit_id'] == unit_id
 
+        cleanup_req_id = response.data['id']
+        cls.get_cleanup_stages(client, cleanup_req_id)
         cls.run_worker()
 
     @staticmethod

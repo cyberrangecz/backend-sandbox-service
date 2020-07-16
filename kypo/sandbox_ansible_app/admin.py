@@ -8,8 +8,9 @@ class ShowIdAdmin(admin.ModelAdmin):
     readonly_fields = ('id',)
 
 
-admin.site.register(models.AnsibleAllocationStage, ShowIdAdmin)
-admin.site.register(models.AnsibleCleanupStage, ShowIdAdmin)
+admin.site.register(models.NetworkingAnsibleAllocationStage, ShowIdAdmin)
+admin.site.register(models.NetworkingAnsibleCleanupStage, ShowIdAdmin)
+admin.site.register(models.UserAnsibleAllocationStage, ShowIdAdmin)
+admin.site.register(models.UserAnsibleCleanupStage, ShowIdAdmin)
 admin.site.register(models.AnsibleOutput, ShowIdAdmin)
-# admin.site.register(models.DockerContainer, ShowIdAdmin)
 admin.site.register(models.DockerContainer)

@@ -22,31 +22,35 @@ urlpatterns = [
     # Sandbox allocation units
     path('sandbox-allocation-units/<int:unit_id>',
          views.SandboxAllocationUnitDetail.as_view(), name='sandbox-allocation-unit-detail'),
-    # Allocation request
     path('sandbox-allocation-units/<int:unit_id>/allocation-request',
-         views.SandboxAllocationRequest.as_view(), name='allocation-request'),
-    path('sandbox-allocation-units/<int:unit_id>/allocation-requests/<int:request_id>/cancel',
-         views.SandboxAllocationRequestCancel.as_view(), name='allocation-request-cancel/'),
-    path('sandbox-allocation-units/<int:unit_id>/allocation-requests/<int:request_id>/stages',
-         views.SandboxAllocationRequestStageList.as_view(), name='allocation-request-stage-list'),
+         views.SandboxAllocationRequest.as_view(), name='sandbox-allocation-request'),
+    path('sandbox-allocation-units/<int:unit_id>/cleanup-request',
+         views.SandboxCleanupRequest.as_view(), name='sandbox-cleanup-request'),
+
+    # Allocation request
+    path('allocation-requests/<request_id>',
+         views.SandboxAllocationRequestDetail.as_view(), name='sandbox-allocation-request-detail'),
+    path('allocation-requests/<int:request_id>/cancel',
+         views.SandboxAllocationRequestCancel.as_view(), name='sandbox-allocation-request-cancel'),
+
     # Cleanup request
-    path('sandbox-allocation-units/<int:unit_id>/cleanup-requests',
-         views.SandboxCleanupRequestList.as_view(), name='sandbox-cleanup-request-list'),
-    path('sandbox-allocation-units/<int:unit_id>/cleanup-requests/<int:request_id>',
+    path('cleanup-requests/<int:request_id>',
          views.SandboxCleanupRequestDetail.as_view(), name='sandbox-cleanup-request-detail'),
-    path('sandbox-allocation-units/<int:unit_id>/cleanup-requests/<int:request_id>/stages',
-         views.SandboxCleanupRequestStageList.as_view(), name='allocation-request-stage-list'),
+    path('cleanup-requests/<int:request_id>/cancel',
+         views.SandboxCleanupRequestCancel.as_view(), name='sandbox-cleanup-request-cancel'),
 
     # Stages
-    path('stages/allocation/<int:stage_id>/openstack',
-         views.OpenstackAllocationStageDetail.as_view(), name='openstack-allocation-stage'),
-    path('stages/allocation/<int:stage_id>/openstack/events',
-         views.SandboxEventList.as_view(), name='sandbox-events'),
-    path('stages/allocation/<int:stage_id>/openstack/resources',
-         views.SandboxResourceList.as_view(), name='sandbox-resources'),
+    path('allocation-requests/<int:request_id>/stages/openstack',
+         views.OpenstackAllocationStageDetail.as_view(),
+         name='openstack-allocation-stage'),
+    path('cleanup-requests/<int:request_id>/stages/openstack',
+         views.OpenstackCleanupStageDetail.as_view(),
+         name='openstack-cleanup-stage'),
 
-    path('stages/cleanup/<int:stage_id>/openstack',
-         views.OpenstackCleanupStageDetail.as_view(), name='ansible-cleanup-stage'),
+    path('allocation-requests/<int:request_id>/stages/openstack/events',
+         views.SandboxEventList.as_view(), name='stack-events'),
+    path('allocation-requests/<int:request_id>/stages/openstack/resources',
+         views.SandboxResourceList.as_view(), name='stack-resources'),
 
     # Pool manipulation
     path('pools/<int:pool_id>/sandboxes', views.PoolSandboxList.as_view(),

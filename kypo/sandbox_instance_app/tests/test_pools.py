@@ -2,10 +2,13 @@ import pytest
 from django.conf import settings
 from django.http import Http404
 from rest_framework.exceptions import ValidationError
+from rest_framework.reverse import reverse
+from rest_framework.test import APIRequestFactory
 
 from kypo.sandbox_common_lib.exceptions import ApiException
 from kypo.sandbox_instance_app.lib import pools
 from kypo.sandbox_instance_app.models import SandboxAllocationUnit, Sandbox
+from kypo.sandbox_instance_app.views import PoolList
 
 pytestmark = pytest.mark.django_db
 
@@ -24,6 +27,7 @@ class TestCreatePool:
         mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_definition")
         mock_repo = mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_def_provider")
         mock_repo.return_value.get_rev_sha = mocker.MagicMock(return_value='sha')
+        self.arf = APIRequestFactory()
         yield
 
     def test_create_pool_success(self):
@@ -46,6 +50,11 @@ class TestCreatePool:
                                    max_size=-10,
                                    rev=self.REV))
 
+    def test_pool_views(self):
+        request = self.arf.get(reverse('pool-list'))
+        response = PoolList.as_view()(request)
+        assert len(response.data['results']) == 2
+
 
 class TestSandboxAllocationUnit:
 
@@ -58,7 +67,6 @@ class TestSandboxAllocationUnit:
 
         sb: Sandbox = Sandbox.objects.get(id=1)
         assert sb.allocation_unit.get_stack_name() == expected_stack_name
-
 
 
 class TestCreateSandboxesInPool:

@@ -7,10 +7,11 @@ from django.db import transaction
 from django.conf import settings
 
 from kypo.sandbox_common_lib import utils
-from kypo.sandbox_ansible_app.models import AnsibleAllocationStage
+from kypo.sandbox_ansible_app.models import NetworkingAnsibleAllocationStage,\
+    UserAnsibleAllocationStage
 from kypo.sandbox_instance_app.lib import jobs
-from kypo.sandbox_instance_app.models import Sandbox, Pool, SandboxAllocationUnit, \
-    AllocationRequest, StackAllocationStage, RQJob
+from kypo.sandbox_instance_app.models import Sandbox, Pool, SandboxAllocationUnit,\
+    AllocationRequest, StackAllocationStage, AllocationRQJob
 from kypo.sandbox_instance_app.lib.stage_handlers import StackStageHandler, AnsibleStageHandler
 
 STACK_STATUS_CREATE_COMPLETE = "CREATE_COMPLETE"
@@ -42,35 +43,42 @@ def create_allocations_requests(pool: Pool, count: int) -> List[SandboxAllocatio
 
 def enqueue_allocation_request(request: AllocationRequest, sandbox: Sandbox) -> None:
     with transaction.atomic():
-        stage_stack = StackAllocationStage.objects.create(request=request)
+        stage_stack = StackAllocationStage.objects.create(
+            allocation_request=request,
+            allocation_request_fk_many=request
+        )
         queue_stack = django_rq.get_queue(
             OPENSTACK_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_build_timeout)
         job_stack = queue_stack.enqueue(
-            StackStageHandler().build, stage_name=stage_stack.__class__.__name__,
+            StackStageHandler().allocate, stage_name=stage_stack.__class__.__name__,
             stage=stage_stack, sandbox=sandbox, meta=dict(locked=True)
         )
-        RQJob.objects.create(stage=stage_stack, job_id=job_stack.id)
+        AllocationRQJob.objects.create(allocation_stage=stage_stack, job_id=job_stack.id)
 
-        stage_networking = AnsibleAllocationStage.objects.create(
-            request=request, repo_url=settings.KYPO_CONFIG.ansible_networking_url,
+        stage_networking = NetworkingAnsibleAllocationStage.objects.create(
+            allocation_request=request,
+            allocation_request_fk_many=request,
+            repo_url=settings.KYPO_CONFIG.ansible_networking_url,
             rev=settings.KYPO_CONFIG.ansible_networking_rev
         )
         queue_ansible = django_rq.get_queue(
             ANSIBLE_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_ansible_timeout)
         job_networking = queue_ansible.enqueue(
-            AnsibleStageHandler().build, stage_name='Allocation Networking Ansible',
+            AnsibleStageHandler().allocate, stage_name='Allocation Networking Ansible',
             stage=stage_networking, sandbox=sandbox, depends_on=job_stack
         )
-        RQJob.objects.create(stage=stage_networking, job_id=job_networking.id)
+        AllocationRQJob.objects.create(allocation_stage=stage_networking, job_id=job_networking.id)
 
-        stage_user_ansible = AnsibleAllocationStage.objects.create(
-            request=request, repo_url=request.allocation_unit.pool.definition.url,
+        stage_user_ansible = UserAnsibleAllocationStage.objects.create(
+            allocation_request=request,
+            allocation_request_fk_many=request,
+            repo_url=request.allocation_unit.pool.definition.url,
             rev=request.allocation_unit.pool.rev_sha
         )
         job_user_ansible = queue_ansible.enqueue(
-            AnsibleStageHandler().build, stage_name='Allocation User Ansible',
+            AnsibleStageHandler().allocate, stage_name='Allocation User Ansible',
             stage=stage_user_ansible, sandbox=sandbox, depends_on=job_networking)
-        RQJob.objects.create(stage=stage_user_ansible, job_id=job_user_ansible.id)
+        AllocationRQJob.objects.create(allocation_stage=stage_user_ansible, job_id=job_user_ansible.id)
 
         queue_default = django_rq.get_queue()
         queue_default.enqueue(save_sandbox_to_database, sandbox=sandbox,

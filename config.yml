@@ -48,9 +48,9 @@ application_configuration:
     #log_level: INFO
 
     # The type of Git repositories. One of: INTERNAL, GITLAB.
-    git_type: INTERNAL
+    #git_type: INTERNAL
 
-    # The address of Git repository.
+    # Git server hostname or IP.
     #git_server: gitlab.ics.muni.cz
 
     # The address of Git REST server with protocol (optionally port)

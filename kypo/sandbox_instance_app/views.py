@@ -21,10 +21,7 @@ from kypo.sandbox_instance_app import serializers
 from kypo.sandbox_instance_app.lib import units, pools, sandboxes, nodes,\
     sandbox_destructor
 from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit, \
-    AllocationRequest, \
-    AllocationStage, StackAllocationStage, CleanupRequest, StackCleanupStage, CleanupStage, \
-    SandboxLock, PoolLock
-
+    AllocationRequest, CleanupRequest, SandboxLock, PoolLock
 
 LOG = structlog.get_logger()
 
@@ -221,6 +218,14 @@ class SandboxAllocationRequest(mixins.RetrieveModelMixin, generics.GenericAPIVie
         return Response(serializer.data)
 
 
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
+class SandboxAllocationRequestDetail(generics.RetrieveAPIView):
+    """get: Retrieve a Sandbox Allocation Request."""
+    queryset = AllocationRequest.objects.all()
+    serializer_class = serializers.AllocationRequestSerializer
+    lookup_url_kwarg = 'request_id'
+
+
 @utils.add_error_responses_doc('patch', [401, 403, 404, 500])
 class SandboxAllocationRequestCancel(generics.GenericAPIView):
     serializer_class = serializers.AllocationRequestSerializer
@@ -229,30 +234,29 @@ class SandboxAllocationRequestCancel(generics.GenericAPIView):
 
     # noinspection PyUnusedLocal
     @swagger_auto_schema(responses={status.HTTP_200_OK: serializers.serializers.Serializer()})
-    def patch(self, request, unit_id, request_id):
+    def patch(self, request, request_id):
         """Cancel given Allocation Request. Returns no data if OK (200)."""
         sandbox_destructor.cancel_allocation_request(self.get_object())
         return Response()
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class SandboxAllocationRequestStageList(generics.ListAPIView):
-    """get: List sandbox Allocation stages."""
-    serializer_class = serializers.AllocationStageSerializer
-
-    def get_queryset(self):
-        request_id = self.kwargs.get('request_id')
-        get_object_or_404(AllocationRequest, pk=request_id)  # check that given request exists
-        return AllocationStage.objects.filter(request_id=request_id).select_subclasses()
-
-
-@utils.add_error_responses_doc('get', [401, 403, 404, 500])
-@utils.add_error_responses_doc('post', [401, 403, 404, 500])
-class SandboxCleanupRequestList(mixins.ListModelMixin, generics.GenericAPIView):
+class SandboxCleanupRequest(mixins.RetrieveModelMixin, generics.GenericAPIView):
+    """get: Retrieve a Sandbox Cleanup Request for an Allocation Unit.
+    Each Allocation Unit has at most one Allocation Request.
+    If it has none, then it returns 404.
+    """
+    queryset = CleanupRequest.objects.none()  # Required for DjangoModelPermissions
     serializer_class = serializers.CleanupRequestSerializer
 
-    def get_queryset(self):
-        return CleanupRequest.objects.filter(allocation_unit=self.kwargs.get('unit_id'))
+    def get(self, request, unit_id):
+        unit = get_object_or_404(SandboxAllocationUnit, pk=unit_id)
+        try:
+            request = unit.cleanup_request
+        except AttributeError:
+            raise Http404
+        serializer = self.get_serializer(request)
+        return Response(serializer.data)
 
     def post(self, request, unit_id):
         """ Create cleanup request.."""
@@ -261,9 +265,12 @@ class SandboxCleanupRequestList(mixins.ListModelMixin, generics.GenericAPIView):
         serializer = self.serializer_class(cleanup_req)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    def get(self, request, *args, **kwargs):
-        """Get a list of Sandbox Cleanup Requests."""
-        return self.list(request, *args, **kwargs)
+    # noinspection PyMethodMayBeStatic
+    def delete(self, request, unit_id):
+        """ Delete cleanup request. Must be finished or cancelled."""
+        unit = get_object_or_404(SandboxAllocationUnit, pk=unit_id)
+        sandbox_destructor.delete_cleanup_request(unit.cleanup_request)
+        return Response({}, status=status.HTTP_204_NO_CONTENT)
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
@@ -274,63 +281,86 @@ class SandboxCleanupRequestDetail(generics.RetrieveAPIView):
     lookup_url_kwarg = "request_id"
 
 
-@utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class SandboxCleanupRequestStageList(generics.ListAPIView):
-    """get: List sandbox Cleanup stages."""
-    serializer_class = serializers.CleanupStageSerializer
-
-    def get_queryset(self):
-        request_id = self.kwargs.get('request_id')
-        get_object_or_404(CleanupRequest, pk=request_id)  # check that given request exists
-        return CleanupStage.objects.filter(request_id=request_id).select_subclasses()
-
-
-@utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class OpenstackAllocationStageDetail(generics.GenericAPIView):
-    serializer_class = serializers.OpenstackAllocationStageSerializer
-    queryset = StackAllocationStage.objects.all()
-    lookup_url_kwarg = "stage_id"
-    pagination_class = None
+@utils.add_error_responses_doc('patch', [401, 403, 404, 500])
+class SandboxCleanupRequestCancel(generics.GenericAPIView):
+    serializer_class = serializers.CleanupRequestSerializer
+    queryset = CleanupRequest.objects.all()
+    lookup_url_kwarg = "request_id"
 
     # noinspection PyUnusedLocal
-    def get(self, request, stage_id):
-        """Retrieve an `openstack` stage.
-        Null `status` and `status_reason` attributes mean, that stack does not have them;
-        AKA it does not exist in OpenStack."""
-        stage = self.get_object()
-        updated = StackStageHandler().update_allocation_stage(stage)
-        serializer = self.get_serializer(updated)
-        return Response(serializer.data)
+    @swagger_auto_schema(responses={status.HTTP_200_OK: serializers.serializers.Serializer()})
+    def patch(self, request, request_id):
+        """Cancel given Cleanup Request. Returns no data if OK (200)."""
+        sandbox_destructor.cancel_cleanup_request(self.get_object())
+        return Response()
+
+
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
+class OpenstackAllocationStageDetail(generics.RetrieveAPIView):
+    """
+    get: Retrieve an `openstack` allocation stage.
+    Null `status` and `status_reason` attributes mean, that stack does not have them;
+    AKA it does not exist in OpenStack.
+    """
+    serializer_class = serializers.OpenstackAllocationStageSerializer
+    queryset = AllocationRequest.objects.all()
+    lookup_url_kwarg = "request_id"
+
+    def get_object(self):
+        request = super().get_object()
+        return StackStageHandler().update_allocation_stage(request.stackallocationstage)
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class OpenstackCleanupStageDetail(generics.RetrieveAPIView):
     """get: Retrieve an `openstack` Cleanup stage."""
     serializer_class = serializers.OpenstackCleanupStageSerializer
-    queryset = StackCleanupStage.objects.all()
-    lookup_url_kwarg = "stage_id"
+    queryset = CleanupRequest.objects.all()
+    lookup_url_kwarg = 'request_id'
+
+    def get_object(self):
+        request = super().get_object()
+        return request.stackcleanupstage
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class SandboxEventList(generics.ListAPIView):
-    """get: List sandbox Events."""
+class SandboxEventList(generics.GenericAPIView):
     serializer_class = serializers.SandboxEventSerializer
+    queryset = AllocationRequest.objects.all()
+    lookup_url_kwarg = 'request_id'
 
-    def get_queryset(self):
-        stage_id = self.kwargs.get('stage_id')
-        stage = get_object_or_404(StackAllocationStage, pk=stage_id)
-        return units.get_stack_events(stage.request.allocation_unit)
+    def get(self, *args, **kwargs):
+        """List sandbox Events."""
+        request = self.get_object()
+        events = units.get_stack_events(request.allocation_unit)
+
+        page = self.paginate_queryset(events)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(events, many=True)
+        return Response(serializer.data)
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class SandboxResourceList(generics.ListAPIView):
-    """get: List sandbox Resources."""
+class SandboxResourceList(generics.GenericAPIView):
     serializer_class = serializers.SandboxResourceSerializer
+    queryset = AllocationRequest.objects.all()
+    lookup_url_kwarg = 'request_id'
 
-    def get_queryset(self):
-        stage_id = self.kwargs.get('stage_id')
-        stage = get_object_or_404(StackAllocationStage, pk=stage_id)
-        return units.get_stack_resources(stage.request.allocation_unit)
+    def get(self, *args, **kwargs):
+        """List sandbox Resources."""
+        request = self.get_object()
+        events = units.get_stack_resources(request.allocation_unit)
+
+        page = self.paginate_queryset(events)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(events, many=True)
+        return Response(serializer.data)
 
 
 #########################################
@@ -519,6 +549,7 @@ class SandboxVMConsole(generics.GenericAPIView):
 class SandboxUserSSHConfig(APIView):
     queryset = Sandbox.objects.none()  # Required for DjangoModelPermissions
 
+    # noinspection PyMethodMayBeStatic
     def get(self, request, sandbox_id):
         """Generate SSH config for User access to this sandbox.
         Some values are user specific, the config contains placeholders for them."""
@@ -534,6 +565,7 @@ class SandboxUserSSHConfig(APIView):
 class SandboxManagementSSHConfig(APIView):
     queryset = Sandbox.objects.none()  # Required for DjangoModelPermissions
 
+    # noinspection PyMethodMayBeStatic
     def get(self, request, sandbox_id):
         """Generate SSH config for Management access to this sandbox.
         Some values are user specific, the config contains placeholders for them."""

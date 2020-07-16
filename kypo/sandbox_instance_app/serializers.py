@@ -77,40 +77,26 @@ class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'pool_id', 'allocation_request')
 
 
-class AllocationStageSerializer(serializers.ModelSerializer):
+class OpenstackAllocationStageSerializer(serializers.ModelSerializer):
     request_id = serializers.PrimaryKeyRelatedField(
-        source='request', read_only=True)
+        source='allocation_request', read_only=True)
 
-    class Meta:
-        model = models.AllocationStage
-        fields = ('id', 'request_id', 'type', 'start', 'end', 'failed', 'error_message')
-        read_only_fields = fields
-
-
-class OpenstackAllocationStageSerializer(AllocationStageSerializer):
     class Meta:
         model = models.StackAllocationStage
-        fields = AllocationStageSerializer.Meta.fields + ('status', 'status_reason')
+        fields = ('id', 'request_id', 'start', 'end', 'failed', 'error_message',
+                  'status', 'status_reason')
         read_only_fields = fields
 
 
-class CleanupStageSerializer(serializers.ModelSerializer):
-    request_id = serializers.PrimaryKeyRelatedField(
-        source='request', read_only=True)
-
-    class Meta:
-        model = models.CleanupStage
-        fields = ('id', 'request_id', 'type', 'start', 'end', 'failed', 'error_message')
-        read_only_fields = fields
-
-
-class OpenstackCleanupStageSerializer(CleanupStageSerializer):
+class OpenstackCleanupStageSerializer(serializers.ModelSerializer):
+    request_id = serializers.PrimaryKeyRelatedField(source='cleanup_request', read_only=True)
     allocation_stage_id = serializers.PrimaryKeyRelatedField(
         source='allocation_stage', read_only=True)
 
     class Meta:
         model = models.StackCleanupStage
-        fields = AllocationStageSerializer.Meta.fields + ('allocation_stage_id',)
+        fields = ('id', 'request_id', 'start', 'end', 'failed', 'error_message',
+                  'allocation_stage_id',)
         read_only_fields = fields
 
 
