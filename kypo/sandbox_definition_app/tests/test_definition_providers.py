@@ -1,5 +1,4 @@
 import pytest
-from django.conf import settings
 
 from kypo.sandbox_common_lib.exceptions import GitError
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
