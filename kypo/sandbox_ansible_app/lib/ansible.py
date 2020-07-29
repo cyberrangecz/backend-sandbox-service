@@ -99,25 +99,30 @@ class AnsibleDockerRunner:
     def prepare_inventory_file(self, dir_path: str, sandbox: Sandbox,
                                top_ins: TopologyInstance) -> str:
         """Prepare inventory file and save it to given directory."""
+        inventory_object = self.prepare_inventory(sandbox, top_ins)
+        inventory_path = os.path.join(dir_path, ANSIBLE_INVENTORY_FILENAME)
+        self.save_file(inventory_path, inventory_object.serialize())
+
+        return inventory_path
+
+    @staticmethod
+    def prepare_inventory(sandbox, top_ins):
         user_private_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
                                         USER_PRIVATE_KEY_FILENAME)
         user_public_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
                                        USER_PUBLIC_KEY_FILENAME)
-        sas = sandbox.allocation_unit.allocation_request.stackallocationstage
+        sau = sandbox.allocation_unit
+        sas = sau.allocation_request.stackallocationstage
         if not hasattr(sas, 'heatstack'):
             raise exceptions.ApiException(f'The SandboxAllocationUnit ID={sas.id} '
                                           'does not have any HeatStack instance.')
         heatstack = sas.heatstack
-
-        inventory = Inventory(
-            top_ins, user_private_key, user_public_key,
-            {'kypo_global_sandbox_allocation_unit_id': sandbox.allocation_unit.id,
-             'kypo_global_openstack_stack_id': heatstack.stack_id}
-        )
-        inventory_path = os.path.join(dir_path, ANSIBLE_INVENTORY_FILENAME)
-        self.save_file(inventory_path, inventory.serialize())
-
-        return inventory_path
+        extra_vars = {
+            'kypo_global_sandbox_allocation_unit_id': sau.id,
+            'kypo_global_openstack_stack_id': heatstack.stack_id,
+            'kypo_global_pool_id': sau.pool.id
+        }
+        return Inventory(top_ins, user_private_key, user_public_key, extra_vars)
 
     @staticmethod
     def make_dir(dir_path: str) -> None:
