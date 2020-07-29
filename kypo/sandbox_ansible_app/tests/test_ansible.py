@@ -22,3 +22,9 @@ class TestPrepareInventoryFile:
         AnsibleDockerRunner().prepare_inventory_file(dir_path, sandbox, top_ins)
 
         mock_inventory.assert_called_once()
+
+    def test_prepare_inventory_object(self, top_ins, inventory):
+        sandbox = Sandbox.objects.get(pk=1)
+        result = AnsibleDockerRunner().prepare_inventory(sandbox, top_ins)
+
+        assert result.data == inventory

@@ -50,8 +50,8 @@ all:
               mask: 255.255.255.0
               net: 10.10.30.0
           ip_forward: true
-          user_private_key_path: /root/user_key
-          user_public_key_path: /root/user_key.pub
+          user_private_key_path: /root/.ssh/user_key
+          user_public_key_path: /root/.ssh/user_key.pub
         uan:
           ansible_host: 192.168.130.57
           ansible_user: debian
@@ -85,3 +85,6 @@ all:
   vars:
     kypo_global_sandbox_ip: 192.168.64.13
     kypo_global_sandbox_name: small-sandbox-integration-1
+    kypo_global_sandbox_allocation_unit_id: 1
+    kypo_global_openstack_stack_id: heatstack-stack-id
+    kypo_global_pool_id: 1
