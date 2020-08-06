@@ -1,7 +1,7 @@
 """
 VM Service module for VM management.
 """
-from kypo.openstack_driver.ostack_general_proxy import OpenStackInstance
+from kypo.openstack_driver.ostack_proxy import OpenStackInstance
 
 from kypo.sandbox_instance_app.models import Sandbox
 from kypo.sandbox_common_lib import utils, exceptions

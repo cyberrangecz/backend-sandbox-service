@@ -2,7 +2,7 @@
 #microservice_name: kypo-sandbox-service
 
 # A prefix of the stack in the cloud.
-#stack_name_prefix: default-prefix-0
+stack_name_prefix: integration-test
 
 # A boolean that turns on/off debug mode.
 # SECURITY WARNING: don't run with debug turned on in production!

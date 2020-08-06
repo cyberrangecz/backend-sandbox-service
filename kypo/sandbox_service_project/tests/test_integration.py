@@ -55,25 +55,28 @@ class TestIntegration:
     RQ_QUEUES = ('default', OPENSTACK_QUEUE, ANSIBLE_QUEUE)
 
     def test_build_sandbox_full(self, client, jump_template):
-        def_id = self.create_definition(client, DEFINITION_URL, DEFINITION_REV)
-        pool_id = self.create_pool(client, def_id)
         try:
+            outs = self.create_jump_host(jump_template)
+            self.set_jump_host_config(outs['jump_ip'], outs['test_key'])
+
+            def_id = self.create_definition(client, DEFINITION_URL, DEFINITION_REV)
             try:
-                outs = self.create_jump_host(jump_template)
-                self.set_jump_host_config(outs['jump_ip'], outs['test_key'])
+                pool_id = self.create_pool(client, def_id)
+                try:
+                    unit_id, alloc_req_id = self.create_alloc_unit(client, pool_id)
+                    try:
+                        sb_id, lock_id = self.get_and_lock(client, pool_id)
+                        self.unlock_sandbox(client, sb_id, lock_id)
 
-                unit_id, alloc_req_id = self.create_alloc_unit(client, pool_id)
-                sb_id, lock_id = self.get_and_lock(client, pool_id)
-                self.unlock_sandbox(client, sb_id, lock_id)
-
-                self.create_cancel_delete_cleanup_request(client, unit_id)
-                self.create_cleanup_req(client, unit_id)
+                        self.create_cancel_delete_cleanup_request(client, unit_id)
+                    finally:
+                        self.create_cleanup_req(client, unit_id)
+                finally:
+                    self.delete_pool(client, pool_id)
             finally:
-                self.delete_jump_host()
+                self.delete_definition(client, def_id)
         finally:
-            self.delete_pool(client, pool_id)
-
-        self.delete_definition(client, def_id)
+            self.delete_jump_host()
 
     @classmethod
     def run_worker(cls):
@@ -227,13 +230,13 @@ class TestIntegration:
         LOG.info(f'Creating jump host {JUMP_STACK_NAME}')
         template = string.Template(jump_template)
         client = utils.get_ostack_client()
-        client.heat_proxy.create_stack_from_template(
+        client.ostack_proxy.create_stack_from_template(
             template.safe_substitute(**TEMPLATE_DICT), JUMP_STACK_NAME)
 
         succ, msg = client.wait_for_stack_create_action(JUMP_STACK_NAME)
         assert succ
 
-        return client.heat_proxy.get_outputs(JUMP_STACK_NAME)
+        return client.ostack_proxy.get_outputs(JUMP_STACK_NAME)
 
     @staticmethod
     def delete_jump_host():
