@@ -2,7 +2,6 @@ Host man 192.168.64.13
     HostName 192.168.64.13
     User debian
     IdentityFile /root/.ssh/pool_mng_key
-    AddKeysToAgent yes
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
     ProxyJump debian@jump-host-ip
@@ -10,50 +9,50 @@ Host man 192.168.64.13
 Host uan 192.168.130.57
     HostName 192.168.130.57
     User debian
+    IdentityFile /root/.ssh/pool_mng_key
     ProxyJump debian@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
-    IdentityFile /root/.ssh/pool_mng_key
 
 Host border-router 192.168.131.49
     HostName 192.168.131.49
     User debian
+    IdentityFile /root/.ssh/pool_mng_key
     ProxyJump debian@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
-    IdentityFile /root/.ssh/pool_mng_key
 
 Host home-router 192.168.128.238
     HostName 192.168.128.238
     User debian
+    IdentityFile /root/.ssh/pool_mng_key
     ProxyJump debian@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
-    IdentityFile /root/.ssh/pool_mng_key
 
 Host server-router 192.168.129.224
     HostName 192.168.129.224
     User debian
+    IdentityFile /root/.ssh/pool_mng_key
     ProxyJump debian@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
-    IdentityFile /root/.ssh/pool_mng_key
 
 Host home 192.168.129.65
     HostName 192.168.129.65
     User debian
+    IdentityFile /root/.ssh/pool_mng_key
     ProxyJump debian@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
-    IdentityFile /root/.ssh/pool_mng_key
 
 Host server 192.168.128.252
     HostName 192.168.128.252
     User debian
+    IdentityFile /root/.ssh/pool_mng_key
     ProxyJump debian@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
-    IdentityFile /root/.ssh/pool_mng_key
 
 Host 192.168.55.101
     User git
