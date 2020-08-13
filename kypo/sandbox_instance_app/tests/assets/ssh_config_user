@@ -2,32 +2,36 @@ Host man 192.168.64.13
     HostName 192.168.64.13
     User user-access
     IdentityFile <path_to_sandbox_private_key>
-    AddKeysToAgent yes
     ProxyJump debian@jump-host-ip
 
 Host uan 192.168.0.18
     HostName 192.168.0.18
     User user-access
+    IdentityFile <path_to_sandbox_private_key>
     ProxyJump user-access@man
 
 Host home-router 10.10.30.1
     HostName 10.10.30.1
     User user-access
+    IdentityFile <path_to_sandbox_private_key>
     ProxyJump user-access@uan
 
 Host server-router 10.10.20.1
     HostName 10.10.20.1
     User user-access
+    IdentityFile <path_to_sandbox_private_key>
     ProxyJump user-access@uan
 
 Host home 10.10.30.5
     HostName 10.10.30.5
     User user-access
+    IdentityFile <path_to_sandbox_private_key>
     ProxyJump user-access@uan
 
 Host server 10.10.20.5
     HostName 10.10.20.5
     User user-access
+    IdentityFile <path_to_sandbox_private_key>
     ProxyJump user-access@uan
 
 Host jump-host-ip

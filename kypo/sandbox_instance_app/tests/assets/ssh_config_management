@@ -2,37 +2,42 @@ Host man 192.168.64.13
     HostName 192.168.64.13
     User debian
     IdentityFile <path_to_pool_private_key>
-    AddKeysToAgent yes
     ProxyJump debian@jump-host-ip
 
 Host uan 192.168.130.57
     HostName 192.168.130.57
     User debian
+    IdentityFile <path_to_pool_private_key>
     ProxyJump debian@man
 
 Host border-router 192.168.131.49
     HostName 192.168.131.49
     User debian
+    IdentityFile <path_to_pool_private_key>
     ProxyJump debian@man
 
 Host home-router 192.168.128.238
     HostName 192.168.128.238
     User debian
+    IdentityFile <path_to_pool_private_key>
     ProxyJump debian@man
 
 Host server-router 192.168.129.224
     HostName 192.168.129.224
     User debian
+    IdentityFile <path_to_pool_private_key>
     ProxyJump debian@man
 
 Host home 192.168.129.65
     HostName 192.168.129.65
     User debian
+    IdentityFile <path_to_pool_private_key>
     ProxyJump debian@man
 
 Host server 192.168.128.252
     HostName 192.168.128.252
     User debian
+    IdentityFile <path_to_pool_private_key>
     ProxyJump debian@man
 
 Host jump-host-ip

@@ -40,12 +40,12 @@ class KypoSSHConfig(SSHConfig):
 
     def add_man(self, name: Union[str, List[str]], user: str, host_name: str,
                 identity_file: str) -> None:
-        opts = dict(User=user, HostName=host_name, IdentityFile=identity_file, AddKeysToAgent='yes')
+        opts = dict(User=user, HostName=host_name, IdentityFile=identity_file)
         self.append(Host(name, opts))
 
     def add_host(self, name: Union[str, List[str]], user: str, host_name: str,
-                 proxy_jump: str, **kwargs) -> None:
-        opts = dict(User=user, HostName=host_name, ProxyJump=proxy_jump)
+                 proxy_jump: str, identity_file: str, **kwargs) -> None:
+        opts = dict(User=user, HostName=host_name, IdentityFile=identity_file, ProxyJump=proxy_jump)
         opts.update(kwargs)
         self.append(Host(name, opts))
 
@@ -80,13 +80,15 @@ class KypoSSHConfig(SSHConfig):
         sshconf.add_host([top_ins.uan.name, uan_ip],
                          SSH_PROXY_USERNAME,
                          uan_ip,
-                         SSH_PROXY_USERNAME + '@' + top_ins.man.name)
+                         SSH_PROXY_USERNAME + '@' + top_ins.man.name,
+                         '<path_to_sandbox_private_key>')
 
         for link in sshconf._get_uan_accessible_node_links(top_ins):
             sshconf.add_host([link.node.name, link.ip],
                              SSH_PROXY_USERNAME,
                              link.ip,
-                             SSH_PROXY_USERNAME + '@' + top_ins.uan.name)
+                             SSH_PROXY_USERNAME + '@' + top_ins.uan.name,
+                             '<path_to_sandbox_private_key>')
 
         if config.proxy_jump_to_man:
             sshconf.add_proxy_jump(top_ins,
@@ -111,7 +113,8 @@ class KypoSSHConfig(SSHConfig):
             sshconf.add_host([link.node.name, link.ip],
                              link.node.base_box.man_user,
                              link.ip,
-                             top_ins.man.base_box.man_user + '@' + top_ins.man.name)
+                             top_ins.man.base_box.man_user + '@' + top_ins.man.name,
+                             '<path_to_pool_private_key>')
 
         if add_jump and config.proxy_jump_to_man:
             sshconf.add_proxy_jump(top_ins,
