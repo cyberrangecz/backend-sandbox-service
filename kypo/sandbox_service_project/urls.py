@@ -47,6 +47,7 @@ urlpatterns = [
     path('', include('kypo.sandbox_ansible_app.urls')),
     path('', include('kypo.sandbox_definition_app.urls')),
     path('', include('kypo.sandbox_instance_app.urls')),
+    path('', include('kypo.sandbox_cloud_app.urls')),
 ]
 
 # Prefixing urls
