@@ -17,6 +17,7 @@ TESTING_SSH_CONFIG_ANSIBLE = 'ssh_config_ansible'
 TESTING_DEFINITION = 'definition.yml'
 TESTING_TOPOLOGY = 'topology.json'
 TESTING_TOPOLOGY_HIDDEN = 'topology-hidden.json'
+TESTING_SSH_ACCESS_SOURCE = 'ssh-access-source.sh'
 
 
 def data_path_join(file: str, data_dir: str = TESTING_DATA_DIR) -> str:
@@ -76,3 +77,26 @@ def top_def():
     """Creates example topology definition for a sandbox."""
     with open(data_path_join(TESTING_DEFINITION)) as f:
         return TopologyDefinition.load(f)
+
+
+@pytest.fixture
+def pool(mocker):
+    mocked_pool = mocker.MagicMock()
+    mocked_pool.public_management_key = 'public-management-key'
+    mocked_pool.private_management_key = 'private-management-key'
+    return mocked_pool
+
+
+@pytest.fixture
+def sandbox(mocker):
+    mocked_sandbox = mocker.MagicMock()
+    mocked_sandbox.public_user_key = 'public-user-key'
+    mocked_sandbox.private_user_key = 'private-user-key'
+    mocked_sandbox.allocation_unit.pool.id = 'pool-id'
+    return mocked_sandbox
+
+
+@pytest.fixture
+def ssh_access_source():
+    with open(data_path_join(TESTING_SSH_ACCESS_SOURCE)) as file:
+        return file.read()

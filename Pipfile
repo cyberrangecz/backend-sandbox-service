@@ -44,6 +44,7 @@ redis = "*"
 docker = "*"
 ssh_config = "*"
 python-gitlab = "*"
+jinja2 = "*"
 
 # Project dependencies
 django-cors-headers = "*"

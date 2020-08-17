@@ -1,4 +1,5 @@
 import pytest
+import zipfile
 from django.conf import settings
 from django.http import Http404
 from rest_framework.exceptions import ValidationError
@@ -111,3 +112,36 @@ class TestGetUnlockedSandbox:
         pool = pools.get_pool(FULL_POOL_ID)
         sb = pools.get_unlocked_sandbox(pool)
         assert sb is None
+
+
+class TestGetManagementSSHAccess:
+    mock_get_top_ins = None
+    mock_get_sandboxes_in_pool = None
+
+    @pytest.fixture(autouse=True)
+    def set_up(self, mocker, top_ins, sandbox):
+        self.mock_get_top_ins = mocker.patch(
+            'kypo.sandbox_instance_app.lib.sandboxes.get_topology_instance')
+        self.mock_get_top_ins.return_value = top_ins
+
+        self.mock_get_sandboxes_in_pool = mocker.patch(
+            'kypo.sandbox_instance_app.lib.pools.get_sandboxes_in_pool')
+        self.mock_get_sandboxes_in_pool.return_value = [sandbox]
+        yield
+
+    def test_get_management_ssh_access_success(self, pool, sandbox, management_ssh_config):
+        ssh_access_name = f'pool-id-{pool.id}'
+        ssh_config_name = f'{ssh_access_name}-sandbox-id-{sandbox.id}-management-config'
+        private_key = f'{ssh_access_name}-management-key'
+        management_ssh_config = management_ssh_config.replace('<path_to_pool_private_key>',
+                                                              f'~/.ssh/{private_key}')
+
+        in_memory_zip_file = pools.get_management_ssh_access(pool)
+
+        with zipfile.ZipFile(in_memory_zip_file, 'r', zipfile.ZIP_DEFLATED) as zip_file:
+            with zip_file.open(ssh_config_name) as file:
+                assert file.read().decode('utf-8') == management_ssh_config
+            with zip_file.open(private_key) as file:
+                assert file.read().decode('utf-8') == pool.private_management_key
+            with zip_file.open(f'{private_key}.pub') as file:
+                assert file.read().decode('utf-8') == pool.public_management_key

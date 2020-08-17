@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+usage () {
+    echo "usage: source ${BASH_SOURCE[0]} PATH_TO_KYPO_PROXY_JUMP_PRIVATE_KEY"
+}
+
+if [ "$_" = "$0" ]
+then
+    echo "Error: Execute this script using \"source\" command"
+    usage
+    exit
+fi
+
+if [ $# -ne 1 ]
+then
+    echo "Error: Invalid number of parameters"
+    usage
+    return
+fi
+
+if [ ! -f "$1" ]
+then
+    echo "Error: File \"$1\" does not exist"
+    return
+fi
+
+alias ssh="ssh -F {{ ssh_config_path }} "
+sed -i "s;{{ private_key_placeholder }};$1;g" {{ ssh_config_path }}

@@ -141,24 +141,6 @@ class NodeActionSerializer(serializers.Serializer):
                                      help_text='Action you with to perform on the node.')
 
 
-class PoolKeypairSerializer(serializers.ModelSerializer):
-    private = serializers.CharField(source='private_management_key')
-    public = serializers.CharField(source='public_management_key')
-
-    class Meta:
-        model = models.Pool
-        fields = ('private', 'public')
-
-
-class SandboxKeypairSerializer(serializers.ModelSerializer):
-    private = serializers.CharField(source='private_user_key')
-    public = serializers.CharField(source='public_user_key')
-
-    class Meta:
-        model = models.Sandbox
-        fields = ('private', 'public')
-
-
 ##########################################
 # KYPO OpenStack lib classes serializers #
 ##########################################

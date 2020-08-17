@@ -1,6 +1,8 @@
 """
 Pool Service module for Pool management.
 """
+import io
+import zipfile
 from typing import List, Dict, Optional
 import structlog
 from django.db import transaction
@@ -12,7 +14,7 @@ from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_definition_app.lib import definitions
 from kypo.sandbox_definition_app.models import Definition
 
-from kypo.sandbox_instance_app.lib import sandbox_creator, sandbox_destructor
+from kypo.sandbox_instance_app.lib import sandbox_creator, sandbox_destructor, sandboxes, sshconfig
 from kypo.sandbox_instance_app import serializers
 from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit, CleanupRequest, \
     SandboxLock, PoolLock
@@ -147,3 +149,29 @@ def lock_pool(pool: Pool) -> PoolLock:
         if hasattr(pool, 'lock'):
             raise exceptions.ValidationError("Pool already locked.")
         return PoolLock.objects.create(pool=pool)
+
+
+def get_management_ssh_access(pool: Pool) -> io.BytesIO:
+    """Get management SSH access files."""
+    ssh_access_name = f'pool-id-{pool.id}'
+    private_key_name = f'{ssh_access_name}-management-key'
+    public_key_name = f'{private_key_name}.pub'
+
+    in_memory_zip_file = io.BytesIO()
+    with zipfile.ZipFile(in_memory_zip_file, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for sandbox in get_sandboxes_in_pool(pool):
+            tmp = f'{ssh_access_name}-sandbox-id-{sandbox.id}-management'
+            ssh_config_name = f'{tmp}-config'
+            source_file_name = f'{tmp}-source.sh'
+
+            ssh_config = sandboxes.get_management_sshconfig(sandbox, f'~/.ssh/{private_key_name}')
+            source_file = sandboxes.get_ssh_access_source_file(f'~/.ssh/{ssh_config_name}')
+
+            zip_file.writestr(ssh_config_name, ssh_config.serialize())
+            zip_file.writestr(source_file_name, source_file)
+
+        zip_file.writestr(private_key_name, pool.private_management_key)
+        zip_file.writestr(public_key_name, pool.public_management_key)
+
+    in_memory_zip_file.seek(0)
+    return in_memory_zip_file
