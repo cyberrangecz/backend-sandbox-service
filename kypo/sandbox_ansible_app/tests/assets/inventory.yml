@@ -88,3 +88,4 @@ all:
     kypo_global_sandbox_allocation_unit_id: 1
     kypo_global_openstack_stack_id: heatstack-stack-id
     kypo_global_pool_id: 1
+    kypo_global_head_ip: 0.0.0.0

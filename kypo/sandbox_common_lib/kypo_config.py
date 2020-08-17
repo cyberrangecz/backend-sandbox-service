@@ -10,6 +10,7 @@ from yamlize import Attribute, Object, YamlizingError, Typed
 from kypo.sandbox_common_lib import kypo_config_validation
 from kypo.sandbox_common_lib.exceptions import ImproperlyConfigured
 
+KYPO_HEAD_IP = '0.0.0.0'
 LOG_FILE = 'kypo-sandbox-service.log'
 LOG_LEVEL = 'INFO'
 GIT_TOKEN = '<default_token>'
@@ -45,6 +46,9 @@ class GitType(Enum):
 
 
 class KypoConfiguration(Object):
+    kypo_head_ip = Attribute(type=str, default=KYPO_HEAD_IP,
+                             validator=kypo_config_validation.validate_kypo_head_ip)
+
     os_auth_url = Attribute(type=str)
     os_application_credential_id = Attribute(type=str)
     os_application_credential_secret = Attribute(type=str)
