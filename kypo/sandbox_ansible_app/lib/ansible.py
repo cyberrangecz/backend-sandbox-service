@@ -120,7 +120,8 @@ class AnsibleDockerRunner:
         extra_vars = {
             'kypo_global_sandbox_allocation_unit_id': sau.id,
             'kypo_global_openstack_stack_id': heatstack.stack_id,
-            'kypo_global_pool_id': sau.pool.id
+            'kypo_global_pool_id': sau.pool.id,
+            'kypo_global_head_ip': settings.KYPO_CONFIG.kypo_head_ip,
         }
         return Inventory(top_ins, user_private_key, user_public_key, extra_vars)
 
