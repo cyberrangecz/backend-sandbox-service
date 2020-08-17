@@ -3,6 +3,9 @@ Sandbox Service module for Sandbox management.
 """
 from typing import Optional
 
+import os
+import io
+import zipfile
 import structlog
 from django.conf import settings
 from django.core.cache import cache
@@ -13,12 +16,13 @@ from rest_framework.generics import get_object_or_404
 
 from kypo.sandbox_common_lib import exceptions, utils
 from kypo.sandbox_definition_app.lib import definitions
-from kypo.sandbox_instance_app.lib.sshconfig import KypoSSHConfig
+from kypo.sandbox_instance_app.lib.sshconfig import KypoSSHConfig, SSH_PROXY_KEY
 from kypo.sandbox_instance_app.lib.topology import Topology
 from kypo.sandbox_instance_app.models import Sandbox, SandboxLock
 
 SANDBOX_CACHE_TIMEOUT = None  # Cache indefinitely
 SANDBOX_CACHE_PREFIX = 'heatstack-{}'
+TEMPLATE_DIR_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'assets')
 
 LOG = structlog.getLogger()
 
@@ -57,16 +61,49 @@ def get_sandbox_topology(sandbox: Sandbox) -> Topology:
     return topology
 
 
-def get_user_sshconfig(sandbox: Sandbox) -> KypoSSHConfig:
+def get_user_sshconfig(sandbox: Sandbox,
+                       sandbox_private_key_path: str = '<path_to_sandbox_private_key>')\
+        -> KypoSSHConfig:
     """Get user SSH config."""
     ti = get_topology_instance(sandbox)
-    return KypoSSHConfig.create_user_config(ti, settings.KYPO_CONFIG)
+    return KypoSSHConfig.create_user_config(ti, settings.KYPO_CONFIG, sandbox_private_key_path)
 
 
-def get_management_sshconfig(sandbox: Sandbox) -> KypoSSHConfig:
+def get_ssh_access_source_file(ssh_config_path: str) -> str:
+    return utils.fill_template(TEMPLATE_DIR_PATH, 'ssh-access-source.sh.j2',
+                               ssh_config_path=ssh_config_path,
+                               private_key_placeholder=SSH_PROXY_KEY)
+
+
+def get_user_ssh_access(sandbox: Sandbox) -> io.BytesIO:
+    """Get user SSH access files."""
+    ssh_access_name = f'pool-id-{sandbox.allocation_unit.pool.id}-sandbox-id-{sandbox.id}-user'
+    ssh_config_name = f'{ssh_access_name}-config'
+    source_file_name = f'{ssh_access_name}-source.sh'
+    private_key_name = f'{ssh_access_name}-key'
+    public_key_name = f'{private_key_name}.pub'
+
+    ssh_config = get_user_sshconfig(sandbox, f'~/.ssh/{private_key_name}')
+    source_file = get_ssh_access_source_file(f'~/.ssh/{ssh_config_name}')
+
+    in_memory_zip_file = io.BytesIO()
+    with zipfile.ZipFile(in_memory_zip_file, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        zip_file.writestr(ssh_config_name, ssh_config.serialize())
+        zip_file.writestr(source_file_name, source_file)
+        zip_file.writestr(private_key_name, sandbox.private_user_key)
+        zip_file.writestr(public_key_name, sandbox.public_user_key)
+
+    in_memory_zip_file.seek(0)
+    return in_memory_zip_file
+
+
+def get_management_sshconfig(sandbox: Sandbox,
+                             pool_private_key_path: str = '<path_to_pool_private_key>')\
+        -> KypoSSHConfig:
     """Get management SSH config."""
     ti = get_topology_instance(sandbox)
-    return KypoSSHConfig.create_management_config(ti, settings.KYPO_CONFIG)
+    return KypoSSHConfig.create_management_config(ti, settings.KYPO_CONFIG,
+                                                  pool_private_key_path=pool_private_key_path)
 
 
 def get_ansible_sshconfig(sandbox: Sandbox, mng_key: str, git_key: str,

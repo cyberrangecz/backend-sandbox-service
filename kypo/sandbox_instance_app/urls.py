@@ -55,10 +55,11 @@ urlpatterns = [
     # Pool manipulation
     path('pools/<int:pool_id>/sandboxes', views.PoolSandboxList.as_view(),
          name='pool-sandbox-list'),
-    path('pools/<int:pool_id>/key-pairs/management', views.PoolKeypairManagement.as_view(),
-         name='pool-mng-key-pair'),
     path('pools/<int:pool_id>/sandboxes/get-and-lock', views.SandboxGetAndLock.as_view(),
          name='pool-sandbox-get-and-lock'),
+    path('pools/<int:pool_id>/management-ssh-access',
+         views.PoolManagementSSHAccess.as_view(),
+         name='pool-management-ssh-access'),
 
     # Sandboxes
     path('sandboxes/<int:sandbox_id>', views.SandboxDetail.as_view(), name='sandbox-detail'),
@@ -69,18 +70,12 @@ urlpatterns = [
     path('sandboxes/<int:sandbox_id>/topology',
          views.SandboxTopology.as_view(), name='sandbox-topology'),
 
-    path('sandboxes/<int:sandbox_id>/key-pairs/user',
-         views.SandboxKeypairUser.as_view(), name='sandbox-user-key-pair'),
-
     path('sandboxes/<int:sandbox_id>/vms/<str:vm_name>',
          views.SandboxVMDetail.as_view(),  name='sandbox-vm-detail'),
     path('sandboxes/<int:sandbox_id>/vms/<str:vm_name>/console',
          views.SandboxVMConsole.as_view(), name='sandbox-vm-console'),
 
-    path('sandboxes/<int:sandbox_id>/user-ssh-config',
-         views.SandboxUserSSHConfig.as_view(),
-         name='sandbox-user-ssh-config'),
-    path('sandboxes/<int:sandbox_id>/management-ssh-config',
-         views.SandboxManagementSSHConfig.as_view(),
-         name='sandbox-management-ssh-config'),
+    path('sandboxes/<int:sandbox_id>/user-ssh-access',
+         views.SandboxUserSSHAccess.as_view(),
+         name='sandbox-user-ssh-access'),
 ]

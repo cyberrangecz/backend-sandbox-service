@@ -36,7 +36,7 @@ Host server 10.10.20.5
 
 Host jump-host-ip
     User debian
-    IdentityFile <path to proxy jump private key>
+    IdentityFile <path_to_proxy_jump_private_key>
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
 

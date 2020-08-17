@@ -389,17 +389,6 @@ class PoolSandboxList(generics.GenericAPIView):
         return Response(serializer.data)
 
 
-@utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class PoolKeypairManagement(generics.RetrieveAPIView):
-    """
-    get: Retrieve management key-pair.
-    Management keypair is the same for each sandbox in the pool.
-    """
-    queryset = Pool.objects.all()
-    lookup_url_kwarg = "pool_id"
-    serializer_class = serializers.PoolKeypairSerializer
-
-
 class SandboxGetAndLock(mixins.RetrieveModelMixin, generics.GenericAPIView):
     serializer_class = serializers.SandboxSerializer
     queryset = Sandbox.objects.all()
@@ -462,14 +451,6 @@ class SandboxLockDetail(generics.RetrieveDestroyAPIView):
     queryset = SandboxLock.objects.all()
     lookup_url_kwarg = "lock_id"
     serializer_class = serializers.SandboxLockSerializer
-
-
-@utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class SandboxKeypairUser(generics.RetrieveAPIView):
-    """get: Retrieve user key-pair. It is unique for each sandbox."""
-    queryset = Sandbox.objects.all()
-    lookup_url_kwarg = "sandbox_id"
-    serializer_class = serializers.SandboxKeypairSerializer
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
@@ -546,7 +527,7 @@ class SandboxVMConsole(generics.GenericAPIView):
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class SandboxUserSSHConfig(APIView):
+class SandboxUserSSHAccess(APIView):
     queryset = Sandbox.objects.none()  # Required for DjangoModelPermissions
 
     # noinspection PyMethodMayBeStatic
@@ -554,24 +535,24 @@ class SandboxUserSSHConfig(APIView):
         """Generate SSH config for User access to this sandbox.
         Some values are user specific, the config contains placeholders for them."""
         sandbox = sandboxes.get_sandbox(sandbox_id)
-        ssh_config = sandboxes.get_user_sshconfig(sandbox)
-        response = HttpResponse(FileWrapper(io.StringIO(ssh_config.serialize())),
-                                content_type='application/txt')
-        response['Content-Disposition'] = "attachment; filename=config"
+        in_memory_zip_file = sandboxes.get_user_ssh_access(sandbox)
+        response = HttpResponse(FileWrapper(in_memory_zip_file),
+                                content_type='application/zip')
+        response['Content-Disposition'] = "attachment; filename=ssh-access.zip"
         return response
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class SandboxManagementSSHConfig(APIView):
-    queryset = Sandbox.objects.none()  # Required for DjangoModelPermissions
+class PoolManagementSSHAccess(APIView):
+    queryset = Pool.objects.none()  # Required for DjangoModelPermissions
 
     # noinspection PyMethodMayBeStatic
-    def get(self, request, sandbox_id):
-        """Generate SSH config for Management access to this sandbox.
+    def get(self, request, pool_id):
+        """Generate SSH config for User access to this sandbox.
         Some values are user specific, the config contains placeholders for them."""
-        sandbox = sandboxes.get_sandbox(sandbox_id)
-        ssh_config = sandboxes.get_management_sshconfig(sandbox)
-        response = HttpResponse(FileWrapper(io.StringIO(ssh_config.serialize())),
-                                content_type='application/txt')
-        response['Content-Disposition'] = "attachment; filename=config"
+        pool = pools.get_pool(pool_id)
+        in_memory_zip_file = pools.get_management_ssh_access(pool)
+        response = HttpResponse(FileWrapper(in_memory_zip_file),
+                                content_type='application/zip')
+        response['Content-Disposition'] = "attachment; filename=ssh-access.zip"
         return response

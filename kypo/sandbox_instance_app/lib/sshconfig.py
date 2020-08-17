@@ -10,7 +10,7 @@ from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
 LOG = structlog.getLogger()
 
 SSH_PROXY_USERNAME = 'user-access'
-SSH_PROXY_KEY = '<path to proxy jump private key>'
+SSH_PROXY_KEY = '<path_to_proxy_jump_private_key>'
 
 # Add missing SSH Options to ssh_config.Host.attrs
 Host.attrs += (
@@ -64,7 +64,8 @@ class KypoSSHConfig(SSHConfig):
         self.get(" ".join([stack.man.name, stack.ip])).update(dict(ProxyJump=user + '@' + name))
 
     @classmethod
-    def create_user_config(cls, top_ins: TopologyInstance, config: KypoConfiguration)\
+    def create_user_config(cls, top_ins: TopologyInstance, config: KypoConfiguration,
+                           sandbox_private_key_path: str = '<path_to_sandbox_private_key>')\
             -> 'KypoSSHConfig':
         """Generates user ssh config string for sandbox.
         If router has multiple networks, then config contains one router entry
@@ -74,21 +75,21 @@ class KypoSSHConfig(SSHConfig):
         sshconf.add_man([top_ins.man.name, top_ins.ip],
                         SSH_PROXY_USERNAME,
                         top_ins.ip,
-                        '<path_to_sandbox_private_key>')
+                        sandbox_private_key_path)
 
         uan_ip = cls._get_uan_ip(top_ins)
         sshconf.add_host([top_ins.uan.name, uan_ip],
                          SSH_PROXY_USERNAME,
                          uan_ip,
                          SSH_PROXY_USERNAME + '@' + top_ins.man.name,
-                         '<path_to_sandbox_private_key>')
+                         sandbox_private_key_path)
 
         for link in sshconf._get_uan_accessible_node_links(top_ins):
             sshconf.add_host([link.node.name, link.ip],
                              SSH_PROXY_USERNAME,
                              link.ip,
                              SSH_PROXY_USERNAME + '@' + top_ins.uan.name,
-                             '<path_to_sandbox_private_key>')
+                             sandbox_private_key_path)
 
         if config.proxy_jump_to_man:
             sshconf.add_proxy_jump(top_ins,
@@ -99,7 +100,9 @@ class KypoSSHConfig(SSHConfig):
 
     @classmethod
     def create_management_config(cls, top_ins: TopologyInstance, config: KypoConfiguration,
-                                 add_jump=True) -> 'KypoSSHConfig':
+                                 add_jump=True,
+                                 pool_private_key_path: str = '<path_to_pool_private_key>')\
+            -> 'KypoSSHConfig':
         """Generates management ssh config string for sandbox.
         It uses MNG network for access.
         """
@@ -107,14 +110,14 @@ class KypoSSHConfig(SSHConfig):
         sshconf.add_man([top_ins.man.name, top_ins.ip],
                         top_ins.man.base_box.man_user ,
                         top_ins.ip,
-                        '<path_to_pool_private_key>')
+                        pool_private_key_path)
 
         for link in sshconf._get_man_accessible_node_links(top_ins):
             sshconf.add_host([link.node.name, link.ip],
                              link.node.base_box.man_user,
                              link.ip,
                              top_ins.man.base_box.man_user + '@' + top_ins.man.name,
-                             '<path_to_pool_private_key>')
+                             pool_private_key_path)
 
         if add_jump and config.proxy_jump_to_man:
             sshconf.add_proxy_jump(top_ins,

@@ -1,3 +1,4 @@
+import zipfile
 import pytest
 from django.db import IntegrityError
 from django.http import Http404
@@ -63,6 +64,28 @@ class TestSandboxesManipulation:
     def test_get_user_sshconfig(self, mocker, user_ssh_config):
         ssh_conf = sandboxes.get_user_sshconfig(mocker.Mock())
         assert ssh_conf.serialize() == user_ssh_config
+
+    def test_get_ssh_access_source_file(self, ssh_access_source):
+        ssh_access_source_file = sandboxes.get_ssh_access_source_file('<ssh_config_path>')
+
+        assert ssh_access_source_file == ssh_access_source
+
+    def test_get_user_ssh_access(self, sandbox, user_ssh_config):
+        ssh_access_name = f'pool-id-{sandbox.allocation_unit.pool.id}-sandbox-id-{sandbox.id}-user'
+        ssh_config_name = f'{ssh_access_name}-config'
+        private_key = f'{ssh_access_name}-key'
+        user_ssh_config = user_ssh_config.replace('<path_to_sandbox_private_key>',
+                                                  f'~/.ssh/{private_key}')
+
+        in_memory_zip_file = sandboxes.get_user_ssh_access(sandbox)
+
+        with zipfile.ZipFile(in_memory_zip_file, 'r', zipfile.ZIP_DEFLATED) as zip_file:
+            with zip_file.open(ssh_config_name) as file:
+                assert file.read().decode('utf-8') == user_ssh_config
+            with zip_file.open(private_key) as file:
+                assert file.read().decode('utf-8') == sandbox.private_user_key
+            with zip_file.open(f'{private_key}.pub') as file:
+                assert file.read().decode('utf-8') == sandbox.public_user_key
 
     def test_get_management_sshconfig(self, mocker, management_ssh_config):
         ssh_conf = sandboxes.get_management_sshconfig(mocker.Mock())

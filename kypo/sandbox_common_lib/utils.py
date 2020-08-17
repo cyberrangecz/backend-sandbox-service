@@ -4,6 +4,7 @@ Simple utils module.
 import json
 import logging
 import uuid
+import jinja2
 from typing import Tuple, Union, Iterable, Callable, Dict
 import structlog
 from Crypto.PublicKey import RSA
@@ -112,3 +113,9 @@ def add_error_responses_doc(method: str, statuses: Iterable[Union[int, str]]) ->
         ))(cls)
         return cls
     return decorate
+
+
+def fill_template(search_path: str, template_name: str, **kwargs) -> str:
+    environment = jinja2.Environment(loader=jinja2.FileSystemLoader(search_path))
+    template = environment.get_template(template_name)
+    return template.render(**kwargs)
