@@ -7,12 +7,13 @@ from rest_framework.response import Response
 
 
 @utils.add_error_responses_doc('get', [401, 403, 500])
-class ProjectQuotaSet(generics.GenericAPIView):
+class ProjectInfo(generics.GenericAPIView):
 
     def get(self, request):
         """
-        Get the quota set of project.
+        Get the quota set and name of project.
         """
+        project_name = projects.get_project_name()
         quota_set = projects.get_quota_set()
         serialized_quota = serializers.QuotaSetSerializer(quota_set)
-        return Response(serialized_quota.data)
+        return Response({'project_name': project_name, 'quotas': serialized_quota.data})
