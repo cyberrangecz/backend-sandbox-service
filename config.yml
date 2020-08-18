@@ -33,7 +33,7 @@ authentication:
 
 application_configuration:
     # The IP address of the KYPO head server.
-    kypo_head_ip: ""
+    #kypo_head_ip: 0.0.0.0
 
     # The URL of OpenStack Identity service API.
     os_auth_url: ""
