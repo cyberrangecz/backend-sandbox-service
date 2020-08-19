@@ -5,10 +5,15 @@ from kypo.sandbox_cloud_app import serializers
 from rest_framework import generics
 from rest_framework.response import Response
 
+from kypo.sandbox_instance_app.models import Pool
+
 
 @utils.add_error_responses_doc('get', [401, 403, 500])
 class ProjectInfo(generics.GenericAPIView):
+    # Exploitation of the Pool model permissions, Since the Cloud App does not have any models.
+    queryset = Pool.objects.none()  # Required for DjangoModelPermissions
 
+    # noinspection PyMethodMayBeStatic
     def get(self, request):
         """
         Get the quota set and name of project.
