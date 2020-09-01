@@ -1,5 +1,11 @@
 from django.apps import AppConfig
 
+from kypo.sandbox_common_lib import utils
+
 
 class ProjectQuotasConfig(AppConfig):
-    name = 'sandbox_cloud_app'
+    name = __package__
+
+    def ready(self):
+        """Perform initialization tasks (logging, registering roles to User and Group, …)."""
+        utils.configure_logging()

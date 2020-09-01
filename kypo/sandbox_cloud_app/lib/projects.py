@@ -15,3 +15,11 @@ def get_project_name():
     """
     client = utils.get_ostack_client()
     return client.get_project_name()
+
+
+def list_images():
+    """
+    Get list of images as generator
+    """
+    client = utils.get_ostack_client()
+    return client.list_images()
