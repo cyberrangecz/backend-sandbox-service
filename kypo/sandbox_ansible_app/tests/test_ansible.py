@@ -17,13 +17,15 @@ class TestPrepareInventoryFile:
 
     def test_prepare_inventory_file_success(self, mocker, top_ins):
         mock_inventory = mocker.patch('kypo.sandbox_ansible_app.lib.ansible.Inventory')
+        mocker.patch('kypo.sandbox_ansible_app.lib.ansible.docker.from_env')
         dir_path = '/tmp'
         sandbox = Sandbox.objects.get(pk=1)
         AnsibleDockerRunner().prepare_inventory_file(dir_path, sandbox, top_ins)
 
         mock_inventory.assert_called_once()
 
-    def test_prepare_inventory_object(self, top_ins, inventory):
+    def test_prepare_inventory_object(self, mocker, top_ins, inventory):
+        mocker.patch('kypo.sandbox_ansible_app.lib.ansible.docker.from_env')
         sandbox = Sandbox.objects.get(pk=1)
         result = AnsibleDockerRunner().prepare_inventory(sandbox, top_ins)
 
