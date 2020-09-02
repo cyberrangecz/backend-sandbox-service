@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "e14407f8f9d53f85d5abb03ccd41df552e6681bfa0f17d7829fe59c2cd4d393c"
+            "sha256": "9f20cf41284a1176fcd053215fac02282c4ca6ccfa01541ec9fd404d3f238cde"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -422,10 +422,10 @@
         },
         "kypo-openstack-lib": {
             "hashes": [
-                "sha256:f5a79d47899be291e43597489da25c5922cdae27c5a68076d043d7ae19658d28"
+                "sha256:c8ff68c30f05a06f67861dab4ea94ffb5a9e9c655cd105ef3820ae27a15ec169"
             ],
             "index": "kypo",
-            "version": "==0.26.1"
+            "version": "==0.26.2"
         },
         "kypo-topology-definition": {
             "hashes": [

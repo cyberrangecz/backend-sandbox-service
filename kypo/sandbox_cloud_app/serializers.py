@@ -33,3 +33,4 @@ class ImageSerializer(serializers.Serializer):
     updated_at = serializers.CharField()
     tags = serializers.ListField()
     default_user = serializers.CharField()
+    name = serializers.CharField()
