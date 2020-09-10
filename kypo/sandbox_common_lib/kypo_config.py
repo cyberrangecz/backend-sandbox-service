@@ -4,7 +4,7 @@ Django Apps configuration file
 import os
 from enum import Enum
 
-from kypo.openstack_driver.transformation_configuration import TransformationConfiguration
+from kypo.openstack_driver import TransformationConfiguration
 from yamlize import Attribute, Object, YamlizingError, Typed
 
 from kypo.sandbox_common_lib import kypo_config_validation

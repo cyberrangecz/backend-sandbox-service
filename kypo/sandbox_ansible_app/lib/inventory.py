@@ -3,7 +3,7 @@ from typing import Dict, Tuple, List, Optional, Any
 import structlog
 import yaml
 
-from kypo.openstack_driver.topology_instance import TopologyInstance
+from kypo.openstack_driver import TopologyInstance
 
 LOG = structlog.get_logger()
 

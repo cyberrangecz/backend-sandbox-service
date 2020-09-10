@@ -1,5 +1,5 @@
 import pytest
-from kypo.openstack_driver.topology_instance import TopologyInstance
+from kypo.openstack_driver import TopologyInstance
 
 from kypo.sandbox_instance_app import serializers
 from kypo.sandbox_instance_app.lib import sandboxes

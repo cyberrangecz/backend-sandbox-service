@@ -2,7 +2,7 @@ from typing import List, Union, Optional
 import structlog
 from ssh_config import Host, SSHConfig
 
-from kypo.openstack_driver.topology_instance import TopologyInstance, UAN_NET_NAME,\
+from kypo.openstack_driver import TopologyInstance,\
     Link, ExtraNode, Host as SandboxHost, Router
 
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration

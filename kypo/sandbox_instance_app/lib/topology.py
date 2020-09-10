@@ -1,6 +1,6 @@
 import structlog
 
-from kypo.openstack_driver.topology_instance import TopologyInstance
+from kypo.openstack_driver import TopologyInstance
 
 LOG = structlog.getLogger()
 

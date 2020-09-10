@@ -15,7 +15,7 @@ from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import serializers
 
-from kypo.openstack_driver.ostack_client import KypoOstackClient
+from kypo.openstack_driver import KypoOstackClient
 
 # Create logger
 LOG = structlog.get_logger()
