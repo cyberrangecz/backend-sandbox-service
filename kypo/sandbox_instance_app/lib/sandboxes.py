@@ -10,7 +10,7 @@ import structlog
 from django.conf import settings
 from django.core.cache import cache
 from django.db import transaction
-from kypo.openstack_driver.topology_instance import TopologyInstance
+from kypo.openstack_driver import TopologyInstance
 from kypo.topology_definition.models import TopologyDefinition
 from rest_framework.generics import get_object_or_404
 

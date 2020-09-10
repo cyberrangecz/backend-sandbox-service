@@ -5,7 +5,7 @@ import docker
 import structlog
 from django.conf import settings
 from docker.models.containers import Container
-from kypo.openstack_driver.topology_instance import TopologyInstance
+from kypo.openstack_driver import TopologyInstance
 
 from kypo.sandbox_ansible_app.lib.inventory import Inventory
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage

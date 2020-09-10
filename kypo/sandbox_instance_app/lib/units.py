@@ -1,6 +1,6 @@
 from typing import List
 
-from kypo.openstack_driver.ostack_proxy import Event, Resource
+from kypo.openstack_driver import Event, Resource
 
 from kypo.sandbox_common_lib import utils
 from kypo.sandbox_instance_app.models import SandboxAllocationUnit
