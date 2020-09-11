@@ -6,8 +6,8 @@ from rest_framework import serializers
 
 
 class QuotaSerializer(serializers.Serializer):
-    limit = serializers.IntegerField()
-    in_use = serializers.IntegerField()
+    limit = serializers.FloatField()
+    in_use = serializers.FloatField()
 
 
 class QuotaSetSerializer(serializers.Serializer):
