@@ -25,4 +25,6 @@ then
 fi
 
 alias ssh="ssh -F {{ ssh_config_path }} "
-sed -i "s;{{ private_key_placeholder }};$1;g" {{ ssh_config_path }}
+
+EXTENSION=.tmp
+sed -i"$EXTENSION" -e "s;{{ private_key_placeholder }};$1;g" -- {{ ssh_config_path }} && rm {{ ssh_config_path }}$EXTENSION
