@@ -25,4 +25,6 @@ then
 fi
 
 alias ssh="ssh -F <ssh_config_path> "
-sed -i "s;<path_to_proxy_jump_private_key>;$1;g" <ssh_config_path>
+
+EXTENSION=.tmp
+sed -i"$EXTENSION" -e "s;<path_to_proxy_jump_private_key>;$1;g" -- <ssh_config_path> && rm <ssh_config_path>$EXTENSION
