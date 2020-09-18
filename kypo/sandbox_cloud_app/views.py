@@ -18,6 +18,7 @@ LOG = structlog.get_logger()
 class ProjectInfo(generics.GenericAPIView):
     # Exploitation of the Pool model permissions, Since the Cloud App does not have any models.
     queryset = Pool.objects.none()  # Required for DjangoModelPermissions
+    serializer_class = serializers.QuotaSetSerializer
 
     # noinspection PyMethodMayBeStatic
     @swagger_auto_schema(tags=['cloud'])
@@ -35,6 +36,7 @@ class ProjectInfo(generics.GenericAPIView):
 class ProjectImages(generics.GenericAPIView,
                     PageNumberWithPageSizePagination):
     queryset = Pool.objects.none()
+    serializer_class = serializers.ImageSerializer
 
     # noinspection PyMethodMayBeStatic
     @swagger_auto_schema(tags=['cloud'])
