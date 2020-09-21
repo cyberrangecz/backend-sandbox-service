@@ -63,7 +63,7 @@ application_configuration:
     git_access_token: ""
 
     # The URL of Ansible networking Git repository.
-    ansible_networking_url: "git@192.168.55.101:/repos/ansible-roles/kypo-ansible-stage-one.git"
+    ansible_networking_url: "git@192.168.55.101:/repos/backend-python/ansible-networking-stage/kypo-ansible-stage-one.git"
 
     # The rev of Ansible networking Git repository.
     ansible_networking_rev: master

@@ -17,8 +17,8 @@ from kypo.sandbox_instance_app.models import Sandbox
 
 LOG = structlog.get_logger()
 
-DEFINITION_URL = 'git@192.168.55.101:/repos/small-sandbox.git'
-DEFINITION_REV = 'sandbox-service-it'
+DEFINITION_URL = 'git@192.168.55.101:/repos/prototypes-and-examples/sandbox-definitions/small-sandbox.git'
+DEFINITION_REV = 'master'
 
 # Heat stack and template values
 JUMP_STACK_NAME = 'integration_test_jump'
@@ -41,6 +41,7 @@ SANDBOX_GET_AND_LOCK = 'pool-sandbox-get-and-lock'
 SANDBOX_LOCK_DETAIL = 'sandbox-lock-detail'
 SANDBOX_CLEANUP_REQUEST = 'sandbox-cleanup-request'
 SANDBOX_CLEANUP_REQUEST_CANCEL = 'sandbox-cleanup-request-cancel'
+SANDBOX_ALLOCATION_REQUEST_CANCEL = 'sandbox-allocation-request-cancel'
 ALLOCATION_STAGE_OPENSTACK = 'openstack-allocation-stage'
 ALLOCATION_STAGE_NETWORKING_ANSIBLE = 'networking-ansible-allocation-stage'
 ALLOCATION_STAGE_USER_ANSIBLE = 'user-ansible-allocation-stage'
@@ -65,9 +66,15 @@ class TestIntegration:
                 try:
                     unit_id, alloc_req_id = self.create_alloc_unit(client, pool_id)
                     try:
+                        try:
+                            assert len(Sandbox.objects.all()) == 1
+                        except AssertionError:
+                            ansible_outputs = [x.content for x in AnsibleOutput.objects.all()]
+                            LOG.info('Ansible outputs', ansible_outputs='\n'.join(ansible_outputs))
+                            self.cancel_allocation_request(client, alloc_req_id)
+                            raise
                         sb_id, lock_id = self.get_and_lock(client, pool_id)
                         self.unlock_sandbox(client, sb_id, lock_id)
-
                         self.create_cancel_delete_cleanup_request(client, unit_id)
                     finally:
                         self.create_cleanup_req(client, unit_id)
@@ -111,12 +118,6 @@ class TestIntegration:
         base_url = reverse(ALLOCATION_UNIT_LIST, kwargs={'pool_id': pool_id})
         response = client.post(base_url + '?count=1')
 
-        if response.status_code != status.HTTP_201_CREATED:
-            LOG.info('Ansible output',
-                     output=[str(x) for x in AnsibleOutput.objects.all()],
-                     logs=[AnsibleDockerRunner().get_container(x.container_id).logs()
-                           for x in DockerContainer.objects.all()]
-                     )
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data[0]['pool_id'] == pool_id
 
@@ -125,7 +126,6 @@ class TestIntegration:
 
         cls.get_allocation_stages(client, alloc_req_id)
         cls.run_worker()
-        assert len(Sandbox.objects.all()) == 1
 
         return unit_id, alloc_req_id
 
@@ -152,6 +152,14 @@ class TestIntegration:
             response = client.get(base_url)
             assert response.status_code == status.HTTP_200_OK
             assert response.data['request_id'] == request_id
+
+    @staticmethod
+    def cancel_allocation_request(client, allocation_req_id):
+        LOG.info("Canceling Allocation Request")
+
+        response = client.patch(reverse(SANDBOX_ALLOCATION_REQUEST_CANCEL,
+                                        kwargs={'request_id': allocation_req_id}))
+        assert response.status_code == status.HTTP_200_OK
 
     @staticmethod
     def create_cancel_delete_cleanup_request(client, unit_id):
