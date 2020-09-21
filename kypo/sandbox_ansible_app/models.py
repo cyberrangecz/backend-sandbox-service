@@ -13,7 +13,7 @@ class AnsibleAllocationStage(AllocationStage):
 
     def __str__(self):
         return super().__str__() + \
-               ', REPO_URL: {0.repo_url}, REV: {0.rev}'.format(self)
+               f', REPO_URL: {self.repo_url}, REV: {self.rev}'
 
 
 class NetworkingAnsibleAllocationStage(AnsibleAllocationStage):
@@ -23,7 +23,7 @@ class NetworkingAnsibleAllocationStage(AnsibleAllocationStage):
     )
 
     def __str__(self):
-        return super().__str__() + ', REQUEST: {0.allocation_request}'.format(self)
+        return super().__str__() + f', REQUEST: {self.allocation_request}'
 
 
 class UserAnsibleAllocationStage(AnsibleAllocationStage):
@@ -33,7 +33,7 @@ class UserAnsibleAllocationStage(AnsibleAllocationStage):
     )
 
     def __str__(self):
-        return super().__str__() + ', REQUEST: {0.allocation_request}'.format(self)
+        return super().__str__() + f', REQUEST: {self.allocation_request}'
 
 
 class AnsibleCleanupStage(CleanupStage):
@@ -49,7 +49,7 @@ class NetworkingAnsibleCleanupStage(AnsibleCleanupStage):
     )
 
     def __str__(self):
-        return super().__str__() + ', REQUEST: {0.cleanup_request}'.format(self)
+        return super().__str__() + f', REQUEST: {self.cleanup_request}'
 
 
 class UserAnsibleCleanupStage(AnsibleCleanupStage):
@@ -59,7 +59,7 @@ class UserAnsibleCleanupStage(AnsibleCleanupStage):
     )
 
     def __str__(self):
-        return super().__str__() + ', REQUEST: {0.cleanup_request}'.format(self)
+        return super().__str__() + f', REQUEST: {self.cleanup_request}'
 
 
 # TODO not the best relationship
@@ -75,11 +75,11 @@ class AnsibleOutput(models.Model):
         ordering = ['id']
 
     def __str__(self):
-        return 'ID: {0.id}, STAGE: {0.stage.id}, CONTENT: {0.content}'.format(self)
+        return f'ID: {self.id}, STAGE: {self.allocation_stage.id}, CONTENT: {self.content}'
 
 
 class DockerContainer(ExternalDependency):
     container_id = models.TextField()
 
     def __str__(self):
-        return 'STAGE: {0.stage.id}, CONTAINER: {0.container_id}'.format(self)
+        return f'STAGE: {self.allocation_stage.id}, CONTAINER: {self.container_id}'

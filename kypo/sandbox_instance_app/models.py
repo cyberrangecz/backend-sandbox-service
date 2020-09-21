@@ -32,8 +32,8 @@ class Pool(models.Model):
         ordering = ['id']
 
     def __str__(self):
-        return 'ID: {0.id}, DEFINITION: {0.definition.id}, MAX_SIZE: {0.max_size}, ' \
-               'REV: {0.rev}'.format(self)
+        return f'ID: {self.id}, DEFINITION: {self.definition.id}, MAX_SIZE: {self.max_size}, ' \
+               f'REV: {self.rev}'
 
     def get_keypair_name(self) -> str:
         """Returns a name of the management key-pair for this pool."""
@@ -107,8 +107,7 @@ class SandboxRequest(models.Model):
         ordering = ['created']
 
     def __str__(self):
-        return 'ID: {0.id}, ALLOCATION_UNIT: {0.allocation_unit.id}, CREATED: {0.created}' \
-            .format(self)
+        return f'ID: {self.id}, CREATED: {self.created}'
 
 
 class AllocationRequest(SandboxRequest):
@@ -123,6 +122,9 @@ class AllocationRequest(SandboxRequest):
         """Whether all stages are finished."""
         return self.stages.filter(finished=False).count() == 0
 
+    def __str__(self):
+        return super().__str__() + f', ALLOCATION_UNIT: {self.allocation_unit.id}'
+
 
 class CleanupRequest(SandboxRequest):
     allocation_unit = models.OneToOneField(
@@ -135,6 +137,9 @@ class CleanupRequest(SandboxRequest):
     def is_finished(self):
         """Whether all stages are finished."""
         return self.stages.filter(finished=False).count() == 0
+
+    def __str__(self):
+        return super().__str__() + f', ALLOCATION_UNIT: {self.allocation_unit.id}'
 
 
 class Stage(models.Model):
@@ -155,8 +160,8 @@ class Stage(models.Model):
         ordering = ['id']
 
     def __str__(self):
-        return 'ID: {0.id}, START: {0.start}, END: {0.end}, FAILED: {0.failed},' \
-               ' ERROR: {0.error_message}'.format(self)
+        return f'ID: {self.id}, START: {self.start}, END: {self.end}, FAILED: {self.failed}, ' \
+               f'ERROR: {self.error_message}'
 
 
 class AllocationStage(Stage):
@@ -184,8 +189,8 @@ class StackAllocationStage(AllocationStage):
     status_reason = models.TextField(null=True, help_text='Stack status reason')
 
     def __str__(self):
-        return super().__str__() + ', REQUEST: {0.allocation_request}, STATUS: {0.status},' \
-                                   ' STATUS_REASON: {0.status_reason}'.format(self)
+        return super().__str__() + f', REQUEST: {self.allocation_request}, STATUS: {self.status},' \
+                                   f' STATUS_REASON: {self.status_reason}'
 
 
 class StackCleanupStage(CleanupStage):
@@ -195,7 +200,7 @@ class StackCleanupStage(CleanupStage):
     )
 
     def __str__(self):
-        return super().__str__() + ', REQUEST: {0.cleanup_request}'.format(self)
+        return super().__str__() + f', REQUEST: {self.cleanup_request}'
 
 
 class RQJob(models.Model):
@@ -214,7 +219,7 @@ class AllocationRQJob(RQJob):
     )
 
     def __str__(self):
-        return 'STAGE: {0.stage.id}, JOB_ID: {0.job_id}'.format(self)
+        return f'STAGE: {self.allocation_stage.id}, JOB_ID: {self.job_id}'
 
 
 class CleanupRQJob(RQJob):
@@ -226,7 +231,7 @@ class CleanupRQJob(RQJob):
     )
 
     def __str__(self):
-        return 'STAGE: {0.stage.id}, JOB_ID: {0.job_id}'.format(self)
+        return f'STAGE: {self.cleanup_stage.id}, JOB_ID: {self.job_id}'
 
 
 class ExternalDependency(models.Model):
@@ -243,11 +248,11 @@ class HeatStack(ExternalDependency):
     stack_id = models.TextField()
 
     def __str__(self):
-        return 'STAGE: {0.stage.id}, STACK: {0.stack_id}'.format(self)
+        return f'STAGE: {self.allocation_stage.id}, STACK: {self.stack_id}'
 
 
 class SystemProcess(ExternalDependency):
     process_id = models.TextField()
 
     def __str__(self):
-        return 'STAGE: {0.stage.id}, PROCESS: {0.process_id}'.format(self)
+        return f'STAGE: {self.allocation_stage.id}, PROCESS: {self.process_id}'
