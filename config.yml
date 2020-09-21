@@ -54,10 +54,10 @@ application_configuration:
     #git_type: INTERNAL
 
     # Git server hostname or IP.
-    #git_server: gitlab.ics.muni.cz
+    #git_server: gitlab.com
 
     # The address of Git REST server with protocol (optionally port)
-    #git_rest_server: https://gitlab.ics.muni.cz/
+    #git_rest_server: https://gitlab.com/
 
     # The name of user used for communication with Git repository.
     #git_user: git

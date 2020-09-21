@@ -77,13 +77,13 @@
 - model: sandbox_ansible_app.networkingansibleallocationstage
   pk: 2
   fields:
-    repo_url: git@gitlab.ics.muni.cz:kypo2/openstack/sandbox-definitions/small-sandbox.git
+    repo_url: git@gitlab.com:small-sandbox.git
     rev: 04e97bb05456b37a74cd28732547b65f213e1b99
     allocation_request: 1
 - model: sandbox_ansible_app.useransibleallocationstage
   pk: 3
   fields:
-    repo_url: git@gitlab.ics.muni.cz:kypo2/openstack/sandbox-definitions/small-sandbox.git
+    repo_url: git@gitlab.com:small-sandbox.git
     rev: 04e97bb05456b37a74cd28732547b65f213e1b99
     allocation_request: 1
 

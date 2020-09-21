@@ -6,8 +6,8 @@ from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider,
 
 
 class TestGitlabProvider:
-    URL = 'git@gitlab.ics.muni.cz:kypo-crp/backend-python/kypo-sandbox-service.git'
-    CFG = KypoConfiguration(git_server='gitlab.ics.muni.cz', git_rest_server='http://gitlab.ics.muni.cz:8081')
+    URL = 'git@gitlab.com:kypo-crp/backend-python/kypo-sandbox-service.git'
+    CFG = KypoConfiguration(git_server='gitlab.com', git_rest_server='http://gitlab.com:8081')
 
     def test_get_project_path(self):
         provider = GitlabProvider(self.URL, self.CFG)
