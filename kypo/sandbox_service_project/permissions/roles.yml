@@ -99,6 +99,8 @@
 - name: organizer
   default: false
   permissions:
+    - view_definition
+
     - view_pool
     - add_pool
     - change_pool
