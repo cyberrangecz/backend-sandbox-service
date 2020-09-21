@@ -10,4 +10,4 @@ class Definition(models.Model):
         ordering = ['id']
 
     def __str__(self):
-        return 'ID: {0.id}, NAME: {0.name}, URL: {0.url}, REV: {0.rev}'.format(self)
+        return f'ID: {self.id}, NAME: {self.name}, URL: {self.url}, REV: {self.rev}'
