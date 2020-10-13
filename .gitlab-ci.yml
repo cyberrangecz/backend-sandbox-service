@@ -2,7 +2,7 @@ stages:
   - unitTests
 
 unitTests:
-  image: python:3.6
+  image: python:3.8
   stage: unitTests
   script:
     - pip3 install pipenv
