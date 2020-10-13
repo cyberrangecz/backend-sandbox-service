@@ -1,4 +1,4 @@
-FROM python:3.6-slim
+FROM python:3.8-slim
 
 ENV DJANGO_ADMIN_USER "admin"
 ENV DJANGO_ADMIN_PASSWORD "admin"

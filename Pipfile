@@ -9,12 +9,12 @@ name = "kypo"
 verify_ssl = true
 
 [requires]
-python_version = "3.6"
+python_version = "3.8"
 
 [dev-packages]
 # tox
-tox = "~=3.7.0"
-tox-pipenv = "~=1.9.0"
+tox = "~=3.20.0"
+tox-pipenv = "~=1.10.1"
 # pytest
 pytest = "*"
 pytest-mock = "*"
