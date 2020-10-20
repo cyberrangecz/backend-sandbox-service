@@ -3,8 +3,8 @@ Inspectors for proper documentation schemas generation.
 """
 from collections import OrderedDict
 
-from drf_yasg import openapi
-from drf_yasg.inspectors import PaginatorInspector, NotHandled
+from drf_yasg2 import openapi
+from drf_yasg2.inspectors import PaginatorInspector, NotHandled
 
 from kypo.sandbox_common_lib import pagination
 

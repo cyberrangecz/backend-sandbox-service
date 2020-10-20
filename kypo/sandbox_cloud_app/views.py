@@ -9,7 +9,7 @@ from rest_framework.response import Response
 
 from kypo.sandbox_instance_app.models import Pool
 
-from drf_yasg.utils import swagger_auto_schema
+from drf_yasg2.utils import swagger_auto_schema
 
 LOG = structlog.get_logger()
 
