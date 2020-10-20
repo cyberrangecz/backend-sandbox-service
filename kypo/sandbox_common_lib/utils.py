@@ -10,9 +10,9 @@ import structlog
 from Crypto.PublicKey import RSA
 from django.conf import settings
 from django.utils.decorators import method_decorator
-from drf_yasg import openapi
+from drf_yasg2 import openapi
 from rest_framework import status
-from drf_yasg.utils import swagger_auto_schema
+from drf_yasg2.utils import swagger_auto_schema
 from rest_framework import serializers
 
 from kypo.openstack_driver import KypoOstackClient

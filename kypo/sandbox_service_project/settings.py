@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'drf_yasg',
+    'drf_yasg2',
     'corsheaders',
     'django_rq',
 
@@ -156,10 +156,9 @@ REST_FRAMEWORK = {
 SWAGGER_SETTINGS = {
     'DEFAULT_PAGINATOR_INSPECTORS': [
         'kypo.sandbox_common_lib.inspectors.PageNumberWithPageSizePaginationInspector',
-        'drf_yasg.inspectors.DjangoRestResponsePagination',
-        'drf_yasg.inspectors.CoreAPICompatInspector',
+        'drf_yasg2.inspectors.DjangoRestResponsePagination',
+        'drf_yasg2.inspectors.CoreAPICompatInspector',
     ],
-    "DEFAULT_GENERATOR_CLASS": "rest_framework.schemas.generators.BaseSchemaGenerator",
 }
 
 if KYPO_SERVICE_CONFIG.authentication.authenticated_rest_api:

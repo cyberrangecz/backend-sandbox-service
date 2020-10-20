@@ -5,8 +5,8 @@ import structlog
 from django.conf import settings
 from django.http import HttpResponse, Http404
 from django.utils.module_loading import import_string
-from drf_yasg import openapi
-from drf_yasg.utils import swagger_auto_schema
+from drf_yasg2 import openapi
+from drf_yasg2.utils import swagger_auto_schema
 from rest_framework import status, generics, mixins
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
