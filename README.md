@@ -17,14 +17,6 @@ It provides REST calls for manipulation with:
 * Sandboxes themselves
 * Applying Ansible playbooks on sandbox machines
 
-## Authors
-
-Name          | Email
-------------- | ------------
-Miloslav Staněk | milosst@mail.muni.cz
-Daniel Tovarňák | tovarnak@ics.muni.cz
-Kamil Andoniadis | andoniadis@ics.muni.cz
-
 ## Project Modules
 This Django project contains three apps and one common library.
 - __Sandbox Common Lib__ with common functionality
