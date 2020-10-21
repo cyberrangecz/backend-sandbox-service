@@ -22,7 +22,6 @@ django.setup()
 
 project = 'KYPO Sandbox Service'
 copyright = '2020, Masaryk University'
-author = 'Miloslav Staněk, Daniel Tovarňák, Kamil Andoniadis'
 
 
 # -- General configuration ---------------------------------------------------
