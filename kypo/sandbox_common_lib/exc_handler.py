@@ -61,5 +61,5 @@ def handle_permission_denied(exc, context):
 def handle_model_validation_error(exc, context):
     """Fix error message in model validation error."""
     return Response({
-        'detail': exc.detail,
+        'detail': str(exc.detail),
     }, status=status.HTTP_400_BAD_REQUEST)
