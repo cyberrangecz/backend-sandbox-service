@@ -4,7 +4,9 @@ import structlog
 from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
 
-from kypo.sandbox_common_lib import exceptions
+from kypo.openstack_driver.exceptions import KypoException
+
+from kypo.sandbox_common_lib import exceptions, utils
 from kypo.sandbox_ansible_app.models import NetworkingAnsibleCleanupStage,\
     UserAnsibleCleanupStage
 
@@ -128,3 +130,20 @@ def cancel_cleanup_request(cleanup_req: CleanupRequest):
     StackStageHandler().cancel_cleanup(cleanup_req.stackcleanupstage)
     AnsibleStageHandler().cancel_cleanup(cleanup_req.networkingansiblecleanupstage)
     AnsibleStageHandler().cancel_cleanup(cleanup_req.useransiblecleanupstage)
+
+
+def delete_stack(allocation_unit: SandboxAllocationUnit):
+    client = utils.get_ostack_client()
+
+    try:
+        stack_name = allocation_unit.get_stack_name()
+        action, status = client.get_stack_status(stack_name)
+
+        if action == 'DELETE' or action == 'ROLLBACK':
+            LOG.warning(f"Sandbox of allocation unit ID={allocation_unit.id} is already being deleted.")
+            return
+
+        client.delete_stack(stack_name)
+    except Exception as exc:
+        raise exceptions.StackError(f'Deleting sandbox of allocation unit ID={allocation_unit.id} failed.'
+                                    f' {exc}')
