@@ -10,6 +10,7 @@ def get_stack_events(unit: SandboxAllocationUnit) -> List[Event]:
     """List all events in sandbox as Events objects."""
     stack_name = unit.get_stack_name()
     client = utils.get_ostack_client()
+    # TODO get stack directly! throw exception
     if stack_name in client.list_stacks():
         return client.list_stack_events(stack_name)
     return []

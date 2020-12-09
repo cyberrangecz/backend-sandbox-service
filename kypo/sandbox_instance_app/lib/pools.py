@@ -14,7 +14,7 @@ from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_definition_app.lib import definitions
 from kypo.sandbox_definition_app.models import Definition
 
-from kypo.sandbox_instance_app.lib import sandbox_creator, sandbox_destructor, sandboxes, sshconfig
+from kypo.sandbox_instance_app.lib import requests, sandboxes
 from kypo.sandbox_instance_app import serializers
 from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit, CleanupRequest, \
     SandboxLock, PoolLock
@@ -116,13 +116,13 @@ def create_sandboxes_in_pool(pool: Pool, count: int = None) -> List[SandboxAlloc
                     curr=current_size, max=pool.max_size, count=count)
                 )
 
-        return sandbox_creator.create_allocations_requests(pool, count)
+        return requests.create_allocations_requests(pool, count)
 
 
 def delete_allocation_units(pool: Pool) -> List[CleanupRequest]:
     """Delete all sandboxes in given pool."""
     units = pool.allocation_units.all()
-    return sandbox_destructor.create_cleanup_requests(units)
+    return requests.create_cleanup_requests(units)
 
 
 def get_unlocked_sandbox(pool: Pool) -> Optional[Sandbox]:

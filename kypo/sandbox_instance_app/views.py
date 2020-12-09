@@ -1,4 +1,3 @@
-import io
 from wsgiref.util import FileWrapper
 
 import structlog
@@ -16,12 +15,13 @@ from kypo.sandbox_common_lib import exceptions, utils
 from kypo.sandbox_common_lib.permissions import AllowReadOnViewSandbox
 from kypo.sandbox_definition_app.models import Definition
 from kypo.sandbox_definition_app.serializers import DefinitionSerializer
-from kypo.sandbox_instance_app.lib.stage_handlers import StackStageHandler
+
 from kypo.sandbox_instance_app import serializers
 from kypo.sandbox_instance_app.lib import units, pools, sandboxes, nodes,\
-    sandbox_destructor
+    requests as sandbox_requests
 from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit, \
     AllocationRequest, CleanupRequest, SandboxLock, PoolLock
+from kypo.sandbox_instance_app.lib import stage_handlers
 
 LOG = structlog.get_logger()
 
@@ -236,7 +236,7 @@ class SandboxAllocationRequestCancel(generics.GenericAPIView):
     @swagger_auto_schema(responses={status.HTTP_200_OK: serializers.serializers.Serializer()})
     def patch(self, request, request_id):
         """Cancel given Allocation Request. Returns no data if OK (200)."""
-        sandbox_destructor.cancel_allocation_request(self.get_object())
+        sandbox_requests.cancel_allocation_request(self.get_object())
         return Response()
 
 
@@ -261,7 +261,7 @@ class SandboxCleanupRequest(mixins.RetrieveModelMixin, generics.GenericAPIView):
     def post(self, request, unit_id):
         """ Create cleanup request.."""
         unit = get_object_or_404(SandboxAllocationUnit, pk=unit_id)
-        cleanup_req = sandbox_destructor.create_cleanup_request(unit)
+        cleanup_req = sandbox_requests.create_cleanup_request(unit)
         serializer = self.serializer_class(cleanup_req)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -269,7 +269,7 @@ class SandboxCleanupRequest(mixins.RetrieveModelMixin, generics.GenericAPIView):
     def delete(self, request, unit_id):
         """ Delete cleanup request. Must be finished or cancelled."""
         unit = get_object_or_404(SandboxAllocationUnit, pk=unit_id)
-        sandbox_destructor.delete_cleanup_request(unit.cleanup_request)
+        sandbox_requests.delete_cleanup_request(unit.cleanup_request)
         return Response({}, status=status.HTTP_204_NO_CONTENT)
 
 
@@ -291,7 +291,7 @@ class SandboxCleanupRequestCancel(generics.GenericAPIView):
     @swagger_auto_schema(responses={status.HTTP_200_OK: serializers.serializers.Serializer()})
     def patch(self, request, request_id):
         """Cancel given Cleanup Request. Returns no data if OK (200)."""
-        sandbox_destructor.cancel_cleanup_request(self.get_object())
+        sandbox_requests.cancel_cleanup_request(self.get_object())
         return Response()
 
 
@@ -308,7 +308,9 @@ class OpenstackAllocationStageDetail(generics.RetrieveAPIView):
 
     def get_object(self):
         request = super().get_object()
-        return StackStageHandler().update_allocation_stage(request.stackallocationstage)
+        # TODO run within RQ in async
+        return stage_handlers.AllocationStackStageHandler(request.stackallocationstage)\
+            .update_allocation_stage()
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])

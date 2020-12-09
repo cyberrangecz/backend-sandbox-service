@@ -117,7 +117,7 @@ class GitlabProvider(DefinitionProvider):
 
     @staticmethod
     def get_project_path(p: GitUrlParsed) -> str:
-        repo_path = f"{p.data['owner']}/{p.data['repo']}"
+        repo_path = f"{p.data['owner']}/{p.data['groups_path']}/{p.data['repo']}"
         return parse.quote_plus(repo_path)
 
 
@@ -168,13 +168,9 @@ class InternalGitProvider(DefinitionProvider):
     def get_rest_url(git_rest_server: str, p: GitUrlParsed) -> str:
         """Return URL of the repository."""
         owner = p.data['owner']
-        # strip leading slash
-        if owner.startswith('/'):
-            owner = owner[1:]
-        repo = p.data['repo']
-        repo_path = f"{owner}/{repo}"
-        head, *tail = re.split('/', repo_path)
-        path = f'{head}/{";".join(tail)}.git'
+        components: list = p.groups
+        components.append(p.data['repo'])
+        path = f'{owner}/{";".join(components)}.git'
         return parse.urljoin(git_rest_server, path)
 
     @staticmethod
