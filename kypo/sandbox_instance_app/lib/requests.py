@@ -1,0 +1,107 @@
+from typing import List
+import structlog
+from django.core.exceptions import ObjectDoesNotExist
+
+from kypo.sandbox_common_lib import exceptions, utils
+
+from kypo.sandbox_instance_app.lib import sandboxes
+from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit,\
+    AllocationRequest, CleanupRequest
+from kypo.sandbox_instance_app.lib.request_handlers import AllocationRequestHandler,\
+    CleanupRequestHandler
+
+LOG = structlog.get_logger()
+
+
+def create_allocation_request(pool: Pool) -> SandboxAllocationUnit:
+    """Create Sandbox Allocation Request.
+    Also create sandbox, but do not save it to the database until
+    successfully created.
+    """
+    unit = SandboxAllocationUnit.objects.create(pool=pool)
+    request = AllocationRequest.objects.create(allocation_unit=unit)
+    pri_key, pub_key = utils.generate_ssh_keypair()
+    sandbox = Sandbox(id=unit.id, allocation_unit=unit,
+                      private_user_key=pri_key, public_user_key=pub_key)
+    AllocationRequestHandler(request).enqueue_request(sandbox)
+    return unit
+
+
+def create_allocations_requests(pool: Pool, count: int) -> List[SandboxAllocationUnit]:
+    """Batch version of create_allocation_request. Create count Sandbox Requests."""
+    return [create_allocation_request(pool) for _ in range(count)]
+
+
+def cancel_allocation_request(alloc_req: AllocationRequest):
+    """(Soft) cancel all stages of the Allocation Request."""
+    AllocationRequestHandler(alloc_req).cancel_request()
+
+
+def create_cleanup_request(allocation_unit: SandboxAllocationUnit) -> CleanupRequest:
+    """Create cleanup request and enqueue it. Immediately delete sandbox from database."""
+    try:
+        sandbox = allocation_unit.sandbox
+    except ObjectDoesNotExist:
+        sandbox = None
+    else:
+        if hasattr(sandbox, 'lock'):
+            raise exceptions.ValidationError('Sandbox ID={} is locked. Unlock it first.'
+                                             .format(sandbox.id))
+
+    if not allocation_unit.allocation_request.is_finished:
+        raise exceptions.ValidationError(
+            f'Create sandbox allocation request ID={allocation_unit.allocation_request.id}'
+            f' has not finished yet. You need to cancel it first.'
+        )
+
+    if hasattr(allocation_unit, 'cleanup_request'):
+        raise exceptions.ValidationError(
+            f'Allocation unit ID={allocation_unit.id} already has a cleanup request '
+            f'ID={allocation_unit.cleanup_request.id}. Delete it first.')
+
+    request = CleanupRequest.objects.create(allocation_unit=allocation_unit)
+    LOG.info('CleanupRequest created', cleanup_request=request,
+             allocation_unit=allocation_unit, sandbox=sandbox)
+
+    if sandbox:
+        sandbox.delete()
+        sandboxes.clear_cache(sandbox)
+
+    CleanupRequestHandler(request).enqueue_request()
+    return request
+
+
+def create_cleanup_requests(allocation_units: List[SandboxAllocationUnit]) -> List[CleanupRequest]:
+    """Batch version of create_cleanup_request."""
+    return [create_cleanup_request(unit) for unit in allocation_units]
+
+
+def cancel_cleanup_request(cleanup_req: CleanupRequest) -> None:
+    """(Soft) cancel all stages of the Cleanup Request."""
+    CleanupRequestHandler(cleanup_req).cancel_request()
+
+
+def delete_cleanup_request(request: CleanupRequest) -> None:
+    """Delete given cleanup request."""
+    if not request.is_finished:
+        raise exceptions.ValidationError('The cleanup request is not finished. '
+                                         'You need to cancel it first.')
+    request.delete()
+
+
+def delete_stack(allocation_unit: SandboxAllocationUnit) -> None:
+    client = utils.get_ostack_client()
+
+    try:
+        stack_name = allocation_unit.get_stack_name()
+        action, status = client.get_stack_status(stack_name)
+
+        if action == 'DELETE' or action == 'ROLLBACK':
+            msg = f"Sandbox of allocation unit ID={allocation_unit.id} is already being deleted."
+            LOG.warning(msg)
+            return
+
+        client.delete_stack(stack_name)
+    except Exception as exc:
+        msg = f'Deleting sandbox of allocation unit ID={allocation_unit.id} failed. {exc}'
+        raise exceptions.StackError(msg)

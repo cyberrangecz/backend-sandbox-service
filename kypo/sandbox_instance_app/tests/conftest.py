@@ -7,6 +7,14 @@ from django.core.management import call_command
 
 from kypo.topology_definition.models import TopologyDefinition
 
+from kypo.sandbox_instance_app.models import StackAllocationStage, SandboxAllocationUnit, \
+    AllocationRequest, HeatStack, AllocationRQJob, Sandbox, CleanupRequest, StackCleanupStage,\
+    Pool, SandboxLock
+from kypo.sandbox_ansible_app.models import NetworkingAnsibleAllocationStage, \
+    UserAnsibleAllocationStage, NetworkingAnsibleCleanupStage, UserAnsibleCleanupStage, \
+    DockerContainer
+from django.utils import timezone
+
 TESTING_DATA_DIR = 'assets'
 
 TESTING_DATABASE = 'database.yaml'
@@ -100,3 +108,207 @@ def sandbox(mocker):
 def ssh_access_source():
     with open(data_path_join(TESTING_SSH_ACCESS_SOURCE)) as file:
         return file.read()
+
+
+def set_stage_started(stage):
+    stage.start = timezone.now()
+    stage.save()
+
+
+def set_stage_finished(stage):
+    set_stage_started(stage)
+    stage.failed = False
+    stage.error_message = None
+    stage.finished = True
+    stage.end = timezone.now()
+    stage.status = 'CREATE_COMPLETE'
+    stage.status_reason = 'Stack CREATE completed successfully'
+    stage.save()
+
+
+@pytest.fixture
+def stack():
+    return {
+        'stack': {
+            'id': 'stack-id'
+        }
+    }
+
+
+@pytest.fixture
+def pool():
+    return Pool.objects.get(pk=1)
+
+
+@pytest.fixture
+def allocation_unit(pool):
+    return SandboxAllocationUnit.objects.create(pool=pool)
+
+
+@pytest.fixture
+def allocation_request(allocation_unit):
+    return AllocationRequest.objects.create(allocation_unit=allocation_unit)
+
+
+@pytest.fixture
+def allocation_stage_stack(allocation_request):
+    return StackAllocationStage.objects.create(
+        allocation_request=allocation_request,
+        allocation_request_fk_many=allocation_request
+    )
+
+
+@pytest.fixture
+def allocation_stage_stack_started(allocation_stage_stack, stack):
+    set_stage_started(allocation_stage_stack)
+    HeatStack.objects.create(
+        allocation_stage=allocation_stage_stack,
+        stack_id=stack['stack']['id']
+    )
+    AllocationRQJob.objects.create(
+        job_id='stack-allocation-rq-job-id',
+        allocation_stage=allocation_stage_stack,
+    )
+    return allocation_stage_stack
+
+
+@pytest.fixture
+def allocation_stage_networking(allocation_request):
+    return NetworkingAnsibleAllocationStage.objects.create(
+        allocation_request=allocation_request,
+        allocation_request_fk_many=allocation_request,
+        repo_url='stage-one-repo-url',
+        rev='stage-one-repo-rev'
+    )
+
+
+@pytest.fixture
+def allocation_stage_networking_started(allocation_stage_networking,
+                                        allocation_stage_stack_started):
+    set_stage_finished(allocation_stage_stack_started)
+    set_stage_started(allocation_stage_networking)
+    DockerContainer.objects.create(
+        allocation_stage=allocation_stage_networking,
+        container_id='docker-container-id'
+    )
+    AllocationRQJob.objects.create(
+        job_id='networking-allocation-rq-job-id',
+        allocation_stage=allocation_stage_networking,
+    )
+    return allocation_stage_networking
+
+
+@pytest.fixture
+def allocation_stage_user(allocation_request):
+    return UserAnsibleAllocationStage.objects.create(
+        allocation_request=allocation_request,
+        allocation_request_fk_many=allocation_request,
+        repo_url=allocation_request.allocation_unit.pool.definition.url,
+        rev=allocation_request.allocation_unit.pool.rev_sha
+    )
+
+
+@pytest.fixture
+def allocation_stage_user_started(allocation_stage_user, allocation_stage_networking_started):
+    set_stage_finished(allocation_stage_networking_started)
+    set_stage_started(allocation_stage_user)
+    DockerContainer.objects.create(
+        allocation_stage=allocation_stage_user,
+        container_id='docker-container-id'
+    )
+    AllocationRQJob.objects.create(
+        job_id='user-allocation-rq-job-id',
+        allocation_stage=allocation_stage_user,
+    )
+    return allocation_stage_user
+
+
+@pytest.fixture
+def allocation_request_started(allocation_stage_user_started):
+    return allocation_stage_user_started.allocation_request
+
+
+@pytest.fixture
+def now():
+    return timezone.now()
+
+
+@pytest.fixture
+def sandbox(allocation_unit):
+    return Sandbox.objects.create(
+        id=allocation_unit.id,
+        allocation_unit=allocation_unit,
+        private_user_key='private-key',
+        public_user_key='public-key'
+    )
+
+
+@pytest.fixture
+def sandbox_finished(allocation_stage_user_started, sandbox):
+    set_stage_finished(allocation_stage_user_started)
+    return sandbox
+
+
+@pytest.fixture
+def sandbox_lock(sandbox_finished):
+    return SandboxLock.objects.create(sandbox=sandbox_finished)
+
+
+@pytest.fixture
+def cleanup_request(allocation_unit):
+    return CleanupRequest.objects.create(allocation_unit=allocation_unit)
+
+
+@pytest.fixture
+def cleanup_stage_user(cleanup_request):
+    return UserAnsibleCleanupStage.objects.create(
+        cleanup_request=cleanup_request,
+        cleanup_request_fk_many=cleanup_request,
+    )
+
+
+@pytest.fixture
+def cleanup_stage_user_started(cleanup_stage_user, allocation_request_started):
+    set_stage_started(cleanup_stage_user)
+    return cleanup_stage_user
+
+
+@pytest.fixture
+def cleanup_stage_networking(cleanup_request):
+    return NetworkingAnsibleCleanupStage.objects.create(
+        cleanup_request=cleanup_request,
+        cleanup_request_fk_many=cleanup_request,
+    )
+
+
+@pytest.fixture
+def cleanup_stage_networking_started(cleanup_stage_networking, cleanup_stage_user_started):
+    set_stage_finished(cleanup_stage_user_started)
+    set_stage_started(cleanup_stage_networking)
+    return cleanup_stage_networking
+
+
+@pytest.fixture
+def cleanup_stage_stack(cleanup_request):
+    return StackCleanupStage.objects.create(
+        cleanup_request=cleanup_request,
+        cleanup_request_fk_many=cleanup_request,
+    )
+
+
+@pytest.fixture
+def cleanup_stage_stack_started(cleanup_stage_stack, cleanup_stage_networking_started):
+    set_stage_finished(cleanup_stage_networking_started)
+    set_stage_started(cleanup_stage_stack)
+    return cleanup_stage_stack
+
+
+@pytest.fixture
+def cleanup_request_started(cleanup_stage_stack_started):
+    return cleanup_stage_stack_started.cleanup_request
+
+
+@pytest.fixture
+def cleanup_request_finished(cleanup_stage_stack_started):
+    set_stage_finished(cleanup_stage_stack_started)
+    return cleanup_stage_stack_started.cleanup_request

@@ -6,12 +6,16 @@ from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider,
 
 
 class TestGitlabProvider:
-    URL = 'git@gitlab.com:kypo-crp/backend-python/kypo-sandbox-service.git'
+    URL1 = 'git@gitlab.com:kypo-crp/backend-python/kypo-sandbox-service.git'
+    URL2 = 'git@gitlab.com:kypo-crp/backend-python/sub-group/GRPX/kypo-sandbox-service.git'
     CFG = KypoConfiguration(git_server='gitlab.com', git_rest_server='http://gitlab.com:8081')
 
     def test_get_project_path(self):
-        provider = GitlabProvider(self.URL, self.CFG)
-        assert provider.project_path == 'kypo-crp%2Fbackend-python%2Fkypo-sandbox-service'
+        provider1 = GitlabProvider(self.URL1, self.CFG)
+        assert provider1.project_path == 'kypo-crp%2Fbackend-python%2Fkypo-sandbox-service'
+
+        provider2 = GitlabProvider(self.URL2, self.CFG)
+        assert provider2.project_path == 'kypo-crp%2Fbackend-python%2Fsub-group%2FGRPX%2Fkypo-sandbox-service'
 
 
 class TestInternalGitProvider:

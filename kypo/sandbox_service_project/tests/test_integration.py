@@ -9,10 +9,8 @@ from redis import Redis
 from rest_framework import status
 from rq import SimpleWorker
 
-from kypo.sandbox_ansible_app.lib.ansible import AnsibleDockerRunner
-from kypo.sandbox_ansible_app.models import AnsibleOutput, DockerContainer
+from kypo.sandbox_ansible_app.models import AnsibleOutput
 from kypo.sandbox_common_lib import utils
-from kypo.sandbox_instance_app.lib.sandbox_creator import OPENSTACK_QUEUE, ANSIBLE_QUEUE
 from kypo.sandbox_instance_app.models import Sandbox
 
 LOG = structlog.get_logger()
@@ -53,7 +51,7 @@ CLEANUP_STAGE_USER_ANSIBLE = 'user-ansible-cleanup-stage'
 @pytest.mark.integration
 class TestIntegration:
     pytestmark = pytest.mark.django_db(transaction=True)
-    RQ_QUEUES = ('default', OPENSTACK_QUEUE, ANSIBLE_QUEUE)
+    RQ_QUEUES = ('default', 'openstack', 'ansible')
 
     def test_build_sandbox_full(self, client, jump_template):
         try:
