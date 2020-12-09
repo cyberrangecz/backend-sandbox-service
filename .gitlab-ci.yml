@@ -1,9 +1,10 @@
 stages:
-  - unitTests
+  - unit_tests
+  - docker_image_push
 
-unitTests:
+unit_tests:
   image: python:3.8
-  stage: unitTests
+  stage: unit_tests
   script:
     - pip3 install pipenv
     - pipenv sync --dev
@@ -11,3 +12,19 @@ unitTests:
   only:
     - branches
     - tags
+
+docker_image_push:
+  before_script: [ ] #prevent global before_script from running
+  variables:
+    IMAGE_DESTINATION: munikypo/crp-demo-sandbox-service
+  stage: docker_image_push
+  image:
+    name: gcr.io/kaniko-project/executor:v1.3.0-debug
+    entrypoint: [ "" ]
+  script:
+    - cat $DOCKER_CONFIG_B64_FILE | base64 -d > /kaniko/.docker/config.json
+    - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --destination $IMAGE_DESTINATION:$CI_COMMIT_TAG --build-arg KYPO_NEXUS_URL=$KYPO_NEXUS_URL
+  only:
+    - tags
+  except:
+    - branches
