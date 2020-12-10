@@ -17,7 +17,7 @@ unit_tests:
 docker_image_push:
   before_script: [ ] #prevent global before_script from running
   variables:
-    CI_CUSTOM_IMAGE_NAME: $CI_PROJECT_NAME
+    CI_CUSTOM_IMAGE_NAME: "${CI_PROJECT_NAME}"
     CI_CUSTOM_REGISTRY_IMAGE: "${CI_REGISTRY}/${CI_CUSTOM_REGISTRY_PATH}/${CI_CUSTOM_IMAGE_NAME}"
   stage: docker_image_push
   image:
