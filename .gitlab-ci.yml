@@ -11,19 +11,21 @@ unit_tests:
     - pipenv run tox
   only:
     - branches
+  except:
     - tags
 
 docker_image_push:
   before_script: [ ] #prevent global before_script from running
   variables:
-    IMAGE_DESTINATION: munikypo/crp-demo-sandbox-service
+    CI_CUSTOM_IMAGE_NAME: $CI_PROJECT_NAME
+    CI_CUSTOM_REGISTRY_IMAGE: "${CI_REGISTRY}/${CI_CUSTOM_REGISTRY_PATH}/${CI_CUSTOM_IMAGE_NAME}"
   stage: docker_image_push
   image:
     name: gcr.io/kaniko-project/executor:v1.3.0-debug
     entrypoint: [ "" ]
   script:
-    - cat $DOCKER_CONFIG_B64_FILE | base64 -d > /kaniko/.docker/config.json
-    - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --destination $IMAGE_DESTINATION:$CI_COMMIT_TAG --build-arg KYPO_NEXUS_URL=$KYPO_NEXUS_URL
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_CUSTOM_REGISTRY_USER\",\"password\":\"$CI_CUSTOM_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
+    - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --destination $CI_CUSTOM_REGISTRY_IMAGE:$CI_COMMIT_TAG --build-arg KYPO_NEXUS_URL=$KYPO_NEXUS_URL
   only:
     - tags
   except:
