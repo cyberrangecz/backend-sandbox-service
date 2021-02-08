@@ -2,6 +2,9 @@ stages:
   - unit_tests
   - docker_image_push
 
+variables:
+  KYPO_PYPI_DOWNLOAD_URL: 'https://__token__:${CI_CUSTOM_REGISTRY_PASSWORD}@${CI_CUSTOM_REGISTRY_PYPI}/simple'
+
 unit_tests:
   image: python:3.8
   stage: unit_tests
@@ -25,7 +28,7 @@ docker_image_push:
   script:
     - export CI_CUSTOM_REGISTRY_IMAGE="${CI_REGISTRY}/${CI_CUSTOM_REGISTRY_PATH}/${CI_CUSTOM_IMAGE_NAME}"
     - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_CUSTOM_REGISTRY_USER\",\"password\":\"$CI_CUSTOM_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
-    - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --destination $CI_CUSTOM_REGISTRY_IMAGE:$CI_COMMIT_TAG --build-arg KYPO_NEXUS_URL=$KYPO_NEXUS_URL
+    - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --destination $CI_CUSTOM_REGISTRY_IMAGE:$CI_COMMIT_TAG --build-arg KYPO_PYPI_DOWNLOAD_URL=$KYPO_PYPI_DOWNLOAD_URL
   only:
     - tags
   except:

@@ -1,7 +1,6 @@
-# small sandbox definition
 provider: OpenStack
 
-name: small-sandbox-integration
+name: small-sandbox
 hosts:
   - name: server
     base_box: {image: debian-9-x86_64, man_user: debian}

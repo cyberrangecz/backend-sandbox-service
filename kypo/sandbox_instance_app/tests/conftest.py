@@ -1,11 +1,10 @@
-import json
-
+import yaml
 import pytest
 import os
-import jsonpickle
 from django.core.management import call_command
 
 from kypo.topology_definition.models import TopologyDefinition
+from kypo.openstack_driver import TopologyInstance, TransformationConfiguration
 
 from kypo.sandbox_instance_app.models import StackAllocationStage, SandboxAllocationUnit, \
     AllocationRequest, HeatStack, AllocationRQJob, Sandbox, CleanupRequest, StackCleanupStage,\
@@ -23,9 +22,10 @@ TESTING_SSH_CONFIG_USER = 'ssh_config_user'
 TESTING_SSH_CONFIG_MANAGEMENT = 'ssh_config_management'
 TESTING_SSH_CONFIG_ANSIBLE = 'ssh_config_ansible'
 TESTING_DEFINITION = 'definition.yml'
-TESTING_TOPOLOGY = 'topology.json'
-TESTING_TOPOLOGY_HIDDEN = 'topology-hidden.json'
+TESTING_TOPOLOGY = 'topology.yml'
 TESTING_SSH_ACCESS_SOURCE = 'ssh-access-source.sh'
+TESTING_TRC_CONFIG = 'trc-config.yml'
+TESTING_LINKS = 'links.yml'
 
 
 def data_path_join(file: str, data_dir: str = TESTING_DATA_DIR) -> str:
@@ -39,10 +39,36 @@ def django_db_setup(django_db_setup, django_db_blocker):
 
 
 @pytest.fixture
-def top_ins():
+def trc_config():
+    return TransformationConfiguration.from_file(data_path_join(TESTING_TRC_CONFIG))
+
+
+@pytest.fixture
+def top_def():
+    """Creates example topology definition for a sandbox."""
+    with open(data_path_join(TESTING_DEFINITION)) as f:
+        return TopologyDefinition.load(f)
+
+
+@pytest.fixture
+def links():
+    """Creates example links definition"""
+    with open(data_path_join(TESTING_LINKS)) as f:
+        return yaml.full_load(f)
+
+
+@pytest.fixture
+def top_ins(top_def, trc_config, links):
     """Creates example topology instance."""
-    with open(data_path_join(TESTING_TOPOLOGY_INSTANCE)) as f:
-        return jsonpickle.decode(f.read())
+    topology_instance = TopologyInstance(top_def, trc_config)
+    topology_instance.name = 'stack-name'
+    topology_instance.ip = '10.10.10.10'
+
+    for link in topology_instance.get_links():
+        link.ip = links[link.name]['ip']
+        link.mac = links[link.name]['mac']
+
+    return topology_instance
 
 
 @pytest.fixture
@@ -70,21 +96,7 @@ def ansible_ssh_config():
 def topology():
     """Creates example topology for a sandbox."""
     with open(data_path_join(TESTING_TOPOLOGY)) as f:
-        return json.load(f)
-
-
-@pytest.fixture
-def topology_hidden():
-    """Creates example topology for a sandbox."""
-    with open(data_path_join(TESTING_TOPOLOGY_HIDDEN)) as f:
-        return json.load(f)
-
-
-@pytest.fixture
-def top_def():
-    """Creates example topology definition for a sandbox."""
-    with open(data_path_join(TESTING_DEFINITION)) as f:
-        return TopologyDefinition.load(f)
+        return yaml.full_load(f)
 
 
 @pytest.fixture

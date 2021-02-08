@@ -5,6 +5,7 @@ hosts:
   - name: server
     base_box: {image: debian-9-x86_64, man_user: debian}
     flavor: csirtmu.tiny1x2
+    hidden: True
 
   - name: home
     base_box: {image: debian-9-x86_64, man_user: debian}

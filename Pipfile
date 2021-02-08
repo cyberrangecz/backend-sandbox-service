@@ -4,7 +4,7 @@ name = "pypi"
 verify_ssl = true
 
 [[source]]
-url = "$KYPO_NEXUS_URL"
+url = "$KYPO_PYPI_DOWNLOAD_URL"
 name = "kypo"
 verify_ssl = true
 

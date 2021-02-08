@@ -4,7 +4,7 @@ ENV DJANGO_ADMIN_USER "admin"
 ENV DJANGO_ADMIN_PASSWORD "admin"
 ENV DJANGO_ADMIN_EMAIL "admin@example.com"
 
-ARG KYPO_NEXUS_URL="https://localhost.lan/repository"
+ARG KYPO_PYPI_DOWNLOAD_URL="https://localhost.lan/repository"
 
 RUN apt-get update && apt-get install -y python3 python3-pip python3-dev git redis libpq-dev docker nginx supervisor postgresql
 
