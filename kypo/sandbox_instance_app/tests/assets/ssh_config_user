@@ -1,11 +1,11 @@
-Host man 192.168.64.13
-    HostName 192.168.64.13
+Host man 10.10.10.10
+    HostName 10.10.10.10
     User user-access
     IdentityFile <path_to_sandbox_private_key>
     ProxyJump debian@jump-host-ip
 
-Host uan 192.168.0.18
-    HostName 192.168.0.18
+Host uan 192.168.0.16
+    HostName 192.168.0.16
     User user-access
     IdentityFile <path_to_sandbox_private_key>
     ProxyJump user-access@man

@@ -1,56 +1,56 @@
-Host man 192.168.64.13
-    HostName 192.168.64.13
-    User debian
+Host man 10.10.10.10
+    HostName 10.10.10.10
+    User kypo-man
     IdentityFile /root/.ssh/pool_mng_key
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
     ProxyJump debian@jump-host-ip
 
-Host uan 192.168.130.57
-    HostName 192.168.130.57
-    User debian
+Host uan 192.168.128.2
+    HostName 192.168.128.2
+    User kypo-man
     IdentityFile /root/.ssh/pool_mng_key
-    ProxyJump debian@man
+    ProxyJump kypo-man@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
 
-Host border-router 192.168.131.49
-    HostName 192.168.131.49
-    User debian
+Host border-router 192.168.128.3
+    HostName 192.168.128.3
+    User kypo-man
     IdentityFile /root/.ssh/pool_mng_key
-    ProxyJump debian@man
+    ProxyJump kypo-man@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
 
-Host home-router 192.168.128.238
-    HostName 192.168.128.238
+Host home-router 192.168.128.7
+    HostName 192.168.128.7
     User debian
     IdentityFile /root/.ssh/pool_mng_key
-    ProxyJump debian@man
+    ProxyJump kypo-man@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
 
-Host server-router 192.168.129.224
-    HostName 192.168.129.224
+Host server-router 192.168.128.6
+    HostName 192.168.128.6
     User debian
     IdentityFile /root/.ssh/pool_mng_key
-    ProxyJump debian@man
+    ProxyJump kypo-man@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
 
-Host home 192.168.129.65
-    HostName 192.168.129.65
+Host home 192.168.128.5
+    HostName 192.168.128.5
     User debian
     IdentityFile /root/.ssh/pool_mng_key
-    ProxyJump debian@man
+    ProxyJump kypo-man@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
 
-Host server 192.168.128.252
-    HostName 192.168.128.252
+Host server 192.168.128.4
+    HostName 192.168.128.4
     User debian
     IdentityFile /root/.ssh/pool_mng_key
-    ProxyJump debian@man
+    ProxyJump kypo-man@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
 
