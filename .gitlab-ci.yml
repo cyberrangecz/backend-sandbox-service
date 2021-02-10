@@ -2,9 +2,6 @@ stages:
   - unit_tests
   - docker_image_push
 
-variables:
-  KYPO_PYPI_DOWNLOAD_URL: 'https://__token__:${CI_CUSTOM_REGISTRY_PASSWORD}@${CI_CUSTOM_REGISTRY_PYPI}/simple'
-
 unit_tests:
   image: python:3.8
   stage: unit_tests
