@@ -82,18 +82,18 @@ class Inventory:
         group[top_ins.uan.name] = cls.router(
             False,
             [cls.interface(uan_man_link.mac, man_uan_link.ip, [])],
-            top_ins.uan.base_box.man_user
+            top_ins.uan.base_box.mgmt_user
         )
         group[top_ins.br.name] = cls.router(
             True,
             br_interfaces,
-            top_ins.br.base_box.man_user
+            top_ins.br.base_box.mgmt_user
         )
         group[top_ins.man.name] = {
             'ip_forward': True,
             'interfaces': [
                 cls.interface(man_br_link.mac, None, man_routes)],
-            "ansible_user": top_ins.uan.base_box.man_user,
+            "ansible_user": top_ins.uan.base_box.mgmt_user,
             'user_private_key_path': user_priv_key_path,
             'user_public_key_path': user_pub_key_path
         }
@@ -113,7 +113,7 @@ class Inventory:
             br_link, r_link = link_pair.first, link_pair.second
             group[r_link.node.name] = cls.router(True,
                                                  [cls.interface(r_link.mac, br_link.ip, [])],
-                                                 r_link.node.base_box.man_user)
+                                                 r_link.node.base_box.mgmt_user)
             cls._update_man_routes_and_br_interfaces(
                 man_routes, br_interfaces, top_ins, r_link, br_man_link, br_link, net_to_router)
 
@@ -124,7 +124,7 @@ class Inventory:
         """Get routing information for hosts."""
         group = {}
         for host in top_ins.get_hosts():
-            group[host.name] = {'ansible_user': host.base_box.man_user}
+            group[host.name] = {'ansible_user': host.base_box.mgmt_user}
         return group
 
     @staticmethod
