@@ -180,7 +180,7 @@ class AllocationStackStageHandler(StackStageHandler):
         top_def = definitions.get_definition(definition.url, definition.rev, settings.KYPO_CONFIG)
         stack = self._client.create_stack(
             self.stage.allocation_request.allocation_unit.get_stack_name(), top_def,
-            kp_name=self.stage.allocation_request.allocation_unit.pool.get_keypair_name())
+            kp_name_ssh=self.stage.allocation_request.allocation_unit.pool.get_keypair_name())
 
         HeatStack.objects.create(allocation_stage=self.stage, stack_id=stack['stack']['id'])
 

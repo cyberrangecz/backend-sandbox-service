@@ -108,15 +108,15 @@ class KypoSSHConfig(SSHConfig):
         """
         sshconf = cls()
         sshconf.add_man([top_ins.man.name, top_ins.ip],
-                        top_ins.man.base_box.man_user ,
+                        top_ins.man.base_box.mgmt_user ,
                         top_ins.ip,
                         pool_private_key_path)
 
         for link in sshconf._get_man_accessible_node_links(top_ins):
             sshconf.add_host([link.node.name, link.ip],
-                             link.node.base_box.man_user,
+                             link.node.base_box.mgmt_user,
                              link.ip,
-                             top_ins.man.base_box.man_user + '@' + top_ins.man.name,
+                             top_ins.man.base_box.mgmt_user + '@' + top_ins.man.name,
                              pool_private_key_path)
 
         if add_jump and config.proxy_jump_to_man:
