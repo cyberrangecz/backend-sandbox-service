@@ -34,6 +34,7 @@ ANSIBLE_DOCKER_INVENTORY_PATH = DockerVolume(
 
 ANSIBLE_INVENTORY_FILENAME = 'inventory.yml'
 MNG_PRIVATE_KEY_FILENAME = 'pool_mng_key'
+MNG_CERTIFICATE_FILENAME = 'pool_mng_cert'
 USER_PRIVATE_KEY_FILENAME = 'user_key'
 USER_PUBLIC_KEY_FILENAME = 'user_key.pub'
 
@@ -78,6 +79,8 @@ class AnsibleDockerRunner:
                        sandbox.public_user_key)
         self.save_file(os.path.join(ssh_directory, MNG_PRIVATE_KEY_FILENAME),
                        stage.allocation_request_fk_many.allocation_unit.pool.private_management_key)
+        self.save_file(os.path.join(ssh_directory, MNG_CERTIFICATE_FILENAME),
+                       stage.allocation_request_fk_many.allocation_unit.pool.management_certificate)
 
         shutil.copy(config.git_private_key, os.path.join(ssh_directory, os.path.basename(config.git_private_key)))
 

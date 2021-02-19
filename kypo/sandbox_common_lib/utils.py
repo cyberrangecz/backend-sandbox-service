@@ -7,7 +7,6 @@ import uuid
 import jinja2
 from typing import Tuple, Union, Iterable, Callable, Dict
 import structlog
-from Crypto.PublicKey import RSA
 from django.conf import settings
 from django.utils.decorators import method_decorator
 from drf_yasg2 import openapi
@@ -15,10 +14,24 @@ from rest_framework import status
 from drf_yasg2.utils import swagger_auto_schema
 from rest_framework import serializers
 
+from cryptography import x509
+from cryptography.x509.oid import NameOID, ExtendedKeyUsageOID
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.backends import default_backend
+
 from kypo.openstack_driver import KypoOstackClient
+
+import datetime
 
 # Create logger
 LOG = structlog.get_logger()
+# Name of user on windows instance
+WIN_USERNAME = 'windows'
+# Object identifier, this extension must be present in certificates
+OID = '1.3.6.1.4.1.311.20.2.3'
+# First two bytes are 'FORM FEED' and 'DEVICE CONTROL ONE' in order.
+OID_LOGIN = '\x0c\x11' + WIN_USERNAME + '@localhost'
 
 
 def configure_logging() -> None:
@@ -56,15 +69,76 @@ def json_pretty_print(data: Dict) -> str:
     return json.dumps(data, indent=2)
 
 
+def create_self_signed_certificate(private_key: str) -> str:
+    """
+    Create self-signed certificate.
+
+    :param private_key: Private key used to sign certificate
+    :return: Certificate string
+    """
+    private_key = serialization.load_pem_private_key(bytes(private_key, encoding='UTF-8'), password=None,
+                                                     backend=default_backend())
+
+    subject = issuer = x509.Name([
+        x509.NameAttribute(NameOID.COMMON_NAME, WIN_USERNAME)
+    ])
+
+    cert = x509.CertificateBuilder().subject_name(
+        subject
+    ).issuer_name(
+        issuer
+    ).public_key(
+        private_key.public_key()
+    ).serial_number(
+        x509.random_serial_number()
+    ).not_valid_before(
+        datetime.datetime.utcnow()
+    ).not_valid_after(
+        datetime.datetime.max
+    ).add_extension(
+        x509.ExtendedKeyUsage(
+            [ExtendedKeyUsageOID.CLIENT_AUTH],
+        ),
+        critical=False,
+    ).add_extension(
+        x509.SubjectAlternativeName(
+            [
+                x509.OtherName(
+                    x509.oid.ObjectIdentifier(OID),
+                    OID_LOGIN.encode('utf-8'),
+                ),
+            ]
+        ),
+        critical=False,
+    ).sign(private_key, hashes.SHA256(), backend=default_backend())
+
+    return cert.public_bytes(encoding=serialization.Encoding.PEM).decode()
+
+
 def generate_ssh_keypair(bits: int = 2048) -> Tuple[str, str]:
     """Generate SSH-RSA key pair.
 
+    :param bits: Length of key in bits
     :return: Tuple of private and public key strings
     """
-    key = RSA.generate(bits)
-    priv_key = key.exportKey().decode()
-    pub_key = key.publickey().exportKey("OpenSSH").decode()
-    return priv_key, pub_key
+    key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=bits,
+        backend=default_backend(),
+    )
+
+    private_key = key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode()
+
+    public_key = key.public_key().public_bytes(
+        encoding=serialization.Encoding.OpenSSH,
+        format=serialization.PublicFormat.OpenSSH,
+    ).decode()
+
+    return private_key, public_key
 
 
 def get_ostack_client() -> KypoOstackClient:

@@ -20,6 +20,9 @@ class Pool(models.Model):
     public_management_key = models.TextField(
         help_text='Public key for management access.'
     )
+    management_certificate = models.TextField(
+        help_text='Certificate for windows management access.'
+    )
     uuid = models.TextField(default=utils.get_simple_uuid)
     rev = models.TextField(
         help_text='Definition revision used for sandboxes.'
@@ -38,6 +41,14 @@ class Pool(models.Model):
     def get_keypair_name(self) -> str:
         """Returns a name of the management key-pair for this pool."""
         return self.definition.name + '-' + str(self.id) + '-' + str(self.uuid)
+
+    @property
+    def ssh_keypair_name(self) -> str:
+        return self.get_keypair_name() + '-ssh'
+
+    @property
+    def certificate_keypair_name(self) -> str:
+        return self.get_keypair_name() + '-cert'
 
 
 class SandboxAllocationUnit(models.Model):
