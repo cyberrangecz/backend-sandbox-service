@@ -19,6 +19,8 @@ from kypo.sandbox_instance_app import serializers
 from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit, CleanupRequest, \
     SandboxLock, PoolLock
 
+from kypo.openstack_driver.exceptions import KypoException, InvalidTopologyDefinition
+
 LOG = structlog.get_logger()
 
 
@@ -37,7 +39,7 @@ def get_pool(pool_pk: int) -> Pool:
 def create_pool(data: Dict) -> Pool:
     """
     Creates new Pool instance.
-    Also creates management key-pair in OpenStack
+    Also creates management key-pairs in OpenStack
 
     :param data: dict of attributes to create model. Currently must contain:
         - definition: primary key (ID) of the Definition that new Pool instance is related to
@@ -61,16 +63,27 @@ def create_pool(data: Dict) -> Pool:
         # Validate definition
         top_def = definitions.get_definition(definition.url, pool.rev, settings.KYPO_CONFIG)
         client.validate_topology_definition(top_def)
-
-        private_key, public_key = utils.generate_ssh_keypair()
-        pool.private_management_key = private_key
-        pool.public_management_key = public_key
-        pool.save()
-
-        client.create_keypair(pool.get_keypair_name(), public_key)
-
-    except Exception:
+    except (exceptions.GitError, exceptions.ValidationError, InvalidTopologyDefinition):
         pool.delete()
+        raise
+
+    private_key, public_key = utils.generate_ssh_keypair()
+    certificate = utils.create_self_signed_certificate(private_key)
+
+    pool.private_management_key = private_key
+    pool.public_management_key = public_key
+    pool.management_certificate = certificate
+    pool.save()
+
+    try:
+        client.create_keypair(pool.ssh_keypair_name, public_key, 'ssh')
+        client.create_keypair(pool.certificate_keypair_name, certificate, 'x509')
+    except KypoException:
+        try:
+            delete_pool(pool)
+        except KypoException:
+            pass
+
         raise
 
     return pool
@@ -78,10 +91,12 @@ def create_pool(data: Dict) -> Pool:
 
 def delete_pool(pool: Pool) -> None:
     """Deletes given Pool. Also deletes management key-pair in OpenStack."""
-    keypair_name = pool.get_keypair_name()
-    pool.delete()
     client = utils.get_ostack_client()
-    client.delete_keypair(keypair_name)
+    try:
+        client.delete_keypair(pool.ssh_keypair_name)
+        client.delete_keypair(pool.certificate_keypair_name)
+    finally:
+        pool.delete()
 
 
 def get_pool_size(pool: Pool) -> int:
