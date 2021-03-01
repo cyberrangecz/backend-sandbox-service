@@ -16,7 +16,7 @@ class TestPrepareInventoryFile:
         yield
 
     def test_prepare_inventory_file_success(self, mocker, top_ins):
-        mock_inventory = mocker.patch('kypo.sandbox_ansible_app.lib.ansible.Inventory')
+        mock_inventory = mocker.patch('kypo.sandbox_ansible_app.lib.inventory.Inventory')
         mocker.patch('kypo.sandbox_ansible_app.lib.ansible.docker.from_env')
         dir_path = '/tmp'
         sandbox = Sandbox.objects.get(pk=1)

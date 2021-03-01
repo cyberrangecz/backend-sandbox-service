@@ -4,6 +4,8 @@ import structlog
 import yaml
 
 from kypo.openstack_driver import TopologyInstance
+from kypo.topology_definition.models import Protocol
+from kypo.sandbox_ansible_app.lib import ansible
 
 LOG = structlog.get_logger()
 
@@ -35,6 +37,9 @@ class Inventory:
 
         # set MAN ip to outer IP, not in MNG network
         groups['management']['hosts'][top_ins.man.name]['ansible_host'] = top_ins.ip
+
+        groups['winrm_nodes'] = self.create_winrm_hosts_group(top_ins)
+        groups['ssh_nodes'] = self.create_ssh_hosts_group(top_ins)
 
         groups.update(self.create_user_groups(top_ins))
 
@@ -126,6 +131,50 @@ class Inventory:
         for host in top_ins.get_hosts():
             group[host.name] = {'ansible_user': host.base_box.mgmt_user}
         return group
+
+    @staticmethod
+    def get_psrp_vars() -> dict:
+        """
+        Get ansible psrp variables for hosts.
+        """
+        return {
+            'ansible_connection': 'psrp',
+            'ansible_psrp_auth': 'certificate',
+            'ansible_psrp_cert_validation': 'ignore',
+            'ansible_psrp_certificate_key_pem': f'{ansible.ANSIBLE_DOCKER_SSH_DIR.bind}/'
+                                                f'{ansible.MNG_PRIVATE_KEY_FILENAME}',
+            'ansible_psrp_certificate_pem': f'{ansible.ANSIBLE_DOCKER_SSH_DIR.bind}/'
+                                            f'{ansible.MNG_CERTIFICATE_FILENAME}',
+            'ansible_psrp_proxy': 'socks5://localhost:12345',
+        }
+
+    @classmethod
+    def create_winrm_hosts_group(cls, top_ins: TopologyInstance) -> Dict[str, dict]:
+        """
+        Create host group for nodes managed by winrm protocol. Append access information.
+        """
+        hosts = {
+            node.name: None for node in top_ins.get_nodes()
+            if node.base_box.mgmt_protocol == Protocol.WINRM
+            and node not in top_ins.get_extra_nodes()
+        }
+
+        return {
+            'hosts': hosts,
+            'vars': cls.get_psrp_vars(),
+        }
+
+    @staticmethod
+    def create_ssh_hosts_group(top_ins: TopologyInstance) -> Dict[str, dict]:
+        """
+        Create host group for nodes managed by ssh protocol. Exclude management nodes.
+        """
+        hosts = {
+            node.name: None for node in top_ins.get_nodes()
+            if node.base_box.mgmt_protocol == Protocol.SSH and node not in top_ins.get_extra_nodes()
+        }
+
+        return {'hosts': hosts}
 
     @staticmethod
     def create_user_groups(top_ins: TopologyInstance) -> Dict[str, Dict[str, Dict[str, None]]]:

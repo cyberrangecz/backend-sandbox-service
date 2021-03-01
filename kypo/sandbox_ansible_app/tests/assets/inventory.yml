@@ -4,7 +4,7 @@ all:
       hosts:
         home:
           ansible_host: 192.168.128.5
-          ansible_user: debian
+          ansible_user: windows
         server:
           ansible_host: 192.168.128.4
           ansible_user: debian
@@ -82,6 +82,21 @@ all:
       hosts:
         home: null
         home-router: null
+    winrm_nodes:
+      hosts:
+        home:
+      vars:
+        'ansible_connection': 'psrp'
+        'ansible_psrp_auth': 'certificate'
+        'ansible_psrp_cert_validation': 'ignore'
+        'ansible_psrp_certificate_key_pem': '/root/.ssh/pool_mng_key'
+        'ansible_psrp_certificate_pem': '/root/.ssh/pool_mng_cert'
+        'ansible_psrp_proxy': 'socks5://localhost:12345'
+    ssh_nodes:
+      hosts:
+        server:
+        home-router:
+        server-router:
   vars:
     kypo_global_head_ip: 0.0.0.0
     kypo_global_openstack_stack_id: heatstack-stack-id
