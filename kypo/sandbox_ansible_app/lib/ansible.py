@@ -7,7 +7,7 @@ from django.conf import settings
 from docker.models.containers import Container
 from kypo.openstack_driver import TopologyInstance
 
-from kypo.sandbox_ansible_app.lib.inventory import Inventory
+from kypo.sandbox_ansible_app.lib import inventory
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage
 from kypo.sandbox_common_lib import exceptions
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
@@ -126,7 +126,7 @@ class AnsibleDockerRunner:
             'kypo_global_pool_id': sau.pool.id,
             'kypo_global_head_ip': settings.KYPO_CONFIG.kypo_head_ip,
         }
-        return Inventory(top_ins, user_private_key, user_public_key, extra_vars)
+        return inventory.Inventory(top_ins, user_private_key, user_public_key, extra_vars)
 
     @staticmethod
     def make_dir(dir_path: str) -> None:

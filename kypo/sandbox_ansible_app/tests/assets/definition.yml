@@ -8,7 +8,7 @@ hosts:
     hidden: True
 
   - name: home
-    base_box: {image: debian-9-x86_64, mgmt_user: debian}
+    base_box: {image: windows-10, mgmt_user: windows, mgmt_protocol: WINRM}
     flavor: csirtmu.tiny1x2
 
 routers:
