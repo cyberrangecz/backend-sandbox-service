@@ -6,7 +6,7 @@ ENV DJANGO_ADMIN_EMAIL "admin@example.com"
 
 ARG KYPO_PYPI_DOWNLOAD_URL="https://localhost.lan/repository"
 
-RUN apt-get update && apt-get install -y python3 python3-pip python3-dev git redis libpq-dev docker nginx supervisor postgresql
+RUN apt-get update && apt-get install -y python3 python3-pip python3-dev git redis libpq-dev docker nginx supervisor postgresql netcat
 
 ENV PYTHONUNBUFFERED 1
 RUN pip3 install pipenv
@@ -40,4 +40,4 @@ RUN pipenv sync && \
 RUN pipenv run python3 manage.py collectstatic --no-input -v 2
 
 EXPOSE 8000
-ENTRYPOINT ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
+ENTRYPOINT ["/app/bin/entrypoint.sh"]
