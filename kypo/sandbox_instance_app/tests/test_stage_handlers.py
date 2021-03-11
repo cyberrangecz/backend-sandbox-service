@@ -107,16 +107,6 @@ class TestCleanupStackStageHandler:
 
         assert_db_stage(cleanup_stage_stack, now, failed=False)
 
-    def test_execute_failed_deletion(self, now, cleanup_stage_stack):
-        handler = stage_handlers.CleanupStackStageHandler(cleanup_stage_stack)
-        stage_handlers.CleanupStackStageHandler._client \
-            .wait_for_stack_delete_action.return_value = False, 'error-message'
-
-        with pytest.raises(api_exceptions.StackError):
-            handler.execute()
-
-        assert_db_stage(cleanup_stage_stack, now, failed=True)
-
     @pytest.mark.xfail(reason='cancellation should set error_message to \'canceled\'')
     def test_cancel_success(self, now, cleanup_stage_stack_started):
         handler = stage_handlers.CleanupStackStageHandler(cleanup_stage_stack_started)
