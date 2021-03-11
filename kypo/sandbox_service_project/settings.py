@@ -242,6 +242,7 @@ RQ_QUEUES = {
 }
 
 RQ_SHOW_ADMIN_LINK = True
+RQ_EXCEPTION_HANDLERS = ['kypo.sandbox_instance_app.lib.request_handlers.request_exception_handler']
 
 LOGGING = {
     "version": 1,

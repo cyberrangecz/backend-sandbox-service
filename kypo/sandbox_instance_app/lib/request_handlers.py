@@ -3,6 +3,7 @@ import structlog
 from functools import partial
 from typing import List, Type, Callable, Union
 from rq import Queue
+from rq.job import Job
 import django_rq
 from django.db import transaction
 from django.conf import settings
@@ -14,7 +15,7 @@ from kypo.sandbox_ansible_app.models import AnsibleAllocationStage,\
 
 from kypo.sandbox_instance_app.models import Sandbox, SandboxAllocationUnit,\
     SandboxRequest, AllocationRequest, CleanupRequest,\
-    StackAllocationStage, CleanupStage, StackCleanupStage
+    StackAllocationStage, CleanupStage, StackCleanupStage, AllocationRQJob, CleanupRQJob
 from kypo.sandbox_instance_app.lib.stage_handlers import StageHandler, StackStageHandler,\
     AllocationStackStageHandler, CleanupStackStageHandler, AnsibleStageHandler,\
     AllocationAnsibleStageHandler, CleanupAnsibleStageHandler
@@ -230,3 +231,26 @@ class CleanupRequestHandler(RequestHandler):
         """
         allocation_unit.delete()
         LOG.info('Allocation Unit deleted from DB', allocation_unit=allocation_unit)
+
+
+def request_exception_handler(job: Job) -> None:
+    """
+    Handle exception raised during request execution in Redis queue worker.
+
+    :param job: The Job that raised an exception
+    """
+    request_handler = None
+    try:
+        request = AllocationRQJob.objects.get(job_id=job.id)\
+            .allocation_stage.allocation_request_fk_many
+        request_handler = AllocationRequestHandler(request)
+    except AllocationRQJob.DoesNotExist:
+        try:
+            request = CleanupRQJob.objects.get(job_id=job.id)\
+                .cleanup_stage.cleanup_request_fk_many
+            request_handler = CleanupRequestHandler(request)
+        except CleanupRQJob.DoesNotExist:
+            pass
+
+    if request_handler:
+        request_handler.cancel_request()

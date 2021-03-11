@@ -88,19 +88,20 @@ class StageHandler(abc.ABC):
           and re-raise them again.
         Warning: Do not override this method. Any changes should be made to _cancel method.
         """
-        try:
-            LOG.info(f'Cancellation of stage {self.name} started', stage=self.stage)
-            self._delete_job()
-            return self._cancel()
-        except Exception as ex:
-            self.stage.error_message = str(ex)
-            raise
-        finally:
-            self.stage.failed = True
-            self.stage.end = timezone.now()
-            self.stage.finished = True
-            self.stage.save()
-            LOG.info(f'Cancellation of stage {self.name} ended', stage=self.stage)
+        if not self.stage.finished:
+            try:
+                LOG.info(f'Cancellation of stage {self.name} started', stage=self.stage)
+                self._delete_job()
+                return self._cancel()
+            except Exception as ex:
+                self.stage.error_message = str(ex)
+                raise
+            finally:
+                self.stage.failed = True
+                self.stage.end = timezone.now()
+                self.stage.finished = True
+                self.stage.save()
+                LOG.info(f'Cancellation of stage {self.name} ended', stage=self.stage)
 
     def _delete_job(self) -> None:
         """
@@ -133,7 +134,7 @@ class StackStageHandler(StageHandler):
     def _cancel(self) -> None:
         pass
 
-    def _delete_sandbox(self, allocation_unit: SandboxAllocationUnit, wait: bool = True) -> None:
+    def _delete_sandbox(self, allocation_unit: SandboxAllocationUnit) -> None:
         """
         Delete sandbox associated with the given allocation unit
           and wait for its completion if wait parameter is True.
@@ -150,19 +151,6 @@ class StackStageHandler(StageHandler):
             LOG.warning('Deleting sandbox failed', exception=str(ex),
                         allocation_unit=allocation_unit)
             return
-
-        if wait:
-            self._wait_for_stack_deletion(stack_name)
-            LOG.debug('Stack deleted successfully from OpenStack',
-                      stack_name=stack_name, allocation_unit=allocation_unit)
-
-    def _wait_for_stack_deletion(self, stack_name: str) -> None:
-        """
-        Wait for the stack deletion.
-        """
-        success, msg = self._client.wait_for_stack_delete_action(stack_name)
-        if not success:
-            raise exceptions.StackError(f'Stack {stack_name} delete failed: {msg}')
 
 
 class AllocationStackStageHandler(StackStageHandler):
@@ -207,7 +195,7 @@ class AllocationStackStageHandler(StackStageHandler):
         Stop the OpenStack stack allocation and remove what has been allocated.
         """
         if self.stage.start:
-            self._delete_sandbox(self.stage.allocation_request.allocation_unit, wait=False)
+            self._delete_sandbox(self.stage.allocation_request.allocation_unit)
 
     def update_allocation_stage(self) -> StackAllocationStage:
         """
