@@ -164,12 +164,13 @@ class AllocationStackStageHandler(StackStageHandler):
         """
         Allocate stack in the OpenStack cloud platform.
         """
-        definition = self.stage.allocation_request.allocation_unit.pool.definition
+        allocation_unit = self.stage.allocation_request.allocation_unit
+        definition = allocation_unit.pool.definition
         top_def = definitions.get_definition(definition.url, definition.rev, settings.KYPO_CONFIG)
         stack = self._client.create_stack(
-            self.stage.allocation_request.allocation_unit.get_stack_name(), top_def,
-            kp_name_ssh=self.stage.allocation_request.allocation_unit.pool.ssh_keypair_name,
-            kp_name_cert=self.stage.allocation_request.allocation_unit.pool.certificate_keypair_name,
+            allocation_unit.get_stack_name(), top_def,
+            key_pair_name_ssh=allocation_unit.pool.ssh_keypair_name,
+            key_pair_name_cert=allocation_unit.pool.certificate_keypair_name,
         )
 
         HeatStack.objects.create(allocation_stage=self.stage, stack_id=stack['stack']['id'])

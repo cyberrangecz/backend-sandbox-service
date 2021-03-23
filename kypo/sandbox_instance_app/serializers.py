@@ -207,13 +207,13 @@ class NodeConsoleSerializer(serializers.Serializer):
 
 
 class SandboxEventSerializer(serializers.Serializer):
-    time = serializers.CharField(source='e_time')
-    name = serializers.CharField(source='r_name')
-    status = serializers.CharField(source='r_status')
-    status_reason = serializers.CharField(source='r_status_reason')
+    time = serializers.CharField(source='event_time')
+    name = serializers.CharField(source='resource_name')
+    status = serializers.CharField(source='resource_status')
+    status_reason = serializers.CharField(source='resource_status_reason')
 
 
 class SandboxResourceSerializer(serializers.Serializer):
-    name = serializers.CharField(source='r_name')
-    type = serializers.CharField(source='r_type')
-    status = serializers.CharField(source='r_status')
+    name = serializers.CharField(source='resource_name')
+    type = serializers.CharField(source='resource_type')
+    status = serializers.CharField(source='resource_status')

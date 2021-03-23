@@ -21,10 +21,16 @@ DEFINITION_REV = 'master'
 # Heat stack and template values
 JUMP_STACK_NAME = 'integration_test_jump'
 DEFAULT_PUBLIC_NETWORK = 'public-cesnet-78-128-251-GROUP'
+KEY_PAIR = 'test_key'
+JUMP_NETWORK = settings.KYPO_CONFIG.trc.base_network
+JUMP_SERVER = 'jump_server'
 TEMPLATE_DICT = dict(
     PUBLIC_NETWORK=os.environ.get('PUBLIC_NETWORK', DEFAULT_PUBLIC_NETWORK),
     JUMP_IMAGE=settings.KYPO_CONFIG.trc.extra_nodes_image,
     JUMP_FLAVOR=settings.KYPO_CONFIG.trc.extra_nodes_flavor,
+    KEY_PAIR=KEY_PAIR,
+    JUMP_NETWORK=JUMP_NETWORK,
+    JUMP_SERVER=JUMP_SERVER,
 )
 
 # URL names
@@ -55,8 +61,10 @@ class TestIntegration:
 
     def test_build_sandbox_full(self, client, jump_template):
         try:
-            outs = self.create_jump_host(jump_template)
-            self.set_jump_host_config(outs['jump_ip'], outs['test_key'])
+            private_key = self.create_key_pair()
+            self.create_jump_host(jump_template)
+            jump_ip = self.get_jump_ip_address()
+            self.set_jump_host_config(jump_ip, private_key)
 
             def_id = self.create_definition(client, DEFINITION_URL, DEFINITION_REV)
             try:
@@ -81,6 +89,7 @@ class TestIntegration:
             finally:
                 self.delete_definition(client, def_id)
         finally:
+            self.delete_key_pair()
             self.delete_jump_host()
 
     @classmethod
@@ -236,13 +245,11 @@ class TestIntegration:
         LOG.info(f'Creating jump host {JUMP_STACK_NAME}')
         template = string.Template(jump_template)
         client = utils.get_ostack_client()
-        client.ostack_proxy.create_stack_from_template(
+        client.open_stack_proxy.create_stack_from_template(
             template.safe_substitute(**TEMPLATE_DICT), JUMP_STACK_NAME)
 
-        succ, msg = client.wait_for_stack_create_action(JUMP_STACK_NAME)
-        assert succ
-
-        return client.ostack_proxy.get_outputs(JUMP_STACK_NAME)
+        result, msg = client.wait_for_stack_create_action(JUMP_STACK_NAME)
+        assert result
 
     @staticmethod
     def delete_jump_host():
@@ -253,9 +260,26 @@ class TestIntegration:
     @staticmethod
     def set_jump_host_config(host, private_key):
         key_path = f'/tmp/test-key-{utils.get_simple_uuid()}'
-        LOG.info('Stack outputs', host=host, key_path=key_path,
+        LOG.info('Set jump host config', host=host, key_path=key_path,
                  private_key=private_key)
         settings.KYPO_CONFIG.proxy_jump_to_man.Host = host
         settings.KYPO_CONFIG.proxy_jump_to_man.IdentityFile = key_path
         with open(key_path, 'w') as f:
             f.write(private_key)
+
+    @staticmethod
+    def create_key_pair():
+        client = utils.get_ostack_client()
+        return client.create_keypair(KEY_PAIR).to_dict().get('private_key')
+
+    @staticmethod
+    def delete_key_pair():
+        client = utils.get_ostack_client()
+        client.delete_keypair(KEY_PAIR)
+
+    @staticmethod
+    def get_jump_ip_address():
+        client = utils.get_ostack_client()
+        links = client.get_node(JUMP_STACK_NAME, JUMP_SERVER).links.get(JUMP_NETWORK)
+        links = [link for link in links if link['type'] == 'floating']
+        return links[0]['addr'] if links else None
