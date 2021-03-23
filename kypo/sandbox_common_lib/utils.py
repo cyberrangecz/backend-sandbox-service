@@ -20,7 +20,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
 
-from kypo.openstack_driver import KypoOstackClient
+from kypo.openstack_driver import KypoOpenStackClient
 
 import datetime
 
@@ -141,12 +141,13 @@ def generate_ssh_keypair(bits: int = 2048) -> Tuple[str, str]:
     return private_key, public_key
 
 
-def get_ostack_client() -> KypoOstackClient:
+def get_ostack_client() -> KypoOpenStackClient:
     """Abstracts creation and authentication to KYPO lib client."""
-    return KypoOstackClient(app_creds_id=settings.KYPO_CONFIG.os_application_credential_id,
-                            auth_url=settings.KYPO_CONFIG.os_auth_url,
-                            app_creds_secret=settings.KYPO_CONFIG.os_application_credential_secret,
-                            trc=settings.KYPO_CONFIG.trc)
+    return KypoOpenStackClient(
+        auth_url=settings.KYPO_CONFIG.os_auth_url,
+        application_credential_id=settings.KYPO_CONFIG.os_application_credential_id,
+        application_credential_secret=settings.KYPO_CONFIG.os_application_credential_secret,
+        trc=settings.KYPO_CONFIG.trc)
 
 
 def get_simple_uuid() -> str:

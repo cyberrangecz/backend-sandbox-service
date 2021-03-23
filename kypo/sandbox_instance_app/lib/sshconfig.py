@@ -2,8 +2,8 @@ from typing import List, Union, Optional
 import structlog
 from ssh_config import Host, SSHConfig
 
-from kypo.openstack_driver import TopologyInstance,\
-    Link, ExtraNode, Host as SandboxHost, Router
+from kypo.topology_definition.models import Host as SandboxHost, Router
+from kypo.openstack_driver import TopologyInstance, Link, ExtraNode
 
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
 

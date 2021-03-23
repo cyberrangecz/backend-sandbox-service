@@ -34,7 +34,6 @@ class TestNodeAction:
 
 class TestGetNode:
     def test_get_node(self, mocker):
-        mock_client = mocker.patch(
-            "kypo.openstack_driver.ostack_client.KypoOstackClient.get_node")
+        mock_client = mocker.patch("kypo.openstack_driver.KypoOpenStackClient.get_node")
         result = nodes.get_node(mocker.MagicMock(), "node_name")
         assert result == mock_client.return_value

@@ -19,13 +19,28 @@ parameters:
         type: string
         default: $PUBLIC_NETWORK
 
+    test_key:
+        type: string
+        default: $KEY_PAIR
+        constraints:
+            - custom_constraint: nova.keypair
+
+    jump_network_name:
+        type: string
+        default: $JUMP_NETWORK
+
+    jump_server_name:
+        type: string
+        default: $JUMP_SERVER
+
+
 ###################################################
 
 resources:
     jump_network:
         type: OS::Neutron::Net
         properties:
-            name: jump_network
+            name: { get_param: jump_network_name }
 
     jump_network_subnet:
         type: OS::Neutron::Subnet
@@ -67,25 +82,13 @@ resources:
             floating_network_id: { get_param: public_network }
             port_id: { get_resource: jump_port }
 
-    test_key:
-        type: OS::Nova::KeyPair
-        properties:
-          name: test_key
-          save_private_key: True
-
     jump_server:
         type: OS::Nova::Server
         depends_on: [jump_network_subnet, jump_port]
         properties:
-            name: jump_server
-            key_name: { get_resource: test_key }
+            name: { get_param: jump_server_name }
+            key_name: { get_param: test_key }
             image: { get_param: jump_image }
             flavor: { get_param: jump_flavor }
             networks:
                 - port: { get_resource: jump_port }
-
-outputs:
-    jump_ip:
-        value: { get_attr: [floating_ip, floating_ip_address] }
-    test_key:
-        value: { get_attr: [test_key, private_key] }
