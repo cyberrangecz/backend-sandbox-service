@@ -44,6 +44,9 @@ application_configuration:
     # The secret string of APPLICATION_CREDENTIAL_ID.
     os_application_credential_secret: ""
 
+    # The OpenStack console type. One of: novnc, xvpvnc, spice-html5, rdp-html5, serial, webmks.
+    #os_console_type: spice-html5
+
     # The path to project log file.
     #log_file: kypo-sandbox-service.log
 
