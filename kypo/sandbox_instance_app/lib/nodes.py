@@ -1,6 +1,8 @@
 """
 VM Service module for VM management.
 """
+from django.conf import settings
+
 from kypo.openstack_driver import OpenStackInstance
 
 from kypo.sandbox_instance_app.models import Sandbox
@@ -30,4 +32,5 @@ def get_node(sandbox: Sandbox, node_name: str) -> OpenStackInstance:
 def get_console_url(sandbox: Sandbox, node_name: str) -> str:
     """Get console URL for given VM."""
     client = utils.get_ostack_client()
-    return client.get_spice_console(sandbox.allocation_unit.get_stack_name(), node_name)
+    return client.get_console_url(sandbox.allocation_unit.get_stack_name(), node_name,
+                                  settings.KYPO_CONFIG.os_console_type.value)

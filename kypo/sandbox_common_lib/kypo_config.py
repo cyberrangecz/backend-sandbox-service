@@ -45,6 +45,22 @@ class GitType(Enum):
     INTERNAL = 2
 
 
+class OpenStackConsoleType(Enum):
+    NOVNC = 'novnc'
+    XVPVNC = 'xvpvnc'
+    SPICE_HTML5 = 'spice-html5'
+    RDP_HTML5 = 'rdp-html5'
+    SERIAL = 'serial'
+    WEBMKS = 'webmks'
+
+    @classmethod
+    def create(cls, value: str) -> None:
+        try:
+            return cls[value.upper().replace('-', '_')]
+        except KeyError:
+            raise ValueError(f'Invalid value for OpenStackConsoleType: {value}')
+
+
 class KypoConfiguration(Object):
     kypo_head_ip = Attribute(type=str, default=KYPO_HEAD_IP,
                              validator=kypo_config_validation.validate_kypo_head_ip)
@@ -52,6 +68,15 @@ class KypoConfiguration(Object):
     os_auth_url = Attribute(type=str)
     os_application_credential_id = Attribute(type=str)
     os_application_credential_secret = Attribute(type=str)
+    os_console_type = Attribute(
+        type=Typed(
+            OpenStackConsoleType,
+            from_yaml=(lambda loader, node, _:
+                       OpenStackConsoleType.create(loader.construct_object(node))),
+            to_yaml=(lambda dumper, data, rtd: dumper.represent_data(data.name)),
+        ),
+        default=OpenStackConsoleType.SPICE_HTML5,
+    )
 
     log_file = Attribute(type=str, default=LOG_FILE)
     log_level = Attribute(type=str, default=LOG_LEVEL)
