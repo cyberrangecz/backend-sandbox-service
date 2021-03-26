@@ -1,42 +1,41 @@
 all:
-  children:
-    hosts:
-      hosts:
-        home:
-          ansible_host: 192.168.128.5
-          ansible_user: windows
-        server:
-          ansible_host: 192.168.128.4
-          ansible_user: debian
-    management:
-      hosts:
-        border-router:
-          ansible_host: 192.168.128.3
-          ansible_user: kypo-man
-          interfaces:
-          - def_gw_ip: 192.168.0.2
-            mac: 00:00:00:00:00:07
-            routes: []
-          - def_gw_ip: null
-            mac: 00:00:00:00:00:14
-            routes:
+  hosts:
+    home:
+      ansible_host: 192.168.128.5
+      ansible_user: windows
+    server:
+      ansible_host: 192.168.128.4
+      ansible_user: debian
+    border-router:
+      ansible_host: 192.168.128.3
+      ansible_user: kypo-man
+      interfaces:
+        - def_gw_ip: 192.168.0.2
+          mac: 00:00:00:00:00:07
+          routes: []
+        - def_gw_ip: null
+          mac: 00:00:00:00:00:14
+          routes:
             - gw: 100.100.100.3
               mask: 255.255.255.0
               net: 10.10.20.0
-          - def_gw_ip: null
-            mac: 00:00:00:00:00:17
-            routes:
+        - def_gw_ip: null
+          mac: 00:00:00:00:00:17
+          routes:
             - gw: 200.100.100.2
               mask: 255.255.255.0
               net: 10.10.30.0
-          ip_forward: true
-        man:
-          ansible_host: 10.10.10.10
-          ansible_user: kypo-man
-          interfaces:
-          - def_gw_ip: null
-            mac: 00:00:00:00:00:03
-            routes:
+      ip_forward: true
+    man:
+      ansible_host: 10.10.10.10
+      ansible_user: kypo-man
+      interfaces:
+        - def_gw_ip: null
+          mac: 00:00:00:00:00:02
+          routes: []
+        - def_gw_ip: null
+          mac: 00:00:00:00:00:03
+          routes:
             - gw: 192.168.0.1
               mask: 255.255.255.248
               net: 100.100.100.0
@@ -49,35 +48,46 @@ all:
             - gw: 192.168.0.1
               mask: 255.255.255.0
               net: 10.10.30.0
-          ip_forward: true
-          user_private_key_path: /root/.ssh/user_key
-          user_public_key_path: /root/.ssh/user_key.pub
-        uan:
-          ansible_host: 192.168.128.2
-          ansible_user: kypo-man
-          interfaces:
-          - def_gw_ip: 192.168.0.17
-            mac: 00:00:00:00:00:05
-            routes: []
-          ip_forward: false
+      ip_forward: true
+      user_private_key_path: /root/.ssh/user_key
+      user_public_key_path: /root/.ssh/user_key.pub
+    uan:
+      ansible_host: 192.168.128.2
+      ansible_user: kypo-man
+      interfaces:
+        - def_gw_ip: 192.168.0.17
+          mac: 00:00:00:00:00:05
+          routes: []
+    home-router:
+      ansible_host: 192.168.128.7
+      ansible_user: debian
+      interfaces:
+        - def_gw_ip: 200.100.100.3
+          mac: 00:00:00:00:00:16
+          routes: []
+      ip_forward: true
+    server-router:
+      ansible_host: 192.168.128.6
+      ansible_user: debian
+      interfaces:
+        - def_gw_ip: 100.100.100.3
+          mac: 00:00:00:00:00:13
+          routes: []
+      ip_forward: true
+  children:
+    hosts:
+      hosts:
+        home: null
+        server: null
+    management:
+      hosts:
+        man: null
+        uan: null
+        border-router: null
     routers:
       hosts:
-        home-router:
-          ansible_host: 192.168.128.7
-          ansible_user: debian
-          interfaces:
-          - def_gw_ip: 200.100.100.3
-            mac: 00:00:00:00:00:16
-            routes: []
-          ip_forward: true
-        server-router:
-          ansible_host: 192.168.128.6
-          ansible_user: debian
-          interfaces:
-          - def_gw_ip: 100.100.100.3
-            mac: 00:00:00:00:00:13
-            routes: []
-          ip_forward: true
+        home-router: null
+        server-router: null
     user-accessible:
       hosts:
         home: null
@@ -86,12 +96,12 @@ all:
       hosts:
         home:
       vars:
-        'ansible_connection': 'psrp'
-        'ansible_psrp_auth': 'certificate'
-        'ansible_psrp_cert_validation': 'ignore'
-        'ansible_psrp_certificate_key_pem': '/root/.ssh/pool_mng_key'
-        'ansible_psrp_certificate_pem': '/root/.ssh/pool_mng_cert'
-        'ansible_psrp_proxy': 'socks5://localhost:12345'
+        ansible_connection: psrp
+        ansible_psrp_auth: certificate
+        ansible_psrp_cert_validation: ignore
+        ansible_psrp_certificate_key_pem: /root/.ssh/pool_mng_key
+        ansible_psrp_certificate_pem: /root/.ssh/pool_mng_cert
+        ansible_psrp_proxy: 'socks5://localhost:12345'
     ssh_nodes:
       hosts:
         server:

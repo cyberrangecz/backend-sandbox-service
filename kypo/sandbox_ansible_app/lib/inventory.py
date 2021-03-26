@@ -1,252 +1,331 @@
 from ipaddress import ip_network
-from typing import Dict, Tuple, List, Optional, Any
+from typing import Dict, List, Tuple, Optional
 import structlog
 import yaml
+import abc
 
-from kypo.openstack_driver import TopologyInstance
-from kypo.topology_definition.models import Protocol
-from kypo.sandbox_ansible_app.lib import ansible
+from kypo.openstack_driver import TopologyInstance, NodeToNodeLinkPair
+from kypo.topology_definition.models import Protocol, Router, Network
 
 LOG = structlog.get_logger()
 
 
-class Inventory:
-    """This class represents Ansible inventory.
+class Base(abc.ABC):
+    def __init__(self):
+        self.variables = {}
 
-    Use `data` attribute to access the inventory as a dictionary.
+    @abc.abstractmethod
+    def to_dict(self) -> dict:
+        return self.variables
+
+    def add_variables(self, **kwargs):
+        self.variables.update(kwargs)
+
+
+class Host(Base):
+    """
+    Represents Ansible inventory host entry.
+    """
+    def __init__(self, name: str, host: str, user: str):
+        super().__init__()
+        self.name = name
+        self.add_variables(ansible_host=host)
+        self.add_variables(ansible_user=user)
+
+    def to_dict(self) -> dict:
+        """
+        Return Ansible inventory host entry represented as a dict.
+        """
+        return super().to_dict()
+
+
+class Group(Base):
+    """
+    Represents Ansible inventory group entry.
+    """
+    def __init__(self, name: str, hosts: List[Host] = None):
+        super().__init__()
+        self.name = name
+        self.hosts = {host.name: host for host in hosts} if hosts else {}
+        self.groups = {}
+
+    def to_dict(self) -> dict:
+        """
+        Return Ansible inventory group entry represented as a dict.
+        """
+        dictionary = {}
+        if self.hosts:
+            dictionary['hosts'] = {host.name: None for host in self.hosts.values()}
+        children = {group.name: group.to_dict() for group in self.groups.values()}
+        if children:
+            dictionary['children'] = children
+        if self.variables:
+            dictionary['vars'] = self.variables
+        return dictionary
+
+    def add_host(self, host: Host) -> None:
+        """
+        Add Ansible host to this group.
+        """
+        self.hosts[host.name] = host
+
+    def get_host(self, name: str) -> Optional[Host]:
+        """
+        Return Ansible host if exist.
+        """
+        return self.hosts.get(name)
+
+    def add_group(self, group: 'Group') -> None:
+        """
+        Add Ansible child group to this one.
+        """
+        self.groups[group.name] = group
+
+    def get_group(self, name: str) -> Optional['Group']:
+        """
+        Return Ansible child group if exist.
+        """
+        return self.groups.get(name)
+
+
+class Route:
+    """
+    Represents route information to be set on an interface.
+    """
+    def __init__(self, network_cidr: str, gateway_ip: str):
+        self.network_ip = network_cidr.split('/')[0]
+        self.network_mask = str(ip_network(network_cidr).netmask)
+        self.gateway_ip = gateway_ip
+
+    def to_dict(self) -> dict:
+        """
+        Return route information represented as a dict.
+        """
+        return {
+            'net': self.network_ip,
+            'mask': self.network_mask,
+            'gw': self.gateway_ip,
+        }
+
+
+class Interface:
+    """
+    Represents a network interface.
+    """
+    def __init__(self, mac: str, ip: str, default_gateway_ip: str = None):
+        self.mac = mac
+        self.ip = ip
+        self.default_gateway_ip = default_gateway_ip
+        self.routes = []
+
+    def add_route(self, route: Route) -> None:
+        """
+        Add route information to this interface.
+        """
+        self.routes.append(route)
+
+    def to_dict(self) -> dict:
+        """
+        Return a network interface represented as a dict.
+        """
+        return {
+            'mac': self.mac,
+            'def_gw_ip': self.default_gateway_ip,
+            'routes': [route.to_dict() for route in self.routes],
+        }
+
+
+class Routing:
+    """
+    Represents sandbox routing information.
+    """
+    def __init__(self, topology_instance: TopologyInstance):
+        self.topology_instance = topology_instance
+        self.network_to_router_mappings = self._get_network_to_router_mapping(topology_instance)
+        self.interfaces: Dict[str, Dict[str, Interface]] =\
+            {node.name: {} for node in topology_instance.get_nodes()}
+        self._set_sandbox_routing()
+
+    def get_node_interfaces(self, node_name: str) -> List[Interface]:
+        """
+        Return a list of Interface settings for a particular node.
+        """
+        return list(self.interfaces.get(node_name, {}).values())
+
+    def _set_sandbox_routing(self) -> None:
+        """
+        The main method that initializes a Routing instance from TopologyInstance.
+        """
+        self._create_interfaces(self.topology_instance.get_link_pair_man_to_uan_over_uan_network())
+
+        man_to_br_link_pair = self.topology_instance.get_link_pair_man_to_br_over_br_network()
+        man_to_br_interface, br_to_man_interface = self._create_interfaces(man_to_br_link_pair)
+        for br_to_router_link_pair in self.topology_instance\
+                .get_link_pairs_br_to_routers_over_routers_networks():
+            br_to_router_interface, router_to_br_interface =\
+                self._create_interfaces(br_to_router_link_pair)
+
+            router_network_cidr = br_to_router_link_pair.first.network.cidr
+            man_to_br_interface.add_route(Route(router_network_cidr, br_to_man_interface.ip))
+            for network in self._get_host_networks_for_routing(br_to_router_link_pair.second.node):
+                man_to_br_interface.add_route(Route(network.cidr, br_to_man_interface.ip))
+                br_to_router_interface.add_route(Route(network.cidr, router_to_br_interface.ip))
+
+    def _get_host_networks_for_routing(self, router: Router) -> List[Network]:
+        """
+        Return a list of user-defined Networks connected to The Router needed to be routed to.
+        """
+        return [
+            router_to_network_link.network for router_to_network_link
+            in self.topology_instance.get_node_links(router,
+                                                     self.topology_instance.get_hosts_networks())
+            if router_to_network_link.node.name ==
+            self.network_to_router_mappings[router_to_network_link.network.name]
+        ]
+
+    def _create_interfaces(self, link_pair: NodeToNodeLinkPair) -> Tuple[Interface, Interface]:
+        """
+        Create and return a 2-tuple of Interfaces created from NodeToNodeLinkPair.
+        """
+        inward_link, outward_link = link_pair.first, link_pair.second
+        inward_interface = Interface(inward_link.mac, inward_link.ip)
+        outward_interface = Interface(outward_link.mac, outward_link.ip, inward_link.ip)
+        self.interfaces[inward_link.node.name][inward_link.mac] = inward_interface
+        self.interfaces[outward_link.node.name][outward_link.mac] = outward_interface
+        return inward_interface, outward_interface
+
+    @staticmethod
+    def _get_network_to_router_mapping(topology_instance: TopologyInstance) -> Dict[str, str]:
+        """
+        Return Dict[network_name, router_name].
+
+        Prefers router which is first in alphabetical order.
+        """
+        net_to_router = {}
+        router_mappings = sorted(topology_instance.topology_definition.router_mappings,
+                                 key=lambda x: x.router, reverse=True)
+        for router_mapping in router_mappings:
+            net_to_router[router_mapping.network] = router_mapping.router
+        return net_to_router
+
+
+class Inventory(Group):
+    """
+    Represents Ansible inventory.
+
     The inventory `vars` section contains by default following attributes:
     - `kypo_global_sandbox_name`
     - `kypo_global_sandbox_ip`
     If you need any extra data in the vars section, pass them as the
     `extra_vars` dictionary to constructor.
     """
-
-    def __init__(self, top_ins: TopologyInstance, user_priv_key_path: str, user_pub_key_path: str,
-                 extra_vars: Optional[Dict[str, Any]] = None):
-        router_group, man_routes, br_interfaces = self.create_routers_group(top_ins)
-        mng_group = self.create_management_group(top_ins, br_interfaces, man_routes,
-                                                 user_priv_key_path, user_pub_key_path)
-        host_group = self.create_host_group(top_ins)
-
-        groups = {
-            'management': {'hosts': mng_group},
-            'routers': {'hosts': router_group},
-            'hosts': {'hosts': host_group},
-        }
-        self.add_management_ips(top_ins, groups)
-
-        # set MAN ip to outer IP, not in MNG network
-        groups['management']['hosts'][top_ins.man.name]['ansible_host'] = top_ins.ip
-
-        groups['winrm_nodes'] = self.create_winrm_hosts_group(top_ins)
-        groups['ssh_nodes'] = self.create_ssh_hosts_group(top_ins)
-
-        groups.update(self.create_user_groups(top_ins))
-
-        ans_vars = self._get_vars(top_ins, extra_vars)
-        self.data = {'all': {'children': groups,
-                             'vars': ans_vars}}
-
-    def __str__(self):
-        return self.serialize()
-
-    @staticmethod
-    def route(cidr: str, mask: str, gw: str) -> Dict[str, str]:
-        return {'net': cidr.split('/')[0],
-                'mask': mask,
-                'gw': gw}
-
-    @staticmethod
-    def interface(mac: str, def_gw: Optional[str], routes: List[Dict[str, str]]) -> Dict[str, str]:
-        return {'mac': mac,
-                'def_gw_ip': def_gw,
-                'routes': routes}
-
-    @staticmethod
-    def router(ip_forward: bool, interfaces: List[Dict], ansible_user: str) -> Dict[str, Any]:
-        return {'ip_forward': ip_forward,
-                'interfaces': interfaces,
-                "ansible_user": ansible_user}
+    def __init__(self, topology_instance: TopologyInstance, mgmt_private_key: str,
+                 mgmt_public_certificate: str, user_private_key: str, user_public_key: str,
+                 extra_vars: dict = None):
+        super().__init__('all')
+        self.topology_instance = topology_instance
+        self.routing = Routing(topology_instance)
+        self._create_hosts()
+        self._set_ip_forward()
+        self._create_groups()
+        self._create_user_defined_groups()
+        self.get_host('man').add_variables(user_private_key_path=user_private_key,
+                                           user_public_key_path=user_public_key)
+        self.get_group('winrm_nodes')\
+            .add_variables(**self._get_winrm_connection_variables(mgmt_private_key,
+                                                                  mgmt_public_certificate))
+        self.add_variables(kypo_global_sandbox_name=self.topology_instance.name,
+                           kypo_global_sandbox_ip=self.topology_instance.ip)
+        if extra_vars:
+            self.add_variables(**extra_vars)
 
     def serialize(self) -> str:
-        """Return YAML representation of Inventory as a string."""
-        return yaml.dump(self.data, default_flow_style=False, indent=2)
-
-    @classmethod
-    def create_management_group(cls, top_ins: TopologyInstance, br_interfaces: List,
-                                man_routes: List, user_priv_key_path: str,
-                                user_pub_key_path: str) -> Dict:
-        """Get routing information for management nodes."""
-        group = {}
-
-        man_uan_link_pair = top_ins.get_link_pair_man_to_uan_over_uan_network()
-        man_uan_link, uan_man_link = man_uan_link_pair.first, man_uan_link_pair.second
-
-        man_br_link = top_ins.get_link_pair_man_to_br_over_br_network().first
-
-        group[top_ins.uan.name] = cls.router(
-            False,
-            [cls.interface(uan_man_link.mac, man_uan_link.ip, [])],
-            top_ins.uan.base_box.mgmt_user
-        )
-        group[top_ins.br.name] = cls.router(
-            True,
-            br_interfaces,
-            top_ins.br.base_box.mgmt_user
-        )
-        group[top_ins.man.name] = {
-            'ip_forward': True,
-            'interfaces': [
-                cls.interface(man_br_link.mac, None, man_routes)],
-            "ansible_user": top_ins.uan.base_box.mgmt_user,
-            'user_private_key_path': user_priv_key_path,
-            'user_public_key_path': user_pub_key_path
-        }
-        return group
-
-    @classmethod
-    def create_routers_group(cls, top_ins: TopologyInstance) -> Tuple[Dict, List, List]:
-        """Get routing information for routers and MAN routes and BR interfaces."""
-        net_to_router = cls._get_net_to_router(top_ins)
-        group = dict()
-        man_br_link_pair = top_ins.get_link_pair_man_to_br_over_br_network()
-        man_br_link, br_man_link = man_br_link_pair.first, man_br_link_pair.second
-        man_routes = []
-        br_interfaces = [cls.interface(br_man_link.mac, man_br_link.ip, [])]
-
-        for link_pair in top_ins.get_link_pairs_br_to_routers_over_routers_networks():
-            br_link, r_link = link_pair.first, link_pair.second
-            group[r_link.node.name] = cls.router(True,
-                                                 [cls.interface(r_link.mac, br_link.ip, [])],
-                                                 r_link.node.base_box.mgmt_user)
-            cls._update_man_routes_and_br_interfaces(
-                man_routes, br_interfaces, top_ins, r_link, br_man_link, br_link, net_to_router)
-
-        return group, man_routes, br_interfaces
-
-    @staticmethod
-    def create_host_group(top_ins: TopologyInstance) -> Dict[str, dict]:
-        """Get routing information for hosts."""
-        group = {}
-        for host in top_ins.get_hosts():
-            group[host.name] = {'ansible_user': host.base_box.mgmt_user}
-        return group
-
-    @staticmethod
-    def get_psrp_vars() -> dict:
         """
-        Get ansible psrp variables for hosts.
+        Return YAML representation of Inventory as a string.
+        """
+        return yaml.dump(self.to_dict(), default_flow_style=False, indent=2)
+
+    def to_dict(self) -> dict:
+        """
+        Return Ansible inventory represented as a dict.
+        """
+        inventory = {'all': super().to_dict()}
+        inventory['all']['hosts'] = {host.name: host.to_dict() for host in self.hosts.values()}
+        return inventory
+
+    def _create_hosts(self) -> None:
+        """
+        Create Ansible host entry for every host in TopologyInstance.
+        """
+        mgmt_links = {link.node.name: link.ip for link in
+                      self.topology_instance.get_network_links(self.topology_instance.man_network)}
+        mgmt_links[self.topology_instance.man.name] = self.topology_instance.ip
+        for node in self.topology_instance.get_nodes():
+            self._add_host(Host(node.name, mgmt_links[node.name], node.base_box.mgmt_user))
+
+    def _add_host(self, host: Host) -> None:
+        """
+        Add Ansible host entry with routing information if exist to special Ansible group 'all'.
+        """
+        interfaces = self.routing.get_node_interfaces(host.name)
+        if interfaces:
+            host.add_variables(interfaces=[interface.to_dict() for interface in interfaces])
+        self.add_host(host)
+
+    def _set_ip_forward(self) -> None:
+        """
+        Set IP forward variable to Routers, Border-Router and MAN.
+        """
+        ip_forward_nodes = list(self.topology_instance.get_routers()) +\
+            [self.topology_instance.man, self.topology_instance.br]
+        for node in ip_forward_nodes:
+            host = self.hosts.get(node.name)
+            if host:
+                host.add_variables(ip_forward=True)
+
+    def _create_groups(self) -> None:
+        """
+        Create KYPO default Ansible group entries.
+
+        Default groups: 'hosts', 'management', 'routers', 'winrm_nodes', and 'ssh_nodes'.
+        """
+        extra_nodes = self.topology_instance.get_extra_nodes()
+
+        hosts = [self.hosts[node.name] for node in self.topology_instance.get_hosts()]
+        self.add_group(Group('hosts', hosts))
+
+        management = [self.hosts[node.name] for node in extra_nodes]
+        self.add_group(Group('management', management))
+
+        routers = [self.hosts[node.name] for node in self.topology_instance.get_routers()]
+        self.add_group(Group('routers', routers))
+
+        winrm_nodes = [self.hosts[node.name] for node in self.topology_instance.get_nodes()
+                       if node.base_box.mgmt_protocol == Protocol.WINRM and node not in extra_nodes]
+        self.add_group(Group('winrm_nodes', winrm_nodes))
+
+        ssh_nodes = [self.hosts[node.name] for node in self.topology_instance.get_nodes()
+                     if node.base_box.mgmt_protocol == Protocol.SSH and node not in extra_nodes]
+        self.add_group(Group('ssh_nodes', ssh_nodes))
+
+    def _create_user_defined_groups(self) -> None:
+        """
+        Create user-defined Ansible group entries.
+        """
+        for group in self.topology_instance.get_groups():
+            self.add_group(Group(group.name, [self.hosts[node_name] for node_name in group.nodes]))
+
+    @staticmethod
+    def _get_winrm_connection_variables(mgmt_private_key: str,
+                                        mgmt_public_certificate: str) -> dict:
+        """
+        Return Ansible variables needed for connection with nodes over WinRM protocol.
         """
         return {
             'ansible_connection': 'psrp',
             'ansible_psrp_auth': 'certificate',
             'ansible_psrp_cert_validation': 'ignore',
-            'ansible_psrp_certificate_key_pem': f'{ansible.ANSIBLE_DOCKER_SSH_DIR.bind}/'
-                                                f'{ansible.MNG_PRIVATE_KEY_FILENAME}',
-            'ansible_psrp_certificate_pem': f'{ansible.ANSIBLE_DOCKER_SSH_DIR.bind}/'
-                                            f'{ansible.MNG_CERTIFICATE_FILENAME}',
+            'ansible_psrp_certificate_key_pem': mgmt_private_key,
+            'ansible_psrp_certificate_pem': mgmt_public_certificate,
             'ansible_psrp_proxy': 'socks5://localhost:12345',
         }
-
-    @classmethod
-    def create_winrm_hosts_group(cls, top_ins: TopologyInstance) -> Dict[str, dict]:
-        """
-        Create host group for nodes managed by winrm protocol. Append access information.
-        """
-        hosts = {
-            node.name: None for node in top_ins.get_nodes()
-            if node.base_box.mgmt_protocol == Protocol.WINRM
-            and node not in top_ins.get_extra_nodes()
-        }
-
-        return {
-            'hosts': hosts,
-            'vars': cls.get_psrp_vars(),
-        }
-
-    @staticmethod
-    def create_ssh_hosts_group(top_ins: TopologyInstance) -> Dict[str, dict]:
-        """
-        Create host group for nodes managed by ssh protocol. Exclude management nodes.
-        """
-        hosts = {
-            node.name: None for node in top_ins.get_nodes()
-            if node.base_box.mgmt_protocol == Protocol.SSH and node not in top_ins.get_extra_nodes()
-        }
-
-        return {'hosts': hosts}
-
-    @staticmethod
-    def create_user_groups(top_ins: TopologyInstance) -> Dict[str, Dict[str, Dict[str, None]]]:
-        """Parses user groups from _validated_ definition.
-        Return Dict of user groups.
-        """
-        return {g.name: {'hosts': {node: None for node in g.nodes}}
-                for g in top_ins.get_groups()}
-
-    @classmethod
-    def add_management_ips(cls, top_ins: TopologyInstance, groups: Dict[str, Any]) -> None:
-        """Add management IPs to groups routing."""
-        mng_ips = cls._get_management_ips(top_ins)
-        for group in groups.values():
-            for name, node in group['hosts'].items():
-                node['ansible_host'] = mng_ips[name]
-
-    ###################################
-    # Private methods
-    ###################################
-
-    @staticmethod
-    def _get_net_to_router(top_ins: TopologyInstance) -> Dict[str, str]:
-        """Return Dict[net_name, router_name].
-        Prefers router which is first in alphabetical order.
-        """
-        net_to_router = {}
-        mapping = sorted(top_ins.topology_definition.router_mappings,
-                         key=lambda x: x.router, reverse=True)
-        for mapp in mapping:
-            net_to_router[mapp.network] = mapp.router
-        return net_to_router
-
-    @classmethod
-    def _update_man_routes_and_br_interfaces(cls, man_routes, br_interfaces, top_ins, r_link,
-                                             br_man_link, br_link, net_to_router) -> None:
-        br_routes = []
-        man_routes.append(
-            cls.route(r_link.network.cidr, cls.get_mask_from_cidr(r_link.network.cidr),
-                      br_man_link.ip))
-
-        r_links_to_hosts = {x.first for x in top_ins.get_node_to_nodes_link_pairs(
-            r_link.node, top_ins.get_hosts_networks())}
-        for net_link in r_links_to_hosts:
-            if net_to_router[net_link.network.name] == r_link.node.name:
-                br_routes.append(
-                    cls.route(net_link.network.cidr,
-                              cls.get_mask_from_cidr(net_link.network.cidr), r_link.ip)
-                )
-                man_routes.append(
-                    cls.route(net_link.network.cidr, cls.get_mask_from_cidr(net_link.network.cidr),
-                              br_man_link.ip)
-                )
-        br_interfaces.append(cls.interface(br_link.mac, None, br_routes))
-
-    @staticmethod
-    def _get_management_ips(top_ins: TopologyInstance) -> Dict[str, str]:
-        """Creates dict of `Node name: management IP`."""
-        return {link.node.name: link.ip
-                for link in top_ins.get_network_links(top_ins.man_network)}
-
-    @staticmethod
-    def _get_vars(top_ins: TopologyInstance, extra_vars: Optional[Dict[str, Any]] = None)\
-            -> Dict[str, str]:
-        if extra_vars is None:
-            extra_vars = {}
-        return dict(
-            kypo_global_sandbox_name=top_ins.name,
-            kypo_global_sandbox_ip=top_ins.ip,
-            **extra_vars
-        )
-
-    @staticmethod
-    def get_mask_from_cidr(cidr: str) -> str:
-        return str(ip_network(cidr).netmask)
