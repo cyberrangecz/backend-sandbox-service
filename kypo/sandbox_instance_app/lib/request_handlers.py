@@ -233,11 +233,14 @@ class CleanupRequestHandler(RequestHandler):
         LOG.info('Allocation Unit deleted from DB', allocation_unit=allocation_unit)
 
 
-def request_exception_handler(job: Job) -> None:
+def request_exception_handler(job: Job, exc_type, exc_value, traceback) -> None:
     """
     Handle exception raised during request execution in Redis queue worker.
 
-    :param job: The Job that raised an exception
+    :param job: The Job that raised an exception.
+    :param exc_type: The type of the exception being handled.
+    :param exc_value: The exception instance. Instance of exc_value.
+    :param traceback: Traceback object which encapsulates the call stack.
     """
     request_handler = None
     try:
