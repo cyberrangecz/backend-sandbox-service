@@ -1,11 +1,8 @@
-from typing import List, Union, Optional
+from typing import List
 import structlog
-from ssh_config import Host, SSHConfig
+from ssh_config.client import Host, SSHConfig, EmptySSHConfig, WrongSSHConfig
 
-from kypo.topology_definition.models import Host as SandboxHost, Router
-from kypo.openstack_driver import TopologyInstance, Link, ExtraNode
-
-from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
+from kypo.openstack_driver import TopologyInstance, Link
 
 LOG = structlog.getLogger()
 
@@ -20,165 +17,138 @@ Host.attrs += (
 
 
 class KypoSSHConfig(SSHConfig):
-    """Subclass of ssh_config.SSHConfig with __str__ method."""
-
-    def __init__(self):
-        super().__init__('')
-
+    """
+    Represents SSH config file for KYPO purposes.
+    """
     def __str__(self):
-        return self.serialize()
+        return '\n'.join([str(host) for host in self.hosts()]) + '\n'
 
     def serialize(self) -> str:
-        """Return the string representation of KypoSSHConfig."""
-        res = []
-        for host in self.hosts():
-            res.append(f'Host {host.name}\n')
-            for attr in host.attributes():
-                res.append(f'    {attr} {host.get(attr)}\n')
-            res.append('\n')
-        return "".join(res)
+        """
+        Return the string representation of KypoSSHConfig.
+        """
+        return str(self)
 
-    def add_man(self, name: Union[str, List[str]], user: str, host_name: str,
-                identity_file: str) -> None:
-        opts = dict(User=user, HostName=host_name, IdentityFile=identity_file)
-        self.append(Host(name, opts))
-
-    def add_host(self, name: Union[str, List[str]], user: str, host_name: str,
-                 proxy_jump: str, identity_file: str, **kwargs) -> None:
-        opts = dict(User=user, HostName=host_name, IdentityFile=identity_file, ProxyJump=proxy_jump)
-        opts.update(kwargs)
-        self.append(Host(name, opts))
-
-    def add_git_server(self, name: Union[str, List[str]], user: str, identity_file: str) -> None:
-        opts = dict(User=user, IdentityFile=identity_file,
+    def add_host(self, host_name: str, user: str, identity_file: str,
+                 proxy_jump: str = None, alias: str = None, **kwargs) -> None:
+        """
+        Create and add ssh_config.Host instance to this SSH config file.
+        """
+        opts = dict(HostName=host_name, User=user, IdentityFile=identity_file,
                     UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no')
-        self.append(Host(name, opts))
-
-    def add_proxy_jump(self, stack, name: Union[str, List[str]], user: str, key_path: str) -> None:
-        opts = dict(User=user, IdentityFile=key_path, UserKnownHostsFile='/dev/null',
-                    StrictHostKeyChecking='no')
-        jump_host = Host(name, opts)
-        self.append(jump_host)
-
-        # Need to use the full-name
-        self.get(" ".join([stack.man.name, stack.ip])).update(dict(ProxyJump=user + '@' + name))
+        if proxy_jump:
+            opts.update(dict(ProxyJump=proxy_jump))
+        opts.update(kwargs)
+        host = Host([alias, host_name] if alias else host_name, opts)
+        self.append(host)
 
     @classmethod
-    def create_user_config(cls, top_ins: TopologyInstance, config: KypoConfiguration,
-                           sandbox_private_key_path: str = '<path_to_sandbox_private_key>')\
-            -> 'KypoSSHConfig':
-        """Generates user ssh config string for sandbox.
-        If router has multiple networks, then config contains one router entry
-        for each of the networks.
+    def from_str(cls, ssh_config):
         """
-        sshconf = cls()
-        sshconf.add_man([top_ins.man.name, top_ins.ip],
-                        SSH_PROXY_USERNAME,
-                        top_ins.ip,
-                        sandbox_private_key_path)
-
-        uan_ip = cls._get_uan_ip(top_ins)
-        sshconf.add_host([top_ins.uan.name, uan_ip],
-                         SSH_PROXY_USERNAME,
-                         uan_ip,
-                         SSH_PROXY_USERNAME + '@' + top_ins.man.name,
-                         sandbox_private_key_path)
-
-        for link in sshconf._get_uan_accessible_node_links(top_ins):
-            sshconf.add_host([link.node.name, link.ip],
-                             SSH_PROXY_USERNAME,
-                             link.ip,
-                             SSH_PROXY_USERNAME + '@' + top_ins.uan.name,
-                             sandbox_private_key_path)
-
-        if config.proxy_jump_to_man:
-            sshconf.add_proxy_jump(top_ins,
-                                   config.proxy_jump_to_man.Host,
-                                   config.proxy_jump_to_man.User,
-                                   SSH_PROXY_KEY)
-        return sshconf
-
-    @classmethod
-    def create_management_config(cls, top_ins: TopologyInstance, config: KypoConfiguration,
-                                 add_jump=True,
-                                 pool_private_key_path: str = '<path_to_pool_private_key>')\
-            -> 'KypoSSHConfig':
-        """Generates management ssh config string for sandbox.
-        It uses MNG network for access.
+        Load SSH config file from string.
         """
-        sshconf = cls()
-        sshconf.add_man([top_ins.man.name, top_ins.ip],
-                        top_ins.man.base_box.mgmt_user ,
-                        top_ins.ip,
-                        pool_private_key_path)
+        self = cls('')
 
-        for link in sshconf._get_man_accessible_node_links(top_ins):
-            sshconf.add_host([link.node.name, link.ip],
-                             link.node.base_box.mgmt_user,
-                             link.ip,
-                             top_ins.man.base_box.mgmt_user + '@' + top_ins.man.name,
-                             pool_private_key_path)
+        self.raw = ssh_config
+        if len(self.raw) <= 0:
+            raise EmptySSHConfig(ssh_config)
+        parsed = self.parse()
+        if parsed is None:
+            raise WrongSSHConfig(ssh_config)
+        for name, config in sorted(parsed.asDict().items()):
+            attrs = dict()
+            for attr in config:
+                attrs.update(attr)
+            self.append(Host(name, attrs))
+        return self
 
-        if add_jump and config.proxy_jump_to_man:
-            sshconf.add_proxy_jump(top_ins,
-                                   config.proxy_jump_to_man.Host,
-                                   config.proxy_jump_to_man.User,
-                                   SSH_PROXY_KEY)
-        return sshconf
 
-    @classmethod
-    def create_ansible_config(cls, top_ins: TopologyInstance, config: KypoConfiguration,
-                              mng_key: str, git_key: str,
-                              proxy_key: Optional[str] = None) -> 'KypoSSHConfig':
-        """Generates Ansible ssh config string for sandbox."""
-        sshconf = cls.create_management_config(top_ins, config, add_jump=False)
+class KypoUserSSHConfig(KypoSSHConfig):
+    """
+    Represents SSH config file used by KYPO trainees.
+    """
+    def __init__(self, top_ins: TopologyInstance, proxy_host: str, proxy_user: str,
+                 sandbox_private_key_path: str = '<path_to_sandbox_private_key>',
+                 proxy_private_key_path: str = SSH_PROXY_KEY):
+        super().__init__('')
 
-        for host in sshconf.hosts():
-            opts = dict(UserKnownHostsFile='/dev/null',
-                        StrictHostKeyChecking='no',
-                        IdentityFile=mng_key)
-            host.update(opts)
+        # Create an entry for KYPO PROXY JUMP host.
+        self.add_host(proxy_host, proxy_user, proxy_private_key_path)
+        proxy_jump = f'{proxy_user}@{proxy_host}'
 
-        sshconf.add_git_server(config.git_server,
-                               config.git_user,
-                               git_key)
+        # Create an entry for MAN as a proxy jump host.
+        self.add_host(top_ins.ip, SSH_PROXY_USERNAME, sandbox_private_key_path,
+                      proxy_jump=proxy_jump, alias=top_ins.man.name)
+        man_proxy_jump = f'{SSH_PROXY_USERNAME}@{top_ins.man.name}'
 
-        if config.proxy_jump_to_man:
-            sshconf.add_proxy_jump(top_ins,
-                                   config.proxy_jump_to_man.Host,
-                                   config.proxy_jump_to_man.User,
-                                   proxy_key)
-        return sshconf
+        # Create an entry for UAN as a proxy jump host.
+        uan_ip = self._get_uan_ip(top_ins)
+        self.add_host(uan_ip, SSH_PROXY_USERNAME, sandbox_private_key_path,
+                      proxy_jump=man_proxy_jump, alias=top_ins.uan.name)
+        uan_proxy_jump = f'{SSH_PROXY_USERNAME}@{top_ins.uan.name}'
 
-    ###################################
-    # Private methods
-    ###################################
+        # Create an entry for user-accessible nodes of a sandbox.
+        for link in self._get_uan_accessible_node_links(top_ins):
+            self.add_host(link.ip, SSH_PROXY_USERNAME, sandbox_private_key_path,
+                          proxy_jump=uan_proxy_jump, alias=link.node.name)
 
     @staticmethod
     def _get_uan_ip(top_ins: TopologyInstance) -> str:
-        """Get IP of UAN in UAN_NETWORK."""
+        """
+        Get IP of UAN in UAN_NETWORK.
+        """
         return top_ins.get_link_between_node_and_network(top_ins.uan, top_ins.uan_network).ip
 
     @classmethod
     def _get_uan_accessible_node_links(cls, top_ins: TopologyInstance) -> List[Link]:
-        """Get links for UAN-accessible nodes."""
-        links = [link_pair.second for link_pair in
-                 top_ins.get_link_pairs_uan_to_nodes_over_user_accessible_hosts_networks()]
-        return cls._sorted_links(links)
+        """
+        Get links for UAN-accessible nodes.
+        """
+        return [link_pair.second for link_pair in
+                top_ins.get_link_pairs_uan_to_nodes_over_user_accessible_hosts_networks()]
+
+
+class KypoMgmtSSHConfig(KypoSSHConfig):
+    """
+    Represents SSH config file used by KYPO designers/organizers.
+    """
+    def __init__(self, top_ins: TopologyInstance, proxy_host: str, proxy_user: str,
+                 pool_private_key_path: str = '<path_to_pool_private_key>',
+                 proxy_private_key_path: str = SSH_PROXY_KEY):
+        super().__init__('')
+
+        # Create an entry for KYPO PROXY JUMP host.
+        self.add_host(proxy_host, proxy_user, proxy_private_key_path)
+        proxy_jump = f'{proxy_user}@{proxy_host}'
+
+        # Create an entry for MAN as a proxy jump host.
+        self.add_host(top_ins.ip, top_ins.man.base_box.mgmt_user, pool_private_key_path,
+                      proxy_jump=proxy_jump, alias=top_ins.man.name)
+        man_proxy_jump = f'{top_ins.man.base_box.mgmt_user}@{top_ins.man.name}'
+
+        # Create an entry for every other node of a sandbox.
+        for link in self._get_man_accessible_node_links(top_ins):
+            self.add_host(link.ip, link.node.base_box.mgmt_user, pool_private_key_path,
+                          proxy_jump=man_proxy_jump, alias=link.node.name)
 
     @classmethod
     def _get_man_accessible_node_links(cls, top_ins: TopologyInstance) -> List[Link]:
-        """Get links for MAN-accessible nodes using Management network."""
-        links = [link_pair.second for link_pair in
-                 top_ins.get_link_pairs_man_to_nodes_over_management_network()]
-        return cls._sorted_links(links)
+        """
+        Get links for MAN-accessible nodes using Management network.
+        """
+        return [link_pair.second for link_pair in
+                top_ins.get_link_pairs_man_to_nodes_over_management_network()]
 
-    @staticmethod
-    def _sorted_links(links: List[Link]) -> List[Link]:
-        """Return new list of links sorted by the hosts type and then by name."""
-        mng_host_links = [link for link in links if isinstance(link.node, ExtraNode)]
-        router_links = [link for link in links if isinstance(link.node, Router)]
-        host_links = [link for link in links if isinstance(link.node, SandboxHost)]
-        router_links.sort(key=lambda l: l.node.name)
-        host_links.sort(key=lambda l: l.node.name)
-        return mng_host_links + router_links + host_links
+
+class KypoAnsibleSSHConfig(KypoMgmtSSHConfig):
+    """
+    Represents SSH config file used by KYPO automated provisioning using Ansible.
+    """
+    def __init__(self, top_ins: TopologyInstance, pool_private_key_path: str,
+                 proxy_host: str, proxy_user: str, proxy_private_key_path: str,
+                 git_host: str, git_user: str, git_private_key_path: str):
+        super().__init__(top_ins, proxy_host, proxy_user,
+                         pool_private_key_path=pool_private_key_path,
+                         proxy_private_key_path=proxy_private_key_path)
+        # Create an entry for Git repository.
+        self.add_host(git_host, git_user, git_private_key_path)

@@ -16,7 +16,8 @@ from rest_framework.generics import get_object_or_404
 
 from kypo.sandbox_common_lib import exceptions, utils
 from kypo.sandbox_definition_app.lib import definitions
-from kypo.sandbox_instance_app.lib.sshconfig import KypoSSHConfig, SSH_PROXY_KEY
+from kypo.sandbox_instance_app.lib.sshconfig import SSH_PROXY_KEY,\
+    KypoMgmtSSHConfig, KypoUserSSHConfig, KypoAnsibleSSHConfig
 from kypo.sandbox_instance_app.lib.topology import Topology
 from kypo.sandbox_instance_app.models import Sandbox, SandboxLock
 
@@ -63,10 +64,11 @@ def get_sandbox_topology(sandbox: Sandbox) -> Topology:
 
 def get_user_sshconfig(sandbox: Sandbox,
                        sandbox_private_key_path: str = '<path_to_sandbox_private_key>')\
-        -> KypoSSHConfig:
+        -> KypoUserSSHConfig:
     """Get user SSH config."""
     ti = get_topology_instance(sandbox)
-    return KypoSSHConfig.create_user_config(ti, settings.KYPO_CONFIG, sandbox_private_key_path)
+    proxy_jump = settings.KYPO_CONFIG.proxy_jump_to_man
+    return KypoUserSSHConfig(ti, proxy_jump.Host, proxy_jump.User, sandbox_private_key_path)
 
 
 def get_ssh_access_source_file(ssh_config_path: str) -> str:
@@ -99,19 +101,22 @@ def get_user_ssh_access(sandbox: Sandbox) -> io.BytesIO:
 
 def get_management_sshconfig(sandbox: Sandbox,
                              pool_private_key_path: str = '<path_to_pool_private_key>')\
-        -> KypoSSHConfig:
+        -> KypoMgmtSSHConfig:
     """Get management SSH config."""
     ti = get_topology_instance(sandbox)
-    return KypoSSHConfig.create_management_config(ti, settings.KYPO_CONFIG,
-                                                  pool_private_key_path=pool_private_key_path)
+    proxy_jump = settings.KYPO_CONFIG.proxy_jump_to_man
+    return KypoMgmtSSHConfig(ti, proxy_jump.Host, proxy_jump.User,
+                             pool_private_key_path=pool_private_key_path)
 
 
 def get_ansible_sshconfig(sandbox: Sandbox, mng_key: str, git_key: str,
-                          proxy_key: Optional[str] = None) -> KypoSSHConfig:
+                          proxy_key: Optional[str] = None) -> KypoAnsibleSSHConfig:
     """Get Ansible SSH config."""
     ti = get_topology_instance(sandbox)
-    return KypoSSHConfig.create_ansible_config(ti, settings.KYPO_CONFIG,
-                                               mng_key, git_key, proxy_key)
+    proxy_jump = settings.KYPO_CONFIG.proxy_jump_to_man
+    return KypoAnsibleSSHConfig(ti, mng_key, proxy_jump.Host, proxy_jump.User, proxy_key,
+                                settings.KYPO_CONFIG.git_server, settings.KYPO_CONFIG.git_user,
+                                git_key)
 
 
 def get_topology_instance(sandbox: Sandbox) -> TopologyInstance:

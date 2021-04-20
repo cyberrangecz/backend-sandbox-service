@@ -1,10 +1,17 @@
+Host jump-host-ip
+    HostName jump-host-ip
+    User debian
+    IdentityFile /root/.ssh/id_rsa
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
+
 Host man 10.10.10.10
     HostName 10.10.10.10
     User kypo-man
     IdentityFile /root/.ssh/pool_mng_key
+    ProxyJump debian@jump-host-ip
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
-    ProxyJump debian@jump-host-ip
 
 Host uan 192.168.128.2
     HostName 192.168.128.2
@@ -55,14 +62,9 @@ Host server 192.168.128.4
     StrictHostKeyChecking no
 
 Host 192.168.55.101
+    HostName 192.168.55.101
     User git
     IdentityFile /root/.ssh/git_rsa_key
-    UserKnownHostsFile /dev/null
-    StrictHostKeyChecking no
-
-Host jump-host-ip
-    User debian
-    IdentityFile /root/.ssh/id_rsa
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
 

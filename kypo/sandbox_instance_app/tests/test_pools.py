@@ -7,7 +7,7 @@ from rest_framework.reverse import reverse
 from rest_framework.test import APIRequestFactory
 
 from kypo.sandbox_common_lib.exceptions import ApiException
-from kypo.sandbox_instance_app.lib import pools
+from kypo.sandbox_instance_app.lib import pools, sshconfig
 from kypo.sandbox_instance_app.models import SandboxAllocationUnit, Sandbox
 from kypo.sandbox_instance_app.views import PoolList
 
@@ -133,14 +133,18 @@ class TestGetManagementSSHAccess:
         ssh_access_name = f'pool-id-{pool.id}'
         ssh_config_name = f'{ssh_access_name}-sandbox-id-{sandbox.id}-management-config'
         private_key = f'{ssh_access_name}-management-key'
-        management_ssh_config = management_ssh_config.replace('<path_to_pool_private_key>',
-                                                              f'~/.ssh/{private_key}')
+
+        for host in management_ssh_config:
+            identity_file = host.get('IdentityFile')
+            host.set('IdentityFile', identity_file.replace('<path_to_pool_private_key>',
+                                                           f'~/.ssh/{private_key}'))
 
         in_memory_zip_file = pools.get_management_ssh_access(pool)
 
         with zipfile.ZipFile(in_memory_zip_file, 'r', zipfile.ZIP_DEFLATED) as zip_file:
             with zip_file.open(ssh_config_name) as file:
-                assert file.read().decode('utf-8') == management_ssh_config
+                assert sshconfig.KypoSSHConfig.from_str(file.read().decode('utf-8')).asdict()\
+                       == management_ssh_config.asdict()
             with zip_file.open(private_key) as file:
                 assert file.read().decode('utf-8') == pool.private_management_key
             with zip_file.open(f'{private_key}.pub') as file:

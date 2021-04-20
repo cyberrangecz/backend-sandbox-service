@@ -25,7 +25,6 @@ SANDBOX_ANSIBLE_TIMEOUT = 3600 * 2
 ANSIBLE_DOCKER_VOLUMES = '/tmp/kypo'
 ANSIBLE_DOCKER_IMAGE = 'csirtmu/kypo-ansible-runner'
 ANSIBLE_DOCKER_NETWORK = 'bridge'
-PROXY_JUMP_TO_MAN = None
 SSL_CA_CERTIFICATE_VERIFY = '/etc/ssl/certs'
 
 
@@ -100,7 +99,7 @@ class KypoConfiguration(Object):
     ansible_networking_url = Attribute(type=str)
     ansible_networking_rev = Attribute(type=str, default=ANSIBLE_NETWORKING_REV)
 
-    proxy_jump_to_man = Attribute(type=ProxyJump, default=PROXY_JUMP_TO_MAN)
+    proxy_jump_to_man = Attribute(type=ProxyJump)
 
     sandbox_build_timeout = Attribute(type=int, default=SANDBOX_BUILD_TIMEOUT)
     sandbox_delete_timeout = Attribute(type=int, default=SANDBOX_DELETE_TIMEOUT)
@@ -131,9 +130,8 @@ class KypoConfiguration(Object):
         # TODO deal with absolute paths in ProxyJump object validation
         # Key-paths need to be absolute
         obj.git_private_key = os.path.abspath(os.path.expanduser(obj.git_private_key))
-        if obj.proxy_jump_to_man:
-            obj.proxy_jump_to_man.IdentityFile = os.path.abspath(
-                os.path.expanduser(obj.proxy_jump_to_man.IdentityFile))
+        obj.proxy_jump_to_man.IdentityFile = os.path.abspath(
+            os.path.expanduser(obj.proxy_jump_to_man.IdentityFile))
 
         # TODO move this somewhere
         os.environ['REQUESTS_CA_BUNDLE'] = obj.ssl_ca_certificate_verify
