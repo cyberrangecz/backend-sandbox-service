@@ -9,6 +9,7 @@ from kypo.openstack_driver import TopologyInstance, TransformationConfiguration
 from kypo.sandbox_instance_app.models import StackAllocationStage, SandboxAllocationUnit, \
     AllocationRequest, HeatStack, AllocationRQJob, Sandbox, CleanupRequest, StackCleanupStage,\
     Pool, SandboxLock
+from kypo.sandbox_instance_app.lib.sshconfig import KypoSSHConfig
 from kypo.sandbox_ansible_app.models import NetworkingAnsibleAllocationStage, \
     UserAnsibleAllocationStage, NetworkingAnsibleCleanupStage, UserAnsibleCleanupStage, \
     DockerContainer
@@ -74,22 +75,19 @@ def top_ins(top_def, trc_config, links):
 @pytest.fixture
 def user_ssh_config():
     """Creates example User ssh config for a sandbox."""
-    with open(data_path_join(TESTING_SSH_CONFIG_USER)) as f:
-        return f.read()
+    return KypoSSHConfig.load(data_path_join(TESTING_SSH_CONFIG_USER))
 
 
 @pytest.fixture
 def management_ssh_config():
     """Creates example Management ssh config for a sandbox."""
-    with open(data_path_join(TESTING_SSH_CONFIG_MANAGEMENT)) as f:
-        return f.read()
+    return KypoSSHConfig.load(data_path_join(TESTING_SSH_CONFIG_MANAGEMENT))
 
 
 @pytest.fixture
 def ansible_ssh_config():
     """Creates example Management ssh config for a sandbox."""
-    with open(data_path_join(TESTING_SSH_CONFIG_ANSIBLE)) as f:
-        return f.read()
+    return KypoSSHConfig.load(data_path_join(TESTING_SSH_CONFIG_ANSIBLE))
 
 
 @pytest.fixture

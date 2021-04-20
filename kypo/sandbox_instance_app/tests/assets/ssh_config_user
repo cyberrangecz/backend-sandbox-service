@@ -1,42 +1,55 @@
+Host jump-host-ip
+    HostName jump-host-ip
+    User debian
+    IdentityFile <path_to_proxy_jump_private_key>
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
+
 Host man 10.10.10.10
     HostName 10.10.10.10
     User user-access
     IdentityFile <path_to_sandbox_private_key>
     ProxyJump debian@jump-host-ip
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
 
 Host uan 192.168.0.16
     HostName 192.168.0.16
     User user-access
     IdentityFile <path_to_sandbox_private_key>
     ProxyJump user-access@man
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
 
 Host home-router 10.10.30.1
     HostName 10.10.30.1
     User user-access
     IdentityFile <path_to_sandbox_private_key>
     ProxyJump user-access@uan
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
 
 Host server-router 10.10.20.1
     HostName 10.10.20.1
     User user-access
     IdentityFile <path_to_sandbox_private_key>
     ProxyJump user-access@uan
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
 
 Host home 10.10.30.5
     HostName 10.10.30.5
     User user-access
     IdentityFile <path_to_sandbox_private_key>
     ProxyJump user-access@uan
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
 
 Host server 10.10.20.5
     HostName 10.10.20.5
     User user-access
     IdentityFile <path_to_sandbox_private_key>
     ProxyJump user-access@uan
-
-Host jump-host-ip
-    User debian
-    IdentityFile <path_to_proxy_jump_private_key>
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
 

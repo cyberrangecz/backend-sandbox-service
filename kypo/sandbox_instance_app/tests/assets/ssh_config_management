@@ -1,48 +1,63 @@
+Host jump-host-ip
+    HostName jump-host-ip
+    User debian
+    IdentityFile <path_to_proxy_jump_private_key>
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
+
 Host man 10.10.10.10
     HostName 10.10.10.10
     User kypo-man
     IdentityFile <path_to_pool_private_key>
     ProxyJump debian@jump-host-ip
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
 
 Host uan 192.168.128.2
     HostName 192.168.128.2
     User kypo-man
     IdentityFile <path_to_pool_private_key>
     ProxyJump kypo-man@man
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
 
 Host border-router 192.168.128.3
     HostName 192.168.128.3
     User kypo-man
     IdentityFile <path_to_pool_private_key>
     ProxyJump kypo-man@man
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
 
 Host home-router 192.168.128.7
     HostName 192.168.128.7
     User debian
     IdentityFile <path_to_pool_private_key>
     ProxyJump kypo-man@man
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
 
 Host server-router 192.168.128.6
     HostName 192.168.128.6
     User debian
     IdentityFile <path_to_pool_private_key>
     ProxyJump kypo-man@man
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
 
 Host home 192.168.128.5
     HostName 192.168.128.5
     User debian
     IdentityFile <path_to_pool_private_key>
     ProxyJump kypo-man@man
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
 
 Host server 192.168.128.4
     HostName 192.168.128.4
     User debian
     IdentityFile <path_to_pool_private_key>
     ProxyJump kypo-man@man
-
-Host jump-host-ip
-    User debian
-    IdentityFile <path_to_proxy_jump_private_key>
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
 
