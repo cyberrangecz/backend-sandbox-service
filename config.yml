@@ -77,11 +77,11 @@ application_configuration:
     # The rev of Ansible networking Git repository.
     #ansible_networking_rev: master
 
-    # The object that represents SSH Host entry. Every attribute is one SSH option (see man page of ssh_config). If you do not use proxy jump, do not set this variable.
-    #proxy_jump_to_man:
-    #    Host: jumphost.example.com
-    #    User: jump
-    #    IdentityFile: ~/.ssh/id_rsa
+    # The object that represents SSH Host entry (see man page of ssh_config).
+    proxy_jump_to_man:
+        Host: ""
+        User: ""
+        IdentityFile: ""
 
     # Timeout of sandbox (stack) creation in cloud in seconds.
     #sandbox_build_timeout: 7200

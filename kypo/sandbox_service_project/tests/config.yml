@@ -77,7 +77,7 @@ application_configuration:
     # The rev of Ansible networking Git repository.
     ansible_networking_rev: master
 
-    # The object that represents SSH Host entry. Every attribute is one SSH option (see man page of ssh_config). If you do not use proxy jump, do not set this variable.
+    # The object that represents SSH Host entry (see man page of ssh_config).
     proxy_jump_to_man:
         Host: jump-host-ip
         User: debian
