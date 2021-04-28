@@ -19,6 +19,7 @@ from kypo.sandbox_instance_app.models import Sandbox, SandboxAllocationUnit,\
 from kypo.sandbox_instance_app.lib.stage_handlers import StageHandler, StackStageHandler,\
     AllocationStackStageHandler, CleanupStackStageHandler, AnsibleStageHandler,\
     AllocationAnsibleStageHandler, CleanupAnsibleStageHandler
+from kypo.sandbox_instance_app.lib import requests
 
 LOG = structlog.get_logger()
 
@@ -183,6 +184,7 @@ class CleanupRequestHandler(RequestHandler):
     """
     request: CleanupRequest
 
+    @transaction.atomic
     def enqueue_request(self) -> None:
         """
         Handles request stages creation and their enqueuing.
@@ -190,8 +192,11 @@ class CleanupRequestHandler(RequestHandler):
         stage_handlers = self._create_stage_handlers()
         finalizing_stage_function = \
             self._get_finalizing_stage_function(self._delete_allocation_unit,
-                                                self.request.allocation_unit)
-        self._enqueue_request(stage_handlers, finalizing_stage_function)
+                                                self.request.allocation_unit, self.request)
+        on_commit_method = \
+            partial(self._enqueue_request, stage_handlers, finalizing_stage_function)
+
+        transaction.on_commit(on_commit_method)
 
     def _create_db_stage(self, stage_class: Type[CleanupStage], *args, **kwargs) -> CleanupStage:
         """
@@ -225,12 +230,15 @@ class CleanupRequestHandler(RequestHandler):
         return [stack_handler, networking_handler, user_handler]
 
     @staticmethod
-    def _delete_allocation_unit(allocation_unit: SandboxAllocationUnit) -> None:
+    def _delete_allocation_unit(allocation_unit: SandboxAllocationUnit, request: CleanupRequest)\
+            -> None:
         """
         Named method used as finalizing stage function.
         """
         allocation_unit.delete()
         LOG.info('Allocation Unit deleted from DB', allocation_unit=allocation_unit)
+        requests.delete_cleanup_request(request)
+        LOG.info('Cleanup request deleted from DB', cleanup_request=request)
 
 
 def request_exception_handler(job: Job, exc_type, exc_value, traceback) -> None:

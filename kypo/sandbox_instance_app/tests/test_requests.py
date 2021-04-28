@@ -16,8 +16,8 @@ class TestAllocationRequest:
             .patch('kypo.sandbox_instance_app.lib.requests.utils.generate_ssh_keypair')
         self.gen_ssh.return_value = 'private-key', 'public-key'
         self.sandbox = mocker.patch('kypo.sandbox_instance_app.lib.requests.Sandbox')
-        self.handler = mocker\
-            .patch('kypo.sandbox_instance_app.lib.requests.AllocationRequestHandler')
+        self.handler = mocker.patch('kypo.sandbox_instance_app.lib.requests.request_handlers.'
+                                    'AllocationRequestHandler')
 
     def test_create_allocation_request_success(self, pool):
         sandbox_allocation_unit = requests.create_allocation_request(pool)
@@ -51,7 +51,8 @@ class TestCleanupRequest:
     @pytest.fixture(autouse=True)
     def set_up(self, mocker):
         mocker.patch('kypo.sandbox_instance_app.lib.requests.LOG')
-        self.handler = mocker.patch('kypo.sandbox_instance_app.lib.requests.CleanupRequestHandler')
+        self.handler = mocker.patch('kypo.sandbox_instance_app.lib.requests.request_handlers.'
+                                    'CleanupRequestHandler')
 
     def test_create_cleanup_request_success(self, sandbox_finished):
         allocation_unit = sandbox_finished.allocation_unit

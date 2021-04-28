@@ -177,13 +177,10 @@ def get_management_ssh_access(pool: Pool) -> io.BytesIO:
         for sandbox in get_sandboxes_in_pool(pool):
             tmp = f'{ssh_access_name}-sandbox-id-{sandbox.id}-management'
             ssh_config_name = f'{tmp}-config'
-            source_file_name = f'{tmp}-source.sh'
 
             ssh_config = sandboxes.get_management_sshconfig(sandbox, f'~/.ssh/{private_key_name}')
-            source_file = sandboxes.get_ssh_access_source_file(f'~/.ssh/{ssh_config_name}')
 
             zip_file.writestr(ssh_config_name, ssh_config.serialize())
-            zip_file.writestr(source_file_name, source_file)
 
         zip_file.writestr(private_key_name, pool.private_management_key)
         zip_file.writestr(public_key_name, pool.public_management_key)

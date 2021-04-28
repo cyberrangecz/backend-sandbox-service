@@ -15,7 +15,6 @@ from kypo.sandbox_instance_app.lib import stage_handlers
 pytestmark = pytest.mark.django_db
 
 
-
 def assert_db_stage(stage: Stage, start_time: timezone.datetime, failed: bool = False):
     assert start_time < stage.start
     assert stage.start < stage.end
@@ -121,7 +120,10 @@ class TestAllocationAnsibleStageHandler:
     def set_up(self, mocker):
         mocker.patch('kypo.sandbox_instance_app.lib.stage_handlers.LOG')
         mocker.patch('kypo.sandbox_instance_app.lib.stage_handlers.os.path.join')
-        mocker.patch('kypo.sandbox_instance_app.lib.stage_handlers.sandboxes.get_topology_instance')
+        mocker.patch('kypo.sandbox_instance_app.lib.sandboxes.get_topology_instance')
+
+        allocation_runner_class = mocker \
+            .patch('kypo.sandbox_instance_app.lib.stage_handlers.AllocationAnsibleDockerRunner')
 
         runner_class = mocker \
             .patch('kypo.sandbox_instance_app.lib.stage_handlers.AnsibleDockerRunner')
@@ -134,7 +136,7 @@ class TestAllocationAnsibleStageHandler:
         }
         runner = mocker.Mock()
         runner.run_container.return_value = container
-        runner_class.return_value = runner
+        allocation_runner_class.return_value = runner
 
         self.runner = runner
 
@@ -219,7 +221,25 @@ class TestCleanupAnsibleStageHandler:
     def set_up(self, mocker):
         mocker.patch('kypo.sandbox_instance_app.lib.stage_handlers.LOG')
 
-    def test_execute_success(self, now, cleanup_stage_networking):
+        runner_class = mocker \
+            .patch('kypo.sandbox_instance_app.lib.stage_handlers.CleanupAnsibleDockerRunner')
+
+        container = mocker.Mock()
+        type(container).id = 'docker-container-id'
+        container.logs.return_value = [b'output\n']
+        container.wait.return_value = {
+            'StatusCode': 0
+        }
+        runner = mocker.Mock()
+        runner.run_container.return_value = container
+        runner_class.return_value = runner
+
+        self.runner = runner
+
+    def test_execute_success(self, now, cleanup_stage_networking, allocation_stage_networking):
+        cleanup_stage_networking.cleanup_request.allocation_unit.allocation_request\
+            .networkingansibleallocationstage = allocation_stage_networking
+
         handler = stage_handlers.CleanupAnsibleStageHandler(cleanup_stage_networking)
 
         handler.execute()

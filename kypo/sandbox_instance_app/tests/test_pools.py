@@ -63,7 +63,7 @@ class TestSandboxAllocationUnit:
         au: SandboxAllocationUnit = SandboxAllocationUnit.objects.get(id=1)
         prefix = settings.KYPO_SERVICE_CONFIG.stack_name_prefix
 
-        expected_stack_name = f'{prefix}-pool-id-{au.pool.id}-sau-id-{au.id}'
+        expected_stack_name = f'{prefix}-p{au.pool.id:010d}-s{au.id:010d}'
         assert au.get_stack_name() == expected_stack_name
 
         sb: Sandbox = Sandbox.objects.get(id=1)
@@ -129,7 +129,9 @@ class TestGetManagementSSHAccess:
         self.mock_get_sandboxes_in_pool.return_value = [sandbox]
         yield
 
-    def test_get_management_ssh_access_success(self, pool, sandbox, management_ssh_config):
+    def test_get_management_ssh_access_success(self, pool, sandbox, management_ssh_config, mocker):
+        pool.get_pool_prefix = mocker.MagicMock()
+        pool.get_pool_prefix.return_value = 'pool-prefix'
         ssh_access_name = f'pool-id-{pool.id}'
         ssh_config_name = f'{ssh_access_name}-sandbox-id-{sandbox.id}-management-config'
         private_key = f'{ssh_access_name}-management-key'

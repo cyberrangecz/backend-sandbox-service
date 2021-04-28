@@ -38,6 +38,11 @@ class Pool(models.Model):
         return f'ID: {self.id}, DEFINITION: {self.definition.id}, MAX_SIZE: {self.max_size}, ' \
                f'REV: {self.rev}'
 
+    def get_pool_prefix(self) -> str:
+        """Returns a prefix of this pool."""
+        prefix = settings.KYPO_SERVICE_CONFIG.stack_name_prefix
+        return f'{prefix}-p{self.id:010d}'
+
     def get_keypair_name(self) -> str:
         """Returns a name of the management key-pair for this pool."""
         return self.definition.name + '-' + str(self.id) + '-' + str(self.uuid)
@@ -60,9 +65,7 @@ class SandboxAllocationUnit(models.Model):
 
     def get_stack_name(self) -> str:
         """Returns a name of the stack for this sandbox"""
-        prefix = settings.KYPO_SERVICE_CONFIG.stack_name_prefix
-        pool_id = self.pool.id
-        return f'{prefix}-pool-id-{pool_id}-sau-id-{self.id}'
+        return f'{self.pool.get_pool_prefix()}-s{self.id:010d}'
 
 
 class Sandbox(models.Model):
@@ -248,6 +251,16 @@ class CleanupRQJob(RQJob):
 class ExternalDependency(models.Model):
     allocation_stage = models.OneToOneField(
         AllocationStage,
+        on_delete=models.CASCADE
+    )
+
+    class Meta:
+        abstract = True
+
+
+class ExternalDependencyCleanup(models.Model):
+    cleanup_stage = models.OneToOneField(
+        CleanupStage,
         on_delete=models.CASCADE
     )
 

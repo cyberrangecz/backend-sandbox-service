@@ -49,8 +49,6 @@ all:
               mask: 255.255.255.0
               net: 10.10.30.0
       ip_forward: true
-      user_private_key_path: /root/.ssh/user_key
-      user_public_key_path: /root/.ssh/user_key.pub
     uan:
       ansible_host: 192.168.128.2
       ansible_user: kypo-man
@@ -74,6 +72,12 @@ all:
           mac: 00:00:00:00:00:13
           routes: []
       ip_forward: true
+    kypo-proxy-jump:
+      ansible_host: jump-host-ip
+      ansible_user: debian
+      user_access_mgmt_name: pool-prefix
+      user_access_user_name: stack-name
+      user_access_present: true
   children:
     hosts:
       hosts:
@@ -114,3 +118,5 @@ all:
     kypo_global_sandbox_allocation_unit_id: 1
     kypo_global_sandbox_ip: 10.10.10.10
     kypo_global_sandbox_name: stack-name
+    kypo_global_ssh_public_user_key: /root/.ssh/user_key.pub
+    kypo_global_ssh_public_mgmt_key: /root/.ssh/pool_mng_key.pub

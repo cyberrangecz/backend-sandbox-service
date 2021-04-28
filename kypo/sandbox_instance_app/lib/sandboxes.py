@@ -67,31 +67,24 @@ def get_user_sshconfig(sandbox: Sandbox,
         -> KypoUserSSHConfig:
     """Get user SSH config."""
     ti = get_topology_instance(sandbox)
+    # Sandbox jump host name is stack name
+    stack_name = sandbox.allocation_unit.get_stack_name()
     proxy_jump = settings.KYPO_CONFIG.proxy_jump_to_man
-    return KypoUserSSHConfig(ti, proxy_jump.Host, proxy_jump.User, sandbox_private_key_path)
-
-
-def get_ssh_access_source_file(ssh_config_path: str) -> str:
-    return utils.fill_template(TEMPLATE_DIR_PATH, 'ssh-access-source.sh.j2',
-                               ssh_config_path=ssh_config_path,
-                               private_key_placeholder=SSH_PROXY_KEY)
+    return KypoUserSSHConfig(ti, proxy_jump.Host, stack_name, sandbox_private_key_path)
 
 
 def get_user_ssh_access(sandbox: Sandbox) -> io.BytesIO:
     """Get user SSH access files."""
     ssh_access_name = f'pool-id-{sandbox.allocation_unit.pool.id}-sandbox-id-{sandbox.id}-user'
     ssh_config_name = f'{ssh_access_name}-config'
-    source_file_name = f'{ssh_access_name}-source.sh'
     private_key_name = f'{ssh_access_name}-key'
     public_key_name = f'{private_key_name}.pub'
 
     ssh_config = get_user_sshconfig(sandbox, f'~/.ssh/{private_key_name}')
-    source_file = get_ssh_access_source_file(f'~/.ssh/{ssh_config_name}')
 
     in_memory_zip_file = io.BytesIO()
     with zipfile.ZipFile(in_memory_zip_file, 'w', zipfile.ZIP_DEFLATED) as zip_file:
         zip_file.writestr(ssh_config_name, ssh_config.serialize())
-        zip_file.writestr(source_file_name, source_file)
         zip_file.writestr(private_key_name, sandbox.private_user_key)
         zip_file.writestr(public_key_name, sandbox.public_user_key)
 
@@ -104,9 +97,11 @@ def get_management_sshconfig(sandbox: Sandbox,
         -> KypoMgmtSSHConfig:
     """Get management SSH config."""
     ti = get_topology_instance(sandbox)
-    proxy_jump = settings.KYPO_CONFIG.proxy_jump_to_man
-    return KypoMgmtSSHConfig(ti, proxy_jump.Host, proxy_jump.User,
-                             pool_private_key_path=pool_private_key_path)
+    proxy_jump_host = settings.KYPO_CONFIG.proxy_jump_to_man.Host
+    proxy_jump_user = sandbox.allocation_unit.pool.get_pool_prefix()
+    return KypoMgmtSSHConfig(ti, proxy_jump_host, proxy_jump_user,
+                             pool_private_key_path=pool_private_key_path,
+                             proxy_private_key_path=pool_private_key_path)
 
 
 def get_ansible_sshconfig(sandbox: Sandbox, mng_key: str, git_key: str,

@@ -1,7 +1,8 @@
 import pytest
 
-from kypo.sandbox_ansible_app.lib.ansible import AnsibleDockerRunner
+from kypo.sandbox_ansible_app.lib.ansible import AllocationAnsibleDockerRunner
 from kypo.sandbox_instance_app.models import Sandbox
+from kypo.sandbox_instance_app.lib import sandboxes
 
 pytestmark = pytest.mark.django_db
 
@@ -18,15 +19,23 @@ class TestPrepareInventoryFile:
     def test_prepare_inventory_file_success(self, mocker, top_ins):
         mock_inventory = mocker.patch('kypo.sandbox_ansible_app.lib.ansible.Inventory')
         mocker.patch('kypo.sandbox_ansible_app.lib.ansible.docker.from_env')
+        sandboxes.get_topology_instance = mocker.MagicMock()
+        sandboxes.get_topology_instance.return_value = top_ins
+
         dir_path = '/tmp'
         sandbox = Sandbox.objects.get(pk=1)
-        AnsibleDockerRunner().prepare_inventory_file(dir_path, sandbox, top_ins)
+        AllocationAnsibleDockerRunner(dir_path).prepare_inventory_file(sandbox)
 
         mock_inventory.assert_called_once()
 
     def test_prepare_inventory_object(self, mocker, top_ins, inventory):
         mocker.patch('kypo.sandbox_ansible_app.lib.ansible.docker.from_env')
+        dir_path = mocker.MagicMock()
         sandbox = Sandbox.objects.get(pk=1)
-        result = AnsibleDockerRunner().prepare_inventory(sandbox, top_ins)
+        sandbox.allocation_unit.pool.get_pool_prefix = mocker.MagicMock()
+        sandbox.allocation_unit.pool.get_pool_prefix.return_value = 'pool-prefix'
+        sandbox.allocation_unit.get_stack_name = mocker.MagicMock()
+        sandbox.allocation_unit.get_stack_name.return_value = 'stack-name'
+        result = AllocationAnsibleDockerRunner(dir_path).create_inventory(sandbox)
 
         assert result.to_dict() == inventory

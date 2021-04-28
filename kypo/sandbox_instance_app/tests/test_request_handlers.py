@@ -146,6 +146,7 @@ class TestCleanupRequestHandler:
         target = 'kypo.sandbox_instance_app.lib.request_handlers.CleanupAnsibleStageHandler.cancel'
         self.ansible_cancel = mocker.patch(target, new_callable=PicklableMock)
 
+    @pytest.mark.django_db(transaction=True)
     def test_enqueue_request(self, cleanup_request):
         handler = request_handlers.CleanupRequestHandler(cleanup_request)
 
