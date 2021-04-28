@@ -309,7 +309,7 @@ class AllocationAnsibleStageHandler(AnsibleStageHandler):
                 output = output[:-1] if output[-1] == '\n' else output
                 AnsibleOutput.objects.create(allocation_stage=self.stage, content=output)
 
-            status = container.wait(timeout=60)
+            status = container.wait(timeout=settings.KYPO_CONFIG.sandbox_ansible_timeout)
             container.remove()
         except (docker.errors.APIError,
                 docker.errors.DockerException,
@@ -363,7 +363,7 @@ class CleanupAnsibleStageHandler(AnsibleStageHandler):
             container = runner.run_container(allocation_stage.repo_url, allocation_stage.rev)
             DockerContainerCleanup.objects.create(cleanup_stage=self.stage,
                                                   container_id=container.id)
-            status = container.wait(timeout=60)
+            status = container.wait(timeout=settings.KYPO_CONFIG.sandbox_ansible_timeout)
             container.remove()
         except (docker.errors.APIError,
                 docker.errors.DockerException,
