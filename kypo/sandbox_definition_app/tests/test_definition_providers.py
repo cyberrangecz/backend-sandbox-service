@@ -11,15 +11,15 @@ class TestGitlabProvider:
     URL3 = 'git@gitlab.com:123456/kypo-sandbox-service.git'
     CFG = KypoConfiguration(git_server='gitlab.com', git_rest_server='http://gitlab.com:8081')
 
-    def test_get_project_path(self):
-        provider1 = GitlabProvider(self.URL1, self.CFG)
-        assert provider1.project_path == 'kypo-crp%2Fbackend-python%2Fkypo-sandbox-service'
+    @staticmethod
+    def get_expected_url(url):
+        return url[url.find(':') + 1:-4]
 
-        provider2 = GitlabProvider(self.URL2, self.CFG)
-        assert provider2.project_path == 'kypo-crp%2Fbackend-python%2Fsub-group%2FGRPX%2Fkypo-sandbox-service'
+    @pytest.mark.parametrize('url', [URL1, URL2, URL3])
+    def test_get_project_path(self, url):
+        provider1 = GitlabProvider(url, self.CFG)
 
-        provider3 = GitlabProvider(self.URL3, self.CFG)
-        assert provider3.project_path == '123456%2Fkypo-sandbox-service'
+        assert provider1.project_path == self.get_expected_url(url)
 
 
 class TestInternalGitProvider:

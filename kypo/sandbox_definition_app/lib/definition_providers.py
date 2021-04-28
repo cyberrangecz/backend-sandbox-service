@@ -117,9 +117,8 @@ class GitlabProvider(DefinitionProvider):
 
     @staticmethod
     def get_project_path(url_parsed) -> str:
-        pathname = url_parsed.pathname[:-4] if url_parsed.pathname[-4:] == '.git' \
+        return url_parsed.pathname[:-4] if url_parsed.pathname[-4:] == '.git'\
             else url_parsed.pathname
-        return parse.quote_plus(pathname)
 
 
 class InternalGitProvider(DefinitionProvider):
