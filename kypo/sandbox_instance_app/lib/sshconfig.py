@@ -68,12 +68,11 @@ class KypoUserSSHConfig(KypoSSHConfig):
     Represents SSH config file used by KYPO trainees.
     """
     def __init__(self, top_ins: TopologyInstance, proxy_host: str, proxy_user: str,
-                 sandbox_private_key_path: str = '<path_to_sandbox_private_key>',
-                 proxy_private_key_path: str = SSH_PROXY_KEY):
+                 sandbox_private_key_path: str = '<path_to_sandbox_private_key>'):
         super().__init__('')
 
         # Create an entry for KYPO PROXY JUMP host.
-        self.add_host(proxy_host, proxy_user, proxy_private_key_path)
+        self.add_host(proxy_host, proxy_user, sandbox_private_key_path)
         proxy_jump = f'{proxy_user}@{proxy_host}'
 
         # Create an entry for MAN as a proxy jump host.
@@ -114,7 +113,7 @@ class KypoMgmtSSHConfig(KypoSSHConfig):
     """
     def __init__(self, top_ins: TopologyInstance, proxy_host: str, proxy_user: str,
                  pool_private_key_path: str = '<path_to_pool_private_key>',
-                 proxy_private_key_path: str = SSH_PROXY_KEY):
+                 proxy_private_key_path: str = '<path_to_pool_private_key>'):
         super().__init__('')
 
         # Create an entry for KYPO PROXY JUMP host.
@@ -151,4 +150,16 @@ class KypoAnsibleSSHConfig(KypoMgmtSSHConfig):
                          pool_private_key_path=pool_private_key_path,
                          proxy_private_key_path=proxy_private_key_path)
         # Create an entry for Git repository.
+        self.add_host(git_host, git_user, git_private_key_path)
+
+
+class KypoAnsibleCleanupSSHConfig(KypoSSHConfig):
+    """
+    Represents SSH config file used by KYPO AnsibleCleanupStage.
+    """
+
+    def __init__(self, proxy_jump_host: str, proxy_jump_user: str, pool_private_key_path: str,
+                 git_host: str, git_user: str, git_private_key_path: str):
+        super().__init__('')
+        self.add_host(proxy_jump_host, proxy_jump_user, pool_private_key_path)
         self.add_host(git_host, git_user, git_private_key_path)

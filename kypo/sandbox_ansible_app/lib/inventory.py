@@ -4,8 +4,11 @@ import structlog
 import yaml
 import abc
 
+from django.conf import settings
 from kypo.openstack_driver import TopologyInstance, NodeToNodeLinkPair
 from kypo.topology_definition.models import Protocol, Router, Network
+
+KYPO_PROXY_JUMP_NAME = 'kypo-proxy-jump'
 
 LOG = structlog.get_logger()
 
@@ -209,7 +212,42 @@ class Routing:
         return net_to_router
 
 
-class Inventory(Group):
+class BaseInventory(Group):
+    """
+    Represents Ansible inventory just for KYPO Proxy.
+    """
+    def __init__(self, proxy_jump_user_access_mgmt_name: str,
+                 proxy_jump_user_access_user_name: str):
+        super().__init__('all')
+        self.add_proxy_jump(proxy_jump_user_access_mgmt_name, proxy_jump_user_access_user_name)
+
+    def add_proxy_jump(self, user_access_mgmt_name: str, user_access_user_name: str) -> None:
+        """
+        Add Ansible host for KYPO Proxy to this group.
+        """
+        proxy_jump_config = settings.KYPO_CONFIG.proxy_jump_to_man
+        host = Host(KYPO_PROXY_JUMP_NAME, proxy_jump_config.Host, proxy_jump_config.User)
+        host.add_variables(user_access_mgmt_name=user_access_mgmt_name,
+                           user_access_user_name=user_access_user_name,
+                           user_access_present=False)
+        self.add_host(host)
+
+    def to_dict(self) -> dict:
+        """
+        Return Ansible inventory represented as a dict.
+        """
+        inventory = {'all': super().to_dict()}
+        inventory['all']['hosts'] = {host.name: host.to_dict() for host in self.hosts.values()}
+        return inventory
+
+    def serialize(self) -> str:
+        """
+        Return YAML representation of Inventory as a string.
+        """
+        return yaml.dump(self.to_dict(), default_flow_style=False, indent=2)
+
+
+class Inventory(BaseInventory):
     """
     Represents Ansible inventory.
 
@@ -219,39 +257,29 @@ class Inventory(Group):
     If you need any extra data in the vars section, pass them as the
     `extra_vars` dictionary to constructor.
     """
-    def __init__(self, topology_instance: TopologyInstance, mgmt_private_key: str,
-                 mgmt_public_certificate: str, user_private_key: str, user_public_key: str,
+    def __init__(self, proxy_jump_user_access_mgmt_name: str, proxy_jump_user_access_user_name: str,
+                 topology_instance: TopologyInstance, mgmt_private_key: str,
+                 mgmt_public_certificate: str, mgmt_public_key: str, user_public_key: str,
                  extra_vars: dict = None):
-        super().__init__('all')
+        super().__init__(proxy_jump_user_access_mgmt_name, proxy_jump_user_access_user_name)
         self.topology_instance = topology_instance
         self.routing = Routing(topology_instance)
+
         self._create_hosts()
         self._set_ip_forward()
         self._create_groups()
         self._create_user_defined_groups()
-        self.get_host('man').add_variables(user_private_key_path=user_private_key,
-                                           user_public_key_path=user_public_key)
+
+        self.get_host(KYPO_PROXY_JUMP_NAME).add_variables(user_access_present=True)
         self.get_group('winrm_nodes')\
             .add_variables(**self._get_winrm_connection_variables(mgmt_private_key,
                                                                   mgmt_public_certificate))
         self.add_variables(kypo_global_sandbox_name=self.topology_instance.name,
-                           kypo_global_sandbox_ip=self.topology_instance.ip)
+                           kypo_global_sandbox_ip=self.topology_instance.ip,
+                           kypo_global_ssh_public_user_key=user_public_key,
+                           kypo_global_ssh_public_mgmt_key=mgmt_public_key)
         if extra_vars:
             self.add_variables(**extra_vars)
-
-    def serialize(self) -> str:
-        """
-        Return YAML representation of Inventory as a string.
-        """
-        return yaml.dump(self.to_dict(), default_flow_style=False, indent=2)
-
-    def to_dict(self) -> dict:
-        """
-        Return Ansible inventory represented as a dict.
-        """
-        inventory = {'all': super().to_dict()}
-        inventory['all']['hosts'] = {host.name: host.to_dict() for host in self.hosts.values()}
-        return inventory
 
     def _create_hosts(self) -> None:
         """

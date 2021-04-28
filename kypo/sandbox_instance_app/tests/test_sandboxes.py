@@ -62,15 +62,15 @@ class TestSandboxesManipulation:
                    sorted(result[item], key=lambda x: x['port_a'])
 
     def test_get_user_ssh_config(self, mocker, user_ssh_config):
-        ssh_conf = sandboxes.get_user_sshconfig(mocker.Mock())
+        sandbox = mocker.MagicMock()
+        sandbox.allocation_unit.get_stack_name.return_value = 'stack-name'
+
+        ssh_conf = sandboxes.get_user_sshconfig(sandbox)
         assert ssh_conf.asdict() == user_ssh_config.asdict()
 
-    def test_get_ssh_access_source_file(self, ssh_access_source):
-        ssh_access_source_file = sandboxes.get_ssh_access_source_file('<ssh_config_path>')
-
-        assert ssh_access_source_file == ssh_access_source
-
-    def test_get_user_ssh_access(self, sandbox, user_ssh_config):
+    def test_get_user_ssh_access(self, mocker, sandbox, user_ssh_config):
+        sandbox.allocation_unit.get_stack_name = mocker.MagicMock()
+        sandbox.allocation_unit.get_stack_name.return_value = 'stack-name'
         ssh_access_name = f'pool-id-{sandbox.allocation_unit.pool.id}-sandbox-id-{sandbox.id}-user'
         ssh_config_name = f'{ssh_access_name}-config'
         private_key = f'{ssh_access_name}-key'
@@ -92,7 +92,11 @@ class TestSandboxesManipulation:
                 assert file.read().decode('utf-8') == sandbox.public_user_key
 
     def test_get_management_ssh_config(self, mocker, management_ssh_config):
-        ssh_conf = sandboxes.get_management_sshconfig(mocker.Mock())
+        sandbox = mocker.Mock()
+        sandbox.allocation_unit.pool.get_pool_prefix.return_value = 'pool-prefix'
+
+        ssh_conf = sandboxes.get_management_sshconfig(sandbox)
+
         assert ssh_conf.asdict() == management_ssh_config.asdict()
 
     def test_get_ansible_ssh_config(self, mocker, ansible_ssh_config):

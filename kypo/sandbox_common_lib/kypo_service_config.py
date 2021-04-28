@@ -8,7 +8,7 @@ from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
 
 # StrList default value must be cast to tuple, otherwise TypeError: unhashable type: 'list' will be thrown
 
-STACK_NAME_PREFIX = 'default-prefix-0'
+STACK_NAME_PREFIX = 'default0'
 MICROSERVICE_NAME = 'kypo-sandbox-service'
 DEBUG = True
 ALLOWED_HOSTS = ['*']  # Allow everyone
@@ -16,6 +16,11 @@ CORS_ORIGIN_ALLOW_ALL = True
 CORS_ORIGIN_WHITELIST = []
 AUTHENTICATED_REST_API = False
 ALLOWED_OIDC_PROVIDERS = []
+
+
+def stack_name_prefix_validator(_, value):
+    if len(value) < 1 or 8 < len(value):
+        raise ValueError('Value stack_name_prefix can have only 1 to 8 characters')
 
 
 class Authentication(Object):
@@ -33,7 +38,8 @@ class Authentication(Object):
 
 
 class KypoServiceConfig(Object):
-    stack_name_prefix = Attribute(type=str, default=STACK_NAME_PREFIX)
+    stack_name_prefix = Attribute(type=str, default=STACK_NAME_PREFIX,
+                                  validator=stack_name_prefix_validator)
     microservice_name = Attribute(type=str, default=MICROSERVICE_NAME)
     debug = Attribute(type=bool, default=DEBUG)
     allowed_hosts = Attribute(type=StrList, default=tuple(ALLOWED_HOSTS))

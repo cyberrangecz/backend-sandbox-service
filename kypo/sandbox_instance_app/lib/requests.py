@@ -4,11 +4,9 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from kypo.sandbox_common_lib import exceptions, utils
 
-from kypo.sandbox_instance_app.lib import sandboxes
 from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit,\
     AllocationRequest, CleanupRequest
-from kypo.sandbox_instance_app.lib.request_handlers import AllocationRequestHandler,\
-    CleanupRequestHandler
+from kypo.sandbox_instance_app.lib import request_handlers, sandboxes
 
 LOG = structlog.get_logger()
 
@@ -23,7 +21,7 @@ def create_allocation_request(pool: Pool) -> SandboxAllocationUnit:
     pri_key, pub_key = utils.generate_ssh_keypair()
     sandbox = Sandbox(id=unit.id, allocation_unit=unit,
                       private_user_key=pri_key, public_user_key=pub_key)
-    AllocationRequestHandler(request).enqueue_request(sandbox)
+    request_handlers.AllocationRequestHandler(request).enqueue_request(sandbox)
     return unit
 
 
@@ -34,7 +32,7 @@ def create_allocations_requests(pool: Pool, count: int) -> List[SandboxAllocatio
 
 def cancel_allocation_request(alloc_req: AllocationRequest):
     """(Soft) cancel all stages of the Allocation Request."""
-    AllocationRequestHandler(alloc_req).cancel_request()
+    request_handlers.AllocationRequestHandler(alloc_req).cancel_request()
 
 
 def create_cleanup_request(allocation_unit: SandboxAllocationUnit) -> CleanupRequest:
@@ -67,7 +65,7 @@ def create_cleanup_request(allocation_unit: SandboxAllocationUnit) -> CleanupReq
         sandbox.delete()
         sandboxes.clear_cache(sandbox)
 
-    CleanupRequestHandler(request).enqueue_request()
+    request_handlers.CleanupRequestHandler(request).enqueue_request()
     return request
 
 
@@ -78,7 +76,7 @@ def create_cleanup_requests(allocation_units: List[SandboxAllocationUnit]) -> Li
 
 def cancel_cleanup_request(cleanup_req: CleanupRequest) -> None:
     """(Soft) cancel all stages of the Cleanup Request."""
-    CleanupRequestHandler(cleanup_req).cancel_request()
+    request_handlers.CleanupRequestHandler(cleanup_req).cancel_request()
 
 
 def delete_cleanup_request(request: CleanupRequest) -> None:

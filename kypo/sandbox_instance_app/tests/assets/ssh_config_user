@@ -1,7 +1,7 @@
 Host jump-host-ip
     HostName jump-host-ip
-    User debian
-    IdentityFile <path_to_proxy_jump_private_key>
+    User stack-name
+    IdentityFile <path_to_sandbox_private_key>
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
 
@@ -9,7 +9,7 @@ Host man 10.10.10.10
     HostName 10.10.10.10
     User user-access
     IdentityFile <path_to_sandbox_private_key>
-    ProxyJump debian@jump-host-ip
+    ProxyJump stack-name@jump-host-ip
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
 

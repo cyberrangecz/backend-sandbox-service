@@ -27,7 +27,7 @@ def django_db_setup(django_db_setup, django_db_blocker):
         call_command('loaddata', data_path_join(TESTING_DATABASE))
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def trc_config():
     return TransformationConfiguration.from_file(data_path_join(TESTING_TRC_CONFIG))
 

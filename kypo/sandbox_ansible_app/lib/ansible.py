@@ -5,14 +5,11 @@ import docker
 import structlog
 from django.conf import settings
 from docker.models.containers import Container
-from kypo.openstack_driver import TopologyInstance
 
-from kypo.sandbox_ansible_app.lib.inventory import Inventory
-from kypo.sandbox_ansible_app.models import AnsibleAllocationStage
+from kypo.sandbox_ansible_app.lib.inventory import Inventory, BaseInventory
 from kypo.sandbox_common_lib import exceptions
-from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
-from kypo.sandbox_instance_app.lib import sandboxes
-from kypo.sandbox_instance_app.models import Sandbox
+from kypo.sandbox_instance_app.lib import sandboxes, sshconfig
+from kypo.sandbox_instance_app.models import Sandbox, Pool, SandboxAllocationUnit
 
 LOG = structlog.get_logger()
 
@@ -23,101 +20,138 @@ class DockerVolume:
         self.mode = mode
 
 
-ANSIBLE_DOCKER_SSH_DIR = DockerVolume(
-    bind='/root/.ssh',
-    mode='rw'
-)
-ANSIBLE_DOCKER_INVENTORY_PATH = DockerVolume(
-    bind='/app/inventory.yml',
-    mode='ro'
-)
-
 ANSIBLE_INVENTORY_FILENAME = 'inventory.yml'
-MNG_PRIVATE_KEY_FILENAME = 'pool_mng_key'
-MNG_CERTIFICATE_FILENAME = 'pool_mng_cert'
-USER_PRIVATE_KEY_FILENAME = 'user_key'
+MGMT_PRIVATE_KEY_FILENAME = 'pool_mng_key'
+MGMT_CERTIFICATE_FILENAME = 'pool_mng_cert'
+MGMT_PUBLIC_KEY_FILENAME = 'pool_mng_key.pub'
 USER_PUBLIC_KEY_FILENAME = 'user_key.pub'
 
 
 class AnsibleDockerRunner:
+    """
+    Represents Docker container environment for executing Ansible.
+    """
     DOCKER_NETWORK = settings.KYPO_CONFIG.ansible_docker_network
+    ANSIBLE_DOCKER_SSH_DIR = DockerVolume(
+        bind='/root/.ssh',
+        mode='rw'
+    )
+    ANSIBLE_DOCKER_INVENTORY_PATH = DockerVolume(
+        bind='/app/inventory.yml',
+        mode='ro'
+    )
 
-    def __init__(self):
+    def __init__(self, directory_path: str):
         self.client = docker.from_env()
+        self.directory_path = directory_path
+        self.ssh_directory = os.path.join(self.directory_path, 'ssh')
+        self.inventory_path = os.path.join(self.directory_path, ANSIBLE_INVENTORY_FILENAME)
 
-    def run_container(self, image, url, rev, ssh_dir, inventory_path):
-        """Run Ansible in Docker container."""
+        self.container_mgmt_private_key = self.container_ssh_path(MGMT_PRIVATE_KEY_FILENAME)
+        self.container_git_private_key =\
+            self.container_ssh_path(settings.KYPO_CONFIG.git_private_key)
+        self.container_proxy_private_key =\
+            self.container_ssh_path(settings.KYPO_CONFIG.proxy_jump_to_man.IdentityFile)
+
+    def run_container(self, url, rev):
+        """
+        Run Ansible in Docker container.
+        """
         volumes = {
-            ssh_dir: ANSIBLE_DOCKER_SSH_DIR.__dict__,
-            inventory_path: ANSIBLE_DOCKER_INVENTORY_PATH.__dict__
+            self.ssh_directory: self.ANSIBLE_DOCKER_SSH_DIR.__dict__,
+            self.inventory_path: self.ANSIBLE_DOCKER_INVENTORY_PATH.__dict__
         }
-        command = ['-u', url, '-r', rev, '-i', ANSIBLE_DOCKER_INVENTORY_PATH.bind]
+        command = ['-u', url, '-r', rev, '-i', self.ANSIBLE_DOCKER_INVENTORY_PATH.bind]
         LOG.debug("Ansible container options", command=command)
-        return self.client.containers.run(image, detach=True,
+        return self.client.containers.run(settings.KYPO_CONFIG.ansible_docker_image, detach=True,
                                           command=command, volumes=volumes,
                                           network=self.DOCKER_NETWORK)
 
     def get_container(self, container_id: str) -> Container:
+        """
+        Return Docker container with given container ID.
+        """
         return self.client.containers.get(container_id)
 
     def delete_container(self, container_id: str, force=True) -> None:
-        """Delete given container. Parameter `force` is whether to kill the running one."""
+        """
+        Delete Docker container with given container ID.
+        Parameter `force` is whether to kill the running one.
+        """
         container = self.get_container(container_id)
         container.remove(force=force)
 
-    # TODO review this and refactor so that the private keys are not copied around
-    def prepare_ssh_dir(self, dir_path: str, stage: AnsibleAllocationStage, sandbox: Sandbox,
-                        config: KypoConfiguration) -> str:
-        """Prepare files that will be passed to docker container."""
-        self.make_dir(dir_path)
-        ssh_directory = os.path.join(dir_path, 'ssh')
-        self.make_dir(ssh_directory)
-
-        self.save_file(os.path.join(ssh_directory, USER_PRIVATE_KEY_FILENAME),
-                       sandbox.private_user_key)
-        self.save_file(os.path.join(ssh_directory, USER_PUBLIC_KEY_FILENAME),
-                       sandbox.public_user_key)
-        self.save_file(os.path.join(ssh_directory, MNG_PRIVATE_KEY_FILENAME),
-                       stage.allocation_request_fk_many.allocation_unit.pool.private_management_key)
-        self.save_file(os.path.join(ssh_directory, MNG_CERTIFICATE_FILENAME),
-                       stage.allocation_request_fk_many.allocation_unit.pool.management_certificate)
-
-        shutil.copy(config.git_private_key, os.path.join(ssh_directory, os.path.basename(config.git_private_key)))
-
-        mng_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind, MNG_PRIVATE_KEY_FILENAME)
-        git_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
-                               os.path.basename(config.git_private_key))
-        proxy_key = None
-        if config.proxy_jump_to_man:
-            proxy_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
-                                     os.path.basename(config.proxy_jump_to_man.IdentityFile))
-            shutil.copy(config.proxy_jump_to_man.IdentityFile, os.path.join(
-                ssh_directory, os.path.basename(config.proxy_jump_to_man.IdentityFile)))
-
-        ans_ssh_config = sandboxes.get_ansible_sshconfig(sandbox, mng_key, git_key, proxy_key)
-        self.save_file(os.path.join(ssh_directory, 'config'), str(ans_ssh_config))
-
-        return ssh_directory
-
-    def prepare_inventory_file(self, dir_path: str, sandbox: Sandbox,
-                               top_ins: TopologyInstance) -> str:
-        """Prepare inventory file and save it to given directory."""
-        inventory_object = self.prepare_inventory(sandbox, top_ins)
-        inventory_path = os.path.join(dir_path, ANSIBLE_INVENTORY_FILENAME)
-        self.save_file(inventory_path, inventory_object.serialize())
-
-        return inventory_path
+    def _prepare_ssh_dir(self):
+        """
+        Create SSH directory with private keys for communication with Git and KYPO Proxy.
+        """
+        self.make_dir(self.ssh_directory)
+        shutil.copy(settings.KYPO_CONFIG.git_private_key, self.ssh_directory)
+        shutil.copy(settings.KYPO_CONFIG.proxy_jump_to_man.IdentityFile, self.ssh_directory)
 
     @staticmethod
-    def prepare_inventory(sandbox, top_ins):
-        mgmt_private_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
-                                        MNG_PRIVATE_KEY_FILENAME)
-        mgmt_public_certificate = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
-                                               MNG_CERTIFICATE_FILENAME)
-        user_private_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
-                                        USER_PRIVATE_KEY_FILENAME)
-        user_public_key = os.path.join(ANSIBLE_DOCKER_SSH_DIR.bind,
-                                       USER_PUBLIC_KEY_FILENAME)
+    def make_dir(dir_path: str) -> None:
+        """
+        Create directory with missing subdirectories or just make sure it exist.
+        """
+        os.makedirs(dir_path, exist_ok=True)
+
+    @staticmethod
+    def save_file(file_path: str, data: str) -> None:
+        """
+        Save data to the file.
+        """
+        with open(file_path, 'w') as file:
+            file.write(data)
+
+    def host_ssh_path(self, filename: str):
+        """
+        Compose absolute path to file in SSH directory volume.
+        """
+        return os.path.join(self.ssh_directory, os.path.basename(filename))
+
+    def container_ssh_path(self, filename):
+        """
+        Compose absolute path to file in SSH directory in the container.
+        """
+        return os.path.join(self.ANSIBLE_DOCKER_SSH_DIR.bind, os.path.basename(filename))
+
+
+class AllocationAnsibleDockerRunner(AnsibleDockerRunner):
+    """
+    Represents Docker container environment for executing Ansible during allocation stage.
+    """
+    # TODO review this and refactor so that the private keys are not copied around
+    def prepare_ssh_dir(self, pool: Pool, sandbox: Sandbox):
+        """
+        Prepare files for SSH communication that will be bind to Docker container.
+        """
+        self._prepare_ssh_dir()
+        self.save_file(self.host_ssh_path(USER_PUBLIC_KEY_FILENAME), sandbox.public_user_key)
+        self.save_file(self.host_ssh_path(MGMT_PUBLIC_KEY_FILENAME), pool.public_management_key)
+        self.save_file(self.host_ssh_path(MGMT_PRIVATE_KEY_FILENAME), pool.private_management_key)
+        self.save_file(self.host_ssh_path(MGMT_CERTIFICATE_FILENAME), pool.management_certificate)
+
+        ans_ssh_config = sandboxes.get_ansible_sshconfig(sandbox, self.container_mgmt_private_key,
+                                                         self.container_git_private_key,
+                                                         self.container_proxy_private_key)
+        self.save_file(self.host_ssh_path('config'), str(ans_ssh_config))
+
+    def prepare_inventory_file(self, sandbox: Sandbox):
+        """
+        Prepare and save Ansible inventory file that will be bind to Docker container.
+        """
+        inventory_object = self.create_inventory(sandbox)
+        self.save_file(self.inventory_path, inventory_object.serialize())
+
+    def create_inventory(self, sandbox):
+        """
+        Return Ansible inventory file.
+        """
+        mgmt_public_certificate = self.container_ssh_path(MGMT_CERTIFICATE_FILENAME)
+        mgmt_public_key = self.container_ssh_path(MGMT_PUBLIC_KEY_FILENAME)
+        user_public_key = self.container_ssh_path(USER_PUBLIC_KEY_FILENAME)
+        top_ins = sandboxes.get_topology_instance(sandbox)
         sau = sandbox.allocation_unit
         sas = sau.allocation_request.stackallocationstage
         if not hasattr(sas, 'heatstack'):
@@ -130,14 +164,35 @@ class AnsibleDockerRunner:
             'kypo_global_pool_id': sau.pool.id,
             'kypo_global_head_ip': settings.KYPO_CONFIG.kypo_head_ip,
         }
-        return Inventory(top_ins, mgmt_private_key, mgmt_public_certificate,
-                         user_private_key, user_public_key, extra_vars)
+        return Inventory(sau.pool.get_pool_prefix(), sau.get_stack_name(),
+                         top_ins, self.container_mgmt_private_key, mgmt_public_certificate,
+                         mgmt_public_key, user_public_key, extra_vars)
 
-    @staticmethod
-    def make_dir(dir_path: str) -> None:
-        os.makedirs(dir_path, exist_ok=True)
 
-    @staticmethod
-    def save_file(file_path: str, data: str) -> None:
-        with open(file_path, 'w') as file:
-            file.write(data)
+class CleanupAnsibleDockerRunner(AnsibleDockerRunner):
+    """
+    Represents Docker container environment for executing Ansible during allocation stage.
+    """
+    def prepare_inventory_file(self, allocation_unit: SandboxAllocationUnit):
+        """
+        Prepare and save Ansible inventory file that will be bind to Docker container.
+        """
+        inventory_object = BaseInventory(allocation_unit.pool.get_pool_prefix(),
+                                         allocation_unit.get_stack_name())
+        self.save_file(self.inventory_path, inventory_object.serialize())
+
+    def prepare_ssh_dir(self, pool: Pool):
+        """
+        Prepare files for SSH communication that will be bind to Docker container.
+        """
+        self._prepare_ssh_dir()
+        self.save_file(self.host_ssh_path(MGMT_PRIVATE_KEY_FILENAME), pool.private_management_key)
+
+        proxy_jump = settings.KYPO_CONFIG.proxy_jump_to_man
+        ans_ssh_config = \
+            sshconfig.KypoAnsibleCleanupSSHConfig(proxy_jump.Host, proxy_jump.User,
+                                                  self.container_proxy_private_key,
+                                                  settings.KYPO_CONFIG.git_server,
+                                                  settings.KYPO_CONFIG.git_user,
+                                                  self.container_git_private_key)
+        self.save_file(self.host_ssh_path('config'), str(ans_ssh_config))

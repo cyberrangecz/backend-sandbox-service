@@ -9,15 +9,16 @@ from requests import exceptions as requests_exceptions
 
 from kypo.openstack_driver.exceptions import KypoException
 
-from kypo.sandbox_ansible_app.lib.ansible import AnsibleDockerRunner
+from kypo.sandbox_ansible_app.lib.ansible import CleanupAnsibleDockerRunner,\
+    AllocationAnsibleDockerRunner, AnsibleDockerRunner
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage, AnsibleCleanupStage,\
-    DockerContainer, AnsibleOutput
+    DockerContainer, AnsibleOutput, UserAnsibleCleanupStage, CleanupStage, DockerContainerCleanup
 from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_definition_app.lib import definitions
 
-from kypo.sandbox_instance_app.lib import jobs, sandboxes
+from kypo.sandbox_instance_app.lib import jobs
 from kypo.sandbox_instance_app.models import Sandbox, HeatStack,\
-    SandboxAllocationUnit, Stage, StackAllocationStage, StackCleanupStage,\
+    SandboxAllocationUnit, StackAllocationStage, StackCleanupStage,\
     RQJob, AllocationRQJob, CleanupRQJob
 
 LOG = structlog.get_logger()
@@ -32,7 +33,7 @@ class StageHandler(abc.ABC):
     """
     _job_class: Type[RQJob]
 
-    def __init__(self, stage: Stage, name: str = None):
+    def __init__(self, stage, name: str = None):
         self.stage = stage
         self.name = name if name is not None else self.stage.__class__.__name__
 
@@ -242,6 +243,11 @@ class AnsibleStageHandler(StageHandler):
     """
     Generalizes common tasks of stages executing Ansible tasks on the remote infrastructure.
     """
+
+    def __init__(self, stage: [AnsibleCleanupStage, AnsibleAllocationStage], name: str = None):
+        super().__init__(stage, name)
+        self.stage = stage
+
     @abc.abstractmethod
     def _execute(self) -> None:
         pass
@@ -249,6 +255,24 @@ class AnsibleStageHandler(StageHandler):
     @abc.abstractmethod
     def _cancel(self) -> None:
         pass
+
+    def create_directory_path(self, allocation_unit: SandboxAllocationUnit):
+        """
+        Compose absolute path to directory for Docker container volumes.
+        """
+        return os.path.join(settings.KYPO_CONFIG.ansible_docker_volumes,
+                            allocation_unit.get_stack_name(),
+                            f'{self.stage.id}-{utils.get_simple_uuid()}')
+
+    def check_status(self, status: dict):
+        """
+        Check status returned by Docker container
+        and raise an exception if Ansible execution failed.
+        """
+        status_code = status['StatusCode']
+        if status_code != 0:
+            raise exceptions.AnsibleError('Ansible ID={} failed with status code \'{}\''
+                                          .format(self.stage.id, status_code))
 
 
 class AllocationAnsibleStageHandler(AnsibleStageHandler):
@@ -260,6 +284,9 @@ class AllocationAnsibleStageHandler(AnsibleStageHandler):
 
     def __init__(self, stage: AnsibleAllocationStage, sandbox: Sandbox = None, name: str = None):
         super().__init__(stage, name)
+
+        self.allocation_unit = stage.allocation_request_fk_many.allocation_unit
+        self.directory_path = self.create_directory_path(self.allocation_unit)
         self.sandbox = sandbox
 
     def _execute(self) -> None:
@@ -269,20 +296,12 @@ class AllocationAnsibleStageHandler(AnsibleStageHandler):
         if self.sandbox is None:
             raise exceptions.AnsibleError(f'Sandbox was not provided')
 
-        dir_path = os.path.join(settings.KYPO_CONFIG.ansible_docker_volumes,
-                                self.sandbox.allocation_unit.get_stack_name(),
-                                f'{self.stage.id}-{utils.get_simple_uuid()}')
-        runner = AnsibleDockerRunner()
-        ssh_directory = runner.prepare_ssh_dir(dir_path, self.stage, self.sandbox,
-                                               settings.KYPO_CONFIG)
-        top_ins = sandboxes.get_topology_instance(self.sandbox)
-        inventory_path = runner.prepare_inventory_file(dir_path, self.sandbox, top_ins)
+        runner = AllocationAnsibleDockerRunner(self.directory_path)
+        runner.prepare_ssh_dir(self.allocation_unit.pool, self.sandbox)
+        runner.prepare_inventory_file(self.sandbox)
 
         try:
-            container = AnsibleDockerRunner().run_container(
-                settings.KYPO_CONFIG.ansible_docker_image, self.stage.repo_url,
-                self.stage.rev, ssh_directory, inventory_path
-            )
+            container = runner.run_container(self.stage.repo_url, self.stage.rev)
             DockerContainer.objects.create(allocation_stage=self.stage, container_id=container.id)
 
             for output in container.logs(stream=True):
@@ -292,16 +311,12 @@ class AllocationAnsibleStageHandler(AnsibleStageHandler):
 
             status = container.wait(timeout=60)
             container.remove()
-
         except (docker.errors.APIError,
                 docker.errors.DockerException,
                 requests_exceptions.ReadTimeout) as ex:
             raise exceptions.DockerError(ex)
 
-        status_code = status['StatusCode']
-        if status_code != 0:
-            raise exceptions.AnsibleError('Ansible ID={} failed with status code \'{}\''
-                                          .format(self.stage.id, status_code))
+        self.check_status(status)
 
     def _cancel(self) -> None:
         """
@@ -310,7 +325,7 @@ class AllocationAnsibleStageHandler(AnsibleStageHandler):
         try:
             if hasattr(self.stage, 'dockercontainer'):
                 container = self.stage.dockercontainer
-                AnsibleDockerRunner().delete_container(container.container_id)
+                AnsibleDockerRunner(self.directory_path).delete_container(container.container_id)
                 container.delete()
         except docker.errors.NotFound as ex:
             LOG.warning('Cancelling Ansible', exception=str(ex), stage=self.stage)
@@ -320,16 +335,42 @@ class CleanupAnsibleStageHandler(AnsibleStageHandler):
     """
     Specifies tasks needed for resources cleanup created during the Ansible execution.
     """
-    stage: AnsibleCleanupStage
+    stage: CleanupStage
     _job_class: Type[CleanupRQJob] = CleanupRQJob
+
+    def __init__(self, stage: CleanupStage):
+        super().__init__(stage)
+
+        self.allocation_unit = stage.cleanup_request_fk_many.allocation_unit
+        self.directory_path = self.create_directory_path(self.allocation_unit)
 
     def _execute(self) -> None:
         """
         Clean up resources created during the Ansible execution.
-
-        TODO: Currently not implemented.
         """
-        pass
+        if isinstance(self.stage, UserAnsibleCleanupStage):
+            return
+
+        runner = CleanupAnsibleDockerRunner(self.directory_path)
+        runner.prepare_ssh_dir(self.allocation_unit.pool)
+        runner.prepare_inventory_file(self.allocation_unit)
+
+        # NetworkingAnsibleAllocationStage is where ansible-stage-one repository URL and REVISION
+        # are saved.
+        allocation_stage = self.allocation_unit.allocation_request.networkingansibleallocationstage
+
+        try:
+            container = runner.run_container(allocation_stage.repo_url, allocation_stage.rev)
+            DockerContainerCleanup.objects.create(cleanup_stage=self.stage,
+                                                  container_id=container.id)
+            status = container.wait(timeout=60)
+            container.remove()
+        except (docker.errors.APIError,
+                docker.errors.DockerException,
+                requests_exceptions.ReadTimeout) as ex:
+            raise exceptions.DockerError(ex)
+
+        self.check_status(status)
 
     def _cancel(self) -> None:
         """

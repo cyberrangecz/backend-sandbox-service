@@ -1,7 +1,7 @@
 from django.db import models
 
 from kypo.sandbox_instance_app.models import ExternalDependency, AllocationStage, \
-    CleanupStage, AllocationRequest, CleanupRequest, SandboxAllocationUnit
+    CleanupStage, AllocationRequest, CleanupRequest, SandboxAllocationUnit, ExternalDependencyCleanup
 
 
 class AnsibleAllocationStage(AllocationStage):
@@ -83,3 +83,10 @@ class DockerContainer(ExternalDependency):
 
     def __str__(self):
         return f'STAGE: {self.allocation_stage.id}, CONTAINER: {self.container_id}'
+
+
+class DockerContainerCleanup(ExternalDependencyCleanup):
+    container_id = models.TextField()
+
+    def __str__(self):
+        return f'STAGE: {self.cleanup_stage.id}, CONTAINER: {self.container_id}'

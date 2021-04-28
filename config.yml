@@ -1,8 +1,8 @@
 # Name of the microservice.
 #microservice_name: kypo-sandbox-service
 
-# A prefix of the stack in the cloud.
-#stack_name_prefix: default-prefix-0
+# A prefix of the stack in the cloud with maximum 8 characters.
+#stack_name_prefix: default0
 
 # A boolean that turns on/off debug mode.
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -93,7 +93,7 @@ application_configuration:
     #sandbox_ansible_timeout: 7200
 
     # The path to local temporary directory where KYPO will prepare Docker volumes.
-    #ansible_docker_volumes: /tmp
+    #ansible_docker_volumes: /tmp/kypo
 
     # The name of the Docker image that is able to run Ansible playbook.
     #ansible_docker_image: csirtmu/kypo-ansible-runner

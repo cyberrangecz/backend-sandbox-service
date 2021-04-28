@@ -6,6 +6,7 @@ from django.core.management import call_command
 from kypo.topology_definition.models import TopologyDefinition
 from kypo.openstack_driver import TopologyInstance, TransformationConfiguration
 
+from kypo.sandbox_definition_app.models import Definition
 from kypo.sandbox_instance_app.models import StackAllocationStage, SandboxAllocationUnit, \
     AllocationRequest, HeatStack, AllocationRQJob, Sandbox, CleanupRequest, StackCleanupStage,\
     Pool, SandboxLock
@@ -24,7 +25,6 @@ TESTING_SSH_CONFIG_MANAGEMENT = 'ssh_config_management'
 TESTING_SSH_CONFIG_ANSIBLE = 'ssh_config_ansible'
 TESTING_DEFINITION = 'definition.yml'
 TESTING_TOPOLOGY = 'topology.yml'
-TESTING_SSH_ACCESS_SOURCE = 'ssh-access-source.sh'
 TESTING_TRC_CONFIG = 'trc-config.yml'
 TESTING_LINKS = 'links.yml'
 
@@ -97,29 +97,6 @@ def topology():
         return yaml.full_load(f)
 
 
-@pytest.fixture
-def pool(mocker):
-    mocked_pool = mocker.MagicMock()
-    mocked_pool.public_management_key = 'public-management-key'
-    mocked_pool.private_management_key = 'private-management-key'
-    return mocked_pool
-
-
-@pytest.fixture
-def sandbox(mocker):
-    mocked_sandbox = mocker.MagicMock()
-    mocked_sandbox.public_user_key = 'public-user-key'
-    mocked_sandbox.private_user_key = 'private-user-key'
-    mocked_sandbox.allocation_unit.pool.id = 'pool-id'
-    return mocked_sandbox
-
-
-@pytest.fixture
-def ssh_access_source():
-    with open(data_path_join(TESTING_SSH_ACCESS_SOURCE)) as file:
-        return file.read()
-
-
 def set_stage_started(stage):
     stage.start = timezone.now()
     stage.save()
@@ -146,8 +123,16 @@ def stack():
 
 
 @pytest.fixture
-def pool():
-    return Pool.objects.get(pk=1)
+def definition():
+    return Definition.objects.create(name='test-def-name', url='test-def-url', rev='test-def-rev')
+
+
+@pytest.fixture
+def pool(definition):
+    return Pool.objects.create(definition=definition, max_size=3,
+                               private_management_key='-----RSA PRIVATE KEY-----',
+                               public_management_key='ssh-rsa',
+                               uuid='0fb3160d', rev='rev_pool1')
 
 
 @pytest.fixture
