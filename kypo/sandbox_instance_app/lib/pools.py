@@ -6,7 +6,7 @@ import zipfile
 from typing import List, Dict, Optional
 import structlog
 from django.db import transaction
-from django.db.models import QuerySet
+from django.db.models import QuerySet, ProtectedError
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 
@@ -91,12 +91,24 @@ def create_pool(data: Dict) -> Pool:
 
 def delete_pool(pool: Pool) -> None:
     """Deletes given Pool. Also deletes management key-pair in OpenStack."""
+    ssh_keypair_name = pool.ssh_keypair_name
+    certificate_keypair_name = pool.certificate_keypair_name
+
+    try:
+        pool.delete()
+    except ProtectedError:
+        raise exceptions.ValidationError('Cannot delete locked pool.')
+
     client = utils.get_ostack_client()
     try:
-        client.delete_keypair(pool.ssh_keypair_name)
-        client.delete_keypair(pool.certificate_keypair_name)
-    finally:
-        pool.delete()
+        client.delete_keypair(ssh_keypair_name)
+    except KypoException as exc:
+        LOG.warning(exc)
+
+    try:
+        client.delete_keypair(certificate_keypair_name)
+    except KypoException as exc:
+        LOG.warning(exc)
 
 
 def get_pool_size(pool: Pool) -> int:
