@@ -12,7 +12,8 @@ from kypo.openstack_driver.exceptions import KypoException
 from kypo.sandbox_ansible_app.lib.ansible import CleanupAnsibleDockerRunner,\
     AllocationAnsibleDockerRunner, AnsibleDockerRunner
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage, AnsibleCleanupStage,\
-    DockerContainer, AnsibleOutput, UserAnsibleCleanupStage, CleanupStage, DockerContainerCleanup
+    DockerContainer, AllocationAnsibleOutput, CleanupAnsibleOutput, UserAnsibleCleanupStage,\
+    CleanupStage, DockerContainerCleanup
 from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_definition_app.lib import definitions
 
@@ -307,7 +308,7 @@ class AllocationAnsibleStageHandler(AnsibleStageHandler):
             for output in container.logs(stream=True):
                 output = output.decode('utf-8')
                 output = output[:-1] if output[-1] == '\n' else output
-                AnsibleOutput.objects.create(allocation_stage=self.stage, content=output)
+                AllocationAnsibleOutput.objects.create(allocation_stage=self.stage, content=output)
 
             status = container.wait(timeout=settings.KYPO_CONFIG.sandbox_ansible_timeout)
             container.remove()
@@ -363,6 +364,12 @@ class CleanupAnsibleStageHandler(AnsibleStageHandler):
             container = runner.run_container(allocation_stage.repo_url, allocation_stage.rev)
             DockerContainerCleanup.objects.create(cleanup_stage=self.stage,
                                                   container_id=container.id)
+
+            for output in container.logs(stream=True):
+                output = output.decode('utf-8')
+                output = output[:-1] if output[-1] == '\n' else output
+                CleanupAnsibleOutput.objects.create(cleanup_stage=self.stage, content=output)
+
             status = container.wait(timeout=settings.KYPO_CONFIG.sandbox_ansible_timeout)
             container.remove()
         except (docker.errors.APIError,

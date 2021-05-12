@@ -9,7 +9,7 @@ from redis import Redis
 from rest_framework import status
 from rq import SimpleWorker
 
-from kypo.sandbox_ansible_app.models import AnsibleOutput
+from kypo.sandbox_ansible_app.models import AllocationAnsibleOutput
 from kypo.sandbox_common_lib import utils
 from kypo.sandbox_instance_app.models import Sandbox
 
@@ -75,7 +75,7 @@ class TestIntegration:
                         try:
                             assert len(Sandbox.objects.all()) == 1
                         except AssertionError:
-                            ansible_outputs = [x.content for x in AnsibleOutput.objects.all()]
+                            ansible_outputs = [x.content for x in AllocationAnsibleOutput.objects.all()]
                             LOG.info('Ansible outputs', ansible_outputs='\n'.join(ansible_outputs))
                             self.cancel_allocation_request(client, alloc_req_id)
                             raise

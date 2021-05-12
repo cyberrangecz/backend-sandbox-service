@@ -1,7 +1,8 @@
 from django.db import models
 
 from kypo.sandbox_instance_app.models import ExternalDependency, AllocationStage, \
-    CleanupStage, AllocationRequest, CleanupRequest, SandboxAllocationUnit, ExternalDependencyCleanup
+    CleanupStage, AllocationRequest, CleanupRequest, SandboxAllocationUnit,\
+    ExternalDependencyCleanup
 
 
 class AnsibleAllocationStage(AllocationStage):
@@ -62,20 +63,38 @@ class UserAnsibleCleanupStage(AnsibleCleanupStage):
         return super().__str__() + f', REQUEST: {self.cleanup_request}'
 
 
-# TODO not the best relationship
 class AnsibleOutput(models.Model):
+    content = models.TextField()
+
+    class Meta:
+        abstract = True
+        ordering = ['id']
+
+    def __str__(self):
+        return f'ID: {self.id}, CONTENT: {self.content}'
+
+
+# TODO not the best relationship
+class AllocationAnsibleOutput(AnsibleOutput):
     allocation_stage = models.ForeignKey(
         AllocationStage,
         on_delete=models.CASCADE,
         related_name='outputs'
     )
-    content = models.TextField()
-
-    class Meta:
-        ordering = ['id']
 
     def __str__(self):
-        return f'ID: {self.id}, STAGE: {self.allocation_stage.id}, CONTENT: {self.content}'
+        return f'{super().__str__()} STAGE: {self.allocation_stage.id}'
+
+
+class CleanupAnsibleOutput(AnsibleOutput):
+    cleanup_stage = models.ForeignKey(
+        CleanupStage,
+        on_delete=models.CASCADE,
+        related_name='outputs'
+    )
+
+    def __str__(self):
+        return f'{super().__str__()} STAGE: {self.cleanup_stage.id}'
 
 
 class DockerContainer(ExternalDependency):

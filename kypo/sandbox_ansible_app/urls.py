@@ -4,7 +4,6 @@ from django.urls import path
 
 from kypo.sandbox_ansible_app import views
 
-
 urlpatterns = [
     path('allocation-requests/<int:request_id>/stages/networking-ansible',
          views.NetworkingAnsibleAllocationStageDetail.as_view(),
