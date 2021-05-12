@@ -70,7 +70,7 @@ class NetworkingAnsibleOutputList(generics.ListAPIView):
     """
     get: Retrieve a list of Ansible Outputs.
     """
-    serializer_class = serializers.AnsibleOutputSerializer
+    serializer_class = serializers.AllocationAnsibleOutputSerializer
 
     def get_queryset(self):
         request_id = self.kwargs.get('request_id')
@@ -83,7 +83,7 @@ class UserAnsibleOutputList(generics.ListAPIView):
     """
     get: Retrieve a list of Ansible Outputs.
     """
-    serializer_class = serializers.AnsibleOutputSerializer
+    serializer_class = serializers.AllocationAnsibleOutputSerializer
 
     def get_queryset(self):
         request_id = self.kwargs.get('request_id')

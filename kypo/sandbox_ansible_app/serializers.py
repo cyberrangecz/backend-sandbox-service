@@ -58,8 +58,8 @@ class UserAnsibleCleanupStageSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class AnsibleOutputSerializer(serializers.ModelSerializer):
+class AllocationAnsibleOutputSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.AnsibleOutput
+        model = models.AllocationAnsibleOutput
         fields = ('content',)
         read_only_fields = fields
