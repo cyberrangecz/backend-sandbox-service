@@ -43,16 +43,14 @@ def create_pool(data: Dict) -> Pool:
 
     :param data: dict of attributes to create model. Currently must contain:
         - definition: primary key (ID) of the Definition that new Pool instance is related to
-        - rev: rev of the definition for pool
         - max_size: max size of new Pool instance
     :return: new Pool instance
     """
     definition = get_object_or_404(Definition, pk=data.get('definition_id'))
-    if 'rev' not in data:
-        data['rev'] = definition.rev
-
     provider = definitions.get_def_provider(definition.url, settings.KYPO_CONFIG)
-    data['rev_sha'] = provider.get_rev_sha(data['rev'])
+
+    data['rev'] = definition.rev
+    data['rev_sha'] = provider.get_rev_sha(definition.rev)
 
     serializer = serializers.PoolSerializerCreate(data=data)
     serializer.is_valid(raise_exception=True)
@@ -61,7 +59,7 @@ def create_pool(data: Dict) -> Pool:
         client = utils.get_ostack_client()
 
         # Validate definition
-        top_def = definitions.get_definition(definition.url, pool.rev, settings.KYPO_CONFIG)
+        top_def = definitions.get_definition(definition.url, pool.rev_sha, settings.KYPO_CONFIG)
         client.validate_topology_definition(top_def)
     except (exceptions.GitError, exceptions.ValidationError, InvalidTopologyDefinition):
         pool.delete()

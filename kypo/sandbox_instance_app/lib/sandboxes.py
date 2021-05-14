@@ -42,8 +42,9 @@ def get_sandbox(sb_pk: int) -> Sandbox:
 
 def get_topology_definition(sandbox: Sandbox) -> TopologyDefinition:
     """Create topology definition for given sandbox."""
-    definition = sandbox.allocation_unit.pool.definition
-    return definitions.get_definition(definition.url, definition.rev, settings.KYPO_CONFIG)
+    pool = sandbox.allocation_unit.pool
+    definition = pool.definition
+    return definitions.get_definition(definition.url, pool.rev_sha, settings.KYPO_CONFIG)
 
 
 def lock_sandbox(sandbox: Sandbox) -> SandboxLock:

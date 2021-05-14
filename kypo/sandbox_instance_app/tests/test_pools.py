@@ -20,7 +20,6 @@ FULL_POOL_ID = 2
 
 class TestCreatePool:
     MAX_SIZE = 10
-    REV = "a1b2c3"
 
     @pytest.fixture(autouse=True)
     def set_up(self, mocker):
@@ -31,25 +30,23 @@ class TestCreatePool:
         self.arf = APIRequestFactory()
         yield
 
-    def test_create_pool_success(self):
+    def test_create_pool_success(self, definition):
         pool = pools.create_pool(dict(definition_id=DEFINITION_ID,
-                                      max_size=self.MAX_SIZE,
-                                      rev=self.REV))
+                                      max_size=self.MAX_SIZE))
+
         assert pool.max_size == self.MAX_SIZE
-        assert pool.rev == self.REV
+        assert pool.rev == definition.rev
         assert pool.definition.id == DEFINITION_ID
 
     def test_create_pool_invalid_definition(self):
         with pytest.raises(Http404):
             pools.create_pool(dict(definition_id=-1,
-                                   max_size=self.MAX_SIZE,
-                                   rev=self.REV))
+                                   max_size=self.MAX_SIZE))
 
     def test_create_pool_invalid_size(self):
         with pytest.raises(ValidationError):
             pools.create_pool(dict(definition_id=1,
-                                   max_size=-10,
-                                   rev=self.REV))
+                                   max_size=-10))
 
     def test_pool_views(self):
         request = self.arf.get(reverse('pool-list'))
