@@ -131,8 +131,7 @@ def definition():
 def pool(definition):
     return Pool.objects.create(definition=definition, max_size=3,
                                private_management_key='-----RSA PRIVATE KEY-----',
-                               public_management_key='ssh-rsa',
-                               uuid='0fb3160d', rev='rev_pool1')
+                               public_management_key='ssh-rsa', uuid='0fb3160d')
 
 
 @pytest.fixture

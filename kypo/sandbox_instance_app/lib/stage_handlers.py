@@ -167,8 +167,9 @@ class AllocationStackStageHandler(StackStageHandler):
         Allocate stack in the OpenStack cloud platform.
         """
         allocation_unit = self.stage.allocation_request.allocation_unit
-        definition = allocation_unit.pool.definition
-        top_def = definitions.get_definition(definition.url, definition.rev, settings.KYPO_CONFIG)
+        pool = allocation_unit.pool
+        definition = pool.definition
+        top_def = definitions.get_definition(definition.url, pool.rev_sha, settings.KYPO_CONFIG)
         stack = self._client.create_stack(
             allocation_unit.get_stack_name(), top_def,
             key_pair_name_ssh=allocation_unit.pool.ssh_keypair_name,
