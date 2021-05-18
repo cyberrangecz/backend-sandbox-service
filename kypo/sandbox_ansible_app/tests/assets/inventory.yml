@@ -92,10 +92,17 @@ all:
       hosts:
         home-router: null
         server-router: null
-    user-accessible:
+    user_accessible_nodes:
       hosts:
         home: null
         home-router: null
+    hidden_hosts:
+      hosts:
+        server: null
+    custom-group:
+      hosts:
+        home: null
+        server-router: null
     winrm_nodes:
       hosts:
         home:
