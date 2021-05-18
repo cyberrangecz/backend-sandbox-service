@@ -315,7 +315,8 @@ class Inventory(BaseInventory):
         """
         Create KYPO default Ansible group entries.
 
-        Default groups: 'hosts', 'management', 'routers', 'winrm_nodes', and 'ssh_nodes'.
+        Default groups: 'hosts', 'management', 'routers', 'winrm_nodes', 'ssh_nodes',
+         'user_accessible_nodes' and 'hidden_hosts'.
         """
         extra_nodes = self.topology_instance.get_extra_nodes()
 
@@ -335,6 +336,20 @@ class Inventory(BaseInventory):
         ssh_nodes = [self.hosts[node.name] for node in self.topology_instance.get_nodes()
                      if node.base_box.mgmt_protocol == Protocol.SSH and node not in extra_nodes]
         self.add_group(Group('ssh_nodes', ssh_nodes))
+
+        self.add_group(Group('user_accessible_nodes', self.get_user_accessible_nodes()))
+
+        hidden_hosts = [self.hosts[node.name] for node in self.topology_instance.get_hosts()
+                        if node.hidden]
+        self.add_group(Group('hidden_hosts', hidden_hosts))
+
+    def get_user_accessible_nodes(self) -> List[Host]:
+        """
+        Create and return user accessible nodes from user accessible networks.
+        """
+        link_pairs = self.topology_instance\
+            .get_link_pairs_uan_to_nodes_over_user_accessible_hosts_networks()
+        return [self.hosts[pair.second.node.name] for pair in link_pairs]
 
     def _create_user_defined_groups(self) -> None:
         """
