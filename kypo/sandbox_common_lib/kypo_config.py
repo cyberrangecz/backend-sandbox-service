@@ -5,7 +5,7 @@ import os
 from enum import Enum
 
 from kypo.openstack_driver import TransformationConfiguration
-from yamlize import Attribute, Object, YamlizingError, Typed
+from yamlize import Attribute, Object, YamlizingError, Typed, Map
 
 from kypo.sandbox_common_lib import kypo_config_validation
 from kypo.sandbox_common_lib.exceptions import ImproperlyConfigured
@@ -65,6 +65,11 @@ class NamingStrategy(Object):
     replace = Attribute(type=str, default='')
 
 
+class FlavorMapping(Map):
+    key_type = Typed(str)
+    value_type = Typed(str)
+
+
 class KypoConfiguration(Object):
     kypo_head_ip = Attribute(type=str, default=KYPO_HEAD_IP,
                              validator=kypo_config_validation.validate_kypo_head_ip)
@@ -105,6 +110,7 @@ class KypoConfiguration(Object):
     ansible_networking_rev = Attribute(type=str, default=ANSIBLE_NETWORKING_REV)
 
     image_naming_strategy = Attribute(type=NamingStrategy, default=None)
+    flavor_mapping = Attribute(type=FlavorMapping, default=None)
 
     proxy_jump_to_man = Attribute(type=ProxyJump)
 
