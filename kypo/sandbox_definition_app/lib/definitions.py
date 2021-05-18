@@ -53,8 +53,21 @@ def load_definition(stream: typing.TextIO) -> TopologyDefinition:
         raise exceptions.ValidationError(ex)
 
     image_naming_strategy = settings.KYPO_CONFIG.image_naming_strategy
-    return image_name_replace(image_naming_strategy.pattern, image_naming_strategy.replace,
-                              topology_definition) if image_naming_strategy else topology_definition
+    if image_naming_strategy:
+        topology_definition = image_name_replace(image_naming_strategy.pattern,
+                                                 image_naming_strategy.replace,
+                                                 topology_definition)
+
+    flavor_mapping = settings.KYPO_CONFIG.flavor_mapping
+    if flavor_mapping:
+        for host in topology_definition.hosts:
+            if host.flavor in flavor_mapping:
+                host.flavor = flavor_mapping[host.flavor]
+        for router in topology_definition.routers:
+            if router.flavor in flavor_mapping:
+                router.flavor = flavor_mapping[router.flavor]
+
+    return topology_definition
 
 
 def get_definition(url: str, rev: str, config: KypoConfiguration) -> TopologyDefinition:

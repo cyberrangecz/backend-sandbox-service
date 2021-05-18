@@ -48,9 +48,11 @@ class TestLoadDefinition:
 
         for host in topology_definition.hosts:
             assert host.base_box.image == 'debian-9-x86_64'
+            assert host.flavor == 'csirtmu.tiny1x2'
 
         for router in topology_definition.routers:
             assert router.base_box.image == 'debian-9-x86_64'
+            assert router.flavor == 'csirtmu.tiny1x2'
 
     def test_load_definition_invalid_definition(self, mocker, topology_definition_stream):
         topology_definition = mocker\

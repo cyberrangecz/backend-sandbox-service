@@ -81,6 +81,10 @@ application_configuration:
     image_naming_strategy:
         pattern: munikypo/
 
+    # The mapping of flavor names to be replaced in sandbox definition.
+    flavor_mapping:
+        standard.tiny: csirtmu.tiny1x2
+
     # The object that represents SSH Host entry (see man page of ssh_config).
     proxy_jump_to_man:
         Host: jump-host-ip

@@ -6,7 +6,7 @@ hosts:
     base_box:
       image: munikypo/debian-9-x86_64
       mgmt_user: None
-    flavor: csirtmu.tiny1x2
+    flavor: standard.tiny
     block_internet: True
     hidden: True
 
@@ -27,7 +27,7 @@ routers:
     base_box:
       image: munikypo/debian-9-x86_64
       mgmt_user: kypo-man
-    flavor: csirtmu.tiny1x2
+    flavor: standard.tiny
     cidr: 200.100.100.0/29
 
 networks:
