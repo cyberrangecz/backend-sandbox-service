@@ -77,6 +77,11 @@ application_configuration:
     # The rev of Ansible networking Git repository.
     #ansible_networking_rev: master
 
+    # The pattern to be replaced in image names of sandbox definitions.
+    #image_naming_strategy:
+    #    pattern: ^
+    #    replace: ''
+
     # The object that represents SSH Host entry (see man page of ssh_config).
     proxy_jump_to_man:
         Host: ""

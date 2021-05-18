@@ -2,10 +2,12 @@
 Definition Service module for Definition management.
 """
 import io
+import typing
 
 import structlog
 from django.conf import settings
 from kypo.topology_definition.models import TopologyDefinition
+from kypo.topology_definition.image_naming import image_name_replace
 from yamlize import YamlizingError
 
 from kypo.sandbox_common_lib import utils, exceptions
@@ -39,6 +41,22 @@ def create_definition(url: str, rev: str = None) -> Definition:
     return serializer.save()
 
 
+def load_definition(stream: typing.TextIO) -> TopologyDefinition:
+    """Load TopologyDefinition from opened stream and make appropriate transformation.
+
+    :param stream: The opened stream from which the TopologyDefinition will be loaded
+    :raise: ValidationError if the TopologyDefinition cannot be loaded
+    """
+    try:
+        topology_definition = TopologyDefinition.load(stream)
+    except YamlizingError as ex:
+        raise exceptions.ValidationError(ex)
+
+    image_naming_strategy = settings.KYPO_CONFIG.image_naming_strategy
+    return image_name_replace(image_naming_strategy.pattern, image_naming_strategy.replace,
+                              topology_definition) if image_naming_strategy else topology_definition
+
+
 def get_definition(url: str, rev: str, config: KypoConfiguration) -> TopologyDefinition:
     """Get sandbox definition file content as TopologyDefinition.
 
@@ -54,10 +72,8 @@ def get_definition(url: str, rev: str, config: KypoConfiguration) -> TopologyDef
     except exceptions.GitError as ex:
         raise exceptions.GitError("Failed to get sandbox definition file {}.\n"
                                   .format(SANDBOX_DEFINITION_FILENAME) + str(ex))
-    try:
-        return TopologyDefinition.load(io.StringIO(definition))
-    except YamlizingError as ex:
-        raise exceptions.ValidationError(ex)
+
+    return load_definition(io.StringIO(definition))
 
 
 def get_def_provider(url: str, config: KypoConfiguration) -> DefinitionProvider:

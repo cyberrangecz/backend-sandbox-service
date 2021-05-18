@@ -1,6 +1,8 @@
 import pytest
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError as RestValidationError
+from yamlize import YamlizingError
 
+from kypo.sandbox_common_lib.exceptions import ValidationError
 from kypo.sandbox_definition_app.lib import definitions
 from kypo.sandbox_definition_app.models import Definition
 
@@ -36,5 +38,24 @@ class TestCreateDefinition:
                      return_value=mock)
 
         definitions.create_definition(url=self.url, rev=self.rev)
-        with pytest.raises(ValidationError):
+        with pytest.raises(RestValidationError):
             definitions.create_definition(url=self.url, rev=self.rev)
+
+
+class TestLoadDefinition:
+    def test_load_definition_success(self, topology_definition_stream):
+        topology_definition = definitions.load_definition(topology_definition_stream)
+
+        for host in topology_definition.hosts:
+            assert host.base_box.image == 'debian-9-x86_64'
+
+        for router in topology_definition.routers:
+            assert router.base_box.image == 'debian-9-x86_64'
+
+    def test_load_definition_invalid_definition(self, mocker, topology_definition_stream):
+        topology_definition = mocker\
+            .patch("kypo.sandbox_definition_app.lib.definitions.TopologyDefinition")
+        topology_definition.load.side_effect = YamlizingError('exception-text')
+
+        with pytest.raises(ValidationError):
+            definitions.load_definition(topology_definition_stream)

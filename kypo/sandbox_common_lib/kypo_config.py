@@ -60,6 +60,11 @@ class OpenStackConsoleType(Enum):
             raise ValueError(f'Invalid value for OpenStackConsoleType: {value}')
 
 
+class NamingStrategy(Object):
+    pattern = Attribute(type=str)
+    replace = Attribute(type=str, default='')
+
+
 class KypoConfiguration(Object):
     kypo_head_ip = Attribute(type=str, default=KYPO_HEAD_IP,
                              validator=kypo_config_validation.validate_kypo_head_ip)
@@ -98,6 +103,8 @@ class KypoConfiguration(Object):
 
     ansible_networking_url = Attribute(type=str)
     ansible_networking_rev = Attribute(type=str, default=ANSIBLE_NETWORKING_REV)
+
+    image_naming_strategy = Attribute(type=NamingStrategy, default=None)
 
     proxy_jump_to_man = Attribute(type=ProxyJump)
 
