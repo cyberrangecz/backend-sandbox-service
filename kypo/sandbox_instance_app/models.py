@@ -45,7 +45,7 @@ class Pool(models.Model):
 
     def get_keypair_name(self) -> str:
         """Returns a name of the management key-pair for this pool."""
-        return self.definition.name + '-' + str(self.id) + '-' + str(self.uuid)
+        return f'{self.get_pool_prefix()}-{self.uuid}'
 
     @property
     def ssh_keypair_name(self) -> str:
