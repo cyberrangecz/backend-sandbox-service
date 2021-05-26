@@ -3,9 +3,11 @@ all:
     home:
       ansible_host: 192.168.128.5
       ansible_user: windows
+      user_network_ip: 10.10.30.5
     server:
       ansible_host: 192.168.128.4
       ansible_user: debian
+      user_network_ip: 10.10.20.5
     border-router:
       ansible_host: 192.168.128.3
       ansible_user: kypo-man
@@ -64,6 +66,7 @@ all:
           mac: 00:00:00:00:00:16
           routes: []
       ip_forward: true
+      user_network_ip: 10.10.30.1
     server-router:
       ansible_host: 192.168.128.6
       ansible_user: debian
@@ -72,6 +75,7 @@ all:
           mac: 00:00:00:00:00:13
           routes: []
       ip_forward: true
+      user_network_ip: 10.10.20.1
     kypo-proxy-jump:
       ansible_host: jump-host-ip
       ansible_user: debian

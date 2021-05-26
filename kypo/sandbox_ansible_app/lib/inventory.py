@@ -1,5 +1,6 @@
 from ipaddress import ip_network
 from typing import Dict, List, Tuple, Optional
+from itertools import chain
 import structlog
 import yaml
 import abc
@@ -269,6 +270,7 @@ class Inventory(BaseInventory):
         self._set_ip_forward()
         self._create_groups()
         self._create_user_defined_groups()
+        self._add_user_network_ip_to_user_defined_nodes()
 
         self.get_host(KYPO_PROXY_JUMP_NAME).add_variables(user_access_present=True)
         self.get_group('winrm_nodes')\
@@ -357,6 +359,20 @@ class Inventory(BaseInventory):
         """
         for group in self.topology_instance.get_groups():
             self.add_group(Group(group.name, [self.hosts[node_name] for node_name in group.nodes]))
+
+    def _add_user_network_ip_to_user_defined_nodes(self) -> None:
+        """
+        Add IP of user network as variable for every user defined nodes.
+        """
+        user_defined_networks = self.topology_instance.get_hosts_networks()
+        networks_links = [self.topology_instance.get_network_links(network)
+                          for network in user_defined_networks]
+        networks_links = chain(*networks_links)
+
+        for link in networks_links:
+            if link.node.name == 'uan':
+                continue
+            self.hosts[link.node.name].add_variables(user_network_ip=link.ip)
 
     @staticmethod
     def _get_winrm_connection_variables(mgmt_private_key: str,
