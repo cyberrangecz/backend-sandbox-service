@@ -62,10 +62,10 @@
     - change_useransibleallocationstage
     - delete_useransibleallocationstage
 
-    - view_ansibleoutput
-    - add_ansibleoutput
-    - change_ansibleoutput
-    - delete_ansibleoutput
+    - view_allocationansibleoutput
+    - add_allocationansibleoutput
+    - change_allocationansibleoutput
+    - delete_allocationansibleoutput
 
     # Cleanup Stages
     - view_cleanupstage
@@ -87,6 +87,11 @@
     - add_useransiblecleanupstage
     - change_useransiblecleanupstage
     - delete_useransiblecleanupstage
+
+    - view_cleanupansibleoutput
+    - add_cleanupansibleoutput
+    - change_cleanupansibleoutput
+    - delete_cleanupansibleoutput
 
 - name: designer
   default: false
@@ -157,10 +162,10 @@
     - change_useransibleallocationstage
     - delete_useransibleallocationstage
 
-    - view_ansibleoutput
-    - add_ansibleoutput
-    - change_ansibleoutput
-    - delete_ansibleoutput
+    - view_allocationansibleoutput
+    - add_allocationansibleoutput
+    - change_allocationansibleoutput
+    - delete_allocationansibleoutput
 
     # Cleanup Stages
     - view_cleanupstage
@@ -182,6 +187,11 @@
     - add_useransiblecleanupstage
     - change_useransiblecleanupstage
     - delete_useransiblecleanupstage
+
+    - view_cleanupansibleoutput
+    - add_cleanupansibleoutput
+    - change_cleanupansibleoutput
+    - delete_cleanupansibleoutput
 
 - name: trainee
   default: true
