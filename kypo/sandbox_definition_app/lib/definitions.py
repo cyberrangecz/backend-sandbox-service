@@ -18,7 +18,7 @@ from kypo.sandbox_definition_app.models import Definition
 
 LOG = structlog.get_logger()
 
-SANDBOX_DEFINITION_FILENAME = 'sandbox.yml'
+SANDBOX_DEFINITION_FILENAME = 'topology.yml'
 
 
 def create_definition(url: str, rev: str = None) -> Definition:
