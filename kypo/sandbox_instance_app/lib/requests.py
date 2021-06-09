@@ -85,21 +85,3 @@ def delete_cleanup_request(request: CleanupRequest) -> None:
         raise exceptions.ValidationError('The cleanup request is not finished. '
                                          'You need to cancel it first.')
     request.delete()
-
-
-def delete_stack(allocation_unit: SandboxAllocationUnit) -> None:
-    client = utils.get_ostack_client()
-
-    try:
-        stack_name = allocation_unit.get_stack_name()
-        action, status = client.get_stack_status(stack_name)
-
-        if action == 'DELETE' or action == 'ROLLBACK':
-            msg = f"Sandbox of allocation unit ID={allocation_unit.id} is already being deleted."
-            LOG.warning(msg)
-            return
-
-        client.delete_stack(stack_name)
-    except Exception as exc:
-        msg = f'Deleting sandbox of allocation unit ID={allocation_unit.id} failed. {exc}'
-        raise exceptions.StackError(msg)

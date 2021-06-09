@@ -6,6 +6,9 @@ from typing import Type
 from django.conf import settings
 from django.utils import timezone
 from requests import exceptions as requests_exceptions
+from redis import Redis
+from rq.exceptions import NoSuchJobError
+from rq.job import Job
 
 from kypo.openstack_driver.exceptions import KypoException
 
@@ -17,7 +20,6 @@ from kypo.sandbox_ansible_app.models import AnsibleAllocationStage, AnsibleClean
 from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_definition_app.lib import definitions
 
-from kypo.sandbox_instance_app.lib import jobs
 from kypo.sandbox_instance_app.models import Sandbox, HeatStack,\
     SandboxAllocationUnit, StackAllocationStage, StackCleanupStage,\
     RQJob, AllocationRQJob, CleanupRQJob
@@ -110,7 +112,11 @@ class StageHandler(abc.ABC):
         Remove and delete enqueued Job of the stage execution from a queue.
         """
         if hasattr(self.stage, 'rq_job'):
-            jobs.delete_job(self.stage.rq_job.job_id)
+            try:
+                Job.fetch(self.stage.rq_job.job_id, connection=Redis())\
+                    .delete(delete_dependents=True)
+            except NoSuchJobError:  # Job already deleted
+                pass
         else:
             LOG.warning(f'Stage {self.name} does not have an RQ job')
 

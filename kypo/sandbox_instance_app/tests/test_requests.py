@@ -119,34 +119,3 @@ class TestCleanupRequest:
 
         with pytest.raises(ObjectDoesNotExist):
             CleanupRequest.objects.get(pk=cleanup_request_finished.id)
-
-
-class TestDeleteStack:
-    @pytest.fixture(autouse=True)
-    def set_up(self, mocker):
-        mocker.patch('kypo.sandbox_instance_app.lib.requests.LOG')
-        self.client = mocker.patch('kypo.sandbox_instance_app.lib.requests.utils.get_ostack_client')
-        self.client.return_value.get_stack_status.return_value = 'action', 'status'
-
-    def test_delete_stack_success(self, sandbox_finished):
-        allocation_unit = sandbox_finished.allocation_unit
-
-        requests.delete_stack(allocation_unit)
-
-        self.client.return_value.delete_stack.assert_called_once()
-
-    @pytest.mark.parametrize("action", ['DELETE', 'ROLLBACK'])
-    def test_delete_stack_success_already_deleting(self, sandbox_finished, action):
-        allocation_unit = sandbox_finished.allocation_unit
-        self.client.return_value.get_stack_status.return_value = action, 'status'
-
-        requests.delete_stack(allocation_unit)
-
-        self.client.return_value.delete_stack.assert_not_called()
-
-    def test_delete_stack_failed_to_delete(self, sandbox_finished):
-        allocation_unit = sandbox_finished.allocation_unit
-        self.client.return_value.delete_stack.side_effect = Exception
-
-        with pytest.raises(api_exceptions.StackError):
-            requests.delete_stack(allocation_unit)

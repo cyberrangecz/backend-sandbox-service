@@ -65,10 +65,3 @@ def inventory():
     """Creates example inventory for a Stack."""
     with open(data_path_join(TESTING_INVENTORY)) as f:
         return yaml.full_load(f)
-
-
-@pytest.fixture
-def top_def():
-    """Creates example topology definition."""
-    with open(data_path_join(TESTING_DEFINITION)) as f:
-        return TopologyDefinition.load(f)
