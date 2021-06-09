@@ -4,11 +4,6 @@ from cryptography.hazmat.backends import default_backend
 from kypo.sandbox_common_lib import utils
 
 
-def test_json_pretty_print_formatting():
-    data = {"key": "val"}
-    assert utils.json_pretty_print(data) == '{\n  "key": "val"\n}'
-
-
 def test_generate_ssh_keypair_correct_format():
     priv_key, pub_key = utils.generate_ssh_keypair()
     assert priv_key.startswith("-----BEGIN RSA PRIVATE KEY-----")
@@ -35,11 +30,3 @@ def test_generate_create_self_signed_certificate_correct_format():
 
     assert certificate.startswith("-----BEGIN CERTIFICATE-----")
     assert certificate.endswith("-----END CERTIFICATE-----\n")
-
-
-def test_fill_template():
-    search_path = os.path.join(os.path.realpath(os.path.dirname(__file__)), 'assets')
-
-    filled_template = utils.fill_template(search_path, 'template.j2', variable='value')
-
-    assert filled_template == 'variable: "value"'

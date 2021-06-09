@@ -60,15 +60,6 @@ def configure_logging() -> None:
     LOG.debug("Logging is set and ready to use.")
 
 
-def json_pretty_print(data: Dict) -> str:
-    """Pretty print JSON as string. Used primarily for logging purposes.
-
-    :param data: Mapping type of JSON
-    :return: JSON string
-    """
-    return json.dumps(data, indent=2)
-
-
 def create_self_signed_certificate(private_key: str) -> str:
     """
     Create self-signed certificate.
@@ -188,9 +179,3 @@ def add_error_responses_doc(method: str, statuses: Iterable[Union[int, str]]) ->
         ))(cls)
         return cls
     return decorate
-
-
-def fill_template(search_path: str, template_name: str, **kwargs) -> str:
-    environment = jinja2.Environment(loader=jinja2.FileSystemLoader(search_path))
-    template = environment.get_template(template_name)
-    return template.render(**kwargs)
