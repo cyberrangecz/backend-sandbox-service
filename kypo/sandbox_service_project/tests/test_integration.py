@@ -15,7 +15,7 @@ from kypo.sandbox_instance_app.models import Sandbox
 
 LOG = structlog.get_logger()
 
-DEFINITION_URL = 'git@192.168.55.101:/repos/prototypes-and-examples/sandbox-definitions/small-sandbox.git'
+DEFINITION_URL = 'git@192.168.55.101:/repos/prototypes-and-examples/sandbox-definitions/kypo-crp-demo-training.git'
 DEFINITION_REV = 'master'
 
 # Heat stack and template values
@@ -30,7 +30,7 @@ TEMPLATE_DICT = dict(
     JUMP_FLAVOR=settings.KYPO_CONFIG.trc.extra_nodes_flavor,
     KEY_PAIR=KEY_PAIR,
     JUMP_NETWORK=JUMP_NETWORK,
-    JUMP_SERVER=JUMP_SERVER,
+    JUMP_SERVER=f'{JUMP_STACK_NAME}-{JUMP_SERVER}',
 )
 
 # URL names

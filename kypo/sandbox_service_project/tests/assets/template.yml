@@ -25,33 +25,24 @@ parameters:
         constraints:
             - custom_constraint: nova.keypair
 
-    jump_network_name:
-        type: string
-        default: $JUMP_NETWORK
-
-    jump_server_name:
-        type: string
-        default: $JUMP_SERVER
-
 
 ###################################################
 
 resources:
-    jump_network:
+    $JUMP_NETWORK:
         type: OS::Neutron::Net
         properties:
-            name: { get_param: jump_network_name }
+            name: $JUMP_NETWORK
 
     jump_network_subnet:
         type: OS::Neutron::Subnet
-        depends_on: [jump_network]
+        depends_on: [$JUMP_NETWORK]
         properties:
             name: jump_network_subnet
             cidr: 192.168.64.0/18
             ip_version: 4
             dns_nameservers: [8.8.8.8]
-            network:
-                get_resource: jump_network
+            network: { get_resource: $JUMP_NETWORK }
 
     test_router:
         type : OS::Neutron::Router
@@ -71,7 +62,7 @@ resources:
         type: OS::Neutron::Port
         depends_on: [jump_network_subnet]
         properties:
-            network_id: { get_resource: jump_network }
+            network_id: { get_resource: $JUMP_NETWORK }
             fixed_ips:
                 - subnet_id: { get_resource: jump_network_subnet }
 
@@ -82,11 +73,11 @@ resources:
             floating_network_id: { get_param: public_network }
             port_id: { get_resource: jump_port }
 
-    jump_server:
+    $JUMP_SERVER:
         type: OS::Nova::Server
         depends_on: [jump_network_subnet, jump_port]
         properties:
-            name: { get_param: jump_server_name }
+            name: $JUMP_SERVER
             key_name: { get_param: test_key }
             image: { get_param: jump_image }
             flavor: { get_param: jump_flavor }
