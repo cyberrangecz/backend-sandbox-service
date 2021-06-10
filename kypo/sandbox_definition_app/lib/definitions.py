@@ -15,6 +15,7 @@ from kypo.sandbox_common_lib.kypo_config import KypoConfiguration, GitType
 from kypo.sandbox_definition_app import serializers
 from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider, DefinitionProvider, InternalGitProvider
 from kypo.sandbox_definition_app.models import Definition
+from kypo.sandbox_ansible_app.lib.inventory import DefaultAnsibleHostsGroups
 
 LOG = structlog.get_logger()
 
@@ -29,6 +30,7 @@ def create_definition(url: str, rev: str = None) -> Definition:
     :return: New definition instance
     """
     top_def = get_definition(url, rev, settings.KYPO_CONFIG)
+    validate_topology_definition(top_def)
 
     client = utils.get_ostack_client()
     client.validate_topology_definition(top_def)
@@ -96,3 +98,20 @@ def get_def_provider(url: str, config: KypoConfiguration) -> DefinitionProvider:
     if config.git_type == GitType.GITLAB:
         return GitlabProvider(url, config)
     raise exceptions.ImproperlyConfigured(f"Cannot determine provider type. provider_type={config.git_type}.")
+
+
+def validate_topology_definition(topology_definition: TopologyDefinition) -> None:
+    """
+    Validates ansible hosts groups of topology definition
+
+    :param topology_definition: Topology definition
+    :raise: ValidationError if definition is incorrect
+    """
+    user_defined_hosts_groups = topology_definition.groups
+    default_hosts_groups = [group.value for group in DefaultAnsibleHostsGroups.__members__.values()]
+
+    for group in user_defined_hosts_groups:
+        if group.name in default_hosts_groups:
+            raise exceptions.ValidationError(f"Cannot redefine default KYPO ansible hosts groups."
+                                             f" Colliding hosts group in topology definition:"
+                                             f" '{group.name}'.")
