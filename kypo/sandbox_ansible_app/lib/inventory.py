@@ -1,6 +1,7 @@
 from ipaddress import ip_network
 from typing import Dict, List, Tuple, Optional
 from itertools import chain
+from enum import Enum
 import structlog
 import yaml
 import abc
@@ -12,6 +13,19 @@ from kypo.topology_definition.models import Protocol, Router, Network
 KYPO_PROXY_JUMP_NAME = 'kypo-proxy-jump'
 
 LOG = structlog.get_logger()
+
+
+class DefaultAnsibleHostsGroups(Enum):
+    """
+    Enumerator for default ansible hosts groups.
+    """
+    HOSTS = 'hosts'
+    MANAGEMENT = 'management'
+    ROUTERS = 'routers'
+    SSH_NODES = 'ssh_nodes'
+    WINRM_NODES = 'winrm_nodes'
+    USER_ACCESSIBLE_NODES = 'user_accessible_nodes'
+    HIDDEN_HOSTS = 'hidden_hosts'
 
 
 class Base(abc.ABC):
@@ -323,27 +337,28 @@ class Inventory(BaseInventory):
         extra_nodes = self.topology_instance.get_extra_nodes()
 
         hosts = [self.hosts[node.name] for node in self.topology_instance.get_hosts()]
-        self.add_group(Group('hosts', hosts))
+        self.add_group(Group(DefaultAnsibleHostsGroups.HOSTS.value, hosts))
 
         management = [self.hosts[node.name] for node in extra_nodes]
-        self.add_group(Group('management', management))
+        self.add_group(Group(DefaultAnsibleHostsGroups.MANAGEMENT.value, management))
 
         routers = [self.hosts[node.name] for node in self.topology_instance.get_routers()]
-        self.add_group(Group('routers', routers))
+        self.add_group(Group(DefaultAnsibleHostsGroups.ROUTERS.value, routers))
 
         winrm_nodes = [self.hosts[node.name] for node in self.topology_instance.get_nodes()
                        if node.base_box.mgmt_protocol == Protocol.WINRM and node not in extra_nodes]
-        self.add_group(Group('winrm_nodes', winrm_nodes))
+        self.add_group(Group(DefaultAnsibleHostsGroups.WINRM_NODES.value, winrm_nodes))
 
         ssh_nodes = [self.hosts[node.name] for node in self.topology_instance.get_nodes()
                      if node.base_box.mgmt_protocol == Protocol.SSH and node not in extra_nodes]
-        self.add_group(Group('ssh_nodes', ssh_nodes))
+        self.add_group(Group(DefaultAnsibleHostsGroups.SSH_NODES.value, ssh_nodes))
 
-        self.add_group(Group('user_accessible_nodes', self.get_user_accessible_nodes()))
+        self.add_group(Group(DefaultAnsibleHostsGroups.USER_ACCESSIBLE_NODES.value,
+                             self.get_user_accessible_nodes()))
 
         hidden_hosts = [self.hosts[node.name] for node in self.topology_instance.get_hosts()
                         if node.hidden]
-        self.add_group(Group('hidden_hosts', hidden_hosts))
+        self.add_group(Group(DefaultAnsibleHostsGroups.HIDDEN_HOSTS.value, hidden_hosts))
 
     def get_user_accessible_nodes(self) -> List[Host]:
         """

@@ -16,6 +16,7 @@ class TestCreateDefinition:
 
     def test_create_definition_success(self, mocker):
         mocker.patch("kypo.sandbox_definition_app.lib.definitions.DefinitionProvider")
+        mocker.patch("kypo.sandbox_definition_app.lib.definitions.validate_topology_definition")
         mocker.patch("kypo.openstack_driver.KypoOpenStackClient.validate_topology_definition")
         mock = mocker.Mock()
         mock.configure_mock(name='def-name')
@@ -31,6 +32,7 @@ class TestCreateDefinition:
 
     def test_create_definition_nonunique(self, mocker):
         mocker.patch("kypo.sandbox_definition_app.lib.definitions.DefinitionProvider")
+        mocker.patch("kypo.sandbox_definition_app.lib.definitions.validate_topology_definition")
         mocker.patch("kypo.openstack_driver.KypoOpenStackClient.validate_topology_definition")
         mock = mocker.Mock()
         mock.configure_mock(name='def-name')
@@ -39,6 +41,19 @@ class TestCreateDefinition:
 
         definitions.create_definition(url=self.url, rev=self.rev)
         with pytest.raises(RestValidationError):
+            definitions.create_definition(url=self.url, rev=self.rev)
+
+    def test_create_definition_invalid_hosts_group(self, mocker):
+        mocker.patch("kypo.sandbox_definition_app.lib.definitions.DefinitionProvider")
+        mocker.patch("kypo.openstack_driver.KypoOpenStackClient.validate_topology_definition")
+        hosts_group = mocker.Mock()
+        hosts_group.name = 'hidden_hosts'
+        topology_definition = mocker.Mock()
+        topology_definition.configure_mock(name='def-name', groups=[hosts_group])
+        mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_definition",
+                     return_value=topology_definition)
+
+        with pytest.raises(ValidationError):
             definitions.create_definition(url=self.url, rev=self.rev)
 
 
