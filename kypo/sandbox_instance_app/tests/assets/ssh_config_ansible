@@ -4,6 +4,7 @@ Host jump-host-ip
     IdentityFile /root/.ssh/id_rsa
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
+    IdentitiesOnly yes
 
 Host man 10.10.10.10
     HostName 10.10.10.10
@@ -12,6 +13,7 @@ Host man 10.10.10.10
     ProxyJump debian@jump-host-ip
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
+    IdentitiesOnly yes
 
 Host uan 192.168.128.2
     HostName 192.168.128.2
@@ -20,6 +22,7 @@ Host uan 192.168.128.2
     ProxyJump kypo-man@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
+    IdentitiesOnly yes
 
 Host border-router 192.168.128.3
     HostName 192.168.128.3
@@ -28,6 +31,7 @@ Host border-router 192.168.128.3
     ProxyJump kypo-man@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
+    IdentitiesOnly yes
 
 Host home-router 192.168.128.7
     HostName 192.168.128.7
@@ -36,6 +40,7 @@ Host home-router 192.168.128.7
     ProxyJump kypo-man@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
+    IdentitiesOnly yes
 
 Host server-router 192.168.128.6
     HostName 192.168.128.6
@@ -44,6 +49,7 @@ Host server-router 192.168.128.6
     ProxyJump kypo-man@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
+    IdentitiesOnly yes
 
 Host home 192.168.128.5
     HostName 192.168.128.5
@@ -52,6 +58,7 @@ Host home 192.168.128.5
     ProxyJump kypo-man@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
+    IdentitiesOnly yes
 
 Host server 192.168.128.4
     HostName 192.168.128.4
@@ -60,6 +67,7 @@ Host server 192.168.128.4
     ProxyJump kypo-man@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
+    IdentitiesOnly yes
 
 Host 192.168.55.101
     HostName 192.168.55.101
@@ -67,4 +75,4 @@ Host 192.168.55.101
     IdentityFile /root/.ssh/git_rsa_key
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
-
+    IdentitiesOnly yes
