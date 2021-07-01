@@ -13,6 +13,7 @@ SSH_PROXY_KEY = '<path_to_proxy_jump_private_key>'
 Host.attrs += (
     ('UserKnownHostsFile', str),
     ('StrictHostKeyChecking', str),
+    ('IdentitiesOnly', str),
 )
 
 
@@ -35,7 +36,8 @@ class KypoSSHConfig(SSHConfig):
         Create and add ssh_config.Host instance to this SSH config file.
         """
         opts = dict(HostName=host_name, User=user, IdentityFile=identity_file,
-                    UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no')
+                    UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no',
+                    IdentitiesOnly='yes')
         if proxy_jump:
             opts.update(dict(ProxyJump=proxy_jump))
         opts.update(kwargs)
