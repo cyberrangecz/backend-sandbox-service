@@ -6,10 +6,12 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.reverse import reverse
 from rest_framework.test import APIRequestFactory
 
-from kypo.sandbox_common_lib.exceptions import ApiException
+from kypo.sandbox_common_lib.exceptions import ApiException, StackError
 from kypo.sandbox_instance_app.lib import pools, sshconfig
 from kypo.sandbox_instance_app.models import SandboxAllocationUnit, Sandbox
 from kypo.sandbox_instance_app.views import PoolList
+
+from kypo.openstack_driver import exceptions
 
 pytestmark = pytest.mark.django_db
 
@@ -69,7 +71,11 @@ class TestSandboxAllocationUnit:
 
 class TestCreateSandboxesInPool:
     @pytest.fixture(autouse=True)
-    def set_up(self, mocker):
+    def set_up(self, mocker, definition):
+        self.client = mocker.MagicMock()
+        mock_get_client = mocker.patch("kypo.sandbox_common_lib.utils.get_ostack_client")
+        mock_get_client.return_value = self.client
+        mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_definition")
         self.create_mock = mocker.patch(
             "kypo.sandbox_instance_app.lib.request_handlers.AllocationRequestHandler")
         yield
@@ -96,6 +102,14 @@ class TestCreateSandboxesInPool:
         pool = pools.get_pool(FULL_POOL_ID)
         with pytest.raises(ApiException):
             pools.create_sandboxes_in_pool(pool, 1)
+
+    def test_create_sandboxes_in_pool_limits_exceeded(self):
+        self.client.validate_hardware_usage_of_stacks.side_effect =\
+            exceptions.StackCreationFailed('testException')
+        pool = pools.get_pool(POOL_ID)
+
+        with pytest.raises(StackError):
+            pools.create_sandboxes_in_pool(pool)
 
 
 class TestGetUnlockedSandbox:

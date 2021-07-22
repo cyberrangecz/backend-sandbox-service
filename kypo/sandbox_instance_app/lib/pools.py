@@ -19,7 +19,8 @@ from kypo.sandbox_instance_app import serializers
 from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit, CleanupRequest, \
     SandboxLock, PoolLock
 
-from kypo.openstack_driver.exceptions import KypoException, InvalidTopologyDefinition
+from kypo.openstack_driver.exceptions import KypoException, InvalidTopologyDefinition,\
+    StackCreationFailed
 
 LOG = structlog.get_logger()
 
@@ -120,6 +121,24 @@ def get_sandboxes_in_pool(pool: Pool) -> QuerySet:
     return Sandbox.objects.all().filter(allocation_unit_id__in=alloc_unit_ids)
 
 
+def validate_hardware_usage_of_sandboxes(pool, count) -> None:
+    """
+    Validates Heat Stacks hardware usage of sandboxes against OpenStack limits.
+
+    :param pool: Pool in which sandboxes are built.
+    :param count: Number of sandboxes.
+    :return: None
+    :raise: StackError if limits are exceeded.
+    """
+    try:
+        top_def = definitions.get_definition(pool.definition.url, pool.rev_sha,
+                                             settings.KYPO_CONFIG)
+        client = utils.get_ostack_client()
+        client.validate_hardware_usage_of_stacks(top_def, count)
+    except StackCreationFailed as exc:
+        raise exceptions.StackError(f'Cannot build {count} sandboxes: {exc}')
+
+
 def create_sandboxes_in_pool(pool: Pool, count: int = None) -> List[SandboxAllocationUnit]:
     """
     Creates count sandboxes in given pool.
@@ -140,6 +159,8 @@ def create_sandboxes_in_pool(pool: Pool, count: int = None) -> List[SandboxAlloc
                 "Current pool size is {curr}/{max}, cannot build {count} more sandboxes".format(
                     curr=current_size, max=pool.max_size, count=count)
                 )
+
+        validate_hardware_usage_of_sandboxes(pool, count)
 
         return requests.create_allocations_requests(pool, count)
 
