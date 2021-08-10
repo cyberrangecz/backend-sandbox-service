@@ -1,5 +1,6 @@
 import pytest
 from django.db.models import ObjectDoesNotExist
+from django.utils import timezone
 
 from kypo.sandbox_instance_app.models import Sandbox, CleanupRequest
 from kypo.sandbox_common_lib import exceptions as api_exceptions
@@ -45,6 +46,29 @@ class TestAllocationRequest:
 
         self.handler.assert_called_once_with(allocation_request_started)
         self.handler.return_value.cancel_request.assert_called_once()
+
+    def test_get_allocation_request_stages_state(self, allocation_request,
+                                                 allocation_stage_networking_started,
+                                                 allocation_stage_user):
+        stages_state = requests.get_allocation_request_stages_state(allocation_request)
+
+        assert stages_state == [requests.StageStage.FINISH_SUCCESS.value,
+                                requests.StageStage.IN_PROGRESS.value,
+                                requests.StageStage.IN_QUEUE.value]
+
+    def test_get_allocation_request_stages_state_fail(self, allocation_request,
+                                                      allocation_stage_networking_started,
+                                                      allocation_stage_user):
+        allocation_stage_networking_started.failed = True
+        allocation_stage_networking_started.end = timezone.now()
+        allocation_stage_user.failed = True
+        allocation_stage_user.end = timezone.now()
+
+        stages_state = requests.get_allocation_request_stages_state(allocation_request)
+
+        assert stages_state == [requests.StageStage.FINISH_SUCCESS.value,
+                                requests.StageStage.FINISH_FAIL.value,
+                                requests.StageStage.FINISH_FAIL.value]
 
 
 class TestCleanupRequest:
@@ -119,3 +143,25 @@ class TestCleanupRequest:
 
         with pytest.raises(ObjectDoesNotExist):
             CleanupRequest.objects.get(pk=cleanup_request_finished.id)
+
+    def test_get_cleanup_request_stages_state(self, cleanup_request, cleanup_stage_stack,
+                                              cleanup_stage_networking_started):
+        stages_state = requests.get_cleanup_request_stages_state(cleanup_request)
+
+        assert stages_state == [requests.StageStage.IN_QUEUE.value,
+                                requests.StageStage.IN_PROGRESS.value,
+                                requests.StageStage.FINISH_SUCCESS.value]
+
+    def test_get_cleanup_request_stages_state_fail(self, cleanup_request, cleanup_stage_stack,
+                                                   cleanup_stage_networking_started,
+                                                   cleanup_stage_user):
+        cleanup_stage_networking_started.end = timezone.now()
+        cleanup_stage_networking_started.failed = True
+        cleanup_stage_stack.end = timezone.now()
+        cleanup_stage_stack.failed = True
+
+        stages_state = requests.get_cleanup_request_stages_state(cleanup_request)
+
+        assert stages_state == [requests.StageStage.FINISH_FAIL.value,
+                                requests.StageStage.FINISH_FAIL.value,
+                                requests.StageStage.FINISH_SUCCESS.value]

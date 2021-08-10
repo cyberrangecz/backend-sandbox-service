@@ -12,7 +12,7 @@ from rest_framework import serializers
 
 from kypo.sandbox_definition_app.models import Definition
 from kypo.sandbox_instance_app import models
-from kypo.sandbox_instance_app.lib import pools
+from kypo.sandbox_instance_app.lib import pools, requests
 
 MAX_SANDBOXES_PER_POOL = 64
 
@@ -53,28 +53,43 @@ class PoolSerializerCreate(PoolSerializer):
         read_only_fields = ('id', 'size')
 
 
-class AllocationRequestSerializer(serializers.ModelSerializer):
-    allocation_unit_id = serializers.PrimaryKeyRelatedField(
-        source='allocation_unit', read_only=True)
+class RequestSerializer(serializers.ModelSerializer):
+    allocation_unit_id = serializers.PrimaryKeyRelatedField(source='allocation_unit',
+                                                            read_only=True)
+    stages = serializers.SerializerMethodField()
 
     class Meta:
+        fields = ('id', 'allocation_unit_id', 'created', 'stages')
+        read_only_fields = ('id', 'allocation_unit_id', 'created', 'stages')
+
+
+class AllocationRequestSerializer(RequestSerializer):
+    @staticmethod
+    def get_stages(obj):
+        return requests.get_allocation_request_stages_state(obj)
+
+    class Meta(RequestSerializer.Meta):
         model = models.AllocationRequest
-        fields = ('id', 'allocation_unit_id', 'created')
-        read_only_fields = ('id', 'allocation_unit_id', 'created')
 
 
-class CleanupRequestSerializer(AllocationRequestSerializer):
-    pass
+class CleanupRequestSerializer(RequestSerializer):
+    @staticmethod
+    def get_stages(obj):
+        return requests.get_cleanup_request_stages_state(obj)
+
+    class Meta(RequestSerializer.Meta):
+        model = models.CleanupRequest
 
 
 class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
     allocation_request = AllocationRequestSerializer(read_only=True)
+    cleanup_request = CleanupRequestSerializer()
     pool_id = serializers.PrimaryKeyRelatedField(source='pool', read_only=True)
 
     class Meta:
         model = models.SandboxAllocationUnit
-        fields = ('id', 'pool_id', 'allocation_request')
-        read_only_fields = ('id', 'pool_id', 'allocation_request')
+        fields = ('id', 'pool_id', 'allocation_request', 'cleanup_request')
+        read_only_fields = ('id', 'pool_id', 'allocation_request', 'cleanup_request')
 
 
 class OpenstackAllocationStageSerializer(serializers.ModelSerializer):
