@@ -1,3 +1,4 @@
+import enum
 from typing import List
 import structlog
 from django.core.exceptions import ObjectDoesNotExist
@@ -9,6 +10,13 @@ from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUni
 from kypo.sandbox_instance_app.lib import request_handlers, sandboxes
 
 LOG = structlog.get_logger()
+
+
+class StageStage(enum.Enum):
+    IN_QUEUE = "IN_QUEUE"
+    IN_PROGRESS = "IN_PROGRESS"
+    FINISH_SUCCESS = "FINISH_SUCCESS"
+    FINISH_FAIL = "FINISH_FAIL"
 
 
 def create_allocation_request(pool: Pool) -> SandboxAllocationUnit:
@@ -85,3 +93,36 @@ def delete_cleanup_request(request: CleanupRequest) -> None:
         raise exceptions.ValidationError('The cleanup request is not finished. '
                                          'You need to cancel it first.')
     request.delete()
+
+
+def get_allocation_request_stages_state(request: AllocationRequest) -> List[str]:
+    """Get AllocationRequests stages state."""
+    stages = [request.stackallocationstage, request.networkingansibleallocationstage,
+              request.useransibleallocationstage]
+
+    return _get_request_stages_state(stages)
+
+
+def get_cleanup_request_stages_state(request: CleanupRequest) -> List[str]:
+    """Get CleanupRequests stages state."""
+    stages = [request.stackcleanupstage, request.networkingansiblecleanupstage,
+              request.useransiblecleanupstage]
+
+    return _get_request_stages_state(stages)
+
+
+def _get_request_stages_state(stages) -> List[str]:
+    """Get SandboxRequests stages state."""
+    stages_state = []
+
+    for stage in stages:
+        if stage.end is None and stage.start:
+            stages_state.append(StageStage.IN_PROGRESS.value)
+        elif stage.failed:
+            stages_state.append(StageStage.FINISH_FAIL.value)
+        elif stage.finished:
+            stages_state.append(StageStage.FINISH_SUCCESS.value)
+        else:
+            stages_state.append(StageStage.IN_QUEUE.value)
+
+    return stages_state
