@@ -6,7 +6,7 @@ import structlog
 from django.conf import settings
 from docker.models.containers import Container
 
-from kypo.sandbox_ansible_app.lib.inventory import Inventory, BaseInventory
+from kypo.sandbox_ansible_app.lib.inventory import Inventory, BaseInventory, KYPO_PROXY_JUMP_NAME
 from kypo.sandbox_common_lib import exceptions
 from kypo.sandbox_instance_app.lib import sandboxes, sshconfig
 from kypo.sandbox_instance_app.models import Sandbox, Pool, SandboxAllocationUnit
@@ -173,12 +173,20 @@ class CleanupAnsibleDockerRunner(AnsibleDockerRunner):
     """
     Represents Docker container environment for executing Ansible during allocation stage.
     """
-    def prepare_inventory_file(self, allocation_unit: SandboxAllocationUnit):
+    def prepare_inventory_file(self, allocation_unit: SandboxAllocationUnit,
+                               user_ansible_cleanup: bool):
         """
         Prepare and save Ansible inventory file that will be bind to Docker container.
         """
         inventory_object = BaseInventory(allocation_unit.pool.get_pool_prefix(),
                                          allocation_unit.get_stack_name())
+        if user_ansible_cleanup:
+            inventory_object.hosts.pop(KYPO_PROXY_JUMP_NAME)
+            inventory_object.add_variables(
+                kypo_global_sandbox_allocation_unit_id=allocation_unit.id,
+                kypo_global_pool_id=allocation_unit.pool.id
+            )
+
         self.save_file(self.inventory_path, inventory_object.serialize())
 
     def prepare_ssh_dir(self, pool: Pool):
