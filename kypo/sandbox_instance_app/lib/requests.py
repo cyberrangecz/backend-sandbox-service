@@ -12,11 +12,11 @@ from kypo.sandbox_instance_app.lib import request_handlers, sandboxes
 LOG = structlog.get_logger()
 
 
-class StageStage(enum.Enum):
+class StageState(enum.Enum):
     IN_QUEUE = "IN_QUEUE"
-    IN_PROGRESS = "IN_PROGRESS"
-    FINISH_SUCCESS = "FINISH_SUCCESS"
-    FINISH_FAIL = "FINISH_FAIL"
+    RUNNING = "RUNNING"
+    FINISHED = "FINISHED"
+    FAILED = "FAILED"
 
 
 def create_allocation_request(pool: Pool) -> SandboxAllocationUnit:
@@ -117,12 +117,12 @@ def _get_request_stages_state(stages) -> List[str]:
 
     for stage in stages:
         if stage.end is None and stage.start:
-            stages_state.append(StageStage.IN_PROGRESS.value)
+            stages_state.append(StageState.RUNNING.value)
         elif stage.failed:
-            stages_state.append(StageStage.FINISH_FAIL.value)
+            stages_state.append(StageState.FAILED.value)
         elif stage.finished:
-            stages_state.append(StageStage.FINISH_SUCCESS.value)
+            stages_state.append(StageState.FINISHED.value)
         else:
-            stages_state.append(StageStage.IN_QUEUE.value)
+            stages_state.append(StageState.IN_QUEUE.value)
 
     return stages_state
