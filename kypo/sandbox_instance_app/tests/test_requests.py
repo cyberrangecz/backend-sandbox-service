@@ -52,9 +52,9 @@ class TestAllocationRequest:
                                                  allocation_stage_user):
         stages_state = requests.get_allocation_request_stages_state(allocation_request)
 
-        assert stages_state == [requests.StageStage.FINISH_SUCCESS.value,
-                                requests.StageStage.IN_PROGRESS.value,
-                                requests.StageStage.IN_QUEUE.value]
+        assert stages_state == [requests.StageState.FINISHED.value,
+                                requests.StageState.RUNNING.value,
+                                requests.StageState.IN_QUEUE.value]
 
     def test_get_allocation_request_stages_state_fail(self, allocation_request,
                                                       allocation_stage_networking_started,
@@ -66,9 +66,9 @@ class TestAllocationRequest:
 
         stages_state = requests.get_allocation_request_stages_state(allocation_request)
 
-        assert stages_state == [requests.StageStage.FINISH_SUCCESS.value,
-                                requests.StageStage.FINISH_FAIL.value,
-                                requests.StageStage.FINISH_FAIL.value]
+        assert stages_state == [requests.StageState.FINISHED.value,
+                                requests.StageState.FAILED.value,
+                                requests.StageState.FAILED.value]
 
 
 class TestCleanupRequest:
@@ -148,9 +148,9 @@ class TestCleanupRequest:
                                               cleanup_stage_networking_started):
         stages_state = requests.get_cleanup_request_stages_state(cleanup_request)
 
-        assert stages_state == [requests.StageStage.IN_QUEUE.value,
-                                requests.StageStage.IN_PROGRESS.value,
-                                requests.StageStage.FINISH_SUCCESS.value]
+        assert stages_state == [requests.StageState.IN_QUEUE.value,
+                                requests.StageState.RUNNING.value,
+                                requests.StageState.FINISHED.value]
 
     def test_get_cleanup_request_stages_state_fail(self, cleanup_request, cleanup_stage_stack,
                                                    cleanup_stage_networking_started,
@@ -162,6 +162,6 @@ class TestCleanupRequest:
 
         stages_state = requests.get_cleanup_request_stages_state(cleanup_request)
 
-        assert stages_state == [requests.StageStage.FINISH_FAIL.value,
-                                requests.StageStage.FINISH_FAIL.value,
-                                requests.StageStage.FINISH_SUCCESS.value]
+        assert stages_state == [requests.StageState.FAILED.value,
+                                requests.StageState.FAILED.value,
+                                requests.StageState.FINISHED.value]
