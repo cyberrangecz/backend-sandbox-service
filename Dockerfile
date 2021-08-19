@@ -16,7 +16,7 @@ RUN mkdir -p /run/nginx
 # remove default Nginx page for fallback URI
 RUN rm -rf /usr/share/nginx/html
 
-ENV PATH="$PATH:/usr/lib/postgresql/11/bin"
+ENV PATH="$PATH:/usr/lib/postgresql/13/bin"
 ENV PGDATA "/var/lib/postgresql/data"
 ENV PGUSER "postgres"
 RUN mkdir -p /run/postgresql && \
