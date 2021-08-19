@@ -109,6 +109,9 @@ application_configuration:
     # The name of the Docker network that the Runner will use.
     #ansible_docker_network: bridge
 
+    # The address of kypo-answers-storage REST API
+    #answers_storage_api: http://answers-storage:8087/kypo-answers-storage/api/v1
+
     # A path to directory of CA certificates or file of CA certificates, i.e. CA bundle.
     # Use in case of self-signed certificates in related services.
     #ssl_ca_certificate_verify: ""
