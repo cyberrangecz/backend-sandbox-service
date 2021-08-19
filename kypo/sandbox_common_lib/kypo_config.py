@@ -25,6 +25,7 @@ SANDBOX_ANSIBLE_TIMEOUT = 3600 * 2
 ANSIBLE_DOCKER_VOLUMES = '/tmp/kypo'
 ANSIBLE_DOCKER_IMAGE = 'csirtmu/kypo-ansible-runner'
 ANSIBLE_DOCKER_NETWORK = 'bridge'
+ANSWERS_STORAGE_API = 'http://answers-storage:8087/kypo-answers-storage/api/v1'
 SSL_CA_CERTIFICATE_VERIFY = '/etc/ssl/certs'
 
 
@@ -121,6 +122,8 @@ class KypoConfiguration(Object):
     ansible_docker_volumes = Attribute(type=str, default=ANSIBLE_DOCKER_VOLUMES)
     ansible_docker_image = Attribute(type=str, default=ANSIBLE_DOCKER_IMAGE)
     ansible_docker_network = Attribute(type=str, default=ANSIBLE_DOCKER_NETWORK)
+
+    answers_storage_api = Attribute(type=str, default=ANSWERS_STORAGE_API)
 
     ssl_ca_certificate_verify = Attribute(type=str, default=SSL_CA_CERTIFICATE_VERIFY)
 

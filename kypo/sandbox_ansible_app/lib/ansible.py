@@ -61,7 +61,8 @@ class AnsibleDockerRunner:
             self.ssh_directory: self.ANSIBLE_DOCKER_SSH_DIR.__dict__,
             self.inventory_path: self.ANSIBLE_DOCKER_INVENTORY_PATH.__dict__
         }
-        command = ['-u', url, '-r', rev, '-i', self.ANSIBLE_DOCKER_INVENTORY_PATH.bind]
+        command = ['-u', url, '-r', rev, '-i', self.ANSIBLE_DOCKER_INVENTORY_PATH.bind,
+                   '-a', settings.KYPO_CONFIG.answers_storage_api]
         LOG.debug("Ansible container options", command=command)
         return self.client.containers.run(settings.KYPO_CONFIG.ansible_docker_image, detach=True,
                                           command=command, volumes=volumes,
