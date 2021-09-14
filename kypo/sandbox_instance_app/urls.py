@@ -78,4 +78,8 @@ urlpatterns = [
     path('sandboxes/<int:sandbox_id>/user-ssh-access',
          views.SandboxUserSSHAccess.as_view(),
          name='sandbox-user-ssh-access'),
+
+    path('sandboxes/<int:sandbox_id>/man-out-port-ip',
+         views.SandboxManOutPortIP.as_view(),
+         name='man-out-port-ip'),
 ]
