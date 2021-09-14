@@ -543,6 +543,17 @@ class SandboxUserSSHAccess(APIView):
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
+class SandboxManOutPortIP(APIView):
+    queryset = Sandbox.objects.none()  # Required for DjangoModelPermissions
+
+    def get(self, request, sandbox_id):
+        """Retrieve a man out port ip address."""
+        sandbox = sandboxes.get_sandbox(sandbox_id)
+        man_ip = sandboxes.get_topology_instance(sandbox).ip
+        return Response({"ip": man_ip})
+
+
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class PoolManagementSSHAccess(APIView):
     queryset = Pool.objects.none()  # Required for DjangoModelPermissions
 
