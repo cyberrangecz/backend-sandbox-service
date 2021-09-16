@@ -21,6 +21,7 @@ from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUni
 
 from kypo.openstack_driver.exceptions import KypoException, InvalidTopologyDefinition,\
     StackCreationFailed
+from kypo.openstack_driver.open_stack_proxy_elements import HardwareUsage
 
 LOG = structlog.get_logger()
 
@@ -218,3 +219,17 @@ def get_management_ssh_access(pool: Pool) -> io.BytesIO:
 
     in_memory_zip_file.seek(0)
     return in_memory_zip_file
+
+
+def get_hardware_usage_of_sandbox(pool: Pool) -> HardwareUsage:
+    """
+    Get Heat Stack hardware usage of a single sandbox in a pool, whether it is allocated or not.
+
+    :param pool: Pool to get HardwareUsage from.
+    :return: Hardware usage of pool.
+    """
+    top_def = definitions.get_definition(pool.definition.url, pool.rev_sha,
+                                         settings.KYPO_CONFIG)
+    client = utils.get_ostack_client()
+    return client.get_hardware_usage(top_def)
+
