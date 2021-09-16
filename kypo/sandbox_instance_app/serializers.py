@@ -24,11 +24,13 @@ class PoolSerializer(serializers.ModelSerializer):
     definition_id = serializers.PrimaryKeyRelatedField(
         source='definition', queryset=Definition.objects.all()
     )
+    hardware_usage = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Pool
-        fields = ('id', 'definition_id', 'size', 'max_size', 'lock_id', 'rev', 'rev_sha')
-        read_only_fields = ('id', 'size', 'lock', 'rev', 'rev_sha')
+        fields = ('id', 'definition_id', 'size', 'max_size', 'lock_id', 'rev', 'rev_sha',
+                  'hardware_usage')
+        read_only_fields = ('id', 'size', 'lock', 'rev', 'rev_sha', 'hardware_usage')
 
     @staticmethod
     def validate_max_size(value):
@@ -46,6 +48,11 @@ class PoolSerializer(serializers.ModelSerializer):
     @staticmethod
     def get_lock_id(obj: models.Pool) -> Optional[int]:
         return obj.lock.id if hasattr(obj, 'lock') else None
+
+    @staticmethod
+    def get_hardware_usage(obj: models.Pool):
+        hardware_usage = pools.get_hardware_usage_of_sandbox(obj)
+        return HardwareUsageSerializer(hardware_usage).data
 
 
 class PoolSerializerCreate(PoolSerializer):
@@ -232,3 +239,12 @@ class SandboxResourceSerializer(serializers.Serializer):
     name = serializers.CharField(source='resource_name')
     type = serializers.CharField(source='resource_type')
     status = serializers.CharField(source='resource_status')
+
+
+class HardwareUsageSerializer(serializers.Serializer):
+    vcpu = serializers.FloatField()
+    ram = serializers.FloatField()
+    instances = serializers.FloatField()
+    network = serializers.FloatField()
+    subnet = serializers.FloatField()
+    port = serializers.FloatField()
