@@ -13,6 +13,7 @@ from rest_framework import serializers
 from kypo.sandbox_definition_app.models import Definition
 from kypo.sandbox_instance_app import models
 from kypo.sandbox_instance_app.lib import pools, requests
+from kypo.sandbox_cloud_app import serializers as cloud_serializers
 
 MAX_SANDBOXES_PER_POOL = 64
 
@@ -220,7 +221,7 @@ class NodeSerializer(serializers.Serializer):
     status = serializers.CharField()
     creation_time = serializers.DateTimeField()
     update_time = serializers.DateTimeField()
-    image_id = serializers.CharField()
+    image = cloud_serializers.ImageSerializer()
     flavor_name = serializers.CharField()
 
 
