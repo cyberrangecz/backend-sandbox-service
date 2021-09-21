@@ -356,19 +356,20 @@ class CleanupAnsibleStageHandler(AnsibleStageHandler):
         """
         Clean up resources created during the Ansible execution.
         """
+        user_ansible_cleanup = isinstance(self.stage, UserAnsibleCleanupStage)
         runner = CleanupAnsibleDockerRunner(self.directory_path)
         runner.prepare_ssh_dir(self.allocation_unit.pool)
-        runner.prepare_inventory_file(self.allocation_unit,
-                                      isinstance(self.stage, UserAnsibleCleanupStage))
+        runner.prepare_inventory_file(self.allocation_unit, user_ansible_cleanup)
 
         allocation_request = self.allocation_unit.allocation_request
-        if isinstance(self.stage, UserAnsibleCleanupStage):
+        if user_ansible_cleanup:
             allocation_stage = allocation_request.useransibleallocationstage
         else:
             allocation_stage = allocation_request.networkingansibleallocationstage
 
         try:
-            container = runner.run_container(allocation_stage.repo_url, allocation_stage.rev)
+            container = runner.run_container(allocation_stage.repo_url, allocation_stage.rev,
+                                             user_ansible_cleanup)
             DockerContainerCleanup.objects.create(cleanup_stage=self.stage,
                                                   container_id=container.id)
 

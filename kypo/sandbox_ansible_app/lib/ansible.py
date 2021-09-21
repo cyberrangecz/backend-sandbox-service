@@ -53,7 +53,7 @@ class AnsibleDockerRunner:
         self.container_proxy_private_key =\
             self.container_ssh_path(settings.KYPO_CONFIG.proxy_jump_to_man.IdentityFile)
 
-    def run_container(self, url, rev):
+    def run_container(self, url, rev, user_ansible_cleanup=False):
         """
         Run Ansible in Docker container.
         """
@@ -63,6 +63,7 @@ class AnsibleDockerRunner:
         }
         command = ['-u', url, '-r', rev, '-i', self.ANSIBLE_DOCKER_INVENTORY_PATH.bind,
                    '-a', settings.KYPO_CONFIG.answers_storage_api]
+        command += ['-c'] if user_ansible_cleanup else []
         LOG.debug("Ansible container options", command=command)
         return self.client.containers.run(settings.KYPO_CONFIG.ansible_docker_image, detach=True,
                                           command=command, volumes=volumes,
