@@ -2,6 +2,7 @@ from django.conf import settings
 from django.db import models
 from django.db.models import PositiveIntegerField
 from django.utils import timezone
+from django.contrib.auth.models import User
 
 from kypo.sandbox_common_lib import utils
 from kypo.sandbox_definition_app.models import Definition
@@ -30,6 +31,8 @@ class Pool(models.Model):
     rev_sha = models.TextField(
         help_text='SHA of the Definition revision.'
     )
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT, null=True,
+                                   help_text='The user that created this pool.')
 
     class Meta:
         ordering = ['id']
@@ -62,6 +65,8 @@ class SandboxAllocationUnit(models.Model):
         on_delete=models.CASCADE,
         related_name='allocation_units',
     )
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT, null=True,
+                                   help_text='The user that created this sandbox allocation unit.')
 
     def get_stack_name(self) -> str:
         """Returns a name of the stack for this sandbox"""

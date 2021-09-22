@@ -1,6 +1,7 @@
 import structlog
 from django.conf import settings
 from django.shortcuts import get_object_or_404
+from django.contrib.auth.models import AnonymousUser
 from rest_framework import status, generics, mixins
 from rest_framework.response import Response
 
@@ -30,7 +31,8 @@ class DefinitionList(mixins.ListModelMixin,
         """
         url = request.data.get('url')
         rev = request.data.get('rev', "master")
-        definition = definitions.create_definition(url, rev)
+        created_by = None if isinstance(request.user, AnonymousUser) else request.user
+        definition = definitions.create_definition(url, created_by, rev)
         serializer = self.serializer_class(definition)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 

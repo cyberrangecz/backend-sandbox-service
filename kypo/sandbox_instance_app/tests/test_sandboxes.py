@@ -21,13 +21,15 @@ class TestGetSandbox:
         with pytest.raises(Http404):
             sandboxes.get_sandbox(-1)
 
-    def test_id_generation_raises(self):
-        au: SandboxAllocationUnit = SandboxAllocationUnit.objects.create(pool_id=1)
+    def test_id_generation_raises(self, created_by):
+        au: SandboxAllocationUnit = SandboxAllocationUnit.objects.create(pool_id=1,
+                                                                         created_by=created_by)
         with pytest.raises(IntegrityError):
             Sandbox.objects.create(allocation_unit=au)
 
-    def test_id_generation_success(self):
-        au: SandboxAllocationUnit = SandboxAllocationUnit.objects.create(pool_id=1)
+    def test_id_generation_success(self, created_by):
+        au: SandboxAllocationUnit = SandboxAllocationUnit.objects.create(pool_id=1,
+                                                                         created_by=created_by)
         sandbox: Sandbox = Sandbox.objects.create(id=64, allocation_unit=au)
         assert sandboxes.get_sandbox(sandbox.id) is not None
 

@@ -32,23 +32,23 @@ class TestCreatePool:
         self.arf = APIRequestFactory()
         yield
 
-    def test_create_pool_success(self, definition):
+    def test_create_pool_success(self, definition, created_by):
         pool = pools.create_pool(dict(definition_id=DEFINITION_ID,
-                                      max_size=self.MAX_SIZE))
+                                      max_size=self.MAX_SIZE), created_by=created_by)
 
         assert pool.max_size == self.MAX_SIZE
         assert pool.rev == definition.rev
         assert pool.definition.id == DEFINITION_ID
 
-    def test_create_pool_invalid_definition(self):
+    def test_create_pool_invalid_definition(self, created_by):
         with pytest.raises(Http404):
             pools.create_pool(dict(definition_id=-1,
-                                   max_size=self.MAX_SIZE))
+                                   max_size=self.MAX_SIZE), created_by=created_by)
 
-    def test_create_pool_invalid_size(self):
+    def test_create_pool_invalid_size(self, created_by):
         with pytest.raises(ValidationError):
             pools.create_pool(dict(definition_id=1,
-                                   max_size=-10))
+                                   max_size=-10), created_by=created_by)
 
     def test_pool_views(self):
         request = self.arf.get(reverse('pool-list'))
@@ -80,36 +80,36 @@ class TestCreateSandboxesInPool:
             "kypo.sandbox_instance_app.lib.request_handlers.AllocationRequestHandler")
         yield
 
-    def test_create_sandboxes_in_pool_success_one(self):
+    def test_create_sandboxes_in_pool_success_one(self, created_by):
         pool = pools.get_pool(POOL_ID)
-        requests = pools.create_sandboxes_in_pool(pool, 1)
+        requests = pools.create_sandboxes_in_pool(pool, created_by, 1)
 
         assert len(requests) == 1
         assert all([req.pool.id == pool.id
                     for req in requests])
 
-    def test_create_sandboxes_in_pool_success_all(self):
+    def test_create_sandboxes_in_pool_success_all(self, created_by):
         pool = pools.get_pool(POOL_ID)
         size_before = pools.get_pool_size(pool)
 
-        requests = pools.create_sandboxes_in_pool(pool)
+        requests = pools.create_sandboxes_in_pool(pool, created_by)
 
         assert len(requests) == pool.max_size - size_before
         assert all([req.pool.id == pool.id
                     for req in requests])
 
-    def test_create_sandboxes_in_pool_full(self):
+    def test_create_sandboxes_in_pool_full(self, created_by):
         pool = pools.get_pool(FULL_POOL_ID)
         with pytest.raises(ApiException):
-            pools.create_sandboxes_in_pool(pool, 1)
+            pools.create_sandboxes_in_pool(pool, created_by, 1)
 
-    def test_create_sandboxes_in_pool_limits_exceeded(self):
+    def test_create_sandboxes_in_pool_limits_exceeded(self, created_by):
         self.client.validate_hardware_usage_of_stacks.side_effect =\
             exceptions.StackCreationFailed('testException')
         pool = pools.get_pool(POOL_ID)
 
         with pytest.raises(StackError):
-            pools.create_sandboxes_in_pool(pool)
+            pools.create_sandboxes_in_pool(pool, created_by)
 
 
 class TestGetUnlockedSandbox:

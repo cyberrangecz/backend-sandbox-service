@@ -9,6 +9,7 @@ from django.db import transaction
 from django.db.models import QuerySet, ProtectedError
 from django.shortcuts import get_object_or_404
 from django.conf import settings
+from django.contrib.auth.models import User
 
 from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_definition_app.lib import definitions
@@ -38,7 +39,7 @@ def get_pool(pool_pk: int) -> Pool:
     return get_object_or_404(Pool, pk=pool_pk)
 
 
-def create_pool(data: Dict) -> Pool:
+def create_pool(data: Dict, created_by: Optional[User]) -> Pool:
     """
     Creates new Pool instance.
     Also creates management key-pairs in OpenStack
@@ -46,6 +47,7 @@ def create_pool(data: Dict) -> Pool:
     :param data: dict of attributes to create model. Currently must contain:
         - definition: primary key (ID) of the Definition that new Pool instance is related to
         - max_size: max size of new Pool instance
+    :param created_by: User creating pool
     :return: new Pool instance
     """
     definition = get_object_or_404(Definition, pk=data.get('definition_id'))
@@ -56,7 +58,7 @@ def create_pool(data: Dict) -> Pool:
 
     serializer = serializers.PoolSerializerCreate(data=data)
     serializer.is_valid(raise_exception=True)
-    pool = serializer.save()
+    pool = serializer.save(created_by=created_by)
     try:
         client = utils.get_ostack_client()
 
@@ -140,11 +142,13 @@ def validate_hardware_usage_of_sandboxes(pool, count) -> None:
         raise exceptions.StackError(f'Cannot build {count} sandboxes: {exc}')
 
 
-def create_sandboxes_in_pool(pool: Pool, count: int = None) -> List[SandboxAllocationUnit]:
+def create_sandboxes_in_pool(pool: Pool, created_by: Optional[User], count: int = None)\
+        -> List[SandboxAllocationUnit]:
     """
     Creates count sandboxes in given pool.
 
     :param pool: Pool where to build sandbox
+    :param created_by: User initiating the build.
     :param count: Count of sandboxes, None to build maximum
     :return: sandbox instance
     """
@@ -163,7 +167,7 @@ def create_sandboxes_in_pool(pool: Pool, count: int = None) -> List[SandboxAlloc
 
         validate_hardware_usage_of_sandboxes(pool, count)
 
-        return requests.create_allocations_requests(pool, count)
+        return requests.create_allocations_requests(pool, count, created_by)
 
 
 def delete_allocation_units(pool: Pool) -> List[CleanupRequest]:
