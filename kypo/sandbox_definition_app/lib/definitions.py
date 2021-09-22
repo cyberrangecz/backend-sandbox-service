@@ -2,13 +2,14 @@
 Definition Service module for Definition management.
 """
 import io
-import typing
 
 import structlog
 from django.conf import settings
+from django.contrib.auth.models import User
 from kypo.topology_definition.models import TopologyDefinition
 from kypo.topology_definition.image_naming import image_name_replace
 from yamlize import YamlizingError
+from typing import Optional, TextIO
 
 from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration, GitType
@@ -22,10 +23,11 @@ LOG = structlog.get_logger()
 SANDBOX_DEFINITION_FILENAME = 'topology.yml'
 
 
-def create_definition(url: str, rev: str = None) -> Definition:
+def create_definition(url: str, created_by: Optional[User], rev: str = None) -> Definition:
     """Validates and creates a new definition in database.
 
     :param url: URL of sandbox definition Git repository
+    :param created_by: User creating sandbox definition
     :param rev: Revision of the repository
     :return: New definition instance
     """
@@ -40,10 +42,10 @@ def create_definition(url: str, rev: str = None) -> Definition:
     serializer = serializers.DefinitionSerializerCreate(
         data=dict(name=top_def.name, url=url, rev=rev))
     serializer.is_valid(raise_exception=True)
-    return serializer.save()
+    return serializer.save(created_by=created_by)
 
 
-def load_definition(stream: typing.TextIO) -> TopologyDefinition:
+def load_definition(stream: TextIO) -> TopologyDefinition:
     """Load TopologyDefinition from opened stream and make appropriate transformation.
 
     :param stream: The opened stream from which the TopologyDefinition will be loaded

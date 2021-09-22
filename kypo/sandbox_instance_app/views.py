@@ -4,6 +4,7 @@ import structlog
 from django.conf import settings
 from django.http import HttpResponse, Http404
 from django.utils.module_loading import import_string
+from django.contrib.auth.models import AnonymousUser
 from drf_yasg2 import openapi
 from drf_yasg2.utils import swagger_auto_schema
 from rest_framework import status, generics, mixins
@@ -43,7 +44,8 @@ class PoolList(mixins.ListModelMixin,
         It is then used as management key for this pool. That means that
         the management key-pair is the same for each sandbox in the pool.
         """
-        pool = pools.create_pool(request.data)
+        created_by = None if isinstance(request.user, AnonymousUser) else request.user
+        pool = pools.create_pool(request.data, created_by)
         serializer = self.serializer_class(pool)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -167,7 +169,8 @@ class SandboxAllocationUnitList(mixins.ListModelMixin, generics.GenericAPIView):
             except ValueError:
                 raise exceptions.ValidationError("Invalid parameter count: %s" % count)
 
-        requests = pools.create_sandboxes_in_pool(pool, count=count)
+        created_by = None if isinstance(request.user, AnonymousUser) else request.user
+        requests = pools.create_sandboxes_in_pool(pool, created_by, count=count)
         serializer = self.serializer_class(requests, many=True)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 

@@ -30,35 +30,35 @@ class TestCreateDefinition:
                      return_value=topology_definition)
         return topology_definition
 
-    def test_create_definition(self, mocker, topology_definition):
+    def test_create_definition(self, mocker, topology_definition, created_by):
         mocker.patch("kypo.sandbox_definition_app.lib.definitions.validate_topology_definition")
-        definitions.create_definition(url=self.URL, rev=self.REV)
+        definitions.create_definition(url=self.URL, rev=self.REV, created_by=created_by)
 
         # Definition name is tested by get
         database_definition = Definition.objects.get(name=self.NAME)
         assert database_definition.url == self.URL
         assert database_definition.rev == self.REV
 
-    def test_create_definition_nonunique(self, mocker, topology_definition):
+    def test_create_definition_nonunique(self, mocker, topology_definition, created_by):
         mocker.patch("kypo.sandbox_definition_app.lib.definitions.validate_topology_definition")
-        definitions.create_definition(url=self.URL, rev=self.REV)
+        definitions.create_definition(url=self.URL, rev=self.REV, created_by=created_by)
         with pytest.raises(RestValidationError):
-            definitions.create_definition(url=self.URL, rev=self.REV)
+            definitions.create_definition(url=self.URL, rev=self.REV, created_by=created_by)
 
-    def test_create_definition_invalid_hosts_group(self, mocker, topology_definition):
+    def test_create_definition_invalid_hosts_group(self, mocker, topology_definition, created_by):
         hosts_group = mocker.Mock()
         hosts_group.name = 'hidden_hosts'
         topology_definition.groups = [hosts_group]
         with pytest.raises(exceptions.ValidationError):
-            definitions.create_definition(url=self.URL, rev=self.REV)
+            definitions.create_definition(url=self.URL, rev=self.REV, created_by=created_by)
 
-    def test_create_definition_inaccessible_by_ssh(self, mocker, topology_definition):
+    def test_create_definition_inaccessible_by_ssh(self, mocker, topology_definition, created_by):
         mocker.patch("kypo.sandbox_definition_app.lib.definitions.validate_topology_definition")
         mocker.patch("kypo.sandbox_definition_app.lib.definitions.DefinitionProvider"
                      ".has_key_access", return_value=False)
 
         with pytest.raises(exceptions.ValidationError):
-            definitions.create_definition(url=self.URL, rev=self.REV)
+            definitions.create_definition(url=self.URL, rev=self.REV, created_by=created_by)
 
 
 class TestLoadDefinition:

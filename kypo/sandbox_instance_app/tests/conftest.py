@@ -2,6 +2,7 @@ import yaml
 import pytest
 import os
 from django.core.management import call_command
+from django.contrib.auth.models import User
 
 from kypo.topology_definition.models import TopologyDefinition
 from kypo.openstack_driver import TopologyInstance, TransformationConfiguration
@@ -121,22 +122,28 @@ def stack():
         }
     }
 
+@pytest.fixture
+def created_by():
+    return User.objects.create(username='test-user', first_name='test-first-name',
+                               last_name='test-last-name', email='test@email.com')
 
 @pytest.fixture
-def definition():
-    return Definition.objects.create(name='test-def-name', url='test-def-url', rev='test-def-rev')
+def definition(created_by):
+    return Definition.objects.create(name='test-def-name', url='test-def-url', rev='test-def-rev',
+                                     created_by=created_by)
 
 
 @pytest.fixture
-def pool(definition):
+def pool(definition, created_by):
     return Pool.objects.create(definition=definition, max_size=3,
                                private_management_key='-----RSA PRIVATE KEY-----',
-                               public_management_key='ssh-rsa', uuid='0fb3160d')
+                               public_management_key='ssh-rsa', uuid='0fb3160d',
+                               created_by=created_by)
 
 
 @pytest.fixture
-def allocation_unit(pool):
-    return SandboxAllocationUnit.objects.create(pool=pool)
+def allocation_unit(pool, created_by):
+    return SandboxAllocationUnit.objects.create(pool=pool, created_by=created_by)
 
 
 @pytest.fixture

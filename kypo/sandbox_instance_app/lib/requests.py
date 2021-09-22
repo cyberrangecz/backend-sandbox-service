@@ -1,7 +1,8 @@
 import enum
-from typing import List
+from typing import List, Optional
 import structlog
 from django.core.exceptions import ObjectDoesNotExist
+from django.contrib.auth.models import User
 
 from kypo.sandbox_common_lib import exceptions, utils
 
@@ -19,12 +20,12 @@ class StageState(enum.Enum):
     FAILED = "FAILED"
 
 
-def create_allocation_request(pool: Pool) -> SandboxAllocationUnit:
+def create_allocation_request(pool: Pool, created_by: Optional[User]) -> SandboxAllocationUnit:
     """Create Sandbox Allocation Request.
     Also create sandbox, but do not save it to the database until
     successfully created.
     """
-    unit = SandboxAllocationUnit.objects.create(pool=pool)
+    unit = SandboxAllocationUnit.objects.create(pool=pool, created_by=created_by)
     request = AllocationRequest.objects.create(allocation_unit=unit)
     pri_key, pub_key = utils.generate_ssh_keypair()
     sandbox = Sandbox(id=unit.id, allocation_unit=unit,
@@ -33,9 +34,10 @@ def create_allocation_request(pool: Pool) -> SandboxAllocationUnit:
     return unit
 
 
-def create_allocations_requests(pool: Pool, count: int) -> List[SandboxAllocationUnit]:
+def create_allocations_requests(pool: Pool, count: int, created_by: Optional[User])\
+        -> List[SandboxAllocationUnit]:
     """Batch version of create_allocation_request. Create count Sandbox Requests."""
-    return [create_allocation_request(pool) for _ in range(count)]
+    return [create_allocation_request(pool, created_by) for _ in range(count)]
 
 
 def cancel_allocation_request(alloc_req: AllocationRequest):

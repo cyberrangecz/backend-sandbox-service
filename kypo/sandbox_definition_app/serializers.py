@@ -10,21 +10,27 @@ Swagger can utilise type hints to determine type, so use them in your own method
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
+from kypo.sandbox_common_lib.serializers import UserSerializer
 from kypo.sandbox_definition_app import models
 
 
 class DefinitionSerializer(serializers.ModelSerializer):
+    created_by = serializers.SerializerMethodField()
+
     class Meta:
         model = models.Definition
-        fields = ('id', 'name', 'url', 'rev')
-        read_only_fields = ('id', 'name')
-
+        fields = ('id', 'name', 'url', 'rev', 'created_by')
+        read_only_fields = ('id', 'name', 'created_by')
         validators = [
             UniqueTogetherValidator(
                 queryset=models.Definition.objects.all(),
                 fields=['url', 'rev']
             )
         ]
+
+    @staticmethod
+    def get_created_by(obj: models.Definition):
+        return UserSerializer(obj.created_by).data
 
 
 class DefinitionSerializerCreate(DefinitionSerializer):

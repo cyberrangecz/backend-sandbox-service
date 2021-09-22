@@ -10,6 +10,7 @@ Swagger can utilise type hints to determine type, so use them in your own method
 from typing import Optional
 from rest_framework import serializers
 
+from kypo.sandbox_common_lib.serializers import UserSerializer
 from kypo.sandbox_definition_app.models import Definition
 from kypo.sandbox_instance_app import models
 from kypo.sandbox_instance_app.lib import pools, requests
@@ -25,13 +26,14 @@ class PoolSerializer(serializers.ModelSerializer):
     definition_id = serializers.PrimaryKeyRelatedField(
         source='definition', queryset=Definition.objects.all()
     )
+    created_by = serializers.SerializerMethodField()
     hardware_usage = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Pool
         fields = ('id', 'definition_id', 'size', 'max_size', 'lock_id', 'rev', 'rev_sha',
-                  'hardware_usage')
-        read_only_fields = ('id', 'size', 'lock', 'rev', 'rev_sha', 'hardware_usage')
+                  'created_by', 'hardware_usage')
+        read_only_fields = ('id', 'size', 'lock', 'rev', 'rev_sha', 'created_by', 'hardware_usage')
 
     @staticmethod
     def validate_max_size(value):
@@ -49,6 +51,10 @@ class PoolSerializer(serializers.ModelSerializer):
     @staticmethod
     def get_lock_id(obj: models.Pool) -> Optional[int]:
         return obj.lock.id if hasattr(obj, 'lock') else None
+
+    @staticmethod
+    def get_created_by(obj: models.Pool):
+        return UserSerializer(obj.created_by).data
 
     @staticmethod
     def get_hardware_usage(obj: models.Pool):
@@ -93,11 +99,16 @@ class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
     allocation_request = AllocationRequestSerializer(read_only=True)
     cleanup_request = CleanupRequestSerializer()
     pool_id = serializers.PrimaryKeyRelatedField(source='pool', read_only=True)
+    created_by = serializers.SerializerMethodField()
 
     class Meta:
         model = models.SandboxAllocationUnit
-        fields = ('id', 'pool_id', 'allocation_request', 'cleanup_request')
-        read_only_fields = ('id', 'pool_id', 'allocation_request', 'cleanup_request')
+        fields = ('id', 'pool_id', 'allocation_request', 'cleanup_request', 'created_by')
+        read_only_fields = ('id', 'pool_id', 'allocation_request', 'cleanup_request', 'created_by')
+
+    @staticmethod
+    def get_created_by(obj: models.SandboxAllocationUnit):
+        return UserSerializer(obj.created_by).data
 
 
 class OpenstackAllocationStageSerializer(serializers.ModelSerializer):

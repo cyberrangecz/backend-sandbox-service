@@ -1,9 +1,17 @@
+- model: auth.user
+  pk: 1
+  fields:
+    username: test-username
+    first_name: test-first-name
+    last_name: test-last-name
+
 - model: sandbox_definition_app.definition
   pk: 1
   fields:
     name: test-def-name
     url: test-def-url
     rev: test-def-rev
+    created_by: 1
 
 - model: sandbox_instance_app.pool
   pk: 1
@@ -13,6 +21,7 @@
     private_management_key: -----RSA PRIVATE KEY-----
     public_management_key: ssh-rsa
     uuid: 0fb3160d
+    created_by: 1
 
 - model: sandbox_instance_app.pool
   pk: 2
@@ -22,11 +31,13 @@
     private_management_key: -----RSA PRIVATE KEY-----
     public_management_key: ssh-rsa
     uuid: 0fb3160d
+    created_by: 1
 
 - model: sandbox_instance_app.sandboxallocationunit
   pk: 1
   fields:
     pool: 1
+    created_by: 1
 
 - model: sandbox_instance_app.sandbox
   pk: 1
