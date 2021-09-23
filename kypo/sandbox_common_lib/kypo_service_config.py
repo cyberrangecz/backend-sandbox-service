@@ -1,7 +1,7 @@
 """
 REST API configuration file
 """
-from yamlize import Attribute, Object, YamlizingError, StrList
+from yamlize import Attribute, Object, YamlizingError, StrList, Sequence, Typed
 
 from kypo.sandbox_common_lib.exceptions import ImproperlyConfigured
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
@@ -23,9 +23,14 @@ def stack_name_prefix_validator(_, value):
         raise ValueError('Value stack_name_prefix can have only 1 to 8 characters')
 
 
+class AllowedOidcProviders(Sequence):
+    item_type = Typed(dict)
+
+
 class Authentication(Object):
     authenticated_rest_api = Attribute(type=bool, default=AUTHENTICATED_REST_API)
-    allowed_oidc_providers = Attribute(type=StrList, default=tuple(ALLOWED_OIDC_PROVIDERS))
+    allowed_oidc_providers = Attribute(type=AllowedOidcProviders,
+                                       default=tuple(ALLOWED_OIDC_PROVIDERS))
     roles_registration_url = Attribute(type=str)
     roles_acquisition_url = Attribute(type=str)
 

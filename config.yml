@@ -22,7 +22,10 @@ authentication:
     # If set to False, other authentication variables are not used.
     #authenticated_rest_api: False
 
-    # List of OIDC provider host/domain names that are allowed.
+    # List of dictionaries representing OIDC providers that are allowed.
+    # Mandatory attributes: 'issuer'. Optional attributes: 'userinfo_endpoint', 'well_known_config'.
+    # Example of such dictionary:
+    # {issuer: http://example.com, userinfo_endpoint: http://example.com/userinfo}
     allowed_oidc_providers: []
 
     # User and Group roles registration endpoint URL.
