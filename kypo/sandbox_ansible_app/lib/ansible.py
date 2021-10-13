@@ -53,7 +53,7 @@ class AnsibleDockerRunner:
         self.container_proxy_private_key =\
             self.container_ssh_path(settings.KYPO_CONFIG.proxy_jump_to_man.IdentityFile)
 
-    def run_container(self, url, rev, user_ansible_cleanup=False):
+    def run_container(self, url, rev, ansible_cleanup=False):
         """
         Run Ansible in Docker container.
         """
@@ -63,7 +63,7 @@ class AnsibleDockerRunner:
         }
         command = ['-u', url, '-r', rev, '-i', self.ANSIBLE_DOCKER_INVENTORY_PATH.bind,
                    '-a', settings.KYPO_CONFIG.answers_storage_api]
-        command += ['-c'] if user_ansible_cleanup else []
+        command += ['-c'] if ansible_cleanup else []
         LOG.debug("Ansible container options", command=command)
         return self.client.containers.run(settings.KYPO_CONFIG.ansible_docker_image, detach=True,
                                           command=command, volumes=volumes,
@@ -175,19 +175,16 @@ class CleanupAnsibleDockerRunner(AnsibleDockerRunner):
     """
     Represents Docker container environment for executing Ansible during allocation stage.
     """
-    def prepare_inventory_file(self, allocation_unit: SandboxAllocationUnit,
-                               user_ansible_cleanup: bool):
+    def prepare_inventory_file(self, allocation_unit: SandboxAllocationUnit):
         """
         Prepare and save Ansible inventory file that will be bind to Docker container.
         """
         inventory_object = BaseInventory(allocation_unit.pool.get_pool_prefix(),
                                          allocation_unit.get_stack_name())
-        if user_ansible_cleanup:
-            inventory_object.hosts.pop(KYPO_PROXY_JUMP_NAME)
-            inventory_object.add_variables(
-                kypo_global_sandbox_allocation_unit_id=allocation_unit.id,
-                kypo_global_pool_id=allocation_unit.pool.id
-            )
+        inventory_object.add_variables(
+            kypo_global_sandbox_allocation_unit_id=allocation_unit.id,
+            kypo_global_pool_id=allocation_unit.pool.id
+        )
 
         self.save_file(self.inventory_path, inventory_object.serialize())
 
