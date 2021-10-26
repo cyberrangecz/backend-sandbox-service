@@ -34,3 +34,4 @@ class ImageSerializer(serializers.Serializer):
     tags = serializers.ListField()
     default_user = serializers.CharField()
     name = serializers.CharField()
+    owner_specified = serializers.DictField()
