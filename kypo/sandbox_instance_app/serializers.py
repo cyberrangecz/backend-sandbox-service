@@ -111,6 +111,10 @@ class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
         return UserSerializer(obj.created_by).data
 
 
+class SandboxAllocationUnitIdListSerializer(serializers.Serializer):
+    unit_ids = serializers.ListField(child=serializers.IntegerField())
+
+
 class OpenstackAllocationStageSerializer(serializers.ModelSerializer):
     request_id = serializers.PrimaryKeyRelatedField(
         source='allocation_request', read_only=True)
