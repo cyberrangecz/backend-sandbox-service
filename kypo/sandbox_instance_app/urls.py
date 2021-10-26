@@ -13,7 +13,7 @@ urlpatterns = [
          name='pool-lock-detail'),
     path('pools/<int:pool_id>/allocation-requests', views.PoolAllocationRequestList.as_view(),
          name='pool-allocation-request-list'),
-    path('pools/<int:pool_id>/cleanup-requests', views.PoolCleanupRequestList.as_view(),
+    path('pools/<int:pool_id>/cleanup-requests', views.PoolCleanupRequests.as_view(),
          name='pool-cleanup-request-list'),
 
     path('pools/<int:pool_id>/sandbox-allocation-units',

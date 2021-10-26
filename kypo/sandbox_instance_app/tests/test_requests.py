@@ -2,10 +2,10 @@ import pytest
 from django.db.models import ObjectDoesNotExist
 from django.utils import timezone
 
-from kypo.sandbox_instance_app.models import Sandbox, CleanupRequest
-from kypo.sandbox_common_lib import exceptions as api_exceptions
-
+from kypo.sandbox_instance_app.models import Sandbox, CleanupRequest, SandboxAllocationUnit
 from kypo.sandbox_instance_app.lib import requests
+
+from kypo.sandbox_common_lib import exceptions as api_exceptions
 
 pytestmark = pytest.mark.django_db
 
@@ -78,10 +78,8 @@ class TestCleanupRequest:
         self.handler = mocker.patch('kypo.sandbox_instance_app.lib.requests.request_handlers.'
                                     'CleanupRequestHandler')
 
-    def test_create_cleanup_request_success(self, sandbox_finished):
-        allocation_unit = sandbox_finished.allocation_unit
-
-        sandbox_cleanup_request = requests.create_cleanup_request(allocation_unit)
+    def assert_cleanup_request_success(self, allocation_unit, force=False):
+        sandbox_cleanup_request = requests.create_cleanup_request(allocation_unit, force)
 
         assert sandbox_cleanup_request.allocation_unit_id == allocation_unit.id
         with pytest.raises(ObjectDoesNotExist):
@@ -89,39 +87,57 @@ class TestCleanupRequest:
         self.handler.assert_called_once_with(sandbox_cleanup_request)
         self.handler.return_value.enqueue_request.assert_called_once()
 
-    def test_create_cleanup_request_failed_locked_sandbox(self, sandbox_lock):
-        allocation_unit = sandbox_lock.sandbox.allocation_unit
-
+    def assert_cleanup_request_failed(self, allocation_unit):
         with pytest.raises(api_exceptions.ValidationError):
             requests.create_cleanup_request(allocation_unit)
 
-        assert Sandbox.objects.get(pk=sandbox_lock.sandbox.id)
         with pytest.raises(ObjectDoesNotExist):
             assert CleanupRequest.objects.get(pk=allocation_unit.id)
         self.handler.assert_not_called()
+
+    def test_create_cleanup_request_success(self, sandbox_finished):
+        allocation_unit = sandbox_finished.allocation_unit
+        self.assert_cleanup_request_success(allocation_unit)
+
+    def test_create_cleanup_request_failed_locked_sandbox(self, sandbox_lock):
+        allocation_unit = sandbox_lock.sandbox.allocation_unit
+        self.assert_cleanup_request_failed(allocation_unit)
+        assert Sandbox.objects.get(pk=sandbox_lock.sandbox.id)
+
+    def test_create_cleanup_request_force_locked_sandbox(self, sandbox_lock):
+        allocation_unit = sandbox_lock.sandbox.allocation_unit
+        self.assert_cleanup_request_success(allocation_unit, True)
 
     def test_create_cleanup_request_failed_active_allocation_request(self,
                                                                      allocation_stage_user_started):
         allocation_unit = allocation_stage_user_started.allocation_request.allocation_unit
+        self.assert_cleanup_request_failed(allocation_unit)
 
-        with pytest.raises(api_exceptions.ValidationError):
-            requests.create_cleanup_request(allocation_unit)
+    def test_create_cleanup_request_force_active_allocation_request(self, mocker,
+                                                                    allocation_stage_user_started):
+        allocation_unit = allocation_stage_user_started.allocation_request.allocation_unit
+        mocker.patch('kypo.sandbox_instance_app.lib.requests.request_handlers.'
+                     'AllocationRequestHandler')
+        self.assert_cleanup_request_success(allocation_unit, True)
 
-        with pytest.raises(ObjectDoesNotExist):
-            assert CleanupRequest.objects.get(pk=allocation_unit.id)
-        self.handler.assert_not_called()
+    def test_create_cleanup_request_failed_already_cleaning(self, sandbox_finished,
+                                                            cleanup_request_started):
+        allocation_unit = sandbox_finished.allocation_unit
+        self.assert_cleanup_request_failed(allocation_unit)
 
-    def test_create_cleanup_request_failed_already_cleaning(self, cleanup_request_started):
-        allocation_unit = cleanup_request_started.allocation_unit
+    def test_create_cleanup_request_force_already_cleaning(self, mocker, sandbox_finished,
+                                                           cleanup_request_started):
+        allocation_unit = sandbox_finished.allocation_unit
 
-        with pytest.raises(api_exceptions.ValidationError):
-            requests.create_cleanup_request(allocation_unit)
+        def mock_is_finished(_):
+            CleanupRequest.is_finished = mocker.PropertyMock()
+            CleanupRequest.is_finished.return_value = True
 
-        with pytest.raises(ObjectDoesNotExist):
-            assert CleanupRequest.objects.get(pk=allocation_unit.id)
-        self.handler.assert_not_called()
+        mocker.patch('kypo.sandbox_instance_app.lib.requests.cancel_cleanup_request',
+                     side_effect=mock_is_finished)
+        self.assert_cleanup_request_success(allocation_unit, True)
 
-    def test_create_cleanup_requests_success(self, sandbox_finished):
+    def test_create_cleanup_requests(self, sandbox_finished):
         allocation_unit = sandbox_finished.allocation_unit
 
         cleanup_requests = requests.create_cleanup_requests([allocation_unit])
@@ -131,6 +147,41 @@ class TestCleanupRequest:
             assert cleanup_request.allocation_unit_id == allocation_unit.id
             with pytest.raises(ObjectDoesNotExist):
                 assert Sandbox.objects.get(pk=cleanup_request.allocation_unit.sandbox.id)
+
+    @staticmethod
+    def assert_cleanup_request_all_failed(allocation_units):
+        with pytest.raises(api_exceptions.ValidationError):
+            requests.create_cleanup_requests(
+                [allocation_unit for allocation_unit in allocation_units])
+
+        for allocation_unit in allocation_units:
+            with pytest.raises(ObjectDoesNotExist):
+                assert CleanupRequest.objects.get(pk=allocation_unit.id)
+
+    def test_create_cleanup_requests_many_alloc_unfinished_first_fail(self, sandbox_finished):
+        unit_alloc_unfinished = SandboxAllocationUnit.objects.get(pk=1)
+        allocation_units = [sandbox_finished.allocation_unit, unit_alloc_unfinished]
+        self.assert_cleanup_request_all_failed(allocation_units)
+
+    def test_create_cleanup_requests_many_alloc_unfinished_last_fail(self, sandbox_finished):
+        unit_alloc_unfinished = SandboxAllocationUnit.objects.get(pk=1)
+        allocation_units = [unit_alloc_unfinished, sandbox_finished.allocation_unit]
+        self.assert_cleanup_request_all_failed(allocation_units)
+
+    def test_create_cleanup_requests_many_alloc_unfinished_locked_force(self, mocker, sandbox_lock):
+        mocker.patch('kypo.sandbox_instance_app.lib.requests.request_handlers.'
+                     'AllocationRequestHandler')
+        unit_alloc_unfinished = SandboxAllocationUnit.objects.get(pk=1)
+        allocation_units = [unit_alloc_unfinished, sandbox_lock.sandbox.allocation_unit]
+
+        cleanup_requests = requests.create_cleanup_requests(
+            [allocation_unit for allocation_unit in allocation_units], True)
+
+        assert len(cleanup_requests) == len(allocation_units)
+        for cleanup_request, allocation_unit in zip(cleanup_requests, allocation_units):
+            assert cleanup_request.allocation_unit_id == allocation_unit.id
+            with pytest.raises(ObjectDoesNotExist):
+                assert Sandbox.objects.get(pk=allocation_unit.sandbox.id)
 
     def test_cancel_cleanup_request_success(self, cleanup_request_started):
         requests.cancel_cleanup_request(cleanup_request_started)

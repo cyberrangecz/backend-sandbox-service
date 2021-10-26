@@ -129,14 +129,43 @@ class PoolAllocationRequestList(generics.ListAPIView):
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class PoolCleanupRequestList(generics.ListAPIView):
-    """get: List Cleanup Request for this pool."""
+@utils.add_error_responses_doc('post', [400, 401, 403, 404, 500])
+class PoolCleanupRequests(generics.GenericAPIView):
     serializer_class = serializers.CleanupRequestSerializer
 
     def get_queryset(self):
         pool_id = self.kwargs.get('pool_id')
-        pool = get_object_or_404(Pool, pk=pool_id)
-        return CleanupRequest.objects.filter(allocation_unit__in=pool.allocation_units.all())
+        return Pool.objects.filter(id=pool_id)
+
+    def get(self, request, *args, **kwargs):
+        """List Cleanup Request for this pool."""
+        pool = self.get_queryset().get()
+        cleanup_requests = CleanupRequest.objects.filter(
+            allocation_unit__in=pool.allocation_units.all())
+        serializer = serializers.CleanupRequestSerializer(cleanup_requests, many=True)
+        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter('force', openapi.IN_QUERY,
+                              description="Force the deletion of sandboxes",
+                              type=openapi.TYPE_BOOLEAN, default=False),
+        ],
+        request_body=serializers.SandboxAllocationUnitIdListSerializer)
+    def post(self, request, *args, **kwargs):
+        """Deletes multiple sandboxes. With an optional parameter *force*,
+        it forces the deletion."""
+        pool = self.get_queryset().get()
+        pool_units = SandboxAllocationUnit.objects.filter(
+             pool=pool)
+        unit_ids = request.data.get('unit_ids')
+        force = request.GET.get('force', 'false') == 'true'
+        units_to_cleanup = SandboxAllocationUnit.objects.filter(id__in=unit_ids)
+        units_to_cleanup = [allocation_unit for allocation_unit in units_to_cleanup
+                            if allocation_unit in pool_units]
+        cleanup_requests = sandbox_requests.create_cleanup_requests(units_to_cleanup, force)
+        serializer = serializers.CleanupRequestSerializer(cleanup_requests, many=True)
+        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
@@ -260,7 +289,7 @@ class SandboxCleanupRequest(mixins.RetrieveModelMixin, generics.GenericAPIView):
         return Response(serializer.data)
 
     def post(self, request, unit_id):
-        """ Create cleanup request.."""
+        """ Create cleanup request."""
         unit = get_object_or_404(SandboxAllocationUnit, pk=unit_id)
         cleanup_req = sandbox_requests.create_cleanup_request(unit)
         serializer = self.serializer_class(cleanup_req)

@@ -2,12 +2,13 @@ import enum
 from typing import List, Optional
 import structlog
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
 from django.contrib.auth.models import User
 
 from kypo.sandbox_common_lib import exceptions, utils
 
 from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit,\
-    AllocationRequest, CleanupRequest
+    AllocationRequest, CleanupRequest, SandboxLock
 from kypo.sandbox_instance_app.lib import request_handlers, sandboxes
 
 LOG = structlog.get_logger()
@@ -45,28 +46,39 @@ def cancel_allocation_request(alloc_req: AllocationRequest):
     request_handlers.AllocationRequestHandler(alloc_req).cancel_request()
 
 
-def create_cleanup_request(allocation_unit: SandboxAllocationUnit) -> CleanupRequest:
-    """Create cleanup request and enqueue it. Immediately delete sandbox from database."""
+def create_cleanup_request(allocation_unit: SandboxAllocationUnit,
+                           force: bool = False) -> CleanupRequest:
+    """Create cleanup request and enqueue it. Immediately delete sandbox from database.
+    The force parameter forces the deletion."""
     try:
         sandbox = allocation_unit.sandbox
     except ObjectDoesNotExist:
         sandbox = None
     else:
         if hasattr(sandbox, 'lock'):
-            raise exceptions.ValidationError('Sandbox ID={} is locked. Unlock it first.'
-                                             .format(sandbox.id))
-
+            if force:
+                SandboxLock.objects.get(sandbox=sandbox).delete()
+            else:
+                raise exceptions.ValidationError('Sandbox ID={} is locked. Unlock it first.'
+                                                 .format(sandbox.id))
     if not allocation_unit.allocation_request.is_finished:
-        raise exceptions.ValidationError(
-            f'Create sandbox allocation request ID={allocation_unit.allocation_request.id}'
-            f' has not finished yet. You need to cancel it first.'
-        )
+        if force:
+            cancel_allocation_request(allocation_unit.allocation_request)
+        else:
+            raise exceptions.ValidationError(
+                f'Create sandbox allocation request ID={allocation_unit.allocation_request.id}'
+                f' has not finished yet. You need to cancel it first.'
+            )
 
     if hasattr(allocation_unit, 'cleanup_request'):
-        raise exceptions.ValidationError(
-            f'Allocation unit ID={allocation_unit.id} already has a cleanup request '
-            f'ID={allocation_unit.cleanup_request.id}. Delete it first.')
-
+        if force:
+            if not allocation_unit.cleanup_request.is_finished:
+                cancel_cleanup_request(allocation_unit.cleanup_request)
+            delete_cleanup_request(allocation_unit.cleanup_request)
+        else:
+            raise exceptions.ValidationError(
+                f'Allocation unit ID={allocation_unit.id} already has a cleanup request '
+                f'ID={allocation_unit.cleanup_request.id}. Delete it first.')
     request = CleanupRequest.objects.create(allocation_unit=allocation_unit)
     LOG.info('CleanupRequest created', cleanup_request=request,
              allocation_unit=allocation_unit, sandbox=sandbox)
@@ -74,14 +86,15 @@ def create_cleanup_request(allocation_unit: SandboxAllocationUnit) -> CleanupReq
     if sandbox:
         sandbox.delete()
         sandboxes.clear_cache(sandbox)
-
     request_handlers.CleanupRequestHandler(request).enqueue_request()
     return request
 
 
-def create_cleanup_requests(allocation_units: List[SandboxAllocationUnit]) -> List[CleanupRequest]:
+def create_cleanup_requests(allocation_units: List[SandboxAllocationUnit], force: bool = False)\
+        -> List[CleanupRequest]:
     """Batch version of create_cleanup_request."""
-    return [create_cleanup_request(unit) for unit in allocation_units]
+    with transaction.atomic():
+        return [create_cleanup_request(unit, force) for unit in allocation_units]
 
 
 def cancel_cleanup_request(cleanup_req: CleanupRequest) -> None:
