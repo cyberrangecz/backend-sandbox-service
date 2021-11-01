@@ -137,7 +137,8 @@ def validate_hardware_usage_of_sandboxes(pool, count) -> None:
         top_def = definitions.get_definition(pool.definition.url, pool.rev_sha,
                                              settings.KYPO_CONFIG)
         client = utils.get_ostack_client()
-        client.validate_hardware_usage_of_stacks(top_def, count)
+        topology_instance = client.get_topology_instance(top_def)
+        client.validate_hardware_usage_of_stacks(topology_instance, count)
     except StackCreationFailed as exc:
         raise exceptions.StackError(f'Cannot build {count} sandboxes: {exc}')
 
@@ -225,15 +226,22 @@ def get_management_ssh_access(pool: Pool) -> io.BytesIO:
     return in_memory_zip_file
 
 
-def get_hardware_usage_of_sandbox(pool: Pool) -> HardwareUsage:
+def get_hardware_usage_of_sandbox(pool: Pool) -> Optional[HardwareUsage]:
     """
     Get Heat Stack hardware usage of a single sandbox in a pool, whether it is allocated or not.
 
     :param pool: Pool to get HardwareUsage from.
-    :return: Hardware usage of pool.
+    :return: Hardware usage of pool. None if predefined errors are encountered.
     """
-    top_def = definitions.get_definition(pool.definition.url, pool.rev_sha,
-                                         settings.KYPO_CONFIG)
-    client = utils.get_ostack_client()
-    return client.get_hardware_usage(top_def)
+    try:
+        top_def = definitions.get_definition(pool.definition.url, pool.rev_sha,
+                                             settings.KYPO_CONFIG)
+        client = utils.get_ostack_client()
+        client.validate_topology_definition(top_def)
+        topology_instance = client.get_topology_instance(top_def)
+    except (exceptions.GitError, exceptions.ImproperlyConfigured, exceptions.ValidationError,
+            KypoException):
+        return None
+
+    return client.get_hardware_usage(topology_instance)
 
