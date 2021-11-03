@@ -142,8 +142,13 @@ class PoolCleanupRequests(generics.GenericAPIView):
         pool = self.get_queryset().get()
         cleanup_requests = CleanupRequest.objects.filter(
             allocation_unit__in=pool.allocation_units.all())
-        serializer = serializers.CleanupRequestSerializer(cleanup_requests, many=True)
-        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+        page = self.paginate_queryset(cleanup_requests)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(cleanup_requests, many=True)
+        return Response(serializer.data)
 
     @swagger_auto_schema(
         manual_parameters=[
