@@ -20,14 +20,14 @@ DEFINITION_REV = 'master'
 
 # Heat stack and template values
 JUMP_STACK_NAME = 'integration_test_jump'
-DEFAULT_PUBLIC_NETWORK = 'public-cesnet-78-128-251-GROUP'
+DEFAULT_PUBLIC_NETWORK = 'public-muni-C4e-147-251-83-4-30'
 KEY_PAIR = 'test_key'
 JUMP_NETWORK = settings.KYPO_CONFIG.trc.base_network
 JUMP_SERVER = 'jump_server'
 TEMPLATE_DICT = dict(
     PUBLIC_NETWORK=os.environ.get('PUBLIC_NETWORK', DEFAULT_PUBLIC_NETWORK),
-    JUMP_IMAGE=settings.KYPO_CONFIG.trc.extra_nodes_image,
-    JUMP_FLAVOR=settings.KYPO_CONFIG.trc.extra_nodes_flavor,
+    JUMP_IMAGE=settings.KYPO_CONFIG.trc.man_image,
+    JUMP_FLAVOR=settings.KYPO_CONFIG.trc.man_flavor,
     KEY_PAIR=KEY_PAIR,
     JUMP_NETWORK=JUMP_NETWORK,
     JUMP_SERVER=f'{JUMP_STACK_NAME}-{JUMP_SERVER}',
@@ -65,7 +65,6 @@ class TestIntegration:
             self.create_jump_host(jump_template)
             jump_ip = self.get_jump_ip_address()
             self.set_jump_host_config(jump_ip, private_key)
-
             def_id = self.create_definition(client, DEFINITION_URL, DEFINITION_REV)
             try:
                 pool_id = self.create_pool(client, def_id)

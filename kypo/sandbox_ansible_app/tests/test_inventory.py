@@ -20,7 +20,6 @@ class TestCreateInventory:
         result = Inventory('pool-prefix', 'stack-name',
                            top_ins, '/root/.ssh/pool_mng_key', '/root/.ssh/pool_mng_cert',
                            ssh_public_mgmt_key, ssh_public_user_key, extra_vars)
-
         assert result.to_dict() == inventory
 
     def test_get_network_to_router_mapping(self, top_ins):

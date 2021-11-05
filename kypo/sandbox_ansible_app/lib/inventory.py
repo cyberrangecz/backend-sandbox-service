@@ -1,5 +1,5 @@
 from ipaddress import ip_network
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional
 from itertools import chain
 from enum import Enum
 import structlog
@@ -7,7 +7,7 @@ import yaml
 import abc
 
 from django.conf import settings
-from kypo.openstack_driver import TopologyInstance, NodeToNodeLinkPair
+from kypo.openstack_driver import TopologyInstance, Link
 from kypo.topology_definition.models import Protocol, Router, Network
 
 KYPO_PROXY_JUMP_NAME = 'kypo-proxy-jump'
@@ -174,20 +174,15 @@ class Routing:
         """
         The main method that initializes a Routing instance from TopologyInstance.
         """
-        self._create_interfaces(self.topology_instance.get_link_pair_man_to_uan_over_uan_network())
-
-        man_to_br_link_pair = self.topology_instance.get_link_pair_man_to_br_over_br_network()
-        man_to_br_interface, br_to_man_interface = self._create_interfaces(man_to_br_link_pair)
-        for br_to_router_link_pair in self.topology_instance\
-                .get_link_pairs_br_to_routers_over_routers_networks():
-            br_to_router_interface, router_to_br_interface =\
-                self._create_interfaces(br_to_router_link_pair)
-
-            router_network_cidr = br_to_router_link_pair.first.network.cidr
-            man_to_br_interface.add_route(Route(router_network_cidr, br_to_man_interface.ip))
-            for network in self._get_host_networks_for_routing(br_to_router_link_pair.second.node):
-                man_to_br_interface.add_route(Route(network.cidr, br_to_man_interface.ip))
-                br_to_router_interface.add_route(Route(network.cidr, router_to_br_interface.ip))
+        man_to_routers_link = self.topology_instance.get_link_between_node_and_network(
+            self.topology_instance.man, self.topology_instance.wan
+        )
+        man_to_routers_interface = self._create_interface_for_link(man_to_routers_link)
+        for router_link in self.topology_instance.get_links_from_wan_to_routers():
+            router_to_man_interface = self._create_interface_for_link(router_link,
+                                                                      man_to_routers_link.ip)
+            for network in self._get_host_networks_for_routing(router_link.node):
+                man_to_routers_interface.add_route(Route(network.cidr, router_to_man_interface.ip))
 
     def _get_host_networks_for_routing(self, router: Router) -> List[Network]:
         """
@@ -201,16 +196,10 @@ class Routing:
             self.network_to_router_mappings[router_to_network_link.network.name]
         ]
 
-    def _create_interfaces(self, link_pair: NodeToNodeLinkPair) -> Tuple[Interface, Interface]:
-        """
-        Create and return a 2-tuple of Interfaces created from NodeToNodeLinkPair.
-        """
-        inward_link, outward_link = link_pair.first, link_pair.second
-        inward_interface = Interface(inward_link.mac, inward_link.ip)
-        outward_interface = Interface(outward_link.mac, outward_link.ip, inward_link.ip)
-        self.interfaces[inward_link.node.name][inward_link.mac] = inward_interface
-        self.interfaces[outward_link.node.name][outward_link.mac] = outward_interface
-        return inward_interface, outward_interface
+    def _create_interface_for_link(self, link: Link, default_gateway_ip: str = "") -> Interface:
+        interface = Interface(link.mac, link.ip, default_gateway_ip)
+        self.interfaces[link.node.name][link.mac] = interface
+        return interface
 
     @staticmethod
     def _get_network_to_router_mapping(topology_instance: TopologyInstance) -> Dict[str, str]:
@@ -321,7 +310,7 @@ class Inventory(BaseInventory):
         Set IP forward variable to Routers, Border-Router and MAN.
         """
         ip_forward_nodes = list(self.topology_instance.get_routers()) +\
-            [self.topology_instance.man, self.topology_instance.br]
+            [self.topology_instance.man]
         for node in ip_forward_nodes:
             host = self.hosts.get(node.name)
             if host:
@@ -334,23 +323,22 @@ class Inventory(BaseInventory):
         Default groups: 'hosts', 'management', 'routers', 'winrm_nodes', 'ssh_nodes',
          'user_accessible_nodes' and 'hidden_hosts'.
         """
-        extra_nodes = self.topology_instance.get_extra_nodes()
+        man = self.topology_instance.man
 
         hosts = [self.hosts[node.name] for node in self.topology_instance.get_hosts()]
         self.add_group(Group(DefaultAnsibleHostsGroups.HOSTS.value, hosts))
 
-        management = [self.hosts[node.name] for node in extra_nodes]
-        self.add_group(Group(DefaultAnsibleHostsGroups.MANAGEMENT.value, management))
+        self.add_group(Group(DefaultAnsibleHostsGroups.MANAGEMENT.value, [man]))
 
         routers = [self.hosts[node.name] for node in self.topology_instance.get_routers()]
         self.add_group(Group(DefaultAnsibleHostsGroups.ROUTERS.value, routers))
 
         winrm_nodes = [self.hosts[node.name] for node in self.topology_instance.get_nodes()
-                       if node.base_box.mgmt_protocol == Protocol.WINRM and node not in extra_nodes]
+                       if node.base_box.mgmt_protocol == Protocol.WINRM and node != man]
         self.add_group(Group(DefaultAnsibleHostsGroups.WINRM_NODES.value, winrm_nodes))
 
         ssh_nodes = [self.hosts[node.name] for node in self.topology_instance.get_nodes()
-                     if node.base_box.mgmt_protocol == Protocol.SSH and node not in extra_nodes]
+                     if node.base_box.mgmt_protocol == Protocol.SSH and node != man]
         self.add_group(Group(DefaultAnsibleHostsGroups.SSH_NODES.value, ssh_nodes))
 
         self.add_group(Group(DefaultAnsibleHostsGroups.USER_ACCESSIBLE_NODES.value,
@@ -364,9 +352,8 @@ class Inventory(BaseInventory):
         """
         Create and return user accessible nodes from user accessible networks.
         """
-        link_pairs = self.topology_instance\
-            .get_link_pairs_uan_to_nodes_over_user_accessible_hosts_networks()
-        return [self.hosts[pair.second.node.name] for pair in link_pairs]
+        return [self.hosts[link.node.name] for link in
+                self.topology_instance.get_links_to_user_accessible_nodes()]
 
     def _create_user_defined_groups(self) -> None:
         """

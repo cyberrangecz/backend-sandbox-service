@@ -15,24 +15,6 @@ Host man 10.10.10.10
     StrictHostKeyChecking no
     IdentitiesOnly yes
 
-Host uan 192.168.128.2
-    HostName 192.168.128.2
-    User kypo-man
-    IdentityFile <path_to_pool_private_key>
-    ProxyJump kypo-man@man
-    UserKnownHostsFile /dev/null
-    StrictHostKeyChecking no
-    IdentitiesOnly yes
-
-Host border-router 192.168.128.3
-    HostName 192.168.128.3
-    User kypo-man
-    IdentityFile <path_to_pool_private_key>
-    ProxyJump kypo-man@man
-    UserKnownHostsFile /dev/null
-    StrictHostKeyChecking no
-    IdentitiesOnly yes
-
 Host home-router 192.168.128.7
     HostName 192.168.128.7
     User debian
@@ -51,8 +33,8 @@ Host server-router 192.168.128.6
     StrictHostKeyChecking no
     IdentitiesOnly yes
 
-Host home 192.168.128.5
-    HostName 192.168.128.5
+Host home 192.168.128.3
+    HostName 192.168.128.3
     User debian
     IdentityFile <path_to_pool_private_key>
     ProxyJump kypo-man@man
@@ -60,8 +42,8 @@ Host home 192.168.128.5
     StrictHostKeyChecking no
     IdentitiesOnly yes
 
-Host server 192.168.128.4
-    HostName 192.168.128.4
+Host server 192.168.128.2
+    HostName 192.168.128.2
     User debian
     IdentityFile <path_to_pool_private_key>
     ProxyJump kypo-man@man

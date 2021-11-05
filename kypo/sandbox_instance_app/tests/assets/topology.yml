@@ -1,68 +1,76 @@
+special_nodes:
+- name: internet
 hosts:
 - name: home
 links:
-- port_a: link-11_home
-  port_b: link-11_home-switch
-- port_a: link-13_server-router
-  port_b: link-13_server-router-network
-- port_a: link-16_home-router
-  port_b: link-16_home-router-network
-- port_a: link-18_server-router
-  port_b: link-18_server-switch
-- port_a: link-19_home-router
-  port_b: link-19_home-switch
+- port_a: link-2_internet
+  port_b: link-2_wan
+- port_a: link-6_home
+  port_b: link-6_home-switch
+- port_a: link-8_server-router
+  port_b: link-8_wan
+- port_a: link-10_home-router
+  port_b: link-10_wan
+- port_a: link-11_server-router
+  port_b: link-11_server-switch
+- port_a: link-12_home-router
+  port_b: link-12_home-switch
 ports:
+- ip: null
+  mac: null
+  parent: internet
+  name: link-2_internet
+- ip: null
+  mac: null
+  parent: wan
+  name: link-2_wan
 - ip: 10.10.30.5
   mac: 00:00:00:00:00:11
-  name: link-11_home
+  name: link-6_home
   parent: home
 - ip: null
   mac: null
-  name: link-11_home-switch
+  name: link-6_home-switch
   parent: home-switch
-- ip: 100.100.100.3
+- ip: 100.100.100.2
   mac: 00:00:00:00:00:13
-  name: link-13_server-router
+  name: link-8_server-router
   parent: server-router
 - ip: null
   mac: null
-  name: link-13_server-router-network
-  parent: server-router-network
-- ip: 200.100.100.2
+  name: link-8_wan
+  parent: wan
+- ip: 100.100.100.3
   mac: 00:00:00:00:00:16
-  name: link-16_home-router
+  name: link-10_home-router
   parent: home-router
 - ip: null
   mac: null
-  name: link-16_home-router-network
-  parent: home-router-network
+  name: link-10_wan
+  parent: wan
 - ip: 10.10.20.1
   mac: 00:00:00:00:00:18
-  name: link-18_server-router
+  name: link-11_server-router
   parent: server-router
 - ip: null
   mac: null
-  name: link-18_server-switch
+  name: link-11_server-switch
   parent: server-switch
 - ip: 10.10.30.1
   mac: 00:00:00:00:00:19
-  name: link-19_home-router
+  name: link-12_home-router
   parent: home-router
 - ip: null
   mac: null
-  name: link-19_home-switch
+  name: link-12_home-switch
   parent: home-switch
 routers:
-- cidr: 100.100.100.0/29
-  name: server-router
-- cidr: 200.100.100.0/29
-  name: home-router
+- name: server-router
+- name: home-router
 switches:
 - cidr: 10.10.20.0/24
   name: server-switch
 - cidr: 10.10.30.0/24
   name: home-switch
-- cidr: 100.100.100.0/29
-  name: server-router-network
-- cidr: 200.100.100.0/29
-  name: home-router-network
+- cidr: 100.100.100.0/24
+  name: wan

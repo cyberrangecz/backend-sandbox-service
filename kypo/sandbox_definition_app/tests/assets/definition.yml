@@ -19,14 +19,12 @@ routers:
     base_box:
       image: munikypo/debian-9-x86_64
     flavor: csirtmu.tiny1x2
-    cidr: 100.100.100.0/29
 
   - name: home-router
     base_box:
       image: munikypo/debian-9-x86_64
       mgmt_user: kypo-man
     flavor: standard.tiny
-    cidr: 200.100.100.0/29
 
 networks:
   - name: server-switch

@@ -15,20 +15,11 @@ Host man 10.10.10.10
     StrictHostKeyChecking no
     IdentitiesOnly yes
 
-Host uan 192.168.0.16
-    HostName 192.168.0.16
-    User user-access
-    IdentityFile <path_to_sandbox_private_key>
-    ProxyJump user-access@man
-    UserKnownHostsFile /dev/null
-    StrictHostKeyChecking no
-    IdentitiesOnly yes
-
 Host home-router 10.10.30.1
     HostName 10.10.30.1
     User user-access
     IdentityFile <path_to_sandbox_private_key>
-    ProxyJump user-access@uan
+    ProxyJump user-access@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
     IdentitiesOnly yes
@@ -37,7 +28,7 @@ Host server-router 10.10.20.1
     HostName 10.10.20.1
     User user-access
     IdentityFile <path_to_sandbox_private_key>
-    ProxyJump user-access@uan
+    ProxyJump user-access@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
     IdentitiesOnly yes
@@ -46,7 +37,7 @@ Host home 10.10.30.5
     HostName 10.10.30.5
     User user-access
     IdentityFile <path_to_sandbox_private_key>
-    ProxyJump user-access@uan
+    ProxyJump user-access@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
     IdentitiesOnly yes
@@ -55,7 +46,7 @@ Host server 10.10.20.5
     HostName 10.10.20.5
     User user-access
     IdentityFile <path_to_sandbox_private_key>
-    ProxyJump user-access@uan
+    ProxyJump user-access@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
     IdentitiesOnly yes
