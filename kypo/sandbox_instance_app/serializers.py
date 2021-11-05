@@ -182,6 +182,9 @@ class NodeActionSerializer(serializers.Serializer):
 ##########################################
 # KYPO OpenStack lib classes serializers #
 ##########################################
+class LibSpecialNodeSerializer(serializers.Serializer):
+    name = serializers.CharField()
+
 
 class LibHostSerializer(serializers.Serializer):
     """KYPO OS lib Host topology serializer"""
@@ -191,7 +194,7 @@ class LibHostSerializer(serializers.Serializer):
 class LibRouterSerializer(serializers.Serializer):
     """KYPO OS lib Router topology serializer"""
     name = serializers.CharField()
-    cidr = serializers.CharField()
+    # cidr = serializers.CharField()
 
 
 class LibNetworkSerializer(serializers.Serializer):
@@ -222,6 +225,7 @@ class PortSerializer(serializers.Serializer):
 
 class TopologySerializer(serializers.Serializer):
     """Serializer for topology"""
+    special_nodes = LibSpecialNodeSerializer(many=True)
     hosts = LibHostSerializer(many=True)
     routers = LibRouterSerializer(many=True)
     switches = LibNetworkSerializer(many=True)

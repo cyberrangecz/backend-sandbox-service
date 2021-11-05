@@ -82,31 +82,10 @@ class KypoUserSSHConfig(KypoSSHConfig):
                       proxy_jump=proxy_jump, alias=top_ins.man.name)
         man_proxy_jump = f'{SSH_PROXY_USERNAME}@{top_ins.man.name}'
 
-        # Create an entry for UAN as a proxy jump host.
-        uan_ip = self._get_uan_ip(top_ins)
-        self.add_host(uan_ip, SSH_PROXY_USERNAME, sandbox_private_key_path,
-                      proxy_jump=man_proxy_jump, alias=top_ins.uan.name)
-        uan_proxy_jump = f'{SSH_PROXY_USERNAME}@{top_ins.uan.name}'
-
         # Create an entry for user-accessible nodes of a sandbox.
-        for link in self._get_uan_accessible_node_links(top_ins):
+        for link in top_ins.get_links_to_user_accessible_nodes():
             self.add_host(link.ip, SSH_PROXY_USERNAME, sandbox_private_key_path,
-                          proxy_jump=uan_proxy_jump, alias=link.node.name)
-
-    @staticmethod
-    def _get_uan_ip(top_ins: TopologyInstance) -> str:
-        """
-        Get IP of UAN in UAN_NETWORK.
-        """
-        return top_ins.get_link_between_node_and_network(top_ins.uan, top_ins.uan_network).ip
-
-    @classmethod
-    def _get_uan_accessible_node_links(cls, top_ins: TopologyInstance) -> List[Link]:
-        """
-        Get links for UAN-accessible nodes.
-        """
-        return [link_pair.second for link_pair in
-                top_ins.get_link_pairs_uan_to_nodes_over_user_accessible_hosts_networks()]
+                          proxy_jump=man_proxy_jump, alias=link.node.name)
 
 
 class KypoMgmtSSHConfig(KypoSSHConfig):

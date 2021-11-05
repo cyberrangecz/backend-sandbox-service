@@ -123,14 +123,14 @@ application_configuration:
         # The name or ID of network in OpenStack where all sandboxes will be deployed.
         #base_network: base_network
 
-        # The name of the image in OpenStack that will be used for management nodes (MAN, UAN, BR).
-        extra_nodes_image: ""
+        # The name of the image in OpenStack that will be used for MAN.
+        man_image: ""
 
-        # The name of user in MNG_IMAGE virtual machine.
-        extra_nodes_user: ""
+        # The name of user in MAN.
+        man_user: ""
 
-        # The name of the flavor in OpenStack that will be used for management nodes.
-        extra_nodes_flavor: ""
+        # The name of the flavor in OpenStack that will be used for MAN.
+        man_flavor: ""
 
         # The cidr notation of network between MAN and every other node in sandbox.
         #sb_man_cidr: 192.168.128.0/17
