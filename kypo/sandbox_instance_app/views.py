@@ -604,3 +604,19 @@ class PoolManagementSSHAccess(APIView):
                                 content_type='application/zip')
         response['Content-Disposition'] = "attachment; filename=ssh-access.zip"
         return response
+
+
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
+class SandboxConsoles(generics.GenericAPIView):
+    queryset = Sandbox.objects.all()
+    lookup_url_kwarg = "sandbox_id"
+
+    # noinspection PyUnusedLocal
+    def get(self, request, sandbox_id):
+        """Retrieve spice console urls for all machines in the topology."""
+        sandbox = self.get_object()
+        topology = sandboxes.get_sandbox_topology(sandbox)
+        node_names = [host.name for host in topology.hosts if not host.hidden] + \
+                     [router.name for router in topology.routers]
+        consoles = {name: nodes.get_console_url(sandbox, name) for name in node_names}
+        return Response(consoles)
