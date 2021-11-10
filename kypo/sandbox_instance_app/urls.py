@@ -82,4 +82,8 @@ urlpatterns = [
     path('sandboxes/<int:sandbox_id>/man-out-port-ip',
          views.SandboxManOutPortIP.as_view(),
          name='man-out-port-ip'),
+
+    path('sandboxes/<int:sandbox_id>/consoles',
+         views.SandboxConsoles.as_view(),
+         name='consoles'),
 ]
