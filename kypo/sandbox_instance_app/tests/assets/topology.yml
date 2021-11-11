@@ -2,6 +2,8 @@ special_nodes:
 - name: internet
 hosts:
 - name: home
+  os_type: debian
+  gui_access: False
 links:
 - port_a: link-2_internet
   port_b: link-2_wan
@@ -66,7 +68,11 @@ ports:
   parent: home-switch
 routers:
 - name: server-router
+  os_type: debian
+  gui_access: False
 - name: home-router
+  os_type: debian
+  gui_access: False
 switches:
 - cidr: 10.10.20.0/24
   name: server-switch
