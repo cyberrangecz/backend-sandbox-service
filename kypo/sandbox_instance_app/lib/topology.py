@@ -1,6 +1,8 @@
 import structlog
 
 from kypo.openstack_driver import TopologyInstance
+from kypo.sandbox_cloud_app.lib.projects import list_images
+from kypo.topology_definition.models import Host
 
 LOG = structlog.getLogger()
 INTERNET_NODE_NAME = 'internet'
@@ -8,6 +10,12 @@ INTERNET_NODE_NAME = 'internet'
 
 class Topology:
     """Represents a topology of a sandbox."""
+
+    class Node:
+        def __init__(self, name, os_type, gui_access):
+            self.name = name
+            self.os_type = os_type
+            self.gui_access = gui_access
 
     class SpecialNode:
         def __init__(self, name):
@@ -33,13 +41,25 @@ class Topology:
         self.links = []
         self.ports = []
 
-        self.add_host_routes_and_switches(top_inst)
+        self.add_nodes(top_inst)
+        self.add_special_nodes_and_switches(top_inst)
         self.add_ports_and_links(top_inst)
 
-    def add_host_routes_and_switches(self, top_inst: TopologyInstance) -> None:
+    def add_nodes(self, top_inst: TopologyInstance) -> None:
+        images = list_images()
+        for node in top_inst.get_nodes_without_man():
+            if (type(node) == Host) and node.hidden:
+                continue
+            image = next(image for image in images if image.name == node.base_box.image)
+            gui_access = image.owner_specified.get('owner_specified.openstack.gui_access') == 'true'
+            new_node = self.Node(node.name, image.os_type, gui_access)
+            if type(node) == Host:
+                self.hosts.append(new_node)
+            else:
+                self.routers.append(new_node)
+
+    def add_special_nodes_and_switches(self, top_inst: TopologyInstance) -> None:
         self.special_nodes = [self.SpecialNode(INTERNET_NODE_NAME)]
-        self.hosts = [h for h in top_inst.get_hosts() if not h.hidden]
-        self.routers = top_inst.get_routers()
         self.switches = [n for n in top_inst.get_networks()
                          if n != top_inst.man_network]
 

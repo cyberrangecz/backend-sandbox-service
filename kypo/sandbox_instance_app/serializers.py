@@ -186,15 +186,11 @@ class LibSpecialNodeSerializer(serializers.Serializer):
     name = serializers.CharField()
 
 
-class LibHostSerializer(serializers.Serializer):
-    """KYPO OS lib Host topology serializer"""
+class LibNodeSerializer(serializers.Serializer):
+    """KYPO OS lib Host and Router topology serializer"""
     name = serializers.CharField()
-
-
-class LibRouterSerializer(serializers.Serializer):
-    """KYPO OS lib Router topology serializer"""
-    name = serializers.CharField()
-    # cidr = serializers.CharField()
+    os_type = serializers.CharField()
+    gui_access = serializers.BooleanField()
 
 
 class LibNetworkSerializer(serializers.Serializer):
@@ -226,8 +222,8 @@ class PortSerializer(serializers.Serializer):
 class TopologySerializer(serializers.Serializer):
     """Serializer for topology"""
     special_nodes = LibSpecialNodeSerializer(many=True)
-    hosts = LibHostSerializer(many=True)
-    routers = LibRouterSerializer(many=True)
+    hosts = LibNodeSerializer(many=True)
+    routers = LibNodeSerializer(many=True)
     switches = LibNetworkSerializer(many=True)
     links = LinkSerializer(many=True)
     ports = PortSerializer(many=True)

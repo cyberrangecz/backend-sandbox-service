@@ -98,6 +98,15 @@ def topology():
         return yaml.full_load(f)
 
 
+@pytest.fixture
+def image(mocker):
+    class MockedImage:
+        name = "debian-9-x86_64"
+        owner_specified = mocker.Mock()
+        os_type = "debian"
+    return MockedImage()
+
+
 def set_stage_started(stage):
     stage.start = timezone.now()
     stage.save()

@@ -51,7 +51,10 @@ class TestSandboxesManipulation:
         with pytest.raises(exceptions.ValidationError):
             sandboxes.lock_sandbox(mocker.Mock())
 
-    def test_get_sandbox_topology(self, mocker, topology):
+    def test_get_sandbox_topology(self, mocker, topology, image):
+        mock_images = mocker.patch(
+            'kypo.openstack_driver.open_stack_client.KypoOpenStackClient.list_images')
+        mock_images.return_value = [image]
         topo = sandboxes.get_sandbox_topology(mocker.Mock())
 
         result = serializers.TopologySerializer(topo).data
@@ -59,6 +62,7 @@ class TestSandboxesManipulation:
         for item in ['hosts', 'routers', 'switches', 'ports']:
             assert sorted(topology[item], key=lambda x: x['name']) == \
                    sorted(result[item], key=lambda x: x['name'])
+
         for item in ['links']:
             assert sorted(topology[item], key=lambda x: x['port_a']) == \
                    sorted(result[item], key=lambda x: x['port_a'])

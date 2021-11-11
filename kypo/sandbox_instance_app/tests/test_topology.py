@@ -7,8 +7,12 @@ pytestmark = pytest.mark.django_db
 
 
 class TestTopology:
-    def test_topology_success(self, top_ins, topology):
+    def test_topology_success(self, mocker, top_ins, topology, image):
+        mock_images = mocker.patch(
+            'kypo.openstack_driver.open_stack_client.KypoOpenStackClient.list_images')
+        mock_images.return_value = [image]
         topo = sandboxes.Topology(top_ins)
+
         result = serializers.TopologySerializer(topo).data
 
         for item in ['hosts', 'routers', 'switches', 'ports']:
