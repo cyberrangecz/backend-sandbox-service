@@ -615,8 +615,8 @@ class SandboxConsoles(generics.GenericAPIView):
     def get(self, request, sandbox_id):
         """Retrieve spice console urls for all machines in the topology."""
         sandbox = self.get_object()
-        topology = sandboxes.get_sandbox_topology(sandbox)
-        node_names = [host.name for host in topology.hosts if not host.hidden] + \
-                     [router.name for router in topology.routers]
+        topology_instance = sandboxes.get_topology_instance(sandbox)
+        node_names = [host.name for host in topology_instance.get_hosts() if not host.hidden] + \
+                     [router.name for router in topology_instance.get_routers()]
         consoles = {name: nodes.get_console_url(sandbox, name) for name in node_names}
         return Response(consoles)
