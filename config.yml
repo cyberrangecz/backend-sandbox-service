@@ -135,12 +135,6 @@ application_configuration:
         # The cidr notation of network between MAN and every other node in sandbox.
         #sb_man_cidr: 192.168.128.0/17
 
-        # The cidr notation of network between UAN and MAN node.
-        #sb_uan_cidr: 192.168.0.0/28
-
-        # The cidr notation of network between BR and MAN node.
-        #sb_br_cidr: 192.168.0.16/28
-
         # The list of IP addresses to custom DNS servers.
         #dns_name_servers: []
 
