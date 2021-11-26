@@ -50,7 +50,8 @@ class TestCreatePool:
             pools.create_pool(dict(definition_id=1,
                                    max_size=-10), created_by=created_by)
 
-    def test_pool_views(self):
+    def test_pool_views(self, mocker):
+        mocker.patch("kypo.sandbox_instance_app.lib.pools.get_hardware_usage_of_sandbox")
         request = self.arf.get(reverse('pool-list'))
         response = PoolList.as_view()(request)
         assert len(response.data['results']) == 2

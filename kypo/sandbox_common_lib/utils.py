@@ -5,9 +5,10 @@ import json
 import logging
 import uuid
 import jinja2
-from typing import Tuple, Union, Iterable, Callable, Dict
+from typing import Tuple, Union, Iterable, Callable
 import structlog
 from django.conf import settings
+from django.core.cache import cache
 from django.utils.decorators import method_decorator
 from drf_yasg2 import openapi
 from rest_framework import status
@@ -139,6 +140,15 @@ def get_ostack_client() -> KypoOpenStackClient:
         application_credential_id=settings.KYPO_CONFIG.os_application_credential_id,
         application_credential_secret=settings.KYPO_CONFIG.os_application_credential_secret,
         trc=settings.KYPO_CONFIG.trc)
+
+
+def clear_cache(cache_key: str) -> None:
+    """
+    Delete record from cache
+
+    :param cache_key: Key of record that will be deleted
+    """
+    cache.delete(cache_key)
 
 
 def get_simple_uuid() -> str:

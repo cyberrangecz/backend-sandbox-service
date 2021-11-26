@@ -10,6 +10,7 @@ from django.db.models import QuerySet, ProtectedError
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.cache import cache
 
 from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_definition_app.lib import definitions
@@ -25,6 +26,8 @@ from kypo.openstack_driver.exceptions import KypoException, InvalidTopologyDefin
 from kypo.openstack_driver.open_stack_proxy_elements import HardwareUsage
 
 LOG = structlog.get_logger()
+POOL_CACHE_TIMEOUT = None
+POOL_CACHE_PREFIX = "hardware-usage-pool-{}"
 
 
 def get_pool(pool_pk: int) -> Pool:
@@ -92,12 +95,14 @@ def create_pool(data: Dict, created_by: Optional[User]) -> Pool:
 
 
 def delete_pool(pool: Pool) -> None:
-    """Deletes given Pool. Also deletes management key-pair in OpenStack."""
+    """Deletes given Pool, deletes management key-pair in OpenStack and cache record for pool"""
     ssh_keypair_name = pool.ssh_keypair_name
     certificate_keypair_name = pool.certificate_keypair_name
+    pool_cache_key = get_cache_key(pool)
 
     try:
         pool.delete()
+        utils.clear_cache(pool_cache_key)
     except ProtectedError:
         raise exceptions.ValidationError('Cannot delete locked pool.')
 
@@ -226,22 +231,53 @@ def get_management_ssh_access(pool: Pool) -> io.BytesIO:
     return in_memory_zip_file
 
 
+def _get_hardware_usage(url: str, rev: str) -> Optional[HardwareUsage]:
+    """
+    Get Heat Stack hardware usage calculated from topology definition.
+
+    :param url: URL of git repository from which topology definition is downloaded
+    :param rev: Revision of git repository
+    :return: Hardware usage or None if error occurs.
+    """
+    try:
+        top_def = definitions.get_definition(url, rev, settings.KYPO_CONFIG)
+        client = utils.get_ostack_client()
+        client.validate_topology_definition(top_def)
+        top_instance = client.get_topology_instance(top_def)
+    except (exceptions.GitError, exceptions.ImproperlyConfigured, exceptions.ValidationError,
+            KypoException):
+        return None
+
+    return client.get_hardware_usage(top_instance)
+
+
 def get_hardware_usage_of_sandbox(pool: Pool) -> Optional[HardwareUsage]:
     """
     Get Heat Stack hardware usage of a single sandbox in a pool, whether it is allocated or not.
 
     :param pool: Pool to get HardwareUsage from.
-    :return: Hardware usage of pool. None if predefined errors are encountered.
+    :return: Hardware usage or None if error occurs.
     """
-    try:
-        top_def = definitions.get_definition(pool.definition.url, pool.rev_sha,
-                                             settings.KYPO_CONFIG)
-        client = utils.get_ostack_client()
-        client.validate_topology_definition(top_def)
-        topology_instance = client.get_topology_instance(top_def)
-    except (exceptions.GitError, exceptions.ImproperlyConfigured, exceptions.ValidationError,
-            KypoException):
-        return None
+    # sentinel object is used to differentiate between stored None and cache miss
+    sentinel = object()
+    hardware_usage_cached = cache.get(get_cache_key(pool), sentinel)
+    definition = pool.definition
 
-    return client.get_hardware_usage(topology_instance)
+    if hardware_usage_cached is not sentinel:
+        return hardware_usage_cached
+
+    hardware_usage = _get_hardware_usage(definition.url, definition.rev)
+    cache.set(get_cache_key(pool), hardware_usage, POOL_CACHE_TIMEOUT)
+
+    return hardware_usage
+
+
+def get_cache_key(pool: Pool) -> str:
+    """
+    Get unique key which is used as cache record key
+
+    :param pool: Pool for which the cache record is for
+    :return: Cache key as string
+    """
+    return POOL_CACHE_PREFIX.format(pool.id)
 
