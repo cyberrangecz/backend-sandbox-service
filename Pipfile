@@ -24,7 +24,7 @@ pytest-django = "*"
 drf-oidc-auth = { index = "kypo", version = ">=2.0.1" }
 kypo-openstack-lib = { index = "kypo", version = "==0.37.0" }
 csirtmu-oidc-client = { index = "kypo", version = ">=0.2.1" }
-csirtmu-uag-auth = { index = "kypo", version = ">=0.1.8" }
+csirtmu-uag-auth = { index = "kypo", version = "==0.1.9" }
 django = "*"
 djangorestframework = "*"
 coreapi = "*"  # Generating REST api documentation (swagger dependency)
