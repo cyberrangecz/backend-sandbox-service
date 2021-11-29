@@ -14,13 +14,15 @@ from django.contrib.auth.models import User
 class UserSerializer(serializers.ModelSerializer):
     sub = serializers.CharField(source='username')
     full_name = serializers.SerializerMethodField()
+    given_name = serializers.CharField(source='first_name')
+    family_name = serializers.CharField(source='last_name')
     mail = serializers.CharField(source='email')
 
     class Meta:
         model = User
-        fields = ('id', 'sub', 'full_name', 'mail')
-        read_only_fields = ('id', 'sub', 'full_name', 'mail')
+        fields = ('id', 'sub', 'full_name', 'given_name', 'family_name', 'mail')
+        read_only_fields = ('id', 'sub', 'full_name', 'given_name', 'family_name', 'mail')
 
     @staticmethod
     def get_full_name(obj: User):
-        return f'{obj.first_name} {obj.last_name}'.lstrip()
+        return obj.get_full_name()
