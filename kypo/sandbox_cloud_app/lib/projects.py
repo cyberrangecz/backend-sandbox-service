@@ -23,3 +23,11 @@ def list_images():
     """
     client = utils.get_ostack_client()
     return client.list_images()
+
+
+def get_project_limits():
+    """
+    Get Absolute limits of OpenStack project.
+    """
+    client = utils.get_ostack_client()
+    return client.get_project_limits()
