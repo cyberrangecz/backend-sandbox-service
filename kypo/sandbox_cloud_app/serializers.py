@@ -35,3 +35,12 @@ class ImageSerializer(serializers.Serializer):
     default_user = serializers.CharField()
     name = serializers.CharField()
     owner_specified = serializers.DictField()
+
+
+class ProjectLimitsSerializer(serializers.Serializer):
+    vcpu = serializers.IntegerField()
+    ram = serializers.FloatField()
+    instances = serializers.IntegerField()
+    network = serializers.IntegerField()
+    subnet = serializers.IntegerField()
+    port = serializers.IntegerField()

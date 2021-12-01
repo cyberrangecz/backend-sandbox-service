@@ -53,3 +53,17 @@ class ProjectImages(generics.GenericAPIView,
             return self.get_paginated_response(page)
 
         return Response({'image_set': serialized_image_set.data})
+
+
+@utils.add_error_responses_doc('get', [401, 403, 500])
+class ProjectLimits(generics.GenericAPIView):
+    queryset = Pool.objects.none()
+    serializer_class = serializers.ProjectLimitsSerializer
+
+    @swagger_auto_schema(tags=['cloud'])
+    def get(self, request):
+        """
+        Get Absolute limits of OpenStack project.
+        """
+        project_limits = projects.get_project_limits()
+        return Response(self.serializer_class(project_limits).data)
