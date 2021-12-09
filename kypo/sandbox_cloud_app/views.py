@@ -1,6 +1,5 @@
 import structlog
 from kypo.sandbox_common_lib import utils
-from kypo.sandbox_common_lib.pagination import PageNumberWithPageSizePagination
 from kypo.sandbox_cloud_app.lib import projects
 from kypo.sandbox_cloud_app import serializers
 
@@ -33,10 +32,15 @@ class ProjectInfo(generics.GenericAPIView):
 
 
 @utils.add_error_responses_doc('get', [401, 403, 500])
-class ProjectImages(generics.GenericAPIView,
-                    PageNumberWithPageSizePagination):
+class ProjectImages(generics.GenericAPIView):
     queryset = Pool.objects.none()
     serializer_class = serializers.ImageSerializer
+
+    @property
+    def paginator(self):
+        _paginator = super().paginator
+        _paginator.sort_by_default_param = 'name'
+        return _paginator
 
     # noinspection PyMethodMayBeStatic
     @swagger_auto_schema(tags=['cloud'])
@@ -44,7 +48,6 @@ class ProjectImages(generics.GenericAPIView,
         """
         Get list of images.
         """
-
         image_set = projects.list_images()
         serialized_image_set = serializers.ImageSerializer(image_set, many=True)
 
