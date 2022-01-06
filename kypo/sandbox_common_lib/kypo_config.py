@@ -15,6 +15,7 @@ LOG_FILE = 'kypo-sandbox-service.log'
 LOG_LEVEL = 'INFO'
 GIT_TOKEN = '<default_token>'
 GIT_SERVER = 'gitlab.com'
+GIT_SSH_PORT = 22
 GIT_REST_SERVER = 'https://gitlab.com/'
 GIT_USER = 'git'
 GIT_PRIVATE_KEY = os.path.expanduser('~/.ssh/git_rsa_key')
@@ -94,6 +95,7 @@ class KypoConfiguration(Object):
     # Sandbox creation configuration
     git_access_token = Attribute(type=str, default=GIT_TOKEN)
     git_server = Attribute(type=str, default=GIT_SERVER)
+    git_ssh_port = Attribute(type=int, default=GIT_SSH_PORT)
     git_rest_server = Attribute(type=str, default=GIT_REST_SERVER,
                                 validator=kypo_config_validation.validate_git_rest_url)
     git_user = Attribute(type=str, default=GIT_USER)

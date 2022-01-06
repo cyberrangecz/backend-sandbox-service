@@ -54,10 +54,10 @@ class DefinitionProvider(ABC):
             raise exceptions.GitError(
                 f"The GIT host does not match the configured value for this instance: expected="
                 f"{config.git_server}, actual={url_parsed.resource}")
-        if url_parsed.port is not None:
+        if (url_parsed.port is not None) and (int(url_parsed.port) != config.git_ssh_port):
             raise exceptions.GitError(
                 f"The GIT port does not match the configured value for this instance: "
-                f"expected=22, actual={url_parsed.port}")
+                f"expected={config.git_ssh_port}, actual={url_parsed.port}")
         if url_parsed.protocol != 'ssh':
             raise exceptions.GitError(
                 f"The GIT protocol does not match the configured value for this instance: "
@@ -117,8 +117,10 @@ class GitlabProvider(DefinitionProvider):
 
     @staticmethod
     def get_project_path(url_parsed) -> str:
-        return url_parsed.pathname[:-4] if url_parsed.pathname[-4:] == '.git'\
+        project_path = url_parsed.pathname[:-4] if url_parsed.pathname[-4:] == '.git'\
             else url_parsed.pathname
+        # custom port results in an additional / at the beginning of the project path
+        return project_path[1:] if project_path[0] == '/' else project_path
 
 
 class InternalGitProvider(DefinitionProvider):
