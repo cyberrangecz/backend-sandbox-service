@@ -607,7 +607,7 @@ class PoolManagementSSHAccess(APIView):
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class SandboxConsoles(generics.GenericAPIView):
+class SandboxConsoles(APIView):
     queryset = Sandbox.objects.all()
     lookup_url_kwarg = "sandbox_id"
 
