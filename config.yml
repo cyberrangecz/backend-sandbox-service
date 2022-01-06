@@ -62,6 +62,9 @@ application_configuration:
     # Git server hostname or IP.
     #git_server: gitlab.com
 
+    # Git server ssh port
+    #git_ssh_port: 22
+
     # The address of Git REST server with protocol (optionally port)
     #git_rest_server: https://gitlab.com/
 

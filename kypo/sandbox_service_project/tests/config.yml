@@ -59,6 +59,9 @@ application_configuration:
     # Git server hostname or IP.
     git_server: 192.168.55.101
 
+    # Git server ssh port
+    #git_ssh_port: 22
+
     # The address of Git REST server with protocol (optionally port)
     git_rest_server: http://192.168.55.102:5000/
 
