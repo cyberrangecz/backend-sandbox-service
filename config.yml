@@ -141,3 +141,22 @@ application_configuration:
         # The list of IP addresses to custom DNS servers.
         #dns_name_servers: []
 
+    # Django database settings.
+    database:
+        # The database backend to use.
+        engine: "django.db.backends.postgresql"
+
+        # Which host to use when connecting to the database.
+        #host: "localhost"
+
+        # The name of the database to use.
+        #name: "postgres"
+
+        # The password to use when connecting to the database.
+        #password: "postgres"
+
+        # The port to use when connecting to the database.
+        #port: "5432"
+
+        # The username to use when connecting to the database.
+        #user: "postgres"

@@ -140,3 +140,23 @@ application_configuration:
 
         # The list of IP addresses to custom DNS servers.
         #dns_name_servers: []
+
+    # Django database settings.
+    database:
+        # The database backend to use.
+        engine: "django.db.backends.sqlite3"
+
+        # Which host to use when connecting to the database.
+        host: ""
+
+        # The name of the database to use.
+        name: 'db.sqlite3'
+
+        # The password to use when connecting to the database.
+        password: ""
+
+        # The port to use when connecting to the database.
+        port: ""
+
+        # The username to use when connecting to the database.
+        user: ""

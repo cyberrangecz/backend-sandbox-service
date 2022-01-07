@@ -92,21 +92,14 @@ WSGI_APPLICATION = 'kypo.sandbox_service_project.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': KYPO_CONFIG.database.engine,
+        'HOST': KYPO_CONFIG.database.host,
+        'NAME': KYPO_CONFIG.database.name,
+        'PASSWORD': KYPO_CONFIG.database.password,
+        'PORT': KYPO_CONFIG.database.port,
+        'USER': KYPO_CONFIG.database.user
     },
-    'production': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'HOST': 'localhost',
-        'NAME': 'postgres',
-        'PASSWORD': 'postgres',
-        'PORT': 5432,
-        'USER': 'postgres'
-    }
 }
-# TODO review this quick fix in the future
-if not DEBUG:
-    DATABASES['default'] = DATABASES['production']
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators

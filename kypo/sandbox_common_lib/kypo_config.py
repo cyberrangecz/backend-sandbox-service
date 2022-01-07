@@ -28,6 +28,12 @@ ANSIBLE_DOCKER_IMAGE = 'csirtmu/kypo-ansible-runner'
 ANSIBLE_DOCKER_NETWORK = 'bridge'
 ANSWERS_STORAGE_API = 'http://answers-storage:8087/kypo-answers-storage/api/v1'
 SSL_CA_CERTIFICATE_VERIFY = '/etc/ssl/certs'
+DATABASE_ENGINE = "django.db.backends.postgresql"
+DATABASE_HOST = "localhost"
+DATABASE_NAME = "postgres"
+DATABASE_PASSWORD = "postgres"
+DATABASE_PORT = "5432"
+DATABASE_USER = "postgres"
 
 
 class ProxyJump(Object):
@@ -39,6 +45,19 @@ class ProxyJump(Object):
         self.Host = host
         self.User = user
         self.IdentityFile = identity_file
+
+
+class Database(Object):
+    engine = Attribute(type=str, default=DATABASE_ENGINE)
+    host = Attribute(type=str, default=DATABASE_HOST)
+    name = Attribute(type=str, default=DATABASE_NAME)
+    password = Attribute(type=str, default=DATABASE_PASSWORD)
+    port = Attribute(type=str, default=DATABASE_PORT)
+    user = Attribute(type=str, default=DATABASE_USER)
+
+    def __init__(self, **kwargs):
+        for key, val in kwargs.items():
+            setattr(self, key, val)
 
 
 class GitType(Enum):
@@ -116,6 +135,7 @@ class KypoConfiguration(Object):
     flavor_mapping = Attribute(type=FlavorMapping, default=None)
 
     proxy_jump_to_man = Attribute(type=ProxyJump)
+    database = Attribute(type=Database)
 
     sandbox_build_timeout = Attribute(type=int, default=SANDBOX_BUILD_TIMEOUT)
     sandbox_delete_timeout = Attribute(type=int, default=SANDBOX_DELETE_TIMEOUT)
