@@ -12,10 +12,3 @@ class ModelPermissions(DjangoModelPermissions):
         'PATCH': ['%(app_label)s.change_%(model_name)s'],
         'DELETE': ['%(app_label)s.delete_%(model_name)s'],
     }
-
-
-class AllowReadOnViewSandbox(BasePermission):
-    """ Simple permission class which requires `view_sandbox` permission for GET request."""
-    def has_permission(self, request, view):
-        return request.method == "GET" and \
-            request.user.has_perm(__package__ + ".view_sandbox")

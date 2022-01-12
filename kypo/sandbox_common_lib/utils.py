@@ -9,11 +9,14 @@ from typing import Tuple, Union, Iterable, Callable
 import structlog
 from django.conf import settings
 from django.core.cache import cache
+from django.http import Http404
 from django.utils.decorators import method_decorator
 from drf_yasg2 import openapi
 from rest_framework import status
 from drf_yasg2.utils import swagger_auto_schema
 from rest_framework import serializers
+from rest_framework.generics import get_object_or_404 as gen_get_object_or_404
+from rest_framework.response import Response
 
 from cryptography import x509
 from cryptography.x509.oid import NameOID, ExtendedKeyUsageOID
@@ -189,3 +192,10 @@ def add_error_responses_doc(method: str, statuses: Iterable[Union[int, str]]) ->
         ))(cls)
         return cls
     return decorate
+
+
+def get_object_or_404(queryset, *filter_args, **filter_kwargs):
+    try:
+        return gen_get_object_or_404(queryset, *filter_args, **filter_kwargs)
+    except Http404:
+        raise Http404(f'The instance of {queryset.__name__} with {filter_kwargs} not found.')

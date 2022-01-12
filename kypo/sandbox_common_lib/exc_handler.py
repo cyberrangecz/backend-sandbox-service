@@ -22,6 +22,8 @@ def custom_exception_handler(exc, context):
         response = handle_permission_denied(exc, context)
     elif isinstance(exc, ValidationError):
         response = handle_model_validation_error(exc, context)
+    elif isinstance(exc, Http404):
+        response = handle_not_found(exc, context)
     else:
         # Call REST framework's default exception handler, to get the standard error response.
         # Handles only Django Errors.
@@ -55,7 +57,7 @@ def handle_permission_denied(exc, context):
         user_groups = None
     return Response({
         'detail': f'{str(exc)} User roles: {str(user_groups)}'
-    },status=status.HTTP_403_FORBIDDEN)
+    }, status=status.HTTP_403_FORBIDDEN)
 
 
 def handle_model_validation_error(exc, context):
@@ -63,3 +65,10 @@ def handle_model_validation_error(exc, context):
     return Response({
         'detail': str(exc.detail),
     }, status=status.HTTP_400_BAD_REQUEST)
+
+
+def handle_not_found(exc, context):
+    """Fix error message in 404 not found."""
+    return Response({
+        'detail': str(exc),
+    }, status=status.HTTP_404_NOT_FOUND)
