@@ -176,12 +176,6 @@ def create_sandboxes_in_pool(pool: Pool, created_by: Optional[User], count: int 
         return requests.create_allocations_requests(pool, count, created_by)
 
 
-def delete_allocation_units(pool: Pool) -> List[CleanupRequest]:
-    """Delete all sandboxes in given pool."""
-    units = pool.allocation_units.all()
-    return requests.create_cleanup_requests(units)
-
-
 def get_unlocked_sandbox(pool: Pool) -> Optional[Sandbox]:
     """Return unlocked sandbox."""
     # TODO: Create Locks immediately on Sandbox creation

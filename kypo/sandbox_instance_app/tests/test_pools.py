@@ -9,7 +9,7 @@ from rest_framework.test import APIRequestFactory
 from kypo.sandbox_common_lib.exceptions import ApiException, StackError
 from kypo.sandbox_instance_app.lib import pools, sshconfig
 from kypo.sandbox_instance_app.models import SandboxAllocationUnit, Sandbox
-from kypo.sandbox_instance_app.views import PoolList
+from kypo.sandbox_instance_app.views import PoolListCreateView
 
 from kypo.openstack_driver import exceptions
 
@@ -53,7 +53,7 @@ class TestCreatePool:
     def test_pool_views(self, mocker):
         mocker.patch("kypo.sandbox_instance_app.lib.pools.get_hardware_usage_of_sandbox")
         request = self.arf.get(reverse('pool-list'))
-        response = PoolList.as_view()(request)
+        response = PoolListCreateView.as_view()(request)
         assert len(response.data['results']) == 2
 
 
