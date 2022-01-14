@@ -10,7 +10,7 @@ LOG = structlog.get_logger()
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class NetworkingAnsibleAllocationStageDetail(generics.RetrieveAPIView):
+class NetworkingAnsibleAllocationStageDetailView(generics.RetrieveAPIView):
     """
     get: Retrieve a `Networking Ansible` Allocation stage.
     """
@@ -24,7 +24,7 @@ class NetworkingAnsibleAllocationStageDetail(generics.RetrieveAPIView):
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class UserAnsibleAllocationStageDetail(generics.RetrieveAPIView):
+class UserAnsibleAllocationStageDetailView(generics.RetrieveAPIView):
     """
     get: Retrieve a `User Ansible` Allocation stage.
     """
@@ -38,7 +38,7 @@ class UserAnsibleAllocationStageDetail(generics.RetrieveAPIView):
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class NetworkingAnsibleCleanupStageDetail(generics.RetrieveAPIView):
+class NetworkingAnsibleCleanupStageDetailView(generics.RetrieveAPIView):
     """
     get: Retrieve a `Networking Ansible` Cleanup stage.
     """
@@ -52,7 +52,7 @@ class NetworkingAnsibleCleanupStageDetail(generics.RetrieveAPIView):
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class UserAnsibleCleanupStageDetail(generics.RetrieveAPIView):
+class UserAnsibleCleanupStageDetailView(generics.RetrieveAPIView):
     """
     get: Retrieve a `User Ansible` Cleanup stage.
     """
@@ -66,7 +66,7 @@ class UserAnsibleCleanupStageDetail(generics.RetrieveAPIView):
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class NetworkingAnsibleOutputList(generics.ListAPIView):
+class NetworkingAnsibleOutputListView(generics.ListAPIView):
     """
     get: Retrieve a list of Ansible Outputs.
     """
@@ -79,7 +79,7 @@ class NetworkingAnsibleOutputList(generics.ListAPIView):
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class UserAnsibleOutputList(generics.ListAPIView):
+class UserAnsibleOutputListView(generics.ListAPIView):
     """
     get: Retrieve a list of Ansible Outputs.
     """

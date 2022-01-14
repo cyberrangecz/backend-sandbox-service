@@ -14,14 +14,14 @@ LOG = structlog.get_logger()
 
 
 @utils.add_error_responses_doc('get', [401, 403, 500])
-class ProjectInfo(generics.GenericAPIView):
+class ProjectInfoView(generics.RetrieveAPIView):
     # Exploitation of the Pool model permissions, Since the Cloud App does not have any models.
     queryset = Pool.objects.none()  # Required for DjangoModelPermissions
     serializer_class = serializers.QuotaSetSerializer
 
     # noinspection PyMethodMayBeStatic
     @swagger_auto_schema(tags=['cloud'])
-    def get(self, request):
+    def get(self, request, *args, **kwargs):
         """
         Get the quota set and name of project.
         """
@@ -32,7 +32,7 @@ class ProjectInfo(generics.GenericAPIView):
 
 
 @utils.add_error_responses_doc('get', [401, 403, 500])
-class ProjectImages(generics.GenericAPIView):
+class ProjectImagesView(generics.ListAPIView):
     queryset = Pool.objects.none()
     serializer_class = serializers.ImageSerializer
 
@@ -44,7 +44,7 @@ class ProjectImages(generics.GenericAPIView):
 
     # noinspection PyMethodMayBeStatic
     @swagger_auto_schema(tags=['cloud'])
-    def get(self, request):
+    def get(self, request, *args, **kwargs):
         """
         Get list of images.
         """
@@ -59,12 +59,12 @@ class ProjectImages(generics.GenericAPIView):
 
 
 @utils.add_error_responses_doc('get', [401, 403, 500])
-class ProjectLimits(generics.GenericAPIView):
+class ProjectLimitsView(generics.RetrieveAPIView):
     queryset = Pool.objects.none()
     serializer_class = serializers.ProjectLimitsSerializer
 
     @swagger_auto_schema(tags=['cloud'])
-    def get(self, request):
+    def get(self, request, *args, **kwargs):
         """
         Get Absolute limits of OpenStack project.
         """
