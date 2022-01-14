@@ -65,15 +65,15 @@ class PoolDetailDeleteView(generics.RetrieveDestroyAPIView):
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class PoolDefinitionView(generics.RetrieveAPIView):
+    """
+    get: Retrieve the definition associated with a pool.
+    """
     queryset = Pool.objects.all()
     lookup_url_kwarg = "pool_id"
     serializer_class = DefinitionSerializer
 
-    def get(self, request, *args, **kwargs):
-        """Retrieve the definition associate with a pool."""
-        pool = self.get_object()
-        serializer = self.get_serializer(pool.definition)
-        return Response(serializer.data)
+    def get_object(self):
+        return super().get_object().definition
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
@@ -207,7 +207,8 @@ class SandboxAllocationUnitDetailView(generics.RetrieveAPIView):
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class SandboxAllocationRequestView(generics.RetrieveAPIView):
-    """get: Retrieve a Sandbox Allocation Request for an Allocation Unit.
+    """
+    get: Retrieve a Sandbox Allocation Request for an Allocation Unit.
     Each Allocation Unit has exactly one Allocation Request.
     (There may occur a situation where it has none, then it returns 404.)
     """
@@ -215,14 +216,12 @@ class SandboxAllocationRequestView(generics.RetrieveAPIView):
     lookup_url_kwarg = "unit_id"
     serializer_class = serializers.AllocationRequestSerializer
 
-    def get(self, request, *args, **kwargs):
-        unit = self.get_object()
+    def get_object(self):
+        unit = super().get_object()
         try:
-            request = unit.allocation_request
+            return unit.allocation_request
         except AttributeError:
             raise Http404(f"The allocation unit (ID={unit.id}) has no allocation request.")
-        serializer = self.get_serializer(request)
-        return Response(serializer.data)
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
@@ -446,16 +445,16 @@ class SandboxLockDetailDestroyView(generics.RetrieveDestroyAPIView):
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class SandboxTopologyView(generics.RetrieveAPIView):
+    """
+    get: Get topology data for given sandbox.
+    Hosts specified as hidden are filtered out, but the network is still visible.
+    """
     queryset = Sandbox.objects.all()
     lookup_url_kwarg = "sandbox_id"
     serializer_class = serializers.TopologySerializer
 
-    def get(self, request, *args, **kwargs):
-        """Get topology data for given sandbox.
-        Hosts specified as hidden are filtered out, but the network is still visible.
-        """
-        topology = sandboxes.get_sandbox_topology(self.get_object())
-        return Response(self.serializer_class(topology).data)
+    def get_object(self):
+        return sandboxes.get_sandbox_topology(super().get_object())
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])

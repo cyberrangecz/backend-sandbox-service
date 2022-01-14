@@ -6,23 +6,23 @@ from kypo.sandbox_ansible_app import views
 
 urlpatterns = [
     path('allocation-requests/<int:request_id>/stages/networking-ansible',
-         views.NetworkingAnsibleAllocationStageDetail.as_view(),
+         views.NetworkingAnsibleAllocationStageDetailView.as_view(),
          name='networking-ansible-allocation-stage'),
     path('allocation-requests/<int:request_id>/stages/user-ansible',
-         views.UserAnsibleAllocationStageDetail.as_view(),
+         views.UserAnsibleAllocationStageDetailView.as_view(),
          name='user-ansible-allocation-stage'),
 
     path('cleanup-requests/<int:request_id>/stages/networking-ansible',
-         views.NetworkingAnsibleCleanupStageDetail.as_view(),
+         views.NetworkingAnsibleCleanupStageDetailView.as_view(),
          name='networking-ansible-cleanup-stage'),
     path('cleanup-requests/<int:request_id>/stages/user-ansible',
-         views.UserAnsibleCleanupStageDetail.as_view(),
+         views.UserAnsibleCleanupStageDetailView.as_view(),
          name='user-ansible-cleanup-stage'),
 
     path('allocation-requests/<int:request_id>/stages/networking-ansible/outputs',
-         views.NetworkingAnsibleOutputList.as_view(),
+         views.NetworkingAnsibleOutputListView.as_view(),
          name='networking-ansible-output'),
     path('allocation-requests/<int:request_id>/stages/user-ansible/outputs',
-         views.UserAnsibleOutputList.as_view(),
+         views.UserAnsibleOutputListView.as_view(),
          name='user-ansible-output'),
 ]
