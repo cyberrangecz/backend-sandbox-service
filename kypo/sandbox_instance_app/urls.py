@@ -26,6 +26,8 @@ urlpatterns = [
          views.SandboxAllocationRequestView.as_view(), name='sandbox-allocation-request'),
     path('sandbox-allocation-units/<int:unit_id>/cleanup-request',
          views.SandboxCleanupRequestView.as_view(), name='sandbox-cleanup-request'),
+    path('sandbox-allocation-units/<int:unit_id>/allocation-stages/restart',
+         views.SandboxAllocationStagesRestartView.as_view(), name='allocation-stages-restart'),
 
     # Allocation request
     path('allocation-requests/<request_id>',
