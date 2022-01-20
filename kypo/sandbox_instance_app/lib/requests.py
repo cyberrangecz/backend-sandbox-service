@@ -35,6 +35,18 @@ def create_allocation_request(pool: Pool, created_by: Optional[User]) -> Sandbox
     return unit
 
 
+def restart_allocation_stages(unit: SandboxAllocationUnit) -> SandboxAllocationUnit:
+    """Restarts failed allocation stages and recreates the existing sandbox and request in the
+     database.
+    """
+    request = unit.allocation_request
+    pri_key, pub_key = utils.generate_ssh_keypair()
+    sandbox = Sandbox(id=unit.id, allocation_unit=unit,
+                      private_user_key=pri_key, public_user_key=pub_key)
+    request_handlers.AllocationRequestHandler(request).enqueue_request(sandbox, restart_stages=True)
+    return unit
+
+
 def create_allocations_requests(pool: Pool, count: int, created_by: Optional[User])\
         -> List[SandboxAllocationUnit]:
     """Batch version of create_allocation_request. Create count Sandbox Requests."""

@@ -279,6 +279,26 @@ class SandboxCleanupRequestView(generics.RetrieveDestroyAPIView,
         return Response({}, status=status.HTTP_204_NO_CONTENT)
 
 
+class SandboxAllocationStagesRestartView(generics.GenericAPIView):
+    serializer_class = serializers.SandboxAllocationUnitSerializer
+    queryset = SandboxAllocationUnit.objects.all()
+    lookup_url_kwarg = "unit_id"
+
+    @swagger_auto_schema(
+        responses={status.HTTP_201_CREATED: serializers.SandboxAllocationUnitSerializer(),
+                   **{k: v for k, v in utils.ERROR_RESPONSES.items()
+                      if k in [400, 401, 403, 404, 500]}})
+    def patch(self, request, *args, **kwargs):
+        """
+        Restart all failed sandbox allocation stages.
+        """
+        allocation_unit = self.get_object()
+        request = sandbox_requests.restart_allocation_stages(allocation_unit)
+
+        serializer = self.serializer_class(request)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class CleanupRequestDetailView(generics.RetrieveAPIView):
     """get: Retrieve a Sandbox Cleanup Request."""

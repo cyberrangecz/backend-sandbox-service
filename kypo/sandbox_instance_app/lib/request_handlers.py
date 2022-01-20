@@ -116,11 +116,12 @@ class AllocationRequestHandler(RequestHandler):
     request: AllocationRequest
 
     @transaction.atomic
-    def enqueue_request(self, sandbox: Sandbox) -> None:
+    def enqueue_request(self, sandbox: Sandbox,  restart_stages: bool = False) -> None:
         """
-        Handles request stages creation and their enqueuing.
+        Handles request stages creation (or restart) and their enqueuing.
         """
-        stage_handlers = self._create_stage_handlers(sandbox)
+        stage_handlers = self._restart_stage_handlers(sandbox) if restart_stages else \
+            self._create_stage_handlers(sandbox)
         finalizing_stage_function = \
             self._get_finalizing_stage_function(self._save_sandbox_to_database, sandbox)
         on_commit_method = \
@@ -156,6 +157,37 @@ class AllocationRequestHandler(RequestHandler):
         user_stage_handler = AllocationAnsibleStageHandler(user_stage, sandbox)
 
         return [stack_stage_handler, networking_stage_handler, user_stage_handler]
+
+    def _restart_stage_handlers(self, sandbox: Sandbox) -> List[StageHandler]:
+        """
+        Restart failed DB stages for this request and return their handlers.
+        """
+
+        if self.request.stackallocationstage.failed:
+            raise exceptions.ValidationError("Restart of the first stage is not implemented yet.")
+        if not self.request.is_finished:
+            raise exceptions.ValidationError("Allocation of the sandbox is still in progress.")
+        if not self.request.useransibleallocationstage.failed:
+            raise exceptions.ValidationError("All stages finished without failing. Only failed"
+                                             " stages can be restarted.")
+
+        stage_handlers = []
+        if self.request.networkingansibleallocationstage.failed:
+            self.request.networkingansibleallocationstage.delete()
+            networking_stage = \
+                self._create_db_stage(NetworkingAnsibleAllocationStage,
+                                      repo_url=settings.KYPO_CONFIG.ansible_networking_url,
+                                      rev=settings.KYPO_CONFIG.ansible_networking_rev)
+            stage_handlers.append(AllocationAnsibleStageHandler(networking_stage, sandbox))
+
+        self.request.useransibleallocationstage.delete()
+        user_stage = \
+            self._create_db_stage(UserAnsibleAllocationStage,
+                                  repo_url=self.request.allocation_unit.pool.definition.url,
+                                  rev=self.request.allocation_unit.pool.rev_sha)
+        stage_handlers.append(AllocationAnsibleStageHandler(user_stage, sandbox))
+
+        return stage_handlers
 
     def _get_stage_handlers(self) -> List[StageHandler]:
         """
