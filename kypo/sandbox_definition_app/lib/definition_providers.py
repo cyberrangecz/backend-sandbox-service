@@ -62,10 +62,11 @@ class DefinitionProvider(ABC):
             raise exceptions.GitError(
                 f"The GIT protocol does not match the configured value for this instance: "
                 f"expected='ssh', actual={url_parsed.protocol}")
-        if url_parsed.user != config.git_user:
+        user = url_parsed.user[6:] if url_parsed.user.startswith("ssh://") else url_parsed.user
+        if user != config.git_user:
             raise exceptions.GitError(
                 f"The GIT user does not match the configured value for this instance: "
-                f"expected='{config.git_user}', actual={url_parsed.user}")
+                f"expected='{config.git_user}', actual={user}")
 
         return url_parsed
 
@@ -128,12 +129,13 @@ class InternalGitProvider(DefinitionProvider):
 
     def __init__(self, url: str, config: KypoConfiguration):
         url_parsed = self.validate(url, config)
-        self.rest_url = self.get_rest_url(config.git_rest_server, url_parsed)
+        self.rest_url = self.get_rest_url(config, url_parsed)
 
     def validate(self, url: str, config: KypoConfiguration):
         url_parsed = DefinitionProvider.validate(url, config)
         pathname = url_parsed.pathname.split('/')
-        actual_prefix = pathname[0] if pathname[0] != '' else pathname[1]
+        actual_prefix = pathname[0] \
+            if pathname[0] != '' and pathname[0] != str(config.git_ssh_port) else pathname[1]
 
         if actual_prefix != KYPO_GIT_PREFIX:
             raise exceptions.GitError(
@@ -180,13 +182,15 @@ class InternalGitProvider(DefinitionProvider):
             raise exceptions.GitError('Failed to get sha of the GIT rev.', ex)
 
     @staticmethod
-    def get_rest_url(git_rest_server: str, url_parsed) -> str:
+    def get_rest_url(config: KypoConfiguration, url_parsed) -> str:
         """Return URL of the repository."""
         pathname = url_parsed.pathname
         pathname = '/' + pathname if pathname[0] != '/' else pathname
         pathname = pathname.split('/')
+        if pathname[1] == str(config.git_ssh_port):
+            pathname.pop(1)
         pathname = f'/{pathname[1]}/{";".join(pathname[2:])}'
-        return parse.urljoin(git_rest_server, pathname)
+        return parse.urljoin(config.git_rest_server, pathname)
 
     @staticmethod
     def get_request(url: str):
