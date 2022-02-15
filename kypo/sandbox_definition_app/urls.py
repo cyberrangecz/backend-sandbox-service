@@ -11,4 +11,6 @@ urlpatterns = [
          name='definition-detail'),
     path('definitions/<int:definition_id>/refs', views.DefinitionRefsListView.as_view(),
          name='definition-rev-list'),
+    path('definitions/<int:definition_id>/topology', views.DefinitionTopologyView.as_view(),
+         name='definition-topology')
 ]

@@ -10,6 +10,9 @@ from kypo.sandbox_definition_app.lib import definitions
 from kypo.sandbox_definition_app.lib.definition_providers import DefinitionProvider
 from kypo.sandbox_definition_app.models import Definition
 
+from kypo.sandbox_instance_app import serializers as instance_serializers
+from kypo.sandbox_instance_app.lib.topology import Topology
+
 LOG = structlog.get_logger()
 
 
@@ -60,3 +63,19 @@ class DefinitionRefsListView(generics.ListAPIView):
         provider: DefinitionProvider = definitions.get_def_provider(definition.url,
                                                                     settings.KYPO_CONFIG)
         return provider.get_refs()
+
+
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
+class DefinitionTopologyView(generics.RetrieveAPIView):
+    """
+    get: Retrieve topology visualisation data from TopologyDefinition
+    """
+    serializer_class = instance_serializers.TopologySerializer
+
+    def get_object(self):
+        definition_id = self.kwargs.get('definition_id')
+        definition = utils.get_object_or_404(Definition, pk=definition_id)
+        topology_definition = definitions.get_definition(definition.url, definition.rev,
+                                                         settings.KYPO_CONFIG)
+        client = utils.get_ostack_client()
+        return Topology(client.get_topology_instance(topology_definition))
