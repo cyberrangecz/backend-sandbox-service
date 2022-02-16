@@ -8,7 +8,7 @@ Host jump-host-ip
 
 Host man 10.10.10.10
     HostName 10.10.10.10
-    User kypo-user
+    User user
     IdentityFile <path_to_sandbox_private_key>
     ProxyJump stack-name@jump-host-ip
     UserKnownHostsFile /dev/null
@@ -17,36 +17,36 @@ Host man 10.10.10.10
 
 Host home-router 10.10.30.1
     HostName 10.10.30.1
-    User kypo-user
+    User user
     IdentityFile <path_to_sandbox_private_key>
-    ProxyJump kypo-user@man
+    ProxyJump user@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
     IdentitiesOnly yes
 
 Host server-router 10.10.20.1
     HostName 10.10.20.1
-    User kypo-user
+    User user
     IdentityFile <path_to_sandbox_private_key>
-    ProxyJump kypo-user@man
+    ProxyJump user@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
     IdentitiesOnly yes
 
 Host home 10.10.30.5
     HostName 10.10.30.5
-    User kypo-user
+    User user
     IdentityFile <path_to_sandbox_private_key>
-    ProxyJump kypo-user@man
+    ProxyJump user@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
     IdentitiesOnly yes
 
 Host server 10.10.20.5
     HostName 10.10.20.5
-    User kypo-user
+    User user
     IdentityFile <path_to_sandbox_private_key>
-    ProxyJump kypo-user@man
+    ProxyJump user@man
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
     IdentitiesOnly yes

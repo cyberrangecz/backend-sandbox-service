@@ -6,7 +6,7 @@ from kypo.openstack_driver import TopologyInstance, Link
 
 LOG = structlog.getLogger()
 
-SSH_PROXY_USERNAME = 'kypo-user'
+SSH_PROXY_USERNAME = 'user'
 SSH_PROXY_KEY = '<path_to_proxy_jump_private_key>'
 
 # Add missing SSH Options to ssh_config.Host.attrs
