@@ -16,8 +16,6 @@ from kypo.sandbox_instance_app import models
 from kypo.sandbox_instance_app.lib import pools, requests
 from kypo.sandbox_cloud_app import serializers as cloud_serializers
 
-MAX_SANDBOXES_PER_POOL = 64
-
 
 class PoolSerializer(serializers.ModelSerializer):
     size = serializers.SerializerMethodField(
@@ -37,11 +35,10 @@ class PoolSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def validate_max_size(value):
-        """Validate that max_size is in [1, MAX_SANDBOXES_PER_POOL]"""
-        if not 1 <= value <= MAX_SANDBOXES_PER_POOL:
+        """Validate that max_size is greater than 0"""
+        if value < 1:
             raise serializers.ValidationError(
-                f'Pool max_size value must be in interval [1, {MAX_SANDBOXES_PER_POOL}].'
-                f' Your value: {value}.')
+                f'Pool max_size value must be greater than 0. Your value: {value}.')
         return value
 
     @staticmethod
