@@ -8,9 +8,13 @@ from rest_framework.response import Response
 
 from kypo.sandbox_instance_app.models import Pool
 
+from drf_yasg2 import openapi
 from drf_yasg2.utils import swagger_auto_schema
 
+from django.core.cache import cache
+
 LOG = structlog.get_logger()
+IMAGE_LIST_CACHE_TIMEOUT = None
 
 
 @utils.add_error_responses_doc('get', [401, 403, 500])
@@ -43,18 +47,56 @@ class ProjectImagesView(generics.ListAPIView):
         return _paginator
 
     # noinspection PyMethodMayBeStatic
-    @swagger_auto_schema(tags=['cloud'])
+    @swagger_auto_schema(tags=['cloud'],
+                         manual_parameters=[
+                            openapi.Parameter('name', openapi.IN_QUERY, type=openapi.TYPE_STRING),
+                            openapi.Parameter('os_distro', openapi.IN_QUERY,
+                                              type=openapi.TYPE_STRING),
+                            openapi.Parameter('os_type', openapi.IN_QUERY,
+                                              type=openapi.TYPE_STRING),
+                            openapi.Parameter('visibility', openapi.IN_QUERY,
+                                              type=openapi.TYPE_STRING),
+                            openapi.Parameter('default_user', openapi.IN_QUERY,
+                                              type=openapi.TYPE_STRING),
+                            openapi.Parameter('munikypo', openapi.IN_QUERY,
+                                              description="Returns only images with the attribute "
+                                                          "owner_specified.openstack.created_by "
+                                                          "set to munikypo",
+                                              type=openapi.TYPE_BOOLEAN, default=False),
+                            openapi.Parameter('cached', openapi.IN_QUERY,
+                                              description="Performs the faster version of this "
+                                                          "endpoint but does retrieve a fresh list"
+                                                          " of images.",
+                                              type=openapi.TYPE_BOOLEAN, default=False),
+                        ])
     def get(self, request, *args, **kwargs):
         """
         Get list of images.
         """
-        image_set = projects.list_images()
-        serialized_image_set = serializers.ImageSerializer(image_set, many=True)
+        if request.GET.get('cached') == "true":
+            image_set = cache.get("image_list", None)
+            if not image_set:
+                image_set = projects.list_images()
+        else:
+            image_set = projects.list_images()
+        cache.set("image_list", image_set, IMAGE_LIST_CACHE_TIMEOUT)
 
+        if request.GET.get('munikypo') == "true":
+            image_set = [image for image in image_set if
+                         image.owner_specified.get('owner_specified.openstack.created_by', 'other')
+                         == 'munikypo']
+        if image_set:
+            image_attributes = [attribute for attribute in dir(image_set[0])
+                                if not attribute.startswith('__')]
+            for attribute in image_attributes:
+                attribute_filter = request.GET.get(attribute)
+                if attribute_filter:
+                    image_set = [image for image in image_set if getattr(image, attribute)
+                                 and attribute_filter in getattr(image, attribute)]
+        serialized_image_set = serializers.ImageSerializer(image_set, many=True)
         page = self.paginate_queryset(serialized_image_set.data)
         if page is not None:
             return self.get_paginated_response(page)
-
         return Response({'image_set': serialized_image_set.data})
 
 

@@ -3,6 +3,7 @@ from collections import OrderedDict
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.compat import coreapi, coreschema
+from django.db.models.query import QuerySet
 
 
 class PageNumberWithPageSizePagination(PageNumberPagination):
@@ -36,13 +37,6 @@ class PageNumberWithPageSizePagination(PageNumberPagination):
 
         return fields
 
-    def sorted_data(self, data):
-        sort_by_param = self.request.GET.get('sort_by', self.sort_by_default_param)
-        order_param = self.request.GET.get('order', self.order_default_param)
-
-        return sorted(data, key=lambda item: item.get(sort_by_param, ''),
-                      reverse=order_param == 'desc')
-
     def get_paginated_response(self, data):
         """Override base class method and extend it with extra args."""
         return Response(OrderedDict([
@@ -51,5 +45,17 @@ class PageNumberWithPageSizePagination(PageNumberPagination):
             ('page_count', self.page.paginator.num_pages),
             ('count', len(self.page)),
             ('total_count', self.page.paginator.count),
-            ('results', self.sorted_data(data)),
+            ('results', data),
         ]))
+
+    def paginate_queryset(self, queryset, request, view=None):
+        sort_by_param = request.GET.get('sort_by', self.sort_by_default_param)
+        order_param = request.GET.get('order', self.order_default_param)
+
+        if isinstance(queryset, QuerySet):
+            sort_by_param = '-'+sort_by_param if order_param == "desc" else sort_by_param
+            queryset.order_by(sort_by_param)
+        else:
+            queryset = sorted(queryset, key=lambda item: item.get(sort_by_param, ''),
+                              reverse=order_param == 'desc')
+        return super().paginate_queryset(queryset, request, view)
