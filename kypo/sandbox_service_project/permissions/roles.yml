@@ -196,5 +196,6 @@
 - name: trainee
   default: true
   permissions:
+    - view_definition
     - view_sandbox
     - change_sandbox
