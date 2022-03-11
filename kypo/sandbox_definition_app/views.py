@@ -70,11 +70,12 @@ class DefinitionTopologyView(generics.RetrieveAPIView):
     """
     get: Retrieve topology visualisation data from TopologyDefinition
     """
+    queryset = Definition.objects.all()
+    lookup_url_kwarg = "definition_id"
     serializer_class = instance_serializers.TopologySerializer
 
     def get_object(self):
-        definition_id = self.kwargs.get('definition_id')
-        definition = utils.get_object_or_404(Definition, pk=definition_id)
+        definition = super().get_object()
         topology_definition = definitions.get_definition(definition.url, definition.rev,
                                                          settings.KYPO_CONFIG)
         client = utils.get_ostack_client()
