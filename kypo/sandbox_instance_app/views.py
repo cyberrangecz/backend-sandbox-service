@@ -406,7 +406,7 @@ class PoolSandboxListView(generics.ListAPIView):
 
 class SandboxGetAndLockView(generics.RetrieveAPIView):
     serializer_class = serializers.SandboxSerializer
-    queryset = Pool.objects.all()
+    queryset = Sandbox.objects.all()  # To allow trainee to access training run!
     lookup_url_kwarg = "pool_id"
 
     @swagger_auto_schema(
@@ -417,7 +417,8 @@ class SandboxGetAndLockView(generics.RetrieveAPIView):
                       k in [400, 401, 403, 404, 500]}})
     def get(self, request, *args, **kwargs):
         """Get unlocked sandbox in given pool and lock it. Return 409 if all are locked."""
-        pool = self.get_object()
+        pool_id = self.kwargs.get('pool_id')
+        pool = get_object_or_404(Pool, id=pool_id)
         sandbox = pools.get_unlocked_sandbox(pool)
         if not sandbox:
             return Response({'detail': 'All sandboxes are already locked.'},
