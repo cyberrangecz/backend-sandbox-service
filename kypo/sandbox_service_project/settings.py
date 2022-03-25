@@ -217,21 +217,11 @@ CACHES = {
 }
 
 RQ_QUEUES = {
-    'default': {
-        'HOST': 'localhost',
-        'PORT': 6379,
-        'DB': 0,
-    },
-    'openstack': {
-        'HOST': 'localhost',
-        'PORT': 6379,
-        'DB': 0,
-    },
-    'ansible': {
-        'HOST': 'localhost',
-        'PORT': 6379,
-        'DB': 0,
-    }
+    queue_name: {
+        'HOST': KYPO_CONFIG.redis.host,
+        'PORT': KYPO_CONFIG.redis.port,
+        'DB': KYPO_CONFIG.redis.db,
+    } for queue_name in ['default', 'openstack', 'ansible']
 }
 
 RQ_SHOW_ADMIN_LINK = True

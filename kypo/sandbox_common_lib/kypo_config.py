@@ -34,6 +34,9 @@ DATABASE_NAME = "postgres"
 DATABASE_PASSWORD = "postgres"
 DATABASE_PORT = "5432"
 DATABASE_USER = "postgres"
+REDIS_HOST = "localhost"
+REDIS_PORT = 6379
+REDIS_DB = 0
 
 
 class ProxyJump(Object):
@@ -58,6 +61,12 @@ class Database(Object):
     def __init__(self, **kwargs):
         for key, val in kwargs.items():
             setattr(self, key, val)
+
+
+class Redis(Object):
+    host = Attribute(type=str, default=REDIS_HOST)
+    port = Attribute(type=int, default=REDIS_PORT)
+    db = Attribute(type=int, default=REDIS_DB)
 
 
 class GitType(Enum):
@@ -136,6 +145,7 @@ class KypoConfiguration(Object):
 
     proxy_jump_to_man = Attribute(type=ProxyJump)
     database = Attribute(type=Database)
+    redis = Attribute(type=Redis, default=())
 
     sandbox_build_timeout = Attribute(type=int, default=SANDBOX_BUILD_TIMEOUT)
     sandbox_delete_timeout = Attribute(type=int, default=SANDBOX_DELETE_TIMEOUT)
