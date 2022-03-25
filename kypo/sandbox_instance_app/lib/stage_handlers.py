@@ -113,7 +113,8 @@ class StageHandler(abc.ABC):
         """
         if hasattr(self.stage, 'rq_job'):
             try:
-                Job.fetch(self.stage.rq_job.job_id, connection=Redis())\
+                Job.fetch(self.stage.rq_job.job_id,
+                          connection=Redis(host=settings.KYPO_CONFIG.redis.host))\
                     .delete(delete_dependents=True)
             except NoSuchJobError:  # Job already deleted
                 pass

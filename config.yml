@@ -160,3 +160,9 @@ application_configuration:
 
         # The username to use when connecting to the database.
         #user: "postgres"
+
+    # Django redis settings for rq queues.
+    redis:
+        host: "localhost"
+        port: 6379
+        db: 0
