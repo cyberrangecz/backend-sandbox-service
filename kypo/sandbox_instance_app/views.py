@@ -9,6 +9,9 @@ from rest_framework import status, generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from generator.var_parser import get_variables
+from generator.var_generator import generate
+
 from kypo.sandbox_common_lib import exceptions, utils
 from kypo.sandbox_common_lib.utils import get_object_or_404
 from kypo.sandbox_definition_app.serializers import DefinitionSerializer
@@ -587,3 +590,33 @@ class SandboxConsolesView(APIView):
                      [router.name for router in topology_instance.get_routers()]
         consoles = {name: nodes.get_console_url(sandbox, name) for name in node_names}
         return Response(consoles)
+
+
+@utils.add_error_responses_doc('post', [401, 403, 404, 500])
+class LocalSandboxVariablesView(generics.CreateAPIView):
+    queryset = Sandbox.objects.none()
+    serializer_class = serializers.LocalSandboxVariablesSerializer
+
+    @swagger_auto_schema(responses={201: serializers.LocalVariableSerializer(many=True)})
+    def post(self, request, *args, **kwargs):
+        """Generate variables for local sandboxes, send it to answers-storage."""
+        variables_raw = request.data.get('variables')
+        user_id = request.data.get('user_id')
+        access_token = request.data.get('access_token')
+
+        variables_raw = {
+            variable['name']: {
+                'type': variable['type'],
+                'min': variable.get('min'),
+                'max': variable.get('max'),
+                'length': variable.get('length'),
+                'prohibited': variable.get('prohibited'),
+            } for variable in variables_raw
+        }
+
+        variables = get_variables(variables_raw)
+        generate(variables, user_id)
+        sandboxes.post_answers(user_id, access_token, variables)
+
+        serialized_variables = serializers.LocalVariableSerializer(variables, many=True)
+        return Response(serialized_variables.data)
