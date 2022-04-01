@@ -116,6 +116,11 @@ application_configuration:
     # Use in case of self-signed certificates in related services.
     #ssl_ca_certificate_verify: ""
 
+    terraform_configuration:
+        # The type of backend that Terraform is using. The 'local' is suitable only for the
+        # development, for production user 'pg'
+        backend_type: 'local'
+
     sandbox_configuration:
         # The name or ID of network in OpenStack where all sandboxes will be deployed.
         base_network: jump_network

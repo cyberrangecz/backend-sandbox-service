@@ -1,6 +1,6 @@
 import structlog
 
-from kypo.openstack_driver import TopologyInstance
+from kypo.cloud_commons import TopologyInstance
 from kypo.sandbox_cloud_app.lib.projects import list_images
 from kypo.topology_definition.models import Host
 

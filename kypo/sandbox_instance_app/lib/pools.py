@@ -21,9 +21,8 @@ from kypo.sandbox_instance_app import serializers
 from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit, CleanupRequest, \
     SandboxLock, PoolLock
 
-from kypo.openstack_driver.exceptions import KypoException, InvalidTopologyDefinition,\
-    StackCreationFailed
-from kypo.openstack_driver.open_stack_proxy_elements import HardwareUsage
+from kypo.cloud_commons import KypoException, InvalidTopologyDefinition,\
+    StackCreationFailed, HardwareUsage
 
 LOG = structlog.get_logger()
 POOL_CACHE_TIMEOUT = None
@@ -63,7 +62,7 @@ def create_pool(data: Dict, created_by: Optional[User]) -> Pool:
     serializer.is_valid(raise_exception=True)
     pool = serializer.save(created_by=created_by)
     try:
-        client = utils.get_ostack_client()
+        client = utils.get_terraform_client()
 
         # Validate definition
         top_def = definitions.get_definition(definition.url, pool.rev_sha, settings.KYPO_CONFIG)
@@ -106,7 +105,7 @@ def delete_pool(pool: Pool) -> None:
     except ProtectedError:
         raise exceptions.ValidationError('Cannot delete locked pool.')
 
-    client = utils.get_ostack_client()
+    client = utils.get_terraform_client()
     try:
         client.delete_keypair(ssh_keypair_name)
     except KypoException as exc:
@@ -141,7 +140,7 @@ def validate_hardware_usage_of_sandboxes(pool, count) -> None:
     try:
         top_def = definitions.get_definition(pool.definition.url, pool.rev_sha,
                                              settings.KYPO_CONFIG)
-        client = utils.get_ostack_client()
+        client = utils.get_terraform_client()
         topology_instance = client.get_topology_instance(top_def)
         client.validate_hardware_usage_of_stacks(topology_instance, count)
     except StackCreationFailed as exc:
@@ -235,7 +234,7 @@ def _get_hardware_usage(url: str, rev: str) -> Optional[HardwareUsage]:
     """
     try:
         top_def = definitions.get_definition(url, rev, settings.KYPO_CONFIG)
-        client = utils.get_ostack_client()
+        client = utils.get_terraform_client()
         client.validate_topology_definition(top_def)
         top_instance = client.get_topology_instance(top_def)
     except (exceptions.GitError, exceptions.ImproperlyConfigured, exceptions.ValidationError,

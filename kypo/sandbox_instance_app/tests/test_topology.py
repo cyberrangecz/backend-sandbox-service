@@ -9,7 +9,7 @@ pytestmark = pytest.mark.django_db
 class TestTopology:
     def test_topology_success(self, mocker, top_ins, topology, image):
         mock_images = mocker.patch(
-            'kypo.openstack_driver.open_stack_client.KypoOpenStackClient.list_images')
+            'kypo.terraform_driver.KypoTerraformClient.list_images')
         mock_images.return_value = [image]
         topo = sandboxes.Topology(top_ins)
 

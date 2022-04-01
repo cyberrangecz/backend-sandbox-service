@@ -4,7 +4,7 @@ Django Apps configuration file
 import os
 from enum import Enum
 
-from kypo.openstack_driver import TransformationConfiguration
+from kypo.cloud_commons import TransformationConfiguration
 from yamlize import Attribute, Object, YamlizingError, Typed, Map
 
 from kypo.sandbox_common_lib import kypo_config_validation
@@ -48,6 +48,10 @@ class ProxyJump(Object):
         self.Host = host
         self.User = user
         self.IdentityFile = identity_file
+
+
+class TerraformConfiguration(Object):
+    backend_type = Attribute(type=str)
 
 
 class Database(Object):
@@ -144,6 +148,7 @@ class KypoConfiguration(Object):
     flavor_mapping = Attribute(type=FlavorMapping, default=None)
 
     proxy_jump_to_man = Attribute(type=ProxyJump)
+    terraform_configuration = Attribute(type=TerraformConfiguration)
     database = Attribute(type=Database)
     redis = Attribute(type=Redis, default=())
 

@@ -20,7 +20,7 @@ class TestCreateDefinition:
     @pytest.fixture(autouse=True)
     def setup(self, mocker):
         mocker.patch("kypo.sandbox_definition_app.lib.definitions.DefinitionProvider")
-        mocker.patch("kypo.openstack_driver.KypoOpenStackClient.validate_topology_definition")
+        mocker.patch("kypo.terraform_driver.KypoTerraformClient.validate_topology_definition")
 
     @pytest.fixture
     def topology_definition(self, mocker):

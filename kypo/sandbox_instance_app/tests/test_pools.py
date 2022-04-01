@@ -11,7 +11,7 @@ from kypo.sandbox_instance_app.lib import pools, sshconfig
 from kypo.sandbox_instance_app.models import SandboxAllocationUnit, Sandbox
 from kypo.sandbox_instance_app.views import PoolListCreateView
 
-from kypo.openstack_driver import exceptions
+from kypo.cloud_commons import exceptions
 
 pytestmark = pytest.mark.django_db
 
@@ -25,7 +25,7 @@ class TestCreatePool:
 
     @pytest.fixture(autouse=True)
     def set_up(self, mocker):
-        self.client = mocker.patch("kypo.sandbox_common_lib.utils.get_ostack_client")
+        self.client = mocker.patch("kypo.sandbox_common_lib.utils.get_terraform_client")
         mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_definition")
         mock_repo = mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_def_provider")
         mock_repo.return_value.get_rev_sha = mocker.MagicMock(return_value='sha')
@@ -74,7 +74,7 @@ class TestCreateSandboxesInPool:
     @pytest.fixture(autouse=True)
     def set_up(self, mocker, definition):
         self.client = mocker.MagicMock()
-        mock_get_client = mocker.patch("kypo.sandbox_common_lib.utils.get_ostack_client")
+        mock_get_client = mocker.patch("kypo.sandbox_common_lib.utils.get_terraform_client")
         mock_get_client.return_value = self.client
         mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_definition")
         self.create_mock = mocker.patch(

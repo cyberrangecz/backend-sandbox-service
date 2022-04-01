@@ -34,7 +34,7 @@ def create_definition(url: str, created_by: Optional[User], rev: str = None) -> 
     top_def = get_definition(url, rev, settings.KYPO_CONFIG)
     validate_topology_definition(top_def)
 
-    client = utils.get_ostack_client()
+    client = utils.get_terraform_client()
     client.validate_topology_definition(top_def)
     if not DefinitionProvider.has_key_access(url, settings.KYPO_CONFIG):
         raise exceptions.ValidationError('Repository is not accessible using SSH key.')

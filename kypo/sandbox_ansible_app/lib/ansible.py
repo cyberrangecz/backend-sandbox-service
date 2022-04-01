@@ -156,13 +156,13 @@ class AllocationAnsibleDockerRunner(AnsibleDockerRunner):
         top_ins = sandboxes.get_topology_instance(sandbox)
         sau = sandbox.allocation_unit
         sas = sau.allocation_request.stackallocationstage
-        if not hasattr(sas, 'heatstack'):
+        if not hasattr(sas, 'terraformstack'):
             raise exceptions.ApiException(f'The SandboxAllocationUnit ID={sas.id} '
-                                          'does not have any HeatStack instance.')
-        heatstack = sas.heatstack
+                                          'does not have any TerraformStack instance.')
+        terraformstack = sas.terraformstack
         extra_vars = {
             'kypo_global_sandbox_allocation_unit_id': sau.id,
-            'kypo_global_openstack_stack_id': heatstack.stack_id,
+            'kypo_global_openstack_stack_id': terraformstack.stack_id,
             'kypo_global_pool_id': sau.pool.id,
             'kypo_global_head_ip': settings.KYPO_CONFIG.kypo_head_ip,
         }

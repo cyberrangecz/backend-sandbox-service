@@ -243,7 +243,7 @@ class TestIntegration:
     def create_jump_host(jump_template):
         LOG.info(f'Creating jump host {JUMP_STACK_NAME}')
         template = string.Template(jump_template)
-        client = utils.get_ostack_client()
+        client = utils.get_terraform_client()
         client.open_stack_proxy.create_stack_from_template(
             template.safe_substitute(**TEMPLATE_DICT), JUMP_STACK_NAME)
 
@@ -253,7 +253,7 @@ class TestIntegration:
     @staticmethod
     def delete_jump_host():
         LOG.info("Deleting Jump Host")
-        client = utils.get_ostack_client()
+        client = utils.get_terraform_client()
         client.delete_stack(JUMP_STACK_NAME)
 
     @staticmethod
@@ -268,17 +268,17 @@ class TestIntegration:
 
     @staticmethod
     def create_key_pair():
-        client = utils.get_ostack_client()
+        client = utils.get_terraform_client()
         return client.create_keypair(KEY_PAIR).to_dict().get('private_key')
 
     @staticmethod
     def delete_key_pair():
-        client = utils.get_ostack_client()
+        client = utils.get_terraform_client()
         client.delete_keypair(KEY_PAIR)
 
     @staticmethod
     def get_jump_ip_address():
-        client = utils.get_ostack_client()
+        client = utils.get_terraform_client()
         links = client.get_node(JUMP_STACK_NAME, JUMP_SERVER).links.get(JUMP_NETWORK)
         links = [link for link in links if link['type'] == 'floating']
         return links[0]['addr'] if links else None
