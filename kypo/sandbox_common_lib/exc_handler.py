@@ -1,7 +1,7 @@
 import structlog
 from django.conf import settings
 from django.http import Http404
-from kypo.openstack_driver.exceptions import KypoException
+from kypo.cloud_commons import KypoException
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response

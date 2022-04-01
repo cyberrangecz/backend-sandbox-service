@@ -273,7 +273,40 @@ class ExternalDependencyCleanup(models.Model):
         abstract = True
 
 
-class HeatStack(ExternalDependency):
+class TerraformOutput(models.Model):
+    content = models.TextField()
+
+    class Meta:
+        abstract = True
+        ordering = ['id']
+
+    def __str__(self):
+        return f'ID: {self.id}, CONTENT: {self.content}'
+
+
+class AllocationTerraformOutput(TerraformOutput):
+    allocation_stage = models.ForeignKey(
+        AllocationStage,
+        on_delete=models.CASCADE,
+        related_name='terraform_outputs'
+    )
+
+    def __str__(self):
+        return f'{super().__str__()} STAGE: {self.allocation_stage.id}'
+
+
+class CleanupTerraformOutput(TerraformOutput):
+    cleanup_stage = models.ForeignKey(
+        CleanupStage,
+        on_delete=models.CASCADE,
+        related_name='terraform_outputs'
+    )
+
+    def __str__(self):
+        return f'{super().__str__()} STAGE: {self.cleanup_stage.id}'
+
+
+class TerraformStack(ExternalDependency):
     stack_id = models.TextField()
 
     def __str__(self):

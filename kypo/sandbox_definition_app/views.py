@@ -78,5 +78,5 @@ class DefinitionTopologyView(generics.RetrieveAPIView):
         definition = super().get_object()
         topology_definition = definitions.get_definition(definition.url, definition.rev,
                                                          settings.KYPO_CONFIG)
-        client = utils.get_ostack_client()
+        client = utils.get_terraform_client()
         return Topology(client.get_topology_instance(topology_definition))

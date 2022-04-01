@@ -26,7 +26,12 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PATH="/app/.venv/bin:$PATH"
 
-RUN apt-get update && apt-get install -y git redis supervisor netcat
+RUN apt-get update && apt-get install -y git redis supervisor netcat gnupg software-properties-common curl
+
+## Install Terraform
+RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
+RUN apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+RUN apt-get update && apt-get install -y terraform
 
 COPY bin bin
 COPY kypo kypo

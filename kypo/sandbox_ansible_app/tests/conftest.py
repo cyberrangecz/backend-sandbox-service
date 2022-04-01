@@ -3,7 +3,7 @@ import os
 import yaml
 from django.core.management import call_command
 
-from kypo.openstack_driver import TopologyInstance, TransformationConfiguration
+from kypo.cloud_commons import TopologyInstance, TransformationConfiguration
 
 from kypo.topology_definition.models import TopologyDefinition
 

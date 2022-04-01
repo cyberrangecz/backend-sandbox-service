@@ -10,7 +10,7 @@ pytestmark = pytest.mark.django_db
 class TestPrepareInventoryFile:
     @pytest.fixture(autouse=True)
     def set_up(self, mocker, top_ins):
-        self.client = mocker.patch('kypo.sandbox_common_lib.utils.get_ostack_client')
+        self.client = mocker.patch('kypo.sandbox_common_lib.utils.get_terraform_client')
         self.client.get_sandbox.return_value = top_ins
         self.save_file = mocker.patch(
             'kypo.sandbox_ansible_app.lib.ansible.AnsibleDockerRunner.save_file')

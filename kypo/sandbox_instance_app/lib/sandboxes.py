@@ -12,7 +12,7 @@ import json
 from django.conf import settings
 from django.core.cache import cache
 from django.db import transaction
-from kypo.openstack_driver import TopologyInstance
+from kypo.cloud_commons import TopologyInstance
 from kypo.topology_definition.models import TopologyDefinition
 from rest_framework.generics import get_object_or_404
 
@@ -24,7 +24,7 @@ from kypo.sandbox_instance_app.lib.topology import Topology
 from kypo.sandbox_instance_app.models import Sandbox, SandboxLock
 
 SANDBOX_CACHE_TIMEOUT = None  # Cache indefinitely
-SANDBOX_CACHE_PREFIX = 'heatstack-{}'
+SANDBOX_CACHE_PREFIX = 'terraformstack-{}'
 TEMPLATE_DIR_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'assets')
 HEADERS = {
     'accept': 'application/json',
@@ -149,7 +149,7 @@ def get_ansible_sshconfig(sandbox: Sandbox, mng_key: str, git_key: str,
 
 def get_topology_instance(sandbox: Sandbox) -> TopologyInstance:
     """Get topology instance object. This function is cached."""
-    client = utils.get_ostack_client()
+    client = utils.get_terraform_client()
     ti = cache.get_or_set(
         get_cache_key(sandbox),
         lambda: client.get_enriched_topology_instance(

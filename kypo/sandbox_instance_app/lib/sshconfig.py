@@ -2,7 +2,7 @@ from typing import List
 import structlog
 from ssh_config.client import Host, SSHConfig, EmptySSHConfig, WrongSSHConfig
 
-from kypo.openstack_driver import TopologyInstance, Link
+from kypo.cloud_commons import TopologyInstance, Link
 
 LOG = structlog.getLogger()
 

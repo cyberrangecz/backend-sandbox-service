@@ -4,7 +4,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from docker.errors import DockerException, NotFound as DockerContainerNotFound
 
-from kypo.openstack_driver import exceptions as driver_exceptions
+from kypo.cloud_commons import exceptions as driver_exceptions
 
 from kypo.sandbox_instance_app.models import Stage
 from kypo.sandbox_ansible_app.models import NetworkingAnsibleAllocationStage
@@ -26,13 +26,15 @@ def assert_db_stage(stage: Stage, start_time: timezone.datetime, failed: bool = 
 
 class TestAllocationStackStageHandler:
     @pytest.fixture(autouse=True)
-    def set_up(self, mocker, stack):
+    def set_up(self, mocker, process):
         mocker.patch('kypo.sandbox_instance_app.lib.stage_handlers.LOG')
         mocker.patch('kypo.sandbox_instance_app.lib.stage_handlers.definitions.get_definition')
-        mocker.patch('kypo.sandbox_instance_app.lib.stage_handlers.utils.get_ostack_client')
+        mocker.patch('kypo.sandbox_instance_app.lib.stage_handlers.utils.get_terraform_client')
         stage_handlers.AllocationStackStageHandler._client = mocker.Mock()
         stage_handlers.AllocationStackStageHandler._client\
-            .create_stack.return_value = stack
+            .get_process_output.return_value = ['output']
+        stage_handlers.AllocationStackStageHandler._client\
+            .create_stack.return_value = process
         stage_handlers.AllocationStackStageHandler._client \
             .wait_for_stack_create_action.return_value = True, 'success'
         stage_handlers.AllocationStackStageHandler._client \
@@ -40,12 +42,12 @@ class TestAllocationStackStageHandler:
         stage_handlers.AllocationStackStageHandler._client \
             .wait_for_stack_rollback_action.return_value = True, 'success'
 
-    def test_execute_success(self, now, allocation_stage_stack, stack):
+    def test_execute_success(self, now, allocation_stage_stack, process):
         handler = stage_handlers.AllocationStackStageHandler(allocation_stage_stack)
 
         handler.execute()
 
-        assert allocation_stage_stack.heatstack.stack_id == stack['stack']['id']
+        assert allocation_stage_stack.terraformstack.stack_id == process.pid
         assert_db_stage(allocation_stage_stack, now, failed=False)
 
     def test_execute_failed_creation_request(self, now, allocation_stage_stack):
@@ -57,18 +59,7 @@ class TestAllocationStackStageHandler:
             handler.execute()
 
         with pytest.raises(ObjectDoesNotExist):
-            assert allocation_stage_stack.heatstack
-        assert_db_stage(allocation_stage_stack, now, failed=True)
-
-    def test_execute_failed_allocation(self, now, allocation_stage_stack, stack):
-        handler = stage_handlers.AllocationStackStageHandler(allocation_stage_stack)
-        stage_handlers.AllocationStackStageHandler._client \
-            .wait_for_stack_create_action.return_value = False, 'error-message'
-
-        with pytest.raises(api_exceptions.StackError):
-            handler.execute()
-
-        assert allocation_stage_stack.heatstack.stack_id == stack['stack']['id']
+            assert allocation_stage_stack.terraformstack
         assert_db_stage(allocation_stage_stack, now, failed=True)
 
     @pytest.mark.xfail(reason='cancellation should set error_message to \'canceled\'')
@@ -92,10 +83,12 @@ class TestAllocationStackStageHandler:
 
 class TestCleanupStackStageHandler:
     @pytest.fixture(autouse=True)
-    def set_up(self, mocker, stack):
+    def set_up(self, mocker, process):
         mocker.patch('kypo.sandbox_instance_app.lib.stage_handlers.LOG')
-        mocker.patch('kypo.sandbox_instance_app.lib.stage_handlers.utils.get_ostack_client')
+        mocker.patch('kypo.sandbox_instance_app.lib.stage_handlers.utils.get_terraform_client')
         stage_handlers.CleanupStackStageHandler._client = mocker.Mock()
+        stage_handlers.CleanupStackStageHandler._client\
+            .get_process_output.return_value = ['output']
         stage_handlers.CleanupStackStageHandler._client \
             .wait_for_stack_delete_action.return_value = True, 'success'
 
