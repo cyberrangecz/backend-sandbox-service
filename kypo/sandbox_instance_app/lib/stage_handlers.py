@@ -151,9 +151,10 @@ class StackStageHandler(StageHandler):
             LOG.debug(line)
             terraform_output.objects.create(**kwargs, content=line)
 
-    def _delete_sandbox(self, allocation_unit: SandboxAllocationUnit) -> None:
+    def _delete_stack(self, allocation_unit: SandboxAllocationUnit, log_output: bool = True)\
+            -> None:
         """
-        Delete sandbox associated with the given allocation unit.
+        Delete stack associated with the given allocation unit.
         """
         stack_name = allocation_unit.get_stack_name()
 
@@ -163,7 +164,9 @@ class StackStageHandler(StageHandler):
         try:
             process = self._client.delete_stack(stack_name)
             if process:
-                self._log_process_output(process, CleanupTerraformOutput, cleanup_stage=self.stage)
+                if log_output:
+                    self._log_process_output(process, CleanupTerraformOutput,
+                                             cleanup_stage=self.stage)
                 self._client.wait_for_process(process)
             else:
                 # process is None when delete_stack is not able to initialize stack directory,
@@ -175,10 +178,8 @@ class StackStageHandler(StageHandler):
 
         LOG.debug('Deleting local terraform stack directory', stack_name=stack_name,
                   allocation_unit=allocation_unit)
-        try:
-            self._client.delete_stack_directory(stack_name)
-        except StackNotFound:  # TODO: might not be the best approach
-            pass
+
+        self._client.delete_stack_directory(stack_name)
 
 
 class AllocationStackStageHandler(StackStageHandler):
@@ -214,7 +215,7 @@ class AllocationStackStageHandler(StackStageHandler):
         except KypoException as exc:
             if self.process:
                 self.process.terminate()
-            # super()._delete_sandbox(allocation_unit)
+            super()._delete_stack(allocation_unit, log_output=False)
             raise StackCreationFailed(f'Sandbox build failed: {exc}')
 
     def _cancel(self) -> None:
@@ -237,7 +238,7 @@ class CleanupStackStageHandler(StackStageHandler):
         """
         Delete allocated stack in the OpenStack platform.
         """
-        self._delete_sandbox(self.stage.cleanup_request.allocation_unit)
+        self._delete_stack(self.stage.cleanup_request.allocation_unit)
 
     def _cancel(self) -> None:
         """
