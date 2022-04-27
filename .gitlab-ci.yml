@@ -6,9 +6,8 @@ unit_tests:
   image: python:3.8
   stage: unit_tests
   script:
-    - pip3 install pipenv
-    - pipenv sync --dev
-    - pipenv run tox
+    - pip3 install tox
+    - tox
   only:
     - branches
   except:
