@@ -35,12 +35,7 @@ class TestAllocationStackStageHandler:
             .get_process_output.return_value = ['output']
         stage_handlers.AllocationStackStageHandler._client\
             .create_stack.return_value = process
-        stage_handlers.AllocationStackStageHandler._client \
-            .wait_for_stack_create_action.return_value = True, 'success'
-        stage_handlers.AllocationStackStageHandler._client \
-            .wait_for_stack_delete_action.return_value = True, 'success'
-        stage_handlers.AllocationStackStageHandler._client \
-            .wait_for_stack_rollback_action.return_value = True, 'success'
+        stage_handlers.AllocationStackStageHandler._wait_for_process = mocker.Mock()
 
     def test_execute_success(self, now, allocation_stage_stack, process):
         handler = stage_handlers.AllocationStackStageHandler(allocation_stage_stack)
@@ -89,8 +84,7 @@ class TestCleanupStackStageHandler:
         stage_handlers.CleanupStackStageHandler._client = mocker.Mock()
         stage_handlers.CleanupStackStageHandler._client\
             .get_process_output.return_value = ['output']
-        stage_handlers.CleanupStackStageHandler._client \
-            .wait_for_stack_delete_action.return_value = True, 'success'
+        stage_handlers.CleanupStackStageHandler._wait_for_process = mocker.Mock()
 
     def test_execute_success(self, now, cleanup_stage_stack):
         handler = stage_handlers.CleanupStackStageHandler(cleanup_stage_stack)

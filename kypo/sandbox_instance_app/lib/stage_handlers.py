@@ -11,7 +11,7 @@ from redis import Redis
 from rq.exceptions import NoSuchJobError
 from rq.job import Job
 
-from kypo.cloud_commons import KypoException, StackNotFound, StackCreationFailed
+from kypo.cloud_commons import KypoException, StackCreationFailed
 
 from kypo.sandbox_ansible_app.lib.ansible import CleanupAnsibleDockerRunner, \
     AllocationAnsibleDockerRunner, AnsibleDockerRunner
@@ -151,6 +151,17 @@ class StackStageHandler(StageHandler):
             LOG.debug(line)
             terraform_output.objects.create(**kwargs, content=line)
 
+    def _wait_for_process(self, process, terraform_output,
+                          timeout=settings.KYPO_CONFIG.sandbox_build_timeout, **kwargs):
+        """
+        Wait for process to finish.
+        """
+        stdout, stderr, return_code = self._client.wait_for_process(process, timeout)
+        if return_code:
+            LOG.error('Terraform execution failed', stderr=stderr, **kwargs)
+            terraform_output.objects.create(**kwargs, content=stderr)
+            raise KypoException(f'Terraform execution failed. See logs for details.')
+
     def _delete_stack(self, allocation_unit: SandboxAllocationUnit, log_output: bool = True)\
             -> None:
         """
@@ -167,7 +178,7 @@ class StackStageHandler(StageHandler):
                 if log_output:
                     self._log_process_output(process, CleanupTerraformOutput,
                                              cleanup_stage=self.stage)
-                self._client.wait_for_process(process)
+                self._wait_for_process(process, CleanupTerraformOutput, cleanup_stage=self.stage)
             else:
                 # process is None when delete_stack is not able to initialize stack directory,
                 # but it is not a problem because creation failed to initialize as well
@@ -176,9 +187,13 @@ class StackStageHandler(StageHandler):
         except KypoException as exc:
             raise exceptions.StackError(f'Sandbox deletion failed :{exc}')
 
+        try:
+            self._client.delete_terraform_workspace(stack_name)
+        except KypoException as exc:
+            LOG.warning(f'Terraform workspace deletion failed :{exc}')
+
         LOG.debug('Deleting local terraform stack directory', stack_name=stack_name,
                   allocation_unit=allocation_unit)
-
         self._client.delete_stack_directory(stack_name)
 
 
@@ -211,7 +226,8 @@ class AllocationStackStageHandler(StackStageHandler):
             TerraformStack.objects.create(allocation_stage=self.stage, stack_id=self.process.pid)
             self._log_process_output(self.process, AllocationTerraformOutput,
                                      allocation_stage=self.stage)
-            self._client.wait_for_process(self.process)
+            self._wait_for_process(self.process, AllocationTerraformOutput,
+                                   allocation_stage=self.stage)
         except KypoException as exc:
             if self.process:
                 self.process.terminate()
