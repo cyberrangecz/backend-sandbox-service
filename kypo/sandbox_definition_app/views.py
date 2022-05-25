@@ -1,8 +1,11 @@
 import structlog
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
+from drf_yasg2.utils import swagger_auto_schema
 from rest_framework import status, generics
 from rest_framework.response import Response
+
+from generator.var_generator import generate
 
 from kypo.sandbox_common_lib import utils
 from kypo.sandbox_definition_app import serializers
@@ -11,6 +14,7 @@ from kypo.sandbox_definition_app.lib.definition_providers import DefinitionProvi
 from kypo.sandbox_definition_app.models import Definition
 
 from kypo.sandbox_instance_app import serializers as instance_serializers
+from kypo.sandbox_instance_app.lib import sandboxes
 from kypo.sandbox_instance_app.lib.topology import Topology
 
 LOG = structlog.get_logger()
@@ -80,3 +84,24 @@ class DefinitionTopologyView(generics.RetrieveAPIView):
                                                          settings.KYPO_CONFIG)
         client = utils.get_terraform_client()
         return Topology(client.get_topology_instance(topology_definition))
+
+
+@utils.add_error_responses_doc('post', [401, 403, 404, 500])
+class LocalSandboxVariablesView(generics.CreateAPIView):
+    queryset = Definition.objects.all()
+    lookup_url_kwarg = "definition_id"
+    serializer_class = serializers.LocalSandboxVariablesSerializer
+
+    @swagger_auto_schema(responses={201: serializers.LocalVariableSerializer(many=True)})
+    def post(self, request, *args, **kwargs):
+        """Generate variables for local sandboxes, send it to answers-storage."""
+        user_id = request.data.get('user_id')
+        access_token = request.data.get('access_token')
+
+        definition = self.get_object()
+        variables = definitions.get_variables(definition.url, definition.rev, settings.KYPO_CONFIG)
+        generate(variables, user_id)
+        sandboxes.post_answers(user_id, access_token, variables)
+
+        serialized_variables = serializers.LocalVariableSerializer(variables, many=True)
+        return Response(serialized_variables.data)
