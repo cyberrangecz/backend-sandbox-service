@@ -85,8 +85,5 @@ urlpatterns = [
 
     path('sandboxes/<int:sandbox_id>/consoles',
          views.SandboxConsolesView.as_view(),
-         name='consoles'),
-
-    path('sandboxes/local-variables', views.LocalSandboxVariablesView.as_view(),
-         name='local-variables'),
+         name='consoles')
 ]

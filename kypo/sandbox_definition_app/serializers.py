@@ -41,3 +41,18 @@ class DefinitionSerializerCreate(DefinitionSerializer):
 
 class DefinitionRevSerializer(serializers.Serializer):
     name = serializers.CharField()
+
+
+class LocalVariableSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    type = serializers.CharField()
+    generated_value = serializers.CharField(read_only=True)
+    min = serializers.CharField()
+    max = serializers.CharField()
+    length = serializers.IntegerField()
+    prohibited = serializers.ListField()
+
+
+class LocalSandboxVariablesSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField()
+    access_token = serializers.CharField()
