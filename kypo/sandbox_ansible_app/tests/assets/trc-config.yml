@@ -1,5 +1,5 @@
 # The name of the image in OpenStack that will be used for MAN.
-man_image: debian-9-x86_64
+man_image: debian-10-man
 
 # The name of user in MAN.
 man_user: kypo-man
