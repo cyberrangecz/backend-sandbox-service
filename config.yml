@@ -132,7 +132,7 @@ application_configuration:
         # The name or ID of network in OpenStack where all sandboxes will be deployed.
         #base_network: base_network
 
-        # The name of the image in OpenStack that will be used for MAN.
+        # The name of the image in OpenStack that will be used for MAN. A dedicated debian-10-man image is recommended.
         man_image: ""
 
         # The name of user in MAN.
