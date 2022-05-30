@@ -1,31 +1,30 @@
+import abc
 import os
 import signal
+from typing import Type
+
 import docker.errors
 import structlog
-import abc
-from typing import Type
 from django.conf import settings
 from django.utils import timezone
-from requests import exceptions as requests_exceptions
+from kypo.cloud_commons import KypoException, StackCreationFailed
 from redis import Redis
 from rq.exceptions import NoSuchJobError
 from rq.job import Job
 
-from kypo.cloud_commons import KypoException, StackCreationFailed
-
-from kypo.sandbox_ansible_app.lib.ansible import CleanupAnsibleDockerRunner, \
-    AllocationAnsibleDockerRunner, AnsibleDockerRunner
+from kypo.sandbox_ansible_app.lib.ansible import CleanupAnsibleRunner, \
+    AllocationAnsibleRunner, AnsibleRunner
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage, AnsibleCleanupStage, \
-    DockerContainer, AllocationAnsibleOutput, CleanupAnsibleOutput, UserAnsibleCleanupStage, \
-    CleanupStage, DockerContainerCleanup
+    Container, UserAnsibleCleanupStage, CleanupStage, ContainerCleanup
 from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_definition_app.lib import definitions
-
 from kypo.sandbox_instance_app.models import Sandbox, TerraformStack, \
     SandboxAllocationUnit, StackAllocationStage, StackCleanupStage, \
     RQJob, AllocationRQJob, CleanupRQJob, AllocationTerraformOutput, CleanupTerraformOutput
 
 LOG = structlog.get_logger()
+ALLOCATION_JOB_NAME = 'ansible-allocation-{}'
+CLEANUP_JOB_NAME = 'ansible-cleanup-{}'
 
 
 class StageHandler(abc.ABC):
@@ -322,36 +321,28 @@ class AllocationAnsibleStageHandler(AnsibleStageHandler):
         if self.sandbox is None:
             raise exceptions.AnsibleError(f'Sandbox was not provided')
 
-        runner = AllocationAnsibleDockerRunner(self.directory_path)
+        runner = AllocationAnsibleRunner(self.directory_path)
         runner.prepare_ssh_dir(self.allocation_unit.pool, self.sandbox)
         runner.prepare_inventory_file(self.sandbox)
 
+        container = runner.run_ansible_playbook(self.stage.repo_url, self.stage.rev, self.stage)
         try:
-            container = runner.run_container(self.stage.repo_url, self.stage.rev)
-            DockerContainer.objects.create(allocation_stage=self.stage, container_id=container.id)
+            Container.objects.create(allocation_stage=self.stage,
+                                     container_name=container.get_container_name())
 
-            for output in container.logs(stream=True):
-                output = output.decode('utf-8')
-                output = output[:-1] if output[-1] == '\n' else output
-                AllocationAnsibleOutput.objects.create(allocation_stage=self.stage, content=output)
-
-            status = container.wait(timeout=settings.KYPO_CONFIG.sandbox_ansible_timeout)
-            container.remove()
-        except (docker.errors.APIError,
-                docker.errors.DockerException,
-                requests_exceptions.ReadTimeout) as ex:
-            raise exceptions.DockerError(ex)
-
-        self.check_status(status)
+            container.get_container_outputs()
+            container.check_container_status()
+        finally:
+            container.delete()
 
     def _cancel(self) -> None:
         """
         Stop the Ansible execution.
         """
         try:
-            if hasattr(self.stage, 'dockercontainer'):
-                container = self.stage.dockercontainer
-                AnsibleDockerRunner(self.directory_path).delete_container(container.container_id)
+            if hasattr(self.stage, 'container'):
+                container = self.stage.container
+                AnsibleRunner(self.directory_path).delete_container(container.container_name)
                 container.delete()
         except docker.errors.NotFound as ex:
             LOG.warning('Cancelling Ansible', exception=str(ex), stage=self.stage)
@@ -376,32 +367,22 @@ class CleanupAnsibleStageHandler(AnsibleStageHandler):
         """
         if isinstance(self.stage, UserAnsibleCleanupStage):
             return
-        runner = CleanupAnsibleDockerRunner(self.directory_path)
+        runner = CleanupAnsibleRunner(self.directory_path)
         runner.prepare_ssh_dir(self.allocation_unit.pool)
         runner.prepare_inventory_file(self.allocation_unit)
 
         allocation_request = self.allocation_unit.allocation_request
         allocation_stage = allocation_request.networkingansibleallocationstage
 
+        container = runner.run_ansible_playbook(allocation_stage.repo_url, allocation_stage.rev,
+                                                self.stage, cleanup=True)
         try:
-            container = runner.run_container(allocation_stage.repo_url, allocation_stage.rev,
-                                             ansible_cleanup=True)
-            DockerContainerCleanup.objects.create(cleanup_stage=self.stage,
-                                                  container_id=container.id)
-
-            for output in container.logs(stream=True):
-                output = output.decode('utf-8')
-                output = output[:-1] if output[-1] == '\n' else output
-                CleanupAnsibleOutput.objects.create(cleanup_stage=self.stage, content=output)
-
-            status = container.wait(timeout=settings.KYPO_CONFIG.sandbox_ansible_timeout)
-            container.remove()
-        except (docker.errors.APIError,
-                docker.errors.DockerException,
-                requests_exceptions.ReadTimeout) as ex:
-            raise exceptions.DockerError(ex)
-
-        self.check_status(status)
+            ContainerCleanup.objects.create(cleanup_stage=self.stage,
+                                            container_name=container.get_container_name())
+            container.get_container_outputs()
+            container.check_container_status()
+        finally:
+            container.delete()
 
     def _cancel(self) -> None:
         """

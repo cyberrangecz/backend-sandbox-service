@@ -54,6 +54,11 @@ class TerraformConfiguration(Object):
     backend_type = Attribute(type=str)
 
 
+class AnsibleRunnerSettings(Object):
+    backend = Attribute(type=str, default='docker')
+    namespace = Attribute(type=str, default='kypo')
+
+
 class Database(Object):
     engine = Attribute(type=str, default=DATABASE_ENGINE)
     host = Attribute(type=str, default=DATABASE_HOST)
@@ -159,6 +164,8 @@ class KypoConfiguration(Object):
     ansible_docker_volumes = Attribute(type=str, default=ANSIBLE_DOCKER_VOLUMES)
     ansible_docker_image = Attribute(type=str, default=ANSIBLE_DOCKER_IMAGE)
     ansible_docker_network = Attribute(type=str, default=ANSIBLE_DOCKER_NETWORK)
+
+    ansible_runner_settings = Attribute(type=AnsibleRunnerSettings, default=AnsibleRunnerSettings())
 
     answers_storage_api = Attribute(type=str, default=ANSWERS_STORAGE_API)
 

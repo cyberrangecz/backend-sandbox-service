@@ -112,6 +112,14 @@ application_configuration:
     # The name of the Docker network that the Runner will use.
     ansible_docker_network: kypo-platform-net-it
 
+    # The settings for the ansible runner container.
+    # ansible_runner_settings:
+        # The container backend. One of: docker, kubernetes.
+        # backend: docker
+
+        # The namespace where the container will be created. Only used when backend is kubernetes.
+        # namespace: kypo
+
     # A path to directory of CA certificates or file of CA certificates, i.e. CA bundle.
     # Use in case of self-signed certificates in related services.
     #ssl_ca_certificate_verify: ""

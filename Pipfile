@@ -24,7 +24,7 @@ drf-oidc-auth = { index = "kypo", version = ">=2.0.1" }
 csirtmu-oidc-client = { index = "kypo", version = ">=0.2.1" }
 csirtmu-uag-auth = { index = "kypo", version = "==0.1.10" }
 kypo-terraform-client = { index = "kypo", version = "~=0.2.0" }
-automated-problem-generation-lib = { index = "kypo", version = ">=0.1.2rc0" }
+automated-problem-generation-lib = { index = "kypo", version = ">=0.1.2" }
 better-profanity = "*"  # tox cannot install it correctly for automated-problem-generation-lib
 django = "*"
 djangorestframework = "*"
@@ -41,11 +41,11 @@ rq = "*"
 django-rq = "*"
 redis = "*"
 docker = "*"
-ssh_config = "*"
+ssh_config = "==0.0.22"
 python-gitlab = "*"
 jinja2 = "*"
 # Project dependencies
-django-cors-headers = "*"
+django-cors-headers = "==3.11.0"  # Newer version requires Django>3.0
 psycopg2-binary = "==2.8.6"
 packaging = "*"
 six = "*"
@@ -53,3 +53,4 @@ drf-yasg2 = "*"
 cryptography = "*"
 git-url-parse = "*"
 pyparsing = "*"
+kubernetes = "*"

@@ -97,15 +97,15 @@ class CleanupAnsibleOutput(AnsibleOutput):
         return f'{super().__str__()} STAGE: {self.cleanup_stage.id}'
 
 
-class DockerContainer(ExternalDependency):
-    container_id = models.TextField()
+class Container(ExternalDependency):
+    container_name = models.TextField()
 
     def __str__(self):
-        return f'STAGE: {self.allocation_stage.id}, CONTAINER: {self.container_id}'
+        return f'STAGE: {self.allocation_stage.id}, CONTAINER: {self.container_name}'
 
 
-class DockerContainerCleanup(ExternalDependencyCleanup):
-    container_id = models.TextField()
+class ContainerCleanup(ExternalDependencyCleanup):
+    container_name = models.TextField()
 
     def __str__(self):
-        return f'STAGE: {self.cleanup_stage.id}, CONTAINER: {self.container_id}'
+        return f'STAGE: {self.cleanup_stage.id}, CONTAINER: {self.container_name}'
