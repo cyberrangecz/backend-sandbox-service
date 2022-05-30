@@ -1,6 +1,6 @@
 import pytest
 
-from kypo.sandbox_ansible_app.lib.ansible import AllocationAnsibleDockerRunner
+from kypo.sandbox_ansible_app.lib.ansible import AllocationAnsibleRunner
 from kypo.sandbox_instance_app.models import Sandbox
 from kypo.sandbox_instance_app.lib import sandboxes
 
@@ -13,7 +13,7 @@ class TestPrepareInventoryFile:
         self.client = mocker.patch('kypo.sandbox_common_lib.utils.get_terraform_client')
         self.client.get_sandbox.return_value = top_ins
         self.save_file = mocker.patch(
-            'kypo.sandbox_ansible_app.lib.ansible.AnsibleDockerRunner.save_file')
+            'kypo.sandbox_ansible_app.lib.ansible.AnsibleRunner.save_file')
         yield
 
     def test_prepare_inventory_file_success(self, mocker, top_ins):
@@ -24,7 +24,7 @@ class TestPrepareInventoryFile:
 
         dir_path = '/tmp'
         sandbox = Sandbox.objects.get(pk=1)
-        AllocationAnsibleDockerRunner(dir_path).prepare_inventory_file(sandbox)
+        AllocationAnsibleRunner(dir_path).prepare_inventory_file(sandbox)
 
         mock_inventory.assert_called_once()
 
@@ -36,6 +36,6 @@ class TestPrepareInventoryFile:
         sandbox.allocation_unit.pool.get_pool_prefix.return_value = 'pool-prefix'
         sandbox.allocation_unit.get_stack_name = mocker.MagicMock()
         sandbox.allocation_unit.get_stack_name.return_value = 'stack-name'
-        result = AllocationAnsibleDockerRunner(dir_path).create_inventory(sandbox)
+        result = AllocationAnsibleRunner(dir_path).create_inventory(sandbox)
 
         assert result.to_dict() == inventory
