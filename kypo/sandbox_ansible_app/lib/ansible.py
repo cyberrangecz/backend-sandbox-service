@@ -46,7 +46,6 @@ class AnsibleRunner:
     )
 
     def __init__(self, directory_path: str):
-        self.client = docker.from_env()
         self.directory_path = directory_path
         self.ssh_directory = os.path.join(self.directory_path, 'ssh')
         self.inventory_path = os.path.join(self.directory_path, ANSIBLE_INVENTORY_FILENAME)
