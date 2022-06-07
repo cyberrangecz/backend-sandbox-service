@@ -112,7 +112,7 @@ class SandboxAllocationUnitIdListSerializer(serializers.Serializer):
     unit_ids = serializers.ListField(child=serializers.IntegerField())
 
 
-class OpenstackAllocationStageSerializer(serializers.ModelSerializer):
+class TerraformAllocationStageSerializer(serializers.ModelSerializer):
     request_id = serializers.PrimaryKeyRelatedField(
         source='allocation_request', read_only=True)
 
@@ -123,7 +123,7 @@ class OpenstackAllocationStageSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class OpenstackCleanupStageSerializer(serializers.ModelSerializer):
+class TerraformCleanupStageSerializer(serializers.ModelSerializer):
     request_id = serializers.PrimaryKeyRelatedField(source='cleanup_request', read_only=True)
     allocation_stage_id = serializers.PrimaryKeyRelatedField(
         source='allocation_stage', read_only=True)
@@ -132,6 +132,13 @@ class OpenstackCleanupStageSerializer(serializers.ModelSerializer):
         model = models.StackCleanupStage
         fields = ('id', 'request_id', 'start', 'end', 'failed', 'error_message',
                   'allocation_stage_id',)
+        read_only_fields = fields
+
+
+class AllocationTerraformOutputSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.AllocationTerraformOutput
+        fields = ('content',)
         read_only_fields = fields
 
 
@@ -231,8 +238,6 @@ class NodeSerializer(serializers.Serializer):
     name = serializers.CharField()
     id = serializers.CharField()
     status = serializers.CharField()
-    creation_time = serializers.DateTimeField()
-    update_time = serializers.DateTimeField()
     image = cloud_serializers.ImageSerializer()
     flavor_name = serializers.CharField()
 

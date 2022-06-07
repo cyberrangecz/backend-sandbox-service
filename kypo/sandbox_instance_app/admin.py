@@ -21,4 +21,6 @@ admin.site.register(models.StackAllocationStage, ShowIdAdmin)
 admin.site.register(models.CleanupStage, ShowIdAdmin)
 admin.site.register(models.StackCleanupStage, ShowIdAdmin)
 
-admin.site.register(models.HeatStack)
+admin.site.register(models.TerraformStack)
+admin.site.register(models.AllocationTerraformOutput, ShowIdAdmin)
+admin.site.register(models.CleanupTerraformOutput, ShowIdAdmin)

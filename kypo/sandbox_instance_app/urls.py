@@ -42,17 +42,15 @@ urlpatterns = [
          views.CleanupRequestCancelView.as_view(), name='sandbox-cleanup-request-cancel'),
 
     # Stages
-    path('allocation-requests/<int:request_id>/stages/openstack',
-         views.OpenstackAllocationStageDetailView.as_view(),
+    path('allocation-requests/<int:request_id>/stages/terraform',
+         views.TerraformAllocationStageDetailView.as_view(),
          name='openstack-allocation-stage'),
-    path('cleanup-requests/<int:request_id>/stages/openstack',
-         views.OpenstackCleanupStageDetailView.as_view(),
-         name='openstack-cleanup-stage'),
+    path('cleanup-requests/<int:request_id>/stages/terraform',
+         views.TerraformCleanupStageDetailView.as_view(),
+         name='terraform-cleanup-stage'),
 
-    path('allocation-requests/<int:request_id>/stages/openstack/events',
-         views.SandboxEventListView.as_view(), name='stack-events'),
-    path('allocation-requests/<int:request_id>/stages/openstack/resources',
-         views.SandboxResourceListView.as_view(), name='stack-resources'),
+    path('allocation-requests/<int:request_id>/stages/terraform/outputs',
+         views.TerraformAllocationStageOutputListView.as_view(), name='terraform-outputs'),
 
     # Pool manipulation
     path('pools/<int:pool_id>/sandboxes', views.PoolSandboxListView.as_view(),
@@ -87,5 +85,5 @@ urlpatterns = [
 
     path('sandboxes/<int:sandbox_id>/consoles',
          views.SandboxConsolesView.as_view(),
-         name='consoles'),
+         name='consoles')
 ]

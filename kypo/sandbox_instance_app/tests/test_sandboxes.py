@@ -53,7 +53,7 @@ class TestSandboxesManipulation:
 
     def test_get_sandbox_topology(self, mocker, topology, image):
         mock_images = mocker.patch(
-            'kypo.openstack_driver.open_stack_client.KypoOpenStackClient.list_images')
+            'kypo.terraform_driver.KypoTerraformClient.list_images')
         mock_images.return_value = [image]
         topo = sandboxes.get_sandbox_topology(mocker.Mock())
 

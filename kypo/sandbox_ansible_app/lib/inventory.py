@@ -7,7 +7,7 @@ import yaml
 import abc
 
 from django.conf import settings
-from kypo.openstack_driver import TopologyInstance, Link
+from kypo.cloud_commons import TopologyInstance, Link
 from kypo.topology_definition.models import Protocol, Router, Network
 
 KYPO_PROXY_JUMP_NAME = 'kypo-proxy-jump'

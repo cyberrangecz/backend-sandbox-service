@@ -4,7 +4,7 @@ Django Apps configuration file
 import os
 from enum import Enum
 
-from kypo.openstack_driver import TransformationConfiguration
+from kypo.cloud_commons import TransformationConfiguration
 from yamlize import Attribute, Object, YamlizingError, Typed, Map
 
 from kypo.sandbox_common_lib import kypo_config_validation
@@ -34,6 +34,9 @@ DATABASE_NAME = "postgres"
 DATABASE_PASSWORD = "postgres"
 DATABASE_PORT = "5432"
 DATABASE_USER = "postgres"
+REDIS_HOST = "localhost"
+REDIS_PORT = 6379
+REDIS_DB = 0
 
 
 class ProxyJump(Object):
@@ -47,6 +50,15 @@ class ProxyJump(Object):
         self.IdentityFile = identity_file
 
 
+class TerraformConfiguration(Object):
+    backend_type = Attribute(type=str)
+
+
+class AnsibleRunnerSettings(Object):
+    backend = Attribute(type=str, default='docker')
+    namespace = Attribute(type=str, default='kypo')
+
+
 class Database(Object):
     engine = Attribute(type=str, default=DATABASE_ENGINE)
     host = Attribute(type=str, default=DATABASE_HOST)
@@ -58,6 +70,12 @@ class Database(Object):
     def __init__(self, **kwargs):
         for key, val in kwargs.items():
             setattr(self, key, val)
+
+
+class Redis(Object):
+    host = Attribute(type=str, default=REDIS_HOST)
+    port = Attribute(type=int, default=REDIS_PORT)
+    db = Attribute(type=int, default=REDIS_DB)
 
 
 class GitType(Enum):
@@ -135,7 +153,9 @@ class KypoConfiguration(Object):
     flavor_mapping = Attribute(type=FlavorMapping, default=None)
 
     proxy_jump_to_man = Attribute(type=ProxyJump)
+    terraform_configuration = Attribute(type=TerraformConfiguration)
     database = Attribute(type=Database)
+    redis = Attribute(type=Redis, default=())
 
     sandbox_build_timeout = Attribute(type=int, default=SANDBOX_BUILD_TIMEOUT)
     sandbox_delete_timeout = Attribute(type=int, default=SANDBOX_DELETE_TIMEOUT)
@@ -144,6 +164,8 @@ class KypoConfiguration(Object):
     ansible_docker_volumes = Attribute(type=str, default=ANSIBLE_DOCKER_VOLUMES)
     ansible_docker_image = Attribute(type=str, default=ANSIBLE_DOCKER_IMAGE)
     ansible_docker_network = Attribute(type=str, default=ANSIBLE_DOCKER_NETWORK)
+
+    ansible_runner_settings = Attribute(type=AnsibleRunnerSettings, default=AnsibleRunnerSettings())
 
     answers_storage_api = Attribute(type=str, default=ANSWERS_STORAGE_API)
 

@@ -67,6 +67,11 @@
     - change_allocationansibleoutput
     - delete_allocationansibleoutput
 
+    - view_allocationterraformoutput
+    - add_allocationterraformoutput
+    - change_allocationterraformoutput
+    - delete_allocationterraformoutput
+
     # Cleanup Stages
     - view_cleanupstage
     - add_cleanupstage
@@ -92,6 +97,11 @@
     - add_cleanupansibleoutput
     - change_cleanupansibleoutput
     - delete_cleanupansibleoutput
+
+    - view_cleanupterraformoutput
+    - add_cleanupterraformoutput
+    - change_cleanupterraformoutput
+    - delete_cleanupterraformoutput
 
 - name: designer
   default: false
@@ -167,6 +177,11 @@
     - change_allocationansibleoutput
     - delete_allocationansibleoutput
 
+    - view_allocationterraformoutput
+    - add_allocationterraformoutput
+    - change_allocationterraformoutput
+    - delete_allocationterraformoutput
+
     # Cleanup Stages
     - view_cleanupstage
     - add_cleanupstage
@@ -192,6 +207,11 @@
     - add_cleanupansibleoutput
     - change_cleanupansibleoutput
     - delete_cleanupansibleoutput
+
+    - view_cleanupterraformoutput
+    - add_cleanupterraformoutput
+    - change_cleanupterraformoutput
+    - delete_cleanupterraformoutput
 
 - name: trainee
   default: true

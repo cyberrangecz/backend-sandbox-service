@@ -6,9 +6,8 @@ unit_tests:
   image: python:3.8
   stage: unit_tests
   script:
-    - pip3 install pipenv
-    - pipenv sync --dev
-    - pipenv run tox
+    - pip3 install tox
+    - tox
   only:
     - branches
   except:
@@ -24,9 +23,9 @@ docker_image_push:
     entrypoint: [ "" ]
   script:
     - export CI_CUSTOM_REGISTRY_IMAGE="${CI_REGISTRY}/${CI_CUSTOM_REGISTRY_PATH}/${CI_CUSTOM_IMAGE_NAME}"
+    - export CI_DOCKER_TAG=$(if [[ "$CI_COMMIT_TAG" == "" ]]; then echo develop; else echo $CI_COMMIT_TAG; fi)
     - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_CUSTOM_REGISTRY_USER\",\"password\":\"$CI_CUSTOM_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
-    - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --destination $CI_CUSTOM_REGISTRY_IMAGE:$CI_COMMIT_TAG --build-arg KYPO_PYPI_DOWNLOAD_URL=$KYPO_PYPI_DOWNLOAD_URL
-  only:
-    - tags
-  except:
-    - branches
+    - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --destination $CI_CUSTOM_REGISTRY_IMAGE:$CI_DOCKER_TAG --build-arg KYPO_PYPI_DOWNLOAD_URL=$KYPO_PYPI_DOWNLOAD_URL
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+    - if: $CI_COMMIT_TAG

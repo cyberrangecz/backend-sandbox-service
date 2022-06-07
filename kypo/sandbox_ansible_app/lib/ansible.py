@@ -4,9 +4,10 @@ import shutil
 import docker
 import structlog
 from django.conf import settings
-from docker.models.containers import Container
 
-from kypo.sandbox_ansible_app.lib.inventory import Inventory, BaseInventory, KYPO_PROXY_JUMP_NAME
+from kypo.sandbox_ansible_app.lib.container import KubernetesContainer, DockerContainer, \
+    BaseContainer
+from kypo.sandbox_ansible_app.lib.inventory import Inventory, BaseInventory
 from kypo.sandbox_common_lib import exceptions
 from kypo.sandbox_instance_app.lib import sandboxes, sshconfig
 from kypo.sandbox_instance_app.models import Sandbox, Pool, SandboxAllocationUnit
@@ -15,7 +16,8 @@ LOG = structlog.get_logger()
 
 
 class DockerVolume:
-    def __init__(self, bind: str, mode: str):
+    def __init__(self, name: str, bind: str, mode: str):
+        self.name = name
         self.bind = bind
         self.mode = mode
 
@@ -27,22 +29,23 @@ MGMT_PUBLIC_KEY_FILENAME = 'pool_mng_key.pub'
 USER_PUBLIC_KEY_FILENAME = 'user_key.pub'
 
 
-class AnsibleDockerRunner:
+class AnsibleRunner:
     """
     Represents Docker container environment for executing Ansible.
     """
     DOCKER_NETWORK = settings.KYPO_CONFIG.ansible_docker_network
     ANSIBLE_DOCKER_SSH_DIR = DockerVolume(
+        name='ansible-ssh-dir',
         bind='/root/.ssh',
         mode='rw'
     )
     ANSIBLE_DOCKER_INVENTORY_PATH = DockerVolume(
+        name='ansible-inventory-path',
         bind='/app/inventory.yml',
         mode='ro'
     )
 
     def __init__(self, directory_path: str):
-        self.client = docker.from_env()
         self.directory_path = directory_path
         self.ssh_directory = os.path.join(self.directory_path, 'ssh')
         self.inventory_path = os.path.join(self.directory_path, ANSIBLE_INVENTORY_FILENAME)
@@ -53,35 +56,22 @@ class AnsibleDockerRunner:
         self.container_proxy_private_key =\
             self.container_ssh_path(settings.KYPO_CONFIG.proxy_jump_to_man.IdentityFile)
 
-    def run_container(self, url, rev, ansible_cleanup=False):
-        """
-        Run Ansible in Docker container.
-        """
-        volumes = {
-            self.ssh_directory: self.ANSIBLE_DOCKER_SSH_DIR.__dict__,
-            self.inventory_path: self.ANSIBLE_DOCKER_INVENTORY_PATH.__dict__
-        }
-        command = ['-u', url, '-r', rev, '-i', self.ANSIBLE_DOCKER_INVENTORY_PATH.bind,
-                   '-a', settings.KYPO_CONFIG.answers_storage_api]
-        command += ['-c'] if ansible_cleanup else []
-        LOG.debug("Ansible container options", command=command)
-        return self.client.containers.run(settings.KYPO_CONFIG.ansible_docker_image, detach=True,
-                                          command=command, volumes=volumes,
-                                          network=self.DOCKER_NETWORK)
+        self.container_manager = KubernetesContainer\
+            if settings.KYPO_CONFIG.ansible_runner_settings.backend == 'kubernetes'\
+            else DockerContainer
 
-    def get_container(self, container_id: str) -> Container:
+    def run_ansible_playbook(self, url, rev, stage, cleanup=False) -> BaseContainer:
         """
-        Return Docker container with given container ID.
+        Run Ansible playbook in container.
         """
-        return self.client.containers.get(container_id)
+        return self.container_manager(url, rev, stage, self.ssh_directory,
+                                      self.inventory_path, cleanup)
 
-    def delete_container(self, container_id: str, force=True) -> None:
+    def delete_container(self, container_name: str) -> None:
         """
-        Delete Docker container with given container ID.
-        Parameter `force` is whether to kill the running one.
+        Delete container with given container name.
         """
-        container = self.get_container(container_id)
-        container.remove(force=force)
+        self.container_manager.delete_container(container_name)
 
     def _prepare_ssh_dir(self):
         """
@@ -119,7 +109,7 @@ class AnsibleDockerRunner:
         return os.path.join(self.ANSIBLE_DOCKER_SSH_DIR.bind, os.path.basename(filename))
 
 
-class AllocationAnsibleDockerRunner(AnsibleDockerRunner):
+class AllocationAnsibleRunner(AnsibleRunner):
     """
     Represents Docker container environment for executing Ansible during allocation stage.
     """
@@ -156,13 +146,13 @@ class AllocationAnsibleDockerRunner(AnsibleDockerRunner):
         top_ins = sandboxes.get_topology_instance(sandbox)
         sau = sandbox.allocation_unit
         sas = sau.allocation_request.stackallocationstage
-        if not hasattr(sas, 'heatstack'):
+        if not hasattr(sas, 'terraformstack'):
             raise exceptions.ApiException(f'The SandboxAllocationUnit ID={sas.id} '
-                                          'does not have any HeatStack instance.')
-        heatstack = sas.heatstack
+                                          'does not have any TerraformStack instance.')
+        terraformstack = sas.terraformstack
         extra_vars = {
             'kypo_global_sandbox_allocation_unit_id': sau.id,
-            'kypo_global_openstack_stack_id': heatstack.stack_id,
+            'kypo_global_openstack_stack_id': terraformstack.stack_id,
             'kypo_global_pool_id': sau.pool.id,
             'kypo_global_head_ip': settings.KYPO_CONFIG.kypo_head_ip,
         }
@@ -171,7 +161,7 @@ class AllocationAnsibleDockerRunner(AnsibleDockerRunner):
                          mgmt_public_key, user_public_key, extra_vars)
 
 
-class CleanupAnsibleDockerRunner(AnsibleDockerRunner):
+class CleanupAnsibleRunner(AnsibleRunner):
     """
     Represents Docker container environment for executing Ansible during allocation stage.
     """

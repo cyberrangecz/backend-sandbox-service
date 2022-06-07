@@ -12,5 +12,7 @@ urlpatterns = [
     path('definitions/<int:definition_id>/refs', views.DefinitionRefsListView.as_view(),
          name='definition-rev-list'),
     path('definitions/<int:definition_id>/topology', views.DefinitionTopologyView.as_view(),
-         name='definition-topology')
+         name='definition-topology'),
+    path('definitions/<int:definition_id>/local-variables',
+         views.LocalSandboxVariablesView.as_view(), name='local-variables')
 ]

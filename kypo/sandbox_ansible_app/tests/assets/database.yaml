@@ -109,8 +109,8 @@
   fields:
     job_id: d5ae9629-e8c2-4ff5-9c49-cca056556d2d
 
-- model: sandbox_instance_app.heatstack
+- model: sandbox_instance_app.terraformstack
   pk: 1
   fields:
-    stack_id: heatstack-stack-id
+    stack_id: terraformstack-stack-id
     allocation_stage_id: 1

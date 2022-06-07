@@ -5,16 +5,17 @@ from django.core.management import call_command
 from django.contrib.auth.models import User
 
 from kypo.topology_definition.models import TopologyDefinition
-from kypo.openstack_driver import TopologyInstance, TransformationConfiguration
+from kypo.cloud_commons import TopologyInstance, TransformationConfiguration
 
 from kypo.sandbox_definition_app.models import Definition
 from kypo.sandbox_instance_app.models import StackAllocationStage, SandboxAllocationUnit, \
-    AllocationRequest, HeatStack, AllocationRQJob, Sandbox, CleanupRequest, StackCleanupStage,\
+    AllocationRequest, TerraformStack, AllocationRQJob, Sandbox, CleanupRequest, StackCleanupStage,\
     Pool, SandboxLock
 from kypo.sandbox_instance_app.lib.sshconfig import KypoSSHConfig
 from kypo.sandbox_ansible_app.models import NetworkingAnsibleAllocationStage, \
     UserAnsibleAllocationStage, NetworkingAnsibleCleanupStage, UserAnsibleCleanupStage, \
-    DockerContainer
+    Container
+from kypo.sandbox_ansible_app.lib.container import DockerContainer
 from django.utils import timezone
 
 TESTING_DATA_DIR = 'assets'
@@ -38,6 +39,11 @@ def data_path_join(file: str, data_dir: str = TESTING_DATA_DIR) -> str:
 def django_db_setup(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
         call_command('loaddata', data_path_join(TESTING_DATABASE))
+
+
+@pytest.fixture(autouse=True)
+def docker_sys_mock(mocker):
+    mocker.patch.object(DockerContainer, 'CLIENT')
 
 
 @pytest.fixture
@@ -131,6 +137,14 @@ def stack():
         }
     }
 
+
+@pytest.fixture
+def process(mocker):
+    proc = mocker.MagicMock()
+    proc.pid = 1
+    return proc
+
+
 @pytest.fixture
 def created_by():
     return User.objects.create(username='test-user', first_name='test-first-name',
@@ -171,7 +185,7 @@ def allocation_stage_stack(allocation_request):
 @pytest.fixture
 def allocation_stage_stack_started(allocation_stage_stack, stack):
     set_stage_started(allocation_stage_stack)
-    HeatStack.objects.create(
+    TerraformStack.objects.create(
         allocation_stage=allocation_stage_stack,
         stack_id=stack['stack']['id']
     )
@@ -197,9 +211,9 @@ def allocation_stage_networking_started(allocation_stage_networking,
                                         allocation_stage_stack_started):
     set_stage_finished(allocation_stage_stack_started)
     set_stage_started(allocation_stage_networking)
-    DockerContainer.objects.create(
+    Container.objects.create(
         allocation_stage=allocation_stage_networking,
-        container_id='docker-container-id'
+        container_name='docker-container-id'
     )
     AllocationRQJob.objects.create(
         job_id='networking-allocation-rq-job-id',
@@ -222,9 +236,9 @@ def allocation_stage_user(allocation_request):
 def allocation_stage_user_started(allocation_stage_user, allocation_stage_networking_started):
     set_stage_finished(allocation_stage_networking_started)
     set_stage_started(allocation_stage_user)
-    DockerContainer.objects.create(
+    Container.objects.create(
         allocation_stage=allocation_stage_user,
-        container_id='docker-container-id'
+        container_name='docker-container-id'
     )
     AllocationRQJob.objects.create(
         job_id='user-allocation-rq-job-id',

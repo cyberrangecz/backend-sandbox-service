@@ -1,30 +1,30 @@
+import abc
 import os
+import signal
+from typing import Type
+
 import docker.errors
 import structlog
-import abc
-from typing import Type
 from django.conf import settings
 from django.utils import timezone
-from requests import exceptions as requests_exceptions
+from kypo.cloud_commons import KypoException, StackCreationFailed
 from redis import Redis
 from rq.exceptions import NoSuchJobError
 from rq.job import Job
 
-from kypo.openstack_driver.exceptions import KypoException
-
-from kypo.sandbox_ansible_app.lib.ansible import CleanupAnsibleDockerRunner,\
-    AllocationAnsibleDockerRunner, AnsibleDockerRunner
-from kypo.sandbox_ansible_app.models import AnsibleAllocationStage, AnsibleCleanupStage,\
-    DockerContainer, AllocationAnsibleOutput, CleanupAnsibleOutput, UserAnsibleCleanupStage,\
-    CleanupStage, DockerContainerCleanup
+from kypo.sandbox_ansible_app.lib.ansible import CleanupAnsibleRunner, \
+    AllocationAnsibleRunner, AnsibleRunner
+from kypo.sandbox_ansible_app.models import AnsibleAllocationStage, AnsibleCleanupStage, \
+    Container, UserAnsibleCleanupStage, CleanupStage, ContainerCleanup
 from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_definition_app.lib import definitions
-
-from kypo.sandbox_instance_app.models import Sandbox, HeatStack,\
-    SandboxAllocationUnit, StackAllocationStage, StackCleanupStage,\
-    RQJob, AllocationRQJob, CleanupRQJob
+from kypo.sandbox_instance_app.models import Sandbox, TerraformStack, \
+    SandboxAllocationUnit, StackAllocationStage, StackCleanupStage, \
+    RQJob, AllocationRQJob, CleanupRQJob, AllocationTerraformOutput, CleanupTerraformOutput
 
 LOG = structlog.get_logger()
+ALLOCATION_JOB_NAME = 'ansible-allocation-{}'
+CLEANUP_JOB_NAME = 'ansible-cleanup-{}'
 
 
 class StageHandler(abc.ABC):
@@ -113,7 +113,8 @@ class StageHandler(abc.ABC):
         """
         if hasattr(self.stage, 'rq_job'):
             try:
-                Job.fetch(self.stage.rq_job.job_id, connection=Redis())\
+                Job.fetch(self.stage.rq_job.job_id,
+                          connection=Redis(host=settings.KYPO_CONFIG.redis.host))\
                     .delete(delete_dependents=True)
             except NoSuchJobError:  # Job already deleted
                 pass
@@ -132,7 +133,7 @@ class StackStageHandler(StageHandler):
     """
     Generalizes common tasks of stages manipulating with OpenStack stacks.
     """
-    _client = utils.get_ostack_client()
+    _client = utils.get_terraform_client()
 
     @abc.abstractmethod
     def _execute(self) -> None:
@@ -142,10 +143,28 @@ class StackStageHandler(StageHandler):
     def _cancel(self) -> None:
         pass
 
-    def _delete_sandbox(self, allocation_unit: SandboxAllocationUnit) -> None:
+    def _log_process_output(self, process, terraform_output, **kwargs):
+        output = self._client.get_process_output(process)
+        for line in output:
+            line = line.rstrip()
+            LOG.debug(line)
+            terraform_output.objects.create(**kwargs, content=line)
+
+    def _wait_for_process(self, process, terraform_output,
+                          timeout=settings.KYPO_CONFIG.sandbox_build_timeout, **kwargs):
         """
-        Delete sandbox associated with the given allocation unit
-          and wait for its completion if wait parameter is True.
+        Wait for process to finish.
+        """
+        stdout, stderr, return_code = self._client.wait_for_process(process, timeout)
+        if return_code:
+            LOG.error('Terraform execution failed', stderr=stderr, **kwargs)
+            terraform_output.objects.create(**kwargs, content=stderr)
+            raise KypoException(f'Terraform execution failed. See logs for details.')
+
+    def _delete_stack(self, allocation_unit: SandboxAllocationUnit, log_output: bool = True)\
+            -> None:
+        """
+        Delete stack associated with the given allocation unit.
         """
         stack_name = allocation_unit.get_stack_name()
 
@@ -153,12 +172,28 @@ class StackStageHandler(StageHandler):
                   allocation_unit=allocation_unit)
 
         try:
-            self._client.delete_stack(stack_name)
-        except KypoException as ex:
-            # Sandbox is already deleted.
-            LOG.warning('Deleting sandbox failed', exception=str(ex),
-                        allocation_unit=allocation_unit)
-            return
+            process = self._client.delete_stack(stack_name)
+            if process:
+                if log_output:
+                    self._log_process_output(process, CleanupTerraformOutput,
+                                             cleanup_stage=self.stage)
+                self._wait_for_process(process, CleanupTerraformOutput, cleanup_stage=self.stage)
+            else:
+                # process is None when delete_stack is not able to initialize stack directory,
+                # but it is not a problem because creation failed to initialize as well
+                LOG.warning('The deletion of the stack failed.'
+                            ' Terraform could not initialize directory')
+        except KypoException as exc:
+            raise exceptions.StackError(f'Sandbox deletion failed :{exc}')
+
+        try:
+            self._client.delete_terraform_workspace(stack_name)
+        except KypoException as exc:
+            LOG.warning(f'Terraform workspace deletion failed :{exc}')
+
+        LOG.debug('Deleting local terraform stack directory', stack_name=stack_name,
+                  allocation_unit=allocation_unit)
+        self._client.delete_stack_directory(stack_name)
 
 
 class AllocationStackStageHandler(StackStageHandler):
@@ -168,61 +203,43 @@ class AllocationStackStageHandler(StackStageHandler):
     stage: StackAllocationStage
     _job_class: Type[AllocationRQJob] = AllocationRQJob
 
+    def __init__(self, stage):
+        self.process = None
+        super().__init__(stage)
+
     def _execute(self) -> None:
         """
         Allocate stack in the OpenStack cloud platform.
         """
         allocation_unit = self.stage.allocation_request.allocation_unit
+        stack_name = allocation_unit.get_stack_name()
         pool = allocation_unit.pool
         definition = pool.definition
         top_def = definitions.get_definition(definition.url, pool.rev_sha, settings.KYPO_CONFIG)
-        stack = self._client.create_stack(
-            allocation_unit.get_stack_name(), top_def,
-            key_pair_name_ssh=allocation_unit.pool.ssh_keypair_name,
-            key_pair_name_cert=allocation_unit.pool.certificate_keypair_name,
-        )
-
-        HeatStack.objects.create(allocation_stage=self.stage, stack_id=stack['stack']['id'])
-
-        self._wait_for_stack_creation()
-
-    def _wait_for_stack_creation(self) -> None:
-        """
-        Wait for the stack creation.
-        """
-        name = self.stage.allocation_request.allocation_unit.get_stack_name()
-        success, msg = self._client.wait_for_stack_create_action(name)
-        if not success:
-            roll_succ, roll_msg = self._client.wait_for_stack_rollback_action(name)
-            if not roll_succ:
-                LOG.warning('Rollback failed', msg=roll_msg)
-            raise exceptions.StackError(f'Sandbox build failed: {msg}')
-
-        LOG.info("Stack created successfully", stage=self.stage)
+        try:
+            self.process = self._client.create_stack(
+                top_def, stack_name=stack_name,
+                key_pair_name_ssh=allocation_unit.pool.ssh_keypair_name,
+                key_pair_name_cert=allocation_unit.pool.certificate_keypair_name,
+            )
+            TerraformStack.objects.create(allocation_stage=self.stage, stack_id=self.process.pid)
+            self._log_process_output(self.process, AllocationTerraformOutput,
+                                     allocation_stage=self.stage)
+            self._wait_for_process(self.process, AllocationTerraformOutput,
+                                   allocation_stage=self.stage)
+        except KypoException as exc:
+            if self.process:
+                self.process.terminate()
+            super()._delete_stack(allocation_unit, log_output=False)
+            raise StackCreationFailed(f'Sandbox build failed: {exc}')
 
     def _cancel(self) -> None:
         """
         Stop the OpenStack stack allocation and remove what has been allocated.
         """
-        if self.stage.start:
-            self._delete_sandbox(self.stage.allocation_request.allocation_unit)
-
-    def update_allocation_stage(self) -> StackAllocationStage:
-        """
-        Update stage with current stack status from the OpenStack platform.
-        """
-        # TODO get stack status directly!
-        stacks = self._client.list_stacks()
-        stack_name = self.stage.allocation_request.allocation_unit.get_stack_name()
-        if stack_name in stacks:
-            sb = stacks[stack_name]
-            self.stage.status = sb.stack_status
-            self.stage.status_reason = sb.stack_status_reason
-        else:
-            self.stage.status = None
-            self.stage.status_reason = None
-        self.stage.save()
-        return self.stage
+        if self.stage.start and hasattr(self.stage, 'terraformstack'):
+            process_id = int(self.stage.terraformstack.stack_id)
+            os.kill(process_id, signal.SIGTERM)
 
 
 class CleanupStackStageHandler(StackStageHandler):
@@ -236,7 +253,7 @@ class CleanupStackStageHandler(StackStageHandler):
         """
         Delete allocated stack in the OpenStack platform.
         """
-        self._delete_sandbox(self.stage.cleanup_request.allocation_unit)
+        self._delete_stack(self.stage.cleanup_request.allocation_unit)
 
     def _cancel(self) -> None:
         """
@@ -304,36 +321,28 @@ class AllocationAnsibleStageHandler(AnsibleStageHandler):
         if self.sandbox is None:
             raise exceptions.AnsibleError(f'Sandbox was not provided')
 
-        runner = AllocationAnsibleDockerRunner(self.directory_path)
+        runner = AllocationAnsibleRunner(self.directory_path)
         runner.prepare_ssh_dir(self.allocation_unit.pool, self.sandbox)
         runner.prepare_inventory_file(self.sandbox)
 
+        container = runner.run_ansible_playbook(self.stage.repo_url, self.stage.rev, self.stage)
         try:
-            container = runner.run_container(self.stage.repo_url, self.stage.rev)
-            DockerContainer.objects.create(allocation_stage=self.stage, container_id=container.id)
+            Container.objects.create(allocation_stage=self.stage,
+                                     container_name=container.get_container_name())
 
-            for output in container.logs(stream=True):
-                output = output.decode('utf-8')
-                output = output[:-1] if output[-1] == '\n' else output
-                AllocationAnsibleOutput.objects.create(allocation_stage=self.stage, content=output)
-
-            status = container.wait(timeout=settings.KYPO_CONFIG.sandbox_ansible_timeout)
-            container.remove()
-        except (docker.errors.APIError,
-                docker.errors.DockerException,
-                requests_exceptions.ReadTimeout) as ex:
-            raise exceptions.DockerError(ex)
-
-        self.check_status(status)
+            container.get_container_outputs()
+            container.check_container_status()
+        finally:
+            container.delete()
 
     def _cancel(self) -> None:
         """
         Stop the Ansible execution.
         """
         try:
-            if hasattr(self.stage, 'dockercontainer'):
-                container = self.stage.dockercontainer
-                AnsibleDockerRunner(self.directory_path).delete_container(container.container_id)
+            if hasattr(self.stage, 'container'):
+                container = self.stage.container
+                AnsibleRunner(self.directory_path).delete_container(container.container_name)
                 container.delete()
         except docker.errors.NotFound as ex:
             LOG.warning('Cancelling Ansible', exception=str(ex), stage=self.stage)
@@ -358,32 +367,22 @@ class CleanupAnsibleStageHandler(AnsibleStageHandler):
         """
         if isinstance(self.stage, UserAnsibleCleanupStage):
             return
-        runner = CleanupAnsibleDockerRunner(self.directory_path)
+        runner = CleanupAnsibleRunner(self.directory_path)
         runner.prepare_ssh_dir(self.allocation_unit.pool)
         runner.prepare_inventory_file(self.allocation_unit)
 
         allocation_request = self.allocation_unit.allocation_request
         allocation_stage = allocation_request.networkingansibleallocationstage
 
+        container = runner.run_ansible_playbook(allocation_stage.repo_url, allocation_stage.rev,
+                                                self.stage, cleanup=True)
         try:
-            container = runner.run_container(allocation_stage.repo_url, allocation_stage.rev,
-                                             ansible_cleanup=True)
-            DockerContainerCleanup.objects.create(cleanup_stage=self.stage,
-                                                  container_id=container.id)
-
-            for output in container.logs(stream=True):
-                output = output.decode('utf-8')
-                output = output[:-1] if output[-1] == '\n' else output
-                CleanupAnsibleOutput.objects.create(cleanup_stage=self.stage, content=output)
-
-            status = container.wait(timeout=settings.KYPO_CONFIG.sandbox_ansible_timeout)
-            container.remove()
-        except (docker.errors.APIError,
-                docker.errors.DockerException,
-                requests_exceptions.ReadTimeout) as ex:
-            raise exceptions.DockerError(ex)
-
-        self.check_status(status)
+            ContainerCleanup.objects.create(cleanup_stage=self.stage,
+                                            container_name=container.get_container_name())
+            container.get_container_outputs()
+            container.check_container_status()
+        finally:
+            container.delete()
 
     def _cancel(self) -> None:
         """

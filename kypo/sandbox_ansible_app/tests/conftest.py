@@ -3,7 +3,8 @@ import os
 import yaml
 from django.core.management import call_command
 
-from kypo.openstack_driver import TopologyInstance, TransformationConfiguration
+from kypo.cloud_commons import TopologyInstance, TransformationConfiguration
+from kypo.sandbox_ansible_app.lib.container import DockerContainer
 
 from kypo.topology_definition.models import TopologyDefinition
 
@@ -25,6 +26,11 @@ def data_path_join(file: str, data_dir: str = TESTING_DATA_DIR) -> str:
 def django_db_setup(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
         call_command('loaddata', data_path_join(TESTING_DATABASE))
+
+
+@pytest.fixture(autouse=True)
+def docker_sys_mock(mocker):
+    mocker.patch.object(DockerContainer, 'CLIENT')
 
 
 @pytest.fixture(scope='session')

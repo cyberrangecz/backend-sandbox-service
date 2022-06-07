@@ -13,8 +13,7 @@ python_version = "3.8"
 
 [dev-packages]
 # tox
-tox = "~=3.20.0"
-tox-pipenv = "~=1.10.1"
+tox = "*"
 # pytest
 pytest = "*"
 pytest-mock = "*"
@@ -22,9 +21,11 @@ pytest-django = "*"
 
 [packages]
 drf-oidc-auth = { index = "kypo", version = ">=2.0.1" }
-kypo-openstack-lib = { index = "kypo", version = "==0.37.1" }
 csirtmu-oidc-client = { index = "kypo", version = ">=0.2.1" }
 csirtmu-uag-auth = { index = "kypo", version = "==0.1.10" }
+kypo-terraform-client = { index = "kypo", version = "~=0.2.0" }
+automated-problem-generation-lib = { index = "kypo", version = ">=0.1.2" }
+better-profanity = "*"  # tox cannot install it correctly for automated-problem-generation-lib
 django = "*"
 djangorestframework = "*"
 coreapi = "*"  # Generating REST api documentation (swagger dependency)
@@ -40,15 +41,16 @@ rq = "*"
 django-rq = "*"
 redis = "*"
 docker = "*"
-ssh_config = "*"
+ssh_config = "==0.0.22"
 python-gitlab = "*"
 jinja2 = "*"
 # Project dependencies
-django-cors-headers = "*"
-psycopg2 = "<2.9"
+django-cors-headers = "==3.11.0"  # Newer version requires Django>3.0
+psycopg2-binary = "==2.8.6"
 packaging = "*"
 six = "*"
 drf-yasg2 = "*"
 cryptography = "*"
 git-url-parse = "*"
 pyparsing = "*"
+kubernetes = "*"

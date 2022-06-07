@@ -4,6 +4,7 @@ Definition Service module for Definition management.
 import io
 
 import structlog
+import yaml
 from django.conf import settings
 from django.contrib.auth.models import User
 from kypo.topology_definition.models import TopologyDefinition
@@ -11,6 +12,7 @@ from kypo.topology_definition.image_naming import image_name_replace
 from yamlize import YamlizingError
 from typing import Optional, TextIO
 
+from generator.var_object import Variable
 from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration, GitType
 from kypo.sandbox_definition_app import serializers
@@ -21,6 +23,7 @@ from kypo.sandbox_ansible_app.lib.inventory import DefaultAnsibleHostsGroups
 LOG = structlog.get_logger()
 
 SANDBOX_DEFINITION_FILENAME = 'topology.yml'
+VARIABLES_FILENAME = 'variables.yml'
 
 
 def create_definition(url: str, created_by: Optional[User], rev: str = None) -> Definition:
@@ -34,7 +37,7 @@ def create_definition(url: str, created_by: Optional[User], rev: str = None) -> 
     top_def = get_definition(url, rev, settings.KYPO_CONFIG)
     validate_topology_definition(top_def)
 
-    client = utils.get_ostack_client()
+    client = utils.get_terraform_client()
     client.validate_topology_definition(top_def)
     if not DefinitionProvider.has_key_access(url, settings.KYPO_CONFIG):
         raise exceptions.ValidationError('Repository is not accessible using SSH key.')
@@ -91,6 +94,37 @@ def get_definition(url: str, rev: str, config: KypoConfiguration) -> TopologyDef
                                   .format(SANDBOX_DEFINITION_FILENAME) + str(ex))
 
     return load_definition(io.StringIO(definition))
+
+
+def get_variables(url: str, rev: str, config: KypoConfiguration) -> list:
+    """Get APG variables file contents as an array of Variable object.
+
+    :param url: URL of sandbox definition Git repository
+    :param rev: Revision of the repository
+    :param config: KypoConfiguration
+    :return: array of Variables
+    :raise: GitError if GIT error occurs
+    """
+    try:
+        provider = get_def_provider(url, config)
+        variables_file = provider.get_file(VARIABLES_FILENAME, rev)
+    except exceptions.GitError as ex:
+        raise exceptions.GitError("Unable to retrieve {} file from repository.\n"
+                                  .format(VARIABLES_FILENAME) + str(ex))
+    var_list = yaml.load(variables_file, Loader=yaml.FullLoader)
+
+    variables = []
+    for var in var_list.keys():
+        v_name = var
+        v_type = var_list[var]["type"]
+        v_min = var_list[var].get("min")
+        v_max = var_list[var].get("max")
+        v_length = var_list[var].get("length")
+        v_prohibited = var_list[var].get("prohibited")
+        if v_prohibited is None:
+            v_prohibited = []
+        variables.append(Variable(v_name, v_type, v_min, v_max, v_prohibited, v_length))
+    return variables
 
 
 def get_def_provider(url: str, config: KypoConfiguration) -> DefinitionProvider:

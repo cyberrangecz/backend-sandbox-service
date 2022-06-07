@@ -112,16 +112,29 @@ application_configuration:
     # The name of the Docker network that the Runner will use.
     ansible_docker_network: kypo-platform-net-it
 
+    # The settings for the ansible runner container.
+    # ansible_runner_settings:
+        # The container backend. One of: docker, kubernetes.
+        # backend: docker
+
+        # The namespace where the container will be created. Only used when backend is kubernetes.
+        # namespace: kypo
+
     # A path to directory of CA certificates or file of CA certificates, i.e. CA bundle.
     # Use in case of self-signed certificates in related services.
     #ssl_ca_certificate_verify: ""
+
+    terraform_configuration:
+        # The type of backend that Terraform is using. The 'local' is suitable only for the
+        # development, for production user 'pg'
+        backend_type: 'local'
 
     sandbox_configuration:
         # The name or ID of network in OpenStack where all sandboxes will be deployed.
         base_network: jump_network
 
-        # The name of the image in OpenStack that will be used for MAN.
-        man_image: debian-9-x86_64
+        # The name of the image in OpenStack that will be used for MAN.  A dedicated debian-10-man image is recommended.
+        man_image: debian-10-man
 
         # The name of user in MAN.
         man_user: debian

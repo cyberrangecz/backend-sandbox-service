@@ -14,7 +14,7 @@ from kypo.sandbox_common_lib.utils import get_object_or_404
 from kypo.sandbox_definition_app.serializers import DefinitionSerializer
 
 from kypo.sandbox_instance_app import serializers
-from kypo.sandbox_instance_app.lib import units, pools, sandboxes, nodes,\
+from kypo.sandbox_instance_app.lib import pools, sandboxes, nodes,\
     requests as sandbox_requests
 from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit, \
     AllocationRequest, CleanupRequest, SandboxLock, PoolLock
@@ -321,26 +321,25 @@ class CleanupRequestCancelView(generics.GenericAPIView):
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class OpenstackAllocationStageDetailView(generics.RetrieveAPIView):
+class TerraformAllocationStageDetailView(generics.RetrieveAPIView):
     """
     get: Retrieve an `openstack` allocation stage.
     Null `status` and `status_reason` attributes mean, that stack does not have them;
     AKA it does not exist in OpenStack.
     """
-    serializer_class = serializers.OpenstackAllocationStageSerializer
+    serializer_class = serializers.TerraformAllocationStageSerializer
     queryset = AllocationRequest.objects.all()
     lookup_url_kwarg = "request_id"
 
     def get_object(self):
         request = super().get_object()
-        return stage_handlers.AllocationStackStageHandler(request.stackallocationstage)\
-            .update_allocation_stage()
+        return stage_handlers.AllocationStackStageHandler(request.stackallocationstage).stage
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class OpenstackCleanupStageDetailView(generics.RetrieveAPIView):
+class TerraformCleanupStageDetailView(generics.RetrieveAPIView):
     """get: Retrieve an `openstack` Cleanup stage."""
-    serializer_class = serializers.OpenstackCleanupStageSerializer
+    serializer_class = serializers.TerraformCleanupStageSerializer
     queryset = CleanupRequest.objects.all()
     lookup_url_kwarg = 'request_id'
 
@@ -349,44 +348,13 @@ class OpenstackCleanupStageDetailView(generics.RetrieveAPIView):
         return request.stackcleanupstage
 
 
-@utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class SandboxEventListView(generics.ListAPIView):
-    serializer_class = serializers.SandboxEventSerializer
-    queryset = AllocationRequest.objects.all()
-    lookup_url_kwarg = 'request_id'
+class TerraformAllocationStageOutputListView(generics.ListAPIView):
+    serializer_class = serializers.AllocationTerraformOutputSerializer
 
-    def get(self, request, *args, **kwargs):
-        """List sandbox Events."""
-        request = self.get_object()
-        events = units.get_stack_events(request.allocation_unit)
-
-        page = self.paginate_queryset(events)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-
-        serializer = self.get_serializer(events, many=True)
-        return Response(serializer.data)
-
-
-@utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class SandboxResourceListView(generics.ListAPIView):
-    serializer_class = serializers.SandboxResourceSerializer
-    queryset = AllocationRequest.objects.all()
-    lookup_url_kwarg = 'request_id'
-
-    def get(self, *args, **kwargs):
-        """List sandbox Resources."""
-        request = self.get_object()
-        events = units.get_stack_resources(request.allocation_unit)
-
-        page = self.paginate_queryset(events)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-
-        serializer = self.get_serializer(events, many=True)
-        return Response(serializer.data)
+    def get_queryset(self):
+        request_id = self.kwargs.get('request_id')
+        request = get_object_or_404(AllocationRequest, pk=request_id)
+        return request.stackallocationstage.terraform_outputs.all()
 
 
 #########################################
@@ -406,7 +374,7 @@ class PoolSandboxListView(generics.ListAPIView):
 
 class SandboxGetAndLockView(generics.RetrieveAPIView):
     serializer_class = serializers.SandboxSerializer
-    queryset = Pool.objects.all()
+    queryset = Sandbox.objects.all()  # To allow trainee to access training run!
     lookup_url_kwarg = "pool_id"
 
     @swagger_auto_schema(
@@ -417,7 +385,8 @@ class SandboxGetAndLockView(generics.RetrieveAPIView):
                       k in [400, 401, 403, 404, 500]}})
     def get(self, request, *args, **kwargs):
         """Get unlocked sandbox in given pool and lock it. Return 409 if all are locked."""
-        pool = self.get_object()
+        pool_id = self.kwargs.get('pool_id')
+        pool = get_object_or_404(Pool, id=pool_id)
         sandbox = pools.get_unlocked_sandbox(pool)
         if not sandbox:
             return Response({'detail': 'All sandboxes are already locked.'},
