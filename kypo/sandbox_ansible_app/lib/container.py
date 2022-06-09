@@ -222,7 +222,7 @@ class KubernetesContainer(BaseContainer):
                             client.V1Volume(
                                 name=ANSIBLE_FILE_VOLUME_NAME,
                                 persistent_volume_claim=V1PersistentVolumeClaimVolumeSource(
-                                    claim_name="sandbox-service"
+                                    claim_name=settings.KYPO_CONFIG.ansible_runner_settings.persistent_volume_claim_name
                                 )
                             )
                         ]
