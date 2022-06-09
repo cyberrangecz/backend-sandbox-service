@@ -5,13 +5,14 @@ import structlog
 from django.conf import settings
 from docker.models.containers import Container
 from kubernetes import client, config, watch
+from kubernetes.client import V1PersistentVolumeClaimVolumeSource
 from kypo.cloud_commons import KypoException
 
 from kypo.sandbox_ansible_app.models import AllocationAnsibleOutput, CleanupAnsibleOutput
 from kypo.sandbox_common_lib import exceptions
 
 LOG = structlog.get_logger()
-
+ANSIBLE_FILE_VOLUME_NAME = "ansible-files-path"
 
 class ContainerVolume:
     def __init__(self, name: str, bind: str, mode: str):
@@ -181,12 +182,16 @@ class KubernetesContainer(BaseContainer):
         kuber_container.args += ['-c'] if self.cleanup else []
         kuber_container.volume_mounts = [
             client.V1VolumeMount(
-                name=self.ANSIBLE_SSH_DIR.name,
-                mount_path=self.ANSIBLE_SSH_DIR.bind
+                name=ANSIBLE_FILE_VOLUME_NAME,
+                mount_path=self.ANSIBLE_SSH_DIR.bind,
+                sub_path=self.ssh_directory[
+                         len(settings.KYPO_CONFIG.ansible_runner_settings.volumes_path):]
             ),
             client.V1VolumeMount(
-                name=self.ANSIBLE_INVENTORY_PATH.name,
-                mount_path=self.ANSIBLE_INVENTORY_PATH.bind
+                name=ANSIBLE_FILE_VOLUME_NAME,
+                mount_path=self.ANSIBLE_INVENTORY_PATH.bind,
+                sub_path=self.inventory_path[
+                         len(settings.KYPO_CONFIG.ansible_runner_settings.volumes_path):]
             )
         ]
 
@@ -215,16 +220,9 @@ class KubernetesContainer(BaseContainer):
                         containers=[kuber_container],
                         volumes=[
                             client.V1Volume(
-                                name=self.ANSIBLE_SSH_DIR.name,
-                                host_path=client.V1HostPathVolumeSource(
-                                    path=self.ssh_directory,
-                                    type='Directory'
-                                )
-                            ),
-                            client.V1Volume(
-                                name=self.ANSIBLE_INVENTORY_PATH.name,
-                                host_path=client.V1HostPathVolumeSource(
-                                    path=self.inventory_path,
+                                name=ANSIBLE_FILE_VOLUME_NAME,
+                                persistent_volume_claim=V1PersistentVolumeClaimVolumeSource(
+                                    claim_name="sandbox-service"
                                 )
                             )
                         ]
