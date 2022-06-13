@@ -1,6 +1,7 @@
 from wsgiref.util import FileWrapper
 
 import structlog
+from django.conf import settings
 from django.http import HttpResponse, Http404
 from django.contrib.auth.models import AnonymousUser
 from drf_yasg2 import openapi
@@ -11,6 +12,7 @@ from rest_framework.views import APIView
 
 from kypo.sandbox_common_lib import exceptions, utils
 from kypo.sandbox_common_lib.utils import get_object_or_404
+from kypo.sandbox_definition_app.lib import definitions
 from kypo.sandbox_definition_app.serializers import DefinitionSerializer
 
 from kypo.sandbox_instance_app import serializers
@@ -555,3 +557,23 @@ class SandboxConsolesView(APIView):
                      [router.name for router in topology_instance.get_routers()]
         consoles = {name: nodes.get_console_url(sandbox, name) for name in node_names}
         return Response(consoles)
+
+
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
+class PoolVariablesView(APIView):
+    queryset = Pool.objects.none()
+
+    # noinspection PyMethodMayBeStatic
+    def get(self, request, *args, **kwargs):
+        """Retrieve APG variables from sandbox definition of this pool, empty list if variables.yml
+        was not found."""
+        pool = utils.get_object_or_404(Pool, pk=kwargs.get('pool_id'))
+        definition = pool.definition
+        variable_names = []
+        try:
+            variables = definitions.get_variables(definition.url, definition.rev,
+                                                  settings.KYPO_CONFIG)
+            variable_names = [variable.name for variable in variables]
+        except exceptions.GitError:
+            pass
+        return Response({"variables": variable_names})

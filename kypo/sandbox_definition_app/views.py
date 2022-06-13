@@ -4,10 +4,11 @@ from django.contrib.auth.models import AnonymousUser
 from drf_yasg2.utils import swagger_auto_schema
 from rest_framework import status, generics
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from generator.var_generator import generate
 
-from kypo.sandbox_common_lib import utils
+from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_definition_app import serializers
 from kypo.sandbox_definition_app.lib import definitions
 from kypo.sandbox_definition_app.lib.definition_providers import DefinitionProvider
@@ -105,3 +106,21 @@ class LocalSandboxVariablesView(generics.CreateAPIView):
 
         serialized_variables = serializers.LocalVariableSerializer(variables, many=True)
         return Response(serialized_variables.data)
+
+
+@utils.add_error_responses_doc('get', [401, 403, 404, 500])
+class DefinitionVariablesView(APIView):
+    queryset = Definition.objects.none()
+
+    # noinspection PyMethodMayBeStatic
+    def get(self, request, *args, **kwargs):
+        """Retrieve APG variables from TopologyDefinition, empty list if variables.yml was not
+        found."""
+        definition = utils.get_object_or_404(Definition, pk=kwargs.get('definition_id'))
+        variable_names = []
+        try:
+            variables = definitions.get_variables(definition.url, definition.rev, settings.KYPO_CONFIG)
+            variable_names = [variable.name for variable in variables]
+        except exceptions.GitError:
+            pass
+        return Response({"variables": variable_names})
