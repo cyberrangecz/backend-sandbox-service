@@ -237,9 +237,12 @@ class AllocationStackStageHandler(StackStageHandler):
         """
         Stop the OpenStack stack allocation and remove what has been allocated.
         """
-        if self.stage.start and hasattr(self.stage, 'terraformstack'):
-            process_id = int(self.stage.terraformstack.stack_id)
-            os.kill(process_id, signal.SIGTERM)
+        try:
+            if self.stage.start and hasattr(self.stage, 'terraformstack'):
+                process_id = int(self.stage.terraformstack.stack_id)
+                os.kill(process_id, signal.SIGTERM)
+        except ProcessLookupError:
+            return
 
 
 class CleanupStackStageHandler(StackStageHandler):
