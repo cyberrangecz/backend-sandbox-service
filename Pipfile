@@ -23,7 +23,7 @@ pytest-django = "*"
 drf-oidc-auth = { index = "kypo", version = ">=2.0.1" }
 csirtmu-oidc-client = { index = "kypo", version = ">=0.2.1" }
 csirtmu-uag-auth = { index = "kypo", version = "==0.1.10" }
-kypo-terraform-client = { index = "kypo", version = "~=0.2.0" }
+kypo-terraform-client = { index = "kypo", version = "~=0.2.2" }
 automated-problem-generation-lib = { index = "kypo", version = ">=0.1.2" }
 better-profanity = "*"  # tox cannot install it correctly for automated-problem-generation-lib
 django = "*"
