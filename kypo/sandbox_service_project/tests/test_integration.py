@@ -49,7 +49,7 @@ SANDBOX_ALLOCATION_REQUEST_CANCEL = 'sandbox-allocation-request-cancel'
 ALLOCATION_STAGE_OPENSTACK = 'openstack-allocation-stage'
 ALLOCATION_STAGE_NETWORKING_ANSIBLE = 'networking-ansible-allocation-stage'
 ALLOCATION_STAGE_USER_ANSIBLE = 'user-ansible-allocation-stage'
-CLEANUP_STAGE_OPENSTACK = 'openstack-cleanup-stage'
+CLEANUP_STAGE_OPENSTACK = 'terraform-cleanup-stage'
 CLEANUP_STAGE_NETWORKING_ANSIBLE = 'networking-ansible-cleanup-stage'
 CLEANUP_STAGE_USER_ANSIBLE = 'user-ansible-cleanup-stage'
 
@@ -59,37 +59,51 @@ class TestIntegration:
     pytestmark = pytest.mark.django_db(transaction=True)
     RQ_QUEUES = ('default', 'openstack', 'ansible')
 
-    def test_build_sandbox_full(self, client, jump_template):
+    # To run this test, fill all the values necessary for building a sandbox in the
+    #  kypo-sandbox-service/kypo/sandbox_service_project/tests/config.yml file. Namely, this
+    #  concerns:
+    #      application_configuration:
+    #          os_auth_url
+    #          os_application_credential_id
+    #          os_application_credential_secret
+    #          proxy_jump_to_man:
+    #               Host, User, IdentityFile
+    #      sandbox_configuration:
+    #          base_network, dns_name_servers
+    #  Note: Changing these values will break some of unit tests - in order to fix these, replace
+    #  the original value of proxy_jump_to_man: Host with the newly set value:
+    #     3x in kypo/sandbox_instance_app/tests/assets/ssh_config_user
+    #     3x in kypo/sandbox_instance_app/tests/assets/ssh_config_management
+    #     1x in kypo/sandbox_ansible_app/tests/assets/inventory.yml
+    #        also change ansible_user to the newly set value for User
+    #     3x in kypo/sandbox_instance_app/tests/assets/ssh_config_ansible
+    #        also change the User of the first Host for the newly set value for User
+    #
+    #  Finally, run the INTERNAL git server - by going to the kypo-it-folder and running
+    #  ./build-images.sh, docker-compose up, ./populate-git.sh in this order
+    def test_build_sandbox_full(self, client):
+        def_id = self.create_definition(client, DEFINITION_URL, DEFINITION_REV)
         try:
-            private_key = self.create_key_pair()
-            self.create_jump_host(jump_template)
-            jump_ip = self.get_jump_ip_address()
-            self.set_jump_host_config(jump_ip, private_key)
-            def_id = self.create_definition(client, DEFINITION_URL, DEFINITION_REV)
+            pool_id = self.create_pool(client, def_id)
             try:
-                pool_id = self.create_pool(client, def_id)
+                unit_id, alloc_req_id = self.create_alloc_unit(client, pool_id)
                 try:
-                    unit_id, alloc_req_id = self.create_alloc_unit(client, pool_id)
                     try:
-                        try:
-                            assert len(Sandbox.objects.all()) == 1
-                        except AssertionError:
-                            ansible_outputs = [x.content for x in AllocationAnsibleOutput.objects.all()]
-                            LOG.info('Ansible outputs', ansible_outputs='\n'.join(ansible_outputs))
-                            self.cancel_allocation_request(client, alloc_req_id)
-                            raise
-                        sb_id, lock_id = self.get_and_lock(client, pool_id)
-                        self.unlock_sandbox(client, sb_id, lock_id)
-                        self.create_cancel_delete_cleanup_request(client, unit_id)
-                    finally:
-                        self.create_cleanup_req(client, unit_id)
+                        assert len(Sandbox.objects.all()) == 1
+                    except AssertionError:
+                        ansible_outputs = [x.content for x in AllocationAnsibleOutput.objects.all()]
+                        LOG.info('Ansible outputs', ansible_outputs='\n'.join(ansible_outputs))
+                        self.cancel_allocation_request(client, alloc_req_id)
+                        raise
+                    sb_id, lock_id = self.get_and_lock(client, pool_id)
+                    self.unlock_sandbox(client, sb_id, lock_id)
+                    self.create_cancel_delete_cleanup_request(client, unit_id)
                 finally:
-                    self.delete_pool(client, pool_id)
+                    self.create_cleanup_req(client, unit_id)
             finally:
-                self.delete_definition(client, def_id)
+                self.delete_pool(client, pool_id)
         finally:
-            self.delete_key_pair()
-            self.delete_jump_host()
+            self.delete_definition(client, def_id)
 
     @classmethod
     def run_worker(cls):
@@ -238,47 +252,3 @@ class TestIntegration:
         response = client.delete(reverse(POOL_DETAIL,
                                          kwargs={'pool_id': pool_id}))
         assert response.status_code == status.HTTP_204_NO_CONTENT
-
-    @staticmethod
-    def create_jump_host(jump_template):
-        LOG.info(f'Creating jump host {JUMP_STACK_NAME}')
-        template = string.Template(jump_template)
-        client = utils.get_terraform_client()
-        client.open_stack_proxy.create_stack_from_template(
-            template.safe_substitute(**TEMPLATE_DICT), JUMP_STACK_NAME)
-
-        result, msg = client.wait_for_stack_create_action(JUMP_STACK_NAME)
-        assert result
-
-    @staticmethod
-    def delete_jump_host():
-        LOG.info("Deleting Jump Host")
-        client = utils.get_terraform_client()
-        client.delete_stack(JUMP_STACK_NAME)
-
-    @staticmethod
-    def set_jump_host_config(host, private_key):
-        key_path = f'/tmp/test-key-{utils.get_simple_uuid()}'
-        LOG.info('Set jump host config', host=host, key_path=key_path,
-                 private_key=private_key)
-        settings.KYPO_CONFIG.proxy_jump_to_man.Host = host
-        settings.KYPO_CONFIG.proxy_jump_to_man.IdentityFile = key_path
-        with open(key_path, 'w') as f:
-            f.write(private_key)
-
-    @staticmethod
-    def create_key_pair():
-        client = utils.get_terraform_client()
-        return client.create_keypair(KEY_PAIR).to_dict().get('private_key')
-
-    @staticmethod
-    def delete_key_pair():
-        client = utils.get_terraform_client()
-        client.delete_keypair(KEY_PAIR)
-
-    @staticmethod
-    def get_jump_ip_address():
-        client = utils.get_terraform_client()
-        links = client.get_node(JUMP_STACK_NAME, JUMP_SERVER).links.get(JUMP_NETWORK)
-        links = [link for link in links if link['type'] == 'floating']
-        return links[0]['addr'] if links else None

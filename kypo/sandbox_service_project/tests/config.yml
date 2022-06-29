@@ -173,3 +173,8 @@ application_configuration:
 
         # The username to use when connecting to the database.
         user: ""
+
+    redis:
+        host: "localhost"
+        port: 6379
+        db: 0
