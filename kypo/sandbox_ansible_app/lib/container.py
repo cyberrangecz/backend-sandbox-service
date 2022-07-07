@@ -257,6 +257,18 @@ class KubernetesContainer(BaseContainer):
                 w.stop()
                 raise KypoException('Pod was deleted before it was ready.')
 
+    def _wait_for_job_finish(self):
+        """
+        Wait for job to finish.
+        """
+        w = watch.Watch()
+        for event in w.stream(self.BATCH_API.list_namespaced_job, namespace=self.KUBERNETES_NAMESPACE,
+                              label_selector='job-name={}'.format(self.job_name)):
+            job_status = event['object'].status
+            if job_status.failed or job_status.succeeded:
+                w.stop()
+                return job_status
+
     def _save_pod_outputs(self, pod_name: str):
         """
         Replace live outputs of the pod with the ones from the storage.
@@ -286,14 +298,9 @@ class KubernetesContainer(BaseContainer):
 
         self._save_pod_outputs(pod_name)
 
-    def _get_container_status(self):
-        """Get the container status."""
-        return self.BATCH_API.read_namespaced_job_status(name=self.get_container_name(),
-                                                         namespace=self.KUBERNETES_NAMESPACE).status
-
     def check_container_status(self):
         """Check the container status."""
-        status = self._get_container_status()
+        status = self._wait_for_job_finish()
         if status.failed or (status.conditions and status.conditions[0].type == 'Failed'):
             raise exceptions.AnsibleError(f'Ansible stage {self.stage.id} failed.'
                                           f' See Ansible outputs for details.')

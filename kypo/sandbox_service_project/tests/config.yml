@@ -179,7 +179,6 @@ application_configuration:
         # The username to use when connecting to the database.
         user: ""
 
-    # Django redis settings for rq queues.
     redis:
         host: "localhost"
         port: 6379
