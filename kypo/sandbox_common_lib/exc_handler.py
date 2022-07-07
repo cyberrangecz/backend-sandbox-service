@@ -16,12 +16,12 @@ LOG = structlog.get_logger()
 def custom_exception_handler(exc, context):
     """Log all exceptions and handle KYPO exceptions in a special way."""
 
-    if isinstance(exc, (ApiException, KypoException)):
-        response = handle_kypo_exception(exc, context)
-    elif isinstance(exc, PermissionDenied):
+    if isinstance(exc, PermissionDenied):
         response = handle_permission_denied(exc, context)
     elif isinstance(exc, ValidationError):
         response = handle_model_validation_error(exc, context)
+    elif isinstance(exc, (ApiException, KypoException)):
+        response = handle_kypo_exception(exc, context)
     elif isinstance(exc, Http404):
         response = handle_not_found(exc, context)
     else:
