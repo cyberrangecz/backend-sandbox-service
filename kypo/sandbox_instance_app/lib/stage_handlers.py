@@ -288,7 +288,7 @@ class AnsibleStageHandler(StageHandler):
         """
         Compose absolute path to directory for Docker container volumes.
         """
-        return os.path.join(settings.KYPO_CONFIG.ansible_docker_volumes,
+        return os.path.join(settings.KYPO_CONFIG.ansible_runner_settings.volumes_path,
                             allocation_unit.get_stack_name(),
                             f'{self.stage.id}-{utils.get_simple_uuid()}')
 
