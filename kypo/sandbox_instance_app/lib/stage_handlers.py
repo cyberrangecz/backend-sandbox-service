@@ -237,9 +237,12 @@ class AllocationStackStageHandler(StackStageHandler):
         """
         Stop the OpenStack stack allocation and remove what has been allocated.
         """
-        if self.stage.start and hasattr(self.stage, 'terraformstack'):
-            process_id = int(self.stage.terraformstack.stack_id)
-            os.kill(process_id, signal.SIGTERM)
+        try:
+            if self.stage.start and hasattr(self.stage, 'terraformstack'):
+                process_id = int(self.stage.terraformstack.stack_id)
+                os.kill(process_id, signal.SIGTERM)
+        except ProcessLookupError:
+            return
 
 
 class CleanupStackStageHandler(StackStageHandler):
@@ -285,7 +288,7 @@ class AnsibleStageHandler(StageHandler):
         """
         Compose absolute path to directory for Docker container volumes.
         """
-        return os.path.join(settings.KYPO_CONFIG.ansible_docker_volumes,
+        return os.path.join(settings.KYPO_CONFIG.ansible_runner_settings.volumes_path,
                             allocation_unit.get_stack_name(),
                             f'{self.stage.id}-{utils.get_simple_uuid()}')
 

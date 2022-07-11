@@ -103,9 +103,6 @@ application_configuration:
     # Timeout for Ansible.
     sandbox_ansible_timeout: 1800
 
-    # The path to local temporary directory where KYPO will prepare Docker volumes.
-    #ansible_docker_volumes: /tmp/kypo
-
     # The name of the Docker image that is able to run Ansible playbook.
     ansible_docker_image: kypo-crp/docker-ansible-runner
 
@@ -115,10 +112,18 @@ application_configuration:
     # The settings for the ansible runner container.
     # ansible_runner_settings:
         # The container backend. One of: docker, kubernetes.
-        # backend: docker
+        #backend: docker
 
         # The namespace where the container will be created. Only used when backend is kubernetes.
-        # namespace: kypo
+        #namespace: kypo
+
+        # The path to local temporary directory where KYPO will prepare Docker volumes if container
+        # backend is set to docker. Path to temporary directory of similar purpose in Persistent
+        # Volume if backend is set to kubernetes.
+        #volumes_name: /tmp/kypo
+
+        # Name of persistent volume claim, only used when backend is kubernetes.
+        #persistent_volume_claim_name: sandbox-service
 
     # A path to directory of CA certificates or file of CA certificates, i.e. CA bundle.
     # Use in case of self-signed certificates in related services.
@@ -173,3 +178,8 @@ application_configuration:
 
         # The username to use when connecting to the database.
         user: ""
+
+    redis:
+        host: "localhost"
+        port: 6379
+        db: 0

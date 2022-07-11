@@ -151,3 +151,12 @@ def validate_topology_definition(topology_definition: TopologyDefinition) -> Non
             raise exceptions.ValidationError(f"Cannot redefine default KYPO ansible hosts groups."
                                              f" Colliding hosts group in topology definition:"
                                              f" '{group.name}'.")
+
+    client = utils.get_terraform_client()
+    terraform_flavors = client.get_flavors_dict()
+    used_flavors = [host.flavor for host in topology_definition.hosts] +\
+                   [router.flavor for router in topology_definition.routers]
+    for flavor in used_flavors:
+        if flavor not in terraform_flavors:
+            raise exceptions.ValidationError(f"Flavor {flavor} was not found on the terraform "
+                                             f"backend.")

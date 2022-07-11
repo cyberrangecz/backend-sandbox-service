@@ -66,6 +66,7 @@ def create_pool(data: Dict, created_by: Optional[User]) -> Pool:
 
         # Validate definition
         top_def = definitions.get_definition(definition.url, pool.rev_sha, settings.KYPO_CONFIG)
+        definitions.validate_topology_definition(top_def)
         client.validate_topology_definition(top_def)
     except (exceptions.GitError, exceptions.ValidationError, InvalidTopologyDefinition):
         pool.delete()

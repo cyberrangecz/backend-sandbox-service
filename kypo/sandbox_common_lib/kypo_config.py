@@ -23,7 +23,8 @@ ANSIBLE_NETWORKING_REV = 'master'
 SANDBOX_BUILD_TIMEOUT = 3600 * 2
 SANDBOX_DELETE_TIMEOUT = 3600
 SANDBOX_ANSIBLE_TIMEOUT = 3600 * 2
-ANSIBLE_DOCKER_VOLUMES = '/tmp/kypo'
+VOLUMES_PATH = '/tmp/kypo'
+PERSISTENT_VOLUME_CLAIM_NAME = 'sandbox-service'
 ANSIBLE_DOCKER_IMAGE = 'csirtmu/kypo-ansible-runner'
 ANSIBLE_DOCKER_NETWORK = 'bridge'
 ANSWERS_STORAGE_API = 'http://answers-storage:8087/kypo-answers-storage/api/v1'
@@ -57,6 +58,8 @@ class TerraformConfiguration(Object):
 class AnsibleRunnerSettings(Object):
     backend = Attribute(type=str, default='docker')
     namespace = Attribute(type=str, default='kypo')
+    volumes_path = Attribute(type=str, default=VOLUMES_PATH)
+    persistent_volume_claim_name = Attribute(type=str, default=PERSISTENT_VOLUME_CLAIM_NAME)
 
 
 class Database(Object):
@@ -161,7 +164,6 @@ class KypoConfiguration(Object):
     sandbox_delete_timeout = Attribute(type=int, default=SANDBOX_DELETE_TIMEOUT)
     sandbox_ansible_timeout = Attribute(type=int, default=SANDBOX_ANSIBLE_TIMEOUT)
 
-    ansible_docker_volumes = Attribute(type=str, default=ANSIBLE_DOCKER_VOLUMES)
     ansible_docker_image = Attribute(type=str, default=ANSIBLE_DOCKER_IMAGE)
     ansible_docker_network = Attribute(type=str, default=ANSIBLE_DOCKER_NETWORK)
 

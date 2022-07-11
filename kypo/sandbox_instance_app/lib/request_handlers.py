@@ -163,8 +163,6 @@ class AllocationRequestHandler(RequestHandler):
         Restart failed DB stages for this request and return their handlers.
         """
 
-        if self.request.stackallocationstage.failed:
-            raise exceptions.ValidationError("Restart of the first stage is not implemented yet.")
         if not self.request.is_finished:
             raise exceptions.ValidationError("Allocation of the sandbox is still in progress.")
         if not self.request.useransibleallocationstage.failed:
@@ -172,7 +170,13 @@ class AllocationRequestHandler(RequestHandler):
                                              " stages can be restarted.")
 
         stage_handlers = []
-        if self.request.networkingansibleallocationstage.failed:
+        if self.request.stackallocationstage.failed:
+            self.request.stackallocationstage.delete()
+            stack_stage = self._create_db_stage(StackAllocationStage)
+            stage_handlers.append(AllocationStackStageHandler(stack_stage))
+
+        if self.request.stackallocationstage.failed or \
+                self.request.networkingansibleallocationstage.failed:
             self.request.networkingansibleallocationstage.delete()
             networking_stage = \
                 self._create_db_stage(NetworkingAnsibleAllocationStage,

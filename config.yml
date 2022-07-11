@@ -106,9 +106,6 @@ application_configuration:
     # Timeout for Ansible.
     #sandbox_ansible_timeout: 7200
 
-    # The path to local temporary directory where KYPO will prepare Docker volumes.
-    #ansible_docker_volumes: /tmp/kypo
-
     # The name of the Docker image that is able to run Ansible playbook.
     #ansible_docker_image: csirtmu/kypo-ansible-runner
 
@@ -118,10 +115,18 @@ application_configuration:
     # The settings for the ansible runner container.
     # ansible_runner_settings:
         # The container backend. One of: docker, kubernetes.
-        # backend: docker
+        #backend: docker
 
         # The namespace where the container will be created. Only used when backend is kubernetes.
-        # namespace: kypo
+        #namespace: kypo
+
+        # The path to local temporary directory where KYPO will prepare Docker volumes if container
+        # backend is set to docker. Path to temporary directory of similar purpose in persistent
+        # volume if backend is kubernetes.
+        #volumes_path: /tmp/kypo
+
+        # Name of persistent volume claim, only used when backend is kubernetes.
+        #persistent_volume_claim_name: sandbox-service
 
     # The address of kypo-answers-storage REST API
     #answers_storage_api: http://answers-storage:8087/kypo-answers-storage/api/v1
