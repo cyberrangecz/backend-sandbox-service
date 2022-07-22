@@ -3,6 +3,9 @@ Serializers for ostack_proxy_elements classes.
 """
 
 from rest_framework import serializers
+from kypo.cloud_commons import Image
+
+OPENSTACK_OWNER_SPECIFIED_PREFIX = 'owner_specified.openstack.'
 
 
 class QuotaSerializer(serializers.Serializer):
@@ -25,7 +28,7 @@ class ImageSerializer(serializers.Serializer):
     disk_format = serializers.CharField()
     container_format = serializers.CharField()
     visibility = serializers.CharField()
-    size = serializers.IntegerField()
+    size = serializers.SerializerMethodField()
     status = serializers.CharField()
     min_ram = serializers.IntegerField()
     min_disk = serializers.IntegerField()
@@ -34,7 +37,17 @@ class ImageSerializer(serializers.Serializer):
     tags = serializers.ListField()
     default_user = serializers.CharField()
     name = serializers.CharField()
-    owner_specified = serializers.DictField()
+    owner_specified = serializers.SerializerMethodField()
+
+    @staticmethod
+    def get_size(obj: Image) -> int:
+        return obj.size/1024**3
+
+    @staticmethod
+    def get_owner_specified(obj: Image) -> dict:
+        return {(key[len(OPENSTACK_OWNER_SPECIFIED_PREFIX):] if
+                 key.startswith(OPENSTACK_OWNER_SPECIFIED_PREFIX) else key): value
+                for (key, value) in obj.owner_specified.items()}
 
 
 class ProjectLimitsSerializer(serializers.Serializer):
