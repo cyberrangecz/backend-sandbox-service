@@ -277,6 +277,8 @@ class KubernetesContainer(BaseContainer):
         temporary_outputs.delete()
         pod_outputs = self.CORE_API.read_namespaced_pod_log(name=pod_name,
                                                             namespace=self.KUBERNETES_NAMESPACE)
+        print("\n\n\n\nTHIS IS NEW LOG\n\n\n\n\n\n\n")
+        print(pod_outputs)
         for output in pod_outputs.split('\n'):
             self.output_class.objects.create(**self.stage_info, content=output)
 
