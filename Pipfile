@@ -21,7 +21,7 @@ pytest-django = "*"
 
 [packages]
 drf-oidc-auth = { index = "kypo", version = ">=2.0.1" }
-csirtmu-oidc-client = { index = "kypo", version = ">=0.2.1" }
+csirtmu-oidc-client = { index = "kypo", version = ">=0.3.0" }
 csirtmu-uag-auth = { index = "kypo", version = "==0.1.10" }
 kypo-terraform-client = { index = "kypo", version = "~=0.2.2" }
 automated-problem-generation-lib = { index = "kypo", version = ">=0.1.2" }
