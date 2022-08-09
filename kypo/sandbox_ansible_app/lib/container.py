@@ -277,9 +277,6 @@ class KubernetesContainer(BaseContainer):
         temporary_outputs.delete()
         pod_outputs = self.CORE_API.read_namespaced_pod_log(name=pod_name,
                                                             namespace=self.KUBERNETES_NAMESPACE)
-        print("\n\n\n\nTHIS IS NEW LOG FROM _save_pod_outputs")
-        print(pod_outputs)
-        print("_save_pod_outputs LOGS OVER")
         for output in pod_outputs.split('\n'):
             self.output_class.objects.create(**self.stage_info, content=output)
 
@@ -290,12 +287,8 @@ class KubernetesContainer(BaseContainer):
         w = watch.Watch()
 
         pod_name = self._wait_for_pod_start()
-        print("\n\n\n\nTHIS IS NEW LOG FROM get_container_outputs")
-        w_cycle_count = 0
         job_done = False
         while not job_done:
-            w_cycle_count += 1
-            print(f"NEW W CYCLE {w_cycle_count}")
             for log in w.stream(self.CORE_API.read_namespaced_pod_log, name=pod_name,
                                 namespace=self.KUBERNETES_NAMESPACE, _preload_content=False):
                 self.output_class.objects.create(**self.stage_info, content=log)
@@ -305,7 +298,6 @@ class KubernetesContainer(BaseContainer):
                     job_done = True
                     w.stop()
                     break
-        print("get_container_outputs LOGS OVER")
         self._save_pod_outputs(pod_name)
 
     def check_container_status(self):
