@@ -15,6 +15,10 @@ urlpatterns = [
          name='pool-allocation-request-list'),
     path('pools/<int:pool_id>/cleanup-requests', views.PoolCleanupRequestsListCreateView.as_view(),
          name='pool-cleanup-request-list'),
+    path('pools/<int:pool_id>/cleanup-failed', views.PoolCleanupRequestFailedCreateView.as_view(),
+         name='pool-cleanup-request-failed'),
+    path('pools/<int:pool_id>/cleanup-unlocked', views.PoolCleanupRequestUnlockedCreateView.as_view(),
+         name='pool-cleanup-request-unlocked'),
     path('pools/<int:pool_id>/variables',
          views.PoolVariablesView.as_view(), name='pool-variables'),
 
@@ -30,6 +34,9 @@ urlpatterns = [
          views.SandboxCleanupRequestView.as_view(), name='sandbox-cleanup-request'),
     path('sandbox-allocation-units/<int:unit_id>/allocation-stages/restart',
          views.SandboxAllocationStagesRestartView.as_view(), name='allocation-stages-restart'),
+    path('sandbox-allocation-units/<int:unit_id>/lock',
+         views.SandboxAllocationUnitLockRetrieveCreateDestroyView.as_view(),
+         name='sandbox-lock-detail-create-destroy'),
 
     # Allocation request
     path('allocation-requests/<request_id>',
@@ -65,10 +72,6 @@ urlpatterns = [
 
     # Sandboxes
     path('sandboxes/<int:sandbox_id>', views.SandboxDetailView.as_view(), name='sandbox-detail'),
-    path('sandboxes/<int:sandbox_id>/locks', views.SandboxLockListCreateView.as_view(),
-         name='sandbox-lock-list'),
-    path('sandboxes/<int:sandbox_id>/locks/<int:lock_id>',
-         views.SandboxLockDetailDestroyView.as_view(), name='sandbox-lock-detail'),
     path('sandboxes/<int:sandbox_id>/topology',
          views.SandboxTopologyView.as_view(), name='sandbox-topology'),
 
