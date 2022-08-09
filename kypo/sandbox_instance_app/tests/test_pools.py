@@ -11,7 +11,7 @@ from kypo.sandbox_instance_app.lib import pools, sshconfig
 from kypo.sandbox_instance_app.models import SandboxAllocationUnit, Sandbox
 from kypo.sandbox_instance_app.views import PoolListCreateView
 
-from kypo.cloud_commons import exceptions
+from kypo.cloud_commons import exceptions, HardwareUsage
 
 pytestmark = pytest.mark.django_db
 
@@ -51,7 +51,9 @@ class TestCreatePool:
                                    max_size=-10), created_by=created_by)
 
     def test_pool_views(self, mocker):
-        mocker.patch("kypo.sandbox_instance_app.lib.pools.get_hardware_usage_of_sandbox")
+        mocker.patch("kypo.sandbox_instance_app.lib.pools.get_hardware_usage_of_sandbox",
+                     return_value=HardwareUsage(**{'vcpu': 0.0, 'ram': 0.0, 'instances': 0.0,
+                                                   'network': 0.0, 'subnet': 0.0, 'port': 0.0}))
         request = self.arf.get(reverse('pool-list'))
         response = PoolListCreateView.as_view()(request)
         assert len(response.data['results']) == 2
