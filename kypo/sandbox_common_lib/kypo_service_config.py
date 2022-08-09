@@ -11,6 +11,7 @@ from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
 STACK_NAME_PREFIX = 'default0'
 MICROSERVICE_NAME = 'kypo-sandbox-service'
 DEBUG = True
+DJANGO_SECRET_KEY = '-^mu0=6s@*x4jdbrz5yr!++p*02#%m$_4&0uw8h1)&r5u!v=12'
 ALLOWED_HOSTS = ['*']  # Allow everyone
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ORIGIN_WHITELIST = []
@@ -47,6 +48,7 @@ class KypoServiceConfig(Object):
                                   validator=stack_name_prefix_validator)
     microservice_name = Attribute(type=str, default=MICROSERVICE_NAME)
     debug = Attribute(type=bool, default=DEBUG)
+    django_secret_key = Attribute(type=str, default=DJANGO_SECRET_KEY)
     allowed_hosts = Attribute(type=StrList, default=tuple(ALLOWED_HOSTS))
     cors_origin_allow_all = Attribute(type=bool, default=CORS_ORIGIN_ALLOW_ALL)
     cors_origin_whitelist = Attribute(type=StrList, default=tuple(CORS_ORIGIN_WHITELIST))
