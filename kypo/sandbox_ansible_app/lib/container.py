@@ -279,7 +279,7 @@ class KubernetesContainer(BaseContainer):
                                                             namespace=self.KUBERNETES_NAMESPACE)
         print("\n\n\n\nTHIS IS NEW LOG FROM _save_pod_outputs")
         print(pod_outputs)
-        print("get_container_outputs LOGS OVER")
+        print("_save_pod_outputs LOGS OVER")
         for output in pod_outputs.split('\n'):
             self.output_class.objects.create(**self.stage_info, content=output)
 
@@ -293,10 +293,11 @@ class KubernetesContainer(BaseContainer):
         print("\n\n\n\nTHIS IS NEW LOG FROM get_container_outputs")
         for log in w.stream(self.CORE_API.read_namespaced_pod_log, name=pod_name,
                             namespace=self.KUBERNETES_NAMESPACE, _preload_content=False):
-            print(log)
+            print(f"LOG: {log}")
             self.output_class.objects.create(**self.stage_info, content=log)
             job = self.BATCH_API.read_namespaced_job_status(name=self.job_name,
                                                             namespace=self.KUBERNETES_NAMESPACE)
+            print(f"JOB NAME: {self.job_name} JOB STATUS: {job.status}")
             if job.status.succeeded or job.status.failed:
                 w.stop()
                 break
