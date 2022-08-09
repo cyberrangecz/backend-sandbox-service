@@ -290,17 +290,25 @@ class KubernetesContainer(BaseContainer):
         w = watch.Watch()
 
         pod_name = self._wait_for_pod_start()
+
+
         print("\n\n\n\nTHIS IS NEW LOG FROM get_container_outputs")
-        for log in w.stream(self.CORE_API.read_namespaced_pod_log, name=pod_name,
-                            namespace=self.KUBERNETES_NAMESPACE, _preload_content=False):
-            print(f"LOG: {log}")
-            self.output_class.objects.create(**self.stage_info, content=log)
-            job = self.BATCH_API.read_namespaced_job_status(name=self.job_name,
-                                                            namespace=self.KUBERNETES_NAMESPACE)
-            print(f"JOB NAME: {self.job_name} JOB STATUS: {job.status}")
-            if job.status.succeeded or job.status.failed:
-                w.stop()
-                break
+        w_cycle_count = 0
+        job_done = False
+        while not job_done:
+            print(f"NEW W CYCLE {w_cycle_count}")
+            for log in w.stream(self.CORE_API.read_namespaced_pod_log, name=pod_name,
+                                namespace=self.KUBERNETES_NAMESPACE, _preload_content=False):
+                w_cycle_count += 1
+                print(f"LOG: {log}")
+                self.output_class.objects.create(**self.stage_info, content=log)
+                job = self.BATCH_API.read_namespaced_job_status(name=self.job_name,
+                                                                namespace=self.KUBERNETES_NAMESPACE)
+                print(f"JOB NAME: {self.job_name} JOB STATUS: {job.status}")
+                if job.status.succeeded or job.status.failed:
+                    job_done = True
+                    w.stop()
+                    break
         print("get_container_outputs LOGS OVER")
         self._save_pod_outputs(pod_name)
 
