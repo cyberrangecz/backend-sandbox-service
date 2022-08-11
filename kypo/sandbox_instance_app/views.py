@@ -37,10 +37,7 @@ class PoolListCreateView(generics.ListCreateAPIView):
         """
         pools_serialized = self.serializer_class(self.get_queryset(), many=True).data
         page = self.paginate_queryset(pools_serialized)
-        if page:
-            return self.get_paginated_response(page)
-
-        return Response({'pools': pools_serialized})
+        return self.get_paginated_response(page)
 
     def post(self, request, *args, **kwargs):
         """Creates new pool.
@@ -161,7 +158,7 @@ class PoolCleanupRequestsListCreateView(generics.ListCreateAPIView):
         return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
 
 
-class PoolCleanupRequestUnlockedCreateView(generics.CreateAPIView):
+class PoolCleanupRequestUnlockedCreateView(APIView):
     @swagger_auto_schema(
         manual_parameters=[
             openapi.Parameter('force', openapi.IN_QUERY,
@@ -169,18 +166,20 @@ class PoolCleanupRequestUnlockedCreateView(generics.CreateAPIView):
                               type=openapi.TYPE_BOOLEAN, default=False),
         ])
     def post(self, request, *args, **kwargs):
-        """Deletes all unlocked sandboxes. With an optional parameter *force*, it forces the deletion."""
+        """Deletes all unlocked sandboxes in a pool. With an optional parameter *force*, it forces
+         the deletion."""
         pool_id = kwargs.get('pool_id')
         get_object_or_404(Pool, pk=pool_id)
         pool_units = SandboxAllocationUnit.objects.filter(pool_id=pool_id)
-        pool_units = [unit for unit in pool_units if hasattr(unit, 'sandbox') and not hasattr(unit.sandbox, "lock")]
+        pool_units = [unit for unit in pool_units if hasattr(unit, 'sandbox') and
+                      not hasattr(unit.sandbox, "lock")]
         force = request.GET.get('force', 'false') == 'true'
         cleanup_requests = sandbox_requests.create_cleanup_requests(pool_units, force)
         serializer = serializers.CleanupRequestSerializer(cleanup_requests, many=True)
         return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
 
 
-class PoolCleanupRequestFailedCreateView(generics.CreateAPIView):
+class PoolCleanupRequestFailedCreateView(APIView):
     @swagger_auto_schema(
         manual_parameters=[
             openapi.Parameter('force', openapi.IN_QUERY,
@@ -188,7 +187,8 @@ class PoolCleanupRequestFailedCreateView(generics.CreateAPIView):
                               type=openapi.TYPE_BOOLEAN, default=False),
         ])
     def post(self, request, *args, **kwargs):
-        """Deletes all failed sandboxes. With an optional parameter *force*, it forces the deletion."""
+        """Deletes all failed sandboxes in a pool. With an optional parameter *force*, it forces
+         the deletion."""
         pool_id = kwargs.get('pool_id')
         get_object_or_404(Pool, pk=pool_id)
         pool_units = SandboxAllocationUnit.objects.filter(pool_id=pool_id)
