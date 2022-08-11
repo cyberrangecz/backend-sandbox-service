@@ -28,16 +28,11 @@ LOG = structlog.get_logger()
 @utils.add_error_responses_doc('get', [401, 403, 500])
 @utils.add_error_responses_doc('post', [400, 401, 403, 404, 500])
 class PoolListCreateView(generics.ListCreateAPIView):
+    """
+    get: Get a list of pools.
+    """
     queryset = Pool.objects.all()
     serializer_class = serializers.PoolSerializer
-
-    def get(self, request, *args, **kwargs):
-        """
-        Get a list of pools.
-        """
-        pools_serialized = self.serializer_class(self.get_queryset(), many=True).data
-        page = self.paginate_queryset(pools_serialized)
-        return self.get_paginated_response(page)
 
     def post(self, request, *args, **kwargs):
         """Creates new pool.
