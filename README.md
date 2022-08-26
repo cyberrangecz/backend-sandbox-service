@@ -33,3 +33,5 @@ Documentation found in this
 ## Wiki
 The wiki with documentation to this project: [KYPO Sandbox Service wiki](https://gitlab.ics.muni.cz/kypo-crp/backend-python/kypo-sandbox-service/-/wikis/home)
 
+## Deployment
+When a change to develop branch occurs, the repository is built into an image with the name *develop* that is then uploaded to the artifact repository. If a new tag is made from master, the image with the name of the tag is built and uploaded. The service comes with an admin account that can be used to access the admin panel. The default credentials are admin - PmOn78IbUv12. This can be changed for every build by setting DJNG_ADMIN_USER and DJNG_ADMIN_PASSWORD gitlab variables before building the image.

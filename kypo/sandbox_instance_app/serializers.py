@@ -12,6 +12,7 @@ from rest_framework import serializers
 
 from kypo.sandbox_common_lib.serializers import UserSerializer
 from kypo.sandbox_definition_app.models import Definition
+from kypo.sandbox_definition_app.serializers import DefinitionSerializer
 from kypo.sandbox_instance_app import models
 from kypo.sandbox_instance_app.lib import pools, requests
 from kypo.sandbox_cloud_app import serializers as cloud_serializers
@@ -21,17 +22,17 @@ class PoolSerializer(serializers.ModelSerializer):
     size = serializers.SerializerMethodField(
         help_text="Number of allocation units associated with this pool.")
     lock_id = serializers.SerializerMethodField()
-    definition_id = serializers.PrimaryKeyRelatedField(
-        source='definition', queryset=Definition.objects.all()
-    )
+    definition = serializers.SerializerMethodField()
+    definition_id = serializers.PrimaryKeyRelatedField(source='definition', queryset=Definition.objects.all(), write_only=True)
     created_by = serializers.SerializerMethodField()
     hardware_usage = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Pool
         fields = ('id', 'definition_id', 'size', 'max_size', 'lock_id', 'rev', 'rev_sha',
-                  'created_by', 'hardware_usage')
-        read_only_fields = ('id', 'size', 'lock', 'rev', 'rev_sha', 'created_by', 'hardware_usage')
+                  'created_by', 'hardware_usage', 'definition')
+        read_only_fields = ('id', 'size', 'lock', 'rev', 'rev_sha', 'created_by', 'hardware_usage',
+                            'definition')
 
     @staticmethod
     def validate_max_size(value):
@@ -58,8 +59,13 @@ class PoolSerializer(serializers.ModelSerializer):
         hardware_usage = pools.get_hardware_usage_of_sandbox(obj)
         return HardwareUsageSerializer(hardware_usage).data
 
+    @staticmethod
+    def get_definition(obj: models.Pool):
+        return DefinitionSerializer(obj.definition).data
+
 
 class PoolSerializerCreate(PoolSerializer):
+
     class Meta(PoolSerializer.Meta):
         read_only_fields = ('id', 'size')
 
@@ -97,15 +103,21 @@ class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
     cleanup_request = CleanupRequestSerializer()
     pool_id = serializers.PrimaryKeyRelatedField(source='pool', read_only=True)
     created_by = serializers.SerializerMethodField()
+    locked = serializers.SerializerMethodField()
 
     class Meta:
         model = models.SandboxAllocationUnit
-        fields = ('id', 'pool_id', 'allocation_request', 'cleanup_request', 'created_by')
-        read_only_fields = ('id', 'pool_id', 'allocation_request', 'cleanup_request', 'created_by')
+        fields = ('id', 'pool_id', 'allocation_request', 'cleanup_request', 'created_by', 'locked')
+        read_only_fields = ('id', 'pool_id', 'allocation_request', 'cleanup_request', 'created_by',
+                            'locked')
 
     @staticmethod
     def get_created_by(obj: models.SandboxAllocationUnit):
         return UserSerializer(obj.created_by).data
+
+    @staticmethod
+    def get_locked(obj: models.SandboxAllocationUnit):
+        return hasattr(obj, 'sandbox') and hasattr(obj.sandbox, 'lock')
 
 
 class SandboxAllocationUnitIdListSerializer(serializers.Serializer):
@@ -260,9 +272,9 @@ class SandboxResourceSerializer(serializers.Serializer):
 
 
 class HardwareUsageSerializer(serializers.Serializer):
-    vcpu = serializers.FloatField()
-    ram = serializers.FloatField()
-    instances = serializers.FloatField()
-    network = serializers.FloatField()
-    subnet = serializers.FloatField()
-    port = serializers.FloatField()
+    vcpu = serializers.DecimalField(decimal_places=3, max_digits=2)
+    ram = serializers.DecimalField(decimal_places=3, max_digits=2)
+    instances = serializers.DecimalField(decimal_places=3, max_digits=2)
+    network = serializers.DecimalField(decimal_places=3, max_digits=2)
+    subnet = serializers.DecimalField(decimal_places=3, max_digits=2)
+    port = serializers.DecimalField(decimal_places=3, max_digits=2)

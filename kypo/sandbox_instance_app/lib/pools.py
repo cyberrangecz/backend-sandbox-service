@@ -26,6 +26,7 @@ from kypo.cloud_commons import KypoException, InvalidTopologyDefinition,\
 
 LOG = structlog.get_logger()
 POOL_CACHE_TIMEOUT = None
+PROJECT_LIMITS_CACHE_IDENTIFIER = 'project-limits'
 POOL_CACHE_PREFIX = "hardware-usage-pool-{}"
 
 
@@ -254,16 +255,26 @@ def get_hardware_usage_of_sandbox(pool: Pool) -> Optional[HardwareUsage]:
     """
     # sentinel object is used to differentiate between stored None and cache miss
     sentinel = object()
-    hardware_usage_cached = cache.get(get_cache_key(pool), sentinel)
     definition = pool.definition
 
-    if hardware_usage_cached is not sentinel:
-        return hardware_usage_cached
+    hardware_usage = cache.get(get_cache_key(pool), sentinel)
+    if hardware_usage is sentinel:
+        hardware_usage = _get_hardware_usage(definition.url, definition.rev)
 
-    hardware_usage = _get_hardware_usage(definition.url, definition.rev)
+    limits = cache.get(PROJECT_LIMITS_CACHE_IDENTIFIER, sentinel)
+    if limits is sentinel:
+        client = utils.get_terraform_client()
+        limits = client.get_project_limits()
+
+    hardware_usage_pool = hardware_usage
+    if hardware_usage_pool:
+        hardware_usage_pool *= get_pool_size(pool)
+        hardware_usage_pool /= limits
+
     cache.set(get_cache_key(pool), hardware_usage, POOL_CACHE_TIMEOUT)
+    cache.set(PROJECT_LIMITS_CACHE_IDENTIFIER, limits, POOL_CACHE_TIMEOUT)
 
-    return hardware_usage
+    return hardware_usage_pool
 
 
 def get_cache_key(pool: Pool) -> str:
