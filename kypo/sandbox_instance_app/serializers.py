@@ -272,9 +272,9 @@ class SandboxResourceSerializer(serializers.Serializer):
 
 
 class HardwareUsageSerializer(serializers.Serializer):
-    vcpu = serializers.DecimalField(decimal_places=3, max_digits=2)
-    ram = serializers.DecimalField(decimal_places=3, max_digits=2)
-    instances = serializers.DecimalField(decimal_places=3, max_digits=2)
-    network = serializers.DecimalField(decimal_places=3, max_digits=2)
-    subnet = serializers.DecimalField(decimal_places=3, max_digits=2)
-    port = serializers.DecimalField(decimal_places=3, max_digits=2)
+    vcpu = serializers.DecimalField(decimal_places=3, max_digits=7)
+    ram = serializers.DecimalField(decimal_places=3, max_digits=7)
+    instances = serializers.DecimalField(decimal_places=3, max_digits=7)
+    network = serializers.DecimalField(decimal_places=3, max_digits=7)
+    subnet = serializers.DecimalField(decimal_places=3, max_digits=7)
+    port = serializers.DecimalField(decimal_places=3, max_digits=7)

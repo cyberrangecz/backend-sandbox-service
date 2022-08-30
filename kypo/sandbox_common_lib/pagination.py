@@ -54,7 +54,7 @@ class PageNumberWithPageSizePagination(PageNumberPagination):
 
         if isinstance(queryset, QuerySet):
             sort_by_param = '-'+sort_by_param if order_param == "desc" else sort_by_param
-            queryset.order_by(sort_by_param)
+            queryset = queryset.order_by(sort_by_param)
         else:
             queryset = sorted(queryset, key=lambda item: item.get(sort_by_param, ''),
                               reverse=order_param == 'desc')
