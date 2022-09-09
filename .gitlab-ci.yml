@@ -1,17 +1,17 @@
 stages:
-#  - unit_tests
+  - unit_tests
   - docker_image_push
 
-#unit_tests:
-#  image: python:3.8
-#  stage: unit_tests
-#  script:
-#    - pip3 install tox
-#    - tox
-#  only:
-#    - branches
-#  except:
-#    - tags
+unit_tests:
+  image: python:3.8
+  stage: unit_tests
+  script:
+    - pip3 install tox
+    - tox
+  only:
+    - branches
+  except:
+    - tags
 
 docker_image_push:
   before_script: [ ] #prevent global before_script from running
@@ -23,10 +23,22 @@ docker_image_push:
     entrypoint: [ "" ]
   script:
     - export CI_CUSTOM_REGISTRY_IMAGE="${CI_REGISTRY}/${CI_CUSTOM_REGISTRY_PATH}/${CI_CUSTOM_IMAGE_NAME}"
-    - export CI_DOCKER_TAG=$(if [[ "$CI_COMMIT_TAG" == "" ]]; then echo develop-improved-resources; else echo $CI_COMMIT_TAG; fi)
+    - export CI_DOCKER_TAG=$(if [[ "$CI_COMMIT_TAG" == "" ]]; then echo develop; else echo $CI_COMMIT_TAG; fi)
     - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_CUSTOM_REGISTRY_USER\",\"password\":\"$CI_CUSTOM_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
-    - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --destination $CI_CUSTOM_REGISTRY_IMAGE:$CI_DOCKER_TAG --build-arg KYPO_PYPI_DOWNLOAD_URL=$KYPO_PYPI_DOWNLOAD_URL
-#  rules:
-#    - if: $CI_COMMIT_MESSAGE =~ /\[deploy]/
-#    - if: $CI_COMMIT_BRANCH == "develop"
-#    - if: $CI_COMMIT_TAG
+    - >
+      if [ -z "$DJNG_ADMIN_USER" ] && [ -z "$DJNG_ADMIN_PASSWORD" ]; then
+        /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --destination $CI_CUSTOM_REGISTRY_IMAGE:$CI_DOCKER_TAG --build-arg KYPO_PYPI_DOWNLOAD_URL=$KYPO_PYPI_DOWNLOAD_URL
+      else
+        if [ -z "$DJNG_ADMIN_USER" ]; then
+          /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --destination $CI_CUSTOM_REGISTRY_IMAGE:$CI_DOCKER_TAG --build-arg KYPO_PYPI_DOWNLOAD_URL=$KYPO_PYPI_DOWNLOAD_URL --build-arg DJNG_ADMIN_PASSWORD=$DJNG_ADMIN_PASSWORD
+        else
+          if [ -z "$DJNG_ADMIN_PASSWORD" ]; then
+            /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --destination $CI_CUSTOM_REGISTRY_IMAGE:$CI_DOCKER_TAG --build-arg KYPO_PYPI_DOWNLOAD_URL=$KYPO_PYPI_DOWNLOAD_URL --build-arg DJNG_ADMIN_USER=$DJNG_ADMIN_USER
+          else
+            /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --destination $CI_CUSTOM_REGISTRY_IMAGE:$CI_DOCKER_TAG --build-arg KYPO_PYPI_DOWNLOAD_URL=$KYPO_PYPI_DOWNLOAD_URL --build-arg DJNG_ADMIN_USER=$DJNG_ADMIN_USER --build-arg DJNG_ADMIN_PASSWORD=$DJNG_ADMIN_PASSWORD
+          fi
+        fi
+      fi
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+    - if: $CI_COMMIT_TAG
