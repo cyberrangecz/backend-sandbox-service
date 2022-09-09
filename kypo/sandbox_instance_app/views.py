@@ -154,6 +154,8 @@ class PoolCleanupRequestsListCreateView(generics.ListCreateAPIView):
 
 
 class PoolCleanupRequestUnlockedCreateView(APIView):
+    queryset = CleanupRequest.objects.none()
+
     @swagger_auto_schema(
         manual_parameters=[
             openapi.Parameter('force', openapi.IN_QUERY,
@@ -175,6 +177,8 @@ class PoolCleanupRequestUnlockedCreateView(APIView):
 
 
 class PoolCleanupRequestFailedCreateView(APIView):
+    queryset = CleanupRequest.objects.none()
+
     @swagger_auto_schema(
         manual_parameters=[
             openapi.Parameter('force', openapi.IN_QUERY,
