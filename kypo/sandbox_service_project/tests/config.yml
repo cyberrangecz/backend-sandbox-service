@@ -8,6 +8,10 @@ stack_name_prefix: kypotest
 # SECURITY WARNING: don't run with debug turned on in production!
 debug: True
 
+# A secret key used by django to provide cryptographic signing.
+# SECURITY WARNING: change this key for production environment and keep it secret!
+#django_secret_key: "-^mu0=6s@*x4jdbrz5yr!++p*02#%m$_4&0uw8h1)&r5u!v=12ASS"
+
 # A list of strings representing the host/domain names that this Django site can serve.
 #allowed_hosts: []
 

@@ -287,15 +287,17 @@ class KubernetesContainer(BaseContainer):
         w = watch.Watch()
 
         pod_name = self._wait_for_pod_start()
-        for log in w.stream(self.CORE_API.read_namespaced_pod_log, name=pod_name,
-                            namespace=self.KUBERNETES_NAMESPACE, _preload_content=False):
-            self.output_class.objects.create(**self.stage_info, content=log)
-            job = self.BATCH_API.read_namespaced_job_status(name=self.job_name,
-                                                            namespace=self.KUBERNETES_NAMESPACE)
-            if job.status.succeeded or job.status.failed:
-                w.stop()
-                break
-
+        job_done = False
+        while not job_done:
+            for log in w.stream(self.CORE_API.read_namespaced_pod_log, name=pod_name,
+                                namespace=self.KUBERNETES_NAMESPACE, _preload_content=False):
+                self.output_class.objects.create(**self.stage_info, content=log)
+                job = self.BATCH_API.read_namespaced_job_status(name=self.job_name,
+                                                                namespace=self.KUBERNETES_NAMESPACE)
+                if job.status.succeeded or job.status.failed:
+                    job_done = True
+                    w.stop()
+                    break
         self._save_pod_outputs(pod_name)
 
     def check_container_status(self):

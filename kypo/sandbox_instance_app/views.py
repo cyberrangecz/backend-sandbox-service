@@ -36,9 +36,9 @@ class PoolListCreateView(generics.ListCreateAPIView):
 
     def post(self, request, *args, **kwargs):
         """Creates new pool.
-        Also creates a new key-pair in OpenStack for this pool.
-        It is then used as management key for this pool. That means that
-        the management key-pair is the same for each sandbox in the pool.
+        Also creates a new key-pair and certificate, which is then passed to terraform client.
+        The key is then used as management key for this pool, which means that the management
+         key-pair is the same for each sandbox in the pool.
         """
         created_by = None if isinstance(request.user, AnonymousUser) else request.user
         pool = pools.create_pool(request.data, created_by)
@@ -140,22 +140,60 @@ class PoolCleanupRequestsListCreateView(generics.ListCreateAPIView):
             openapi.Parameter('force', openapi.IN_QUERY,
                               description="Force the deletion of sandboxes",
                               type=openapi.TYPE_BOOLEAN, default=False),
-        ],
-        request_body=serializers.SandboxAllocationUnitIdListSerializer)
+        ])
     def post(self, request, *args, **kwargs):
         """Deletes multiple sandboxes. With an optional parameter *force*,
         it forces the deletion."""
         pool_id = kwargs.get('pool_id')
         get_object_or_404(Pool, pk=pool_id)
-        pool_units = SandboxAllocationUnit.objects.filter(
-             pool_id=pool_id)
-        unit_ids = request.data.get('unit_ids')
+        pool_units = SandboxAllocationUnit.objects.filter(pool_id=pool_id)
         force = request.GET.get('force', 'false') == 'true'
-        units_to_cleanup = SandboxAllocationUnit.objects.filter(id__in=unit_ids) if len(unit_ids) \
-            else pool_units
-        units_to_cleanup = [allocation_unit for allocation_unit in units_to_cleanup
-                            if allocation_unit in pool_units]
-        cleanup_requests = sandbox_requests.create_cleanup_requests(units_to_cleanup, force)
+        cleanup_requests = sandbox_requests.create_cleanup_requests(pool_units, force)
+        serializer = serializers.CleanupRequestSerializer(cleanup_requests, many=True)
+        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+
+
+class PoolCleanupRequestUnlockedCreateView(APIView):
+    queryset = CleanupRequest.objects.none()
+
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter('force', openapi.IN_QUERY,
+                              description="Force the deletion of sandboxes",
+                              type=openapi.TYPE_BOOLEAN, default=False),
+        ])
+    def post(self, request, *args, **kwargs):
+        """Deletes all unlocked sandboxes in a pool. With an optional parameter *force*, it forces
+         the deletion."""
+        pool_id = kwargs.get('pool_id')
+        get_object_or_404(Pool, pk=pool_id)
+        pool_units = SandboxAllocationUnit.objects.filter(pool_id=pool_id)
+        pool_units = [unit for unit in pool_units if hasattr(unit, 'sandbox') and
+                      not hasattr(unit.sandbox, "lock")]
+        force = request.GET.get('force', 'false') == 'true'
+        cleanup_requests = sandbox_requests.create_cleanup_requests(pool_units, force)
+        serializer = serializers.CleanupRequestSerializer(cleanup_requests, many=True)
+        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+
+
+class PoolCleanupRequestFailedCreateView(APIView):
+    queryset = CleanupRequest.objects.none()
+
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter('force', openapi.IN_QUERY,
+                              description="Force the deletion of sandboxes",
+                              type=openapi.TYPE_BOOLEAN, default=False),
+        ])
+    def post(self, request, *args, **kwargs):
+        """Deletes all failed sandboxes in a pool. With an optional parameter *force*, it forces
+         the deletion."""
+        pool_id = kwargs.get('pool_id')
+        get_object_or_404(Pool, pk=pool_id)
+        pool_units = SandboxAllocationUnit.objects.filter(pool_id=pool_id)
+        force = request.GET.get('force', 'false') == 'true'
+        pool_units = [unit for unit in pool_units if unit.allocation_request.stages.filter(failed=True).count()]
+        cleanup_requests = sandbox_requests.create_cleanup_requests(pool_units, force)
         serializer = serializers.CleanupRequestSerializer(cleanup_requests, many=True)
         return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
 
@@ -410,28 +448,43 @@ class SandboxDetailView(generics.RetrieveAPIView):
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
 @utils.add_error_responses_doc('post', [400, 401, 403, 404, 500])
-class SandboxLockListCreateView(generics.ListCreateAPIView):
+class SandboxAllocationUnitLockRetrieveCreateDestroyView(generics.RetrieveDestroyAPIView,
+                                                         generics.CreateAPIView):
+    """
+    post: Create locks for given sandbox allocation unit if its sandbox exists.
+    delete: Destroy locks for given sandbox allocation unit if its sandbox exists."""
+    queryset = SandboxAllocationUnit.objects.all()
+    lookup_url_kwarg = "unit_id"
     serializer_class = serializers.SandboxLockSerializer
-    """get: List locks for given sandbox."""
 
-    def get_queryset(self):
-        sandbox_id = self.kwargs.get('sandbox_id')
-        get_object_or_404(Sandbox, pk=sandbox_id)
-        return SandboxLock.objects.filter(sandbox=sandbox_id)
+    def get(self, request, *args, **kwargs):
+        """get: Retrieve lock for given sandbox allocation unit if its sandbox exists."""
+        allocation_unit = self.get_object()
+        if not hasattr(allocation_unit, "sandbox"):
+            raise Http404(f'Sandbox allocation unit {allocation_unit.id} has no sandbox.')
+        sandbox_id = allocation_unit.sandbox.id
+        lock = SandboxLock.objects.get(sandbox=sandbox_id)
+        return Response(self.get_serializer(lock).data)
 
     def post(self, request, *args, **kwargs):
-        """Lock given sandbox."""
-        sandbox = sandboxes.get_sandbox(kwargs.get('sandbox_id'))
+        """Lock sandbox of given sandbox allocation unit if the sandbox exists."""
+        allocation_unit = self.get_object()
+        if not hasattr(allocation_unit, "sandbox"):
+            raise Http404(f'Sandbox allocation unit {allocation_unit.id} has no sandbox.')
+        sandbox = allocation_unit.sandbox
         lock = sandboxes.lock_sandbox(sandbox)
-        return Response(self.serializer_class(lock).data, status=status.HTTP_201_CREATED)
+        return Response(self.get_serializer(lock).data, status=status.HTTP_201_CREATED)
 
-
-@utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class SandboxLockDetailDestroyView(generics.RetrieveDestroyAPIView):
-    """delete: Delete given lock."""
-    queryset = SandboxLock.objects.all()
-    lookup_url_kwarg = "lock_id"
-    serializer_class = serializers.SandboxLockSerializer
+    def delete(self, request, *args, **kwargs):
+        """Delete lock of given sandbox allocation unit if it has sandbox."""
+        allocation_unit = self.get_object()
+        if not hasattr(allocation_unit, "sandbox"):
+            raise Http404(f'Sandbox allocation unit {allocation_unit.id} has no sandbox.')
+        sandbox = allocation_unit.sandbox
+        if not hasattr(sandbox, "lock"):
+            raise Http404(f'No SandboxLock matches the given query')
+        SandboxLock.objects.filter(sandbox=sandbox.id).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
@@ -550,13 +603,20 @@ class SandboxConsolesView(APIView):
 
     # noinspection PyMethodMayBeStatic
     def get(self, request, *args, **kwargs):
-        """Retrieve spice console urls for all machines in the topology."""
+        """Retrieve spice console urls for all machines in the topology. Returns 202 if
+        consoles are not ready yet."""
         sandbox = sandboxes.get_sandbox(kwargs.get('sandbox_id'))
         topology_instance = sandboxes.get_topology_instance(sandbox)
         node_names = [host.name for host in topology_instance.get_hosts() if not host.hidden] + \
                      [router.name for router in topology_instance.get_routers()]
-        consoles = {name: nodes.get_console_url(sandbox, name) for name in node_names}
-        return Response(consoles)
+        consoles = {}
+        is_ready = True
+        for name in node_names:
+            console_url = nodes.get_console_url(sandbox, name)
+            if not console_url:
+                is_ready = False
+            consoles[name] = console_url
+        return Response(consoles) if is_ready else Response(status=status.HTTP_202_ACCEPTED)
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])

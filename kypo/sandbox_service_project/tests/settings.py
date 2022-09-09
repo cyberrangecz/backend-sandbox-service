@@ -24,7 +24,7 @@ KYPO_SERVICE_CONFIG = KypoServiceConfig.from_file(KYPO_SANDBOX_SERVICE_CONFIG_PA
 KYPO_CONFIG = KYPO_SERVICE_CONFIG.app_config
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '-^mu0=6s@*x4jdbrz5yr!++p*02#%m$_4&0uw8h1)&r5u!v=12'
+SECRET_KEY = KYPO_SERVICE_CONFIG.django_secret_key
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = KYPO_SERVICE_CONFIG.debug
