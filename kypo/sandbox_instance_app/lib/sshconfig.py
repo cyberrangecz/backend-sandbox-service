@@ -44,6 +44,20 @@ class KypoSSHConfig(SSHConfig):
         host = Host([alias, host_name] if alias else host_name, opts)
         self.append(host)
 
+    def add_docker_host(self, host_name: str, user: str, identity_file: str, port: int,
+                 proxy_jump: str = None, alias: str = None, **kwargs) -> None:
+        """
+        Create and add ssh_config  instance to this SSH config file.
+        """
+        opts = dict(HostName=host_name, User=user, IdentityFile=identity_file, Port=port,
+                    UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no',
+                    IdentitiesOnly='yes')
+        if proxy_jump:
+            opts.update(dict(ProxyJump=proxy_jump))
+        opts.update(kwargs)
+        host = Host(alias, opts)
+        self.append(host)
+
     @classmethod
     def from_str(cls, ssh_config):
         """
@@ -86,6 +100,13 @@ class KypoUserSSHConfig(KypoSSHConfig):
         for link in top_ins.get_links_to_user_accessible_nodes():
             self.add_host(link.ip, SSH_PROXY_USERNAME, sandbox_private_key_path,
                           proxy_jump=man_proxy_jump, alias=link.node.name)
+
+        # Create entries for docker containers
+        if top_ins.containers:
+            for container_mapping in top_ins.containers.container_mappings:
+                self.add_docker_host('127.0.0.1', 'root', sandbox_private_key_path,
+                                     port=container_mapping.port, proxy_jump=container_mapping.host,
+                                     alias=container_mapping.host+'-'+container_mapping.container)
 
 
 class KypoMgmtSSHConfig(KypoSSHConfig):

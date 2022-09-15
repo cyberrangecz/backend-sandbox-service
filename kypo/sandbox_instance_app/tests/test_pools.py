@@ -27,6 +27,7 @@ class TestCreatePool:
     def set_up(self, mocker):
         self.client = mocker.patch("kypo.sandbox_common_lib.utils.get_terraform_client")
         mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_definition")
+        mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_containers")
         mock_repo = mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_def_provider")
         mock_repo.return_value.get_rev_sha = mocker.MagicMock(return_value='sha')
         self.arf = APIRequestFactory()

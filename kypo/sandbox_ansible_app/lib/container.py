@@ -14,6 +14,7 @@ from kypo.sandbox_common_lib import exceptions
 LOG = structlog.get_logger()
 ANSIBLE_FILE_VOLUME_NAME = "ansible-files-path"
 
+
 class ContainerVolume:
     def __init__(self, name: str, bind: str, mode: str):
         self.name = name
@@ -34,9 +35,14 @@ class BaseContainer(abc.ABC):
         bind='/app/inventory.yml',
         mode='ro'
     )
+    ANSIBLE_DOCKER_CONTAINER_PATH = ContainerVolume(
+        name='docker-containers-path',
+        bind='/root/containers',
+        mode='rw'
+    )
 
     @abc.abstractmethod
-    def __init__(self, url, rev, stage, ssh_directory, inventory_path, cleanup=False):
+    def __init__(self, url, rev, stage, ssh_directory, inventory_path, containers_path, cleanup=False):
         """Initialize the container."""
         self.url = url
         self.rev = rev
@@ -44,6 +50,7 @@ class BaseContainer(abc.ABC):
         self.cleanup = cleanup
         self.ssh_directory = ssh_directory
         self.inventory_path = inventory_path
+        self.containers_path = containers_path
         self.output_class = CleanupAnsibleOutput if self.cleanup else AllocationAnsibleOutput
         self.stage_info = {'cleanup_stage': self.stage} if self.cleanup\
             else {'allocation_stage': self.stage}
@@ -86,9 +93,9 @@ class DockerContainer(BaseContainer):
     DOCKER_NETWORK = settings.KYPO_CONFIG.ansible_docker_network
     CLIENT = docker.from_env
 
-    def __init__(self, url, rev, stage, ssh_directory, inventory_path, cleanup=False):
+    def __init__(self, url, rev, stage, ssh_directory, inventory_path, containers_path, cleanup=False):
         """Initialize the container."""
-        super().__init__(url, rev, stage, ssh_directory, inventory_path, cleanup)
+        super().__init__(url, rev, stage, ssh_directory, inventory_path, containers_path, cleanup)
         self.container = self._run_container()
 
     def _run_container(self):
@@ -97,7 +104,8 @@ class DockerContainer(BaseContainer):
         """
         volumes = {
             self.ssh_directory: self.ANSIBLE_SSH_DIR.__dict__,
-            self.inventory_path: self.ANSIBLE_INVENTORY_PATH.__dict__
+            self.inventory_path: self.ANSIBLE_INVENTORY_PATH.__dict__,
+            self.containers_path: self.ANSIBLE_DOCKER_CONTAINER_PATH.__dict__
         }
         command = ['-u', self.url, '-r', self.rev, '-i', self.ANSIBLE_INVENTORY_PATH.bind,
                    '-a', settings.KYPO_CONFIG.answers_storage_api]
@@ -152,9 +160,9 @@ class KubernetesContainer(BaseContainer):
     CORE_API = client.CoreV1Api()
     BATCH_API = client.BatchV1Api()
 
-    def __init__(self, url, rev, stage, ssh_directory, inventory_path, cleanup=False):
+    def __init__(self, url, rev, stage, ssh_directory, inventory_path, containers_path, cleanup=False):
         """Initialize the container."""
-        super().__init__(url, rev, stage, ssh_directory, inventory_path, cleanup)
+        super().__init__(url, rev, stage, ssh_directory, inventory_path, containers_path, cleanup)
         self.job_name = self.ALLOCATION_JOB_NAME.format(self.stage.id) if not self.cleanup\
             else self.CLEANUP_JOB_NAME.format(self.stage.id)
         self._initialize_kube_config()

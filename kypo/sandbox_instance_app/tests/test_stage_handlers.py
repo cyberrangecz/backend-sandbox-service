@@ -126,7 +126,7 @@ class TestAllocationAnsibleStageHandler:
             'StatusCode': 0
         }
         container_class = DockerContainer('url', 'rev', allocation_stage_networking, 'ssh_dir',
-                                          'inventory_path')
+                                          'inventory_path', 'containers_path')
         container_class.container = container
         container_class.CLIENT = mocker.MagicMock()
 
@@ -233,7 +233,7 @@ class TestCleanupAnsibleStageHandler:
             'StatusCode': 0
         }
         container_class = DockerContainer('url', 'rev', allocation_stage_networking, 'ssh_dir',
-                                          'inventory_path')
+                                          'inventory_path', 'containers_path')
         container_class.container = container
         container_class.CLIENT = mocker.MagicMock()
 
