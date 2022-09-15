@@ -13,7 +13,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.db import transaction
 from kypo.cloud_commons import TopologyInstance
-from kypo.topology_definition.models import TopologyDefinition
+from kypo.topology_definition.models import TopologyDefinition, DockerContainers
 from rest_framework.generics import get_object_or_404
 
 from kypo.sandbox_common_lib import exceptions, utils
@@ -74,11 +74,12 @@ def get_sandbox(sb_pk: int) -> Sandbox:
     return get_object_or_404(Sandbox, pk=sb_pk)
 
 
-def get_topology_definition(sandbox: Sandbox) -> TopologyDefinition:
+def get_topology_definition_and_containers(sandbox: Sandbox) -> (TopologyDefinition, DockerContainers):
     """Create topology definition for given sandbox."""
     pool = sandbox.allocation_unit.pool
     definition = pool.definition
-    return definitions.get_definition(definition.url, pool.rev_sha, settings.KYPO_CONFIG)
+    return definitions.get_definition(definition.url, pool.rev_sha, settings.KYPO_CONFIG), definitions.get_containers(
+        definition.url, pool.rev_sha, settings.KYPO_CONFIG)
 
 
 def lock_sandbox(sandbox: Sandbox) -> SandboxLock:
@@ -152,11 +153,12 @@ def get_ansible_sshconfig(sandbox: Sandbox, mng_key: str, git_key: str,
 def get_topology_instance(sandbox: Sandbox) -> TopologyInstance:
     """Get topology instance object. This function is cached."""
     client = utils.get_terraform_client()
+    topology_definition, containers = get_topology_definition_and_containers(sandbox)
     ti = cache.get_or_set(
         get_cache_key(sandbox),
         lambda: client.get_enriched_topology_instance(
             sandbox.allocation_unit.get_stack_name(),
-            get_topology_definition(sandbox)),
+            topology_definition, containers),
         SANDBOX_CACHE_TIMEOUT
     )
     return ti

@@ -327,6 +327,7 @@ class AllocationAnsibleStageHandler(AnsibleStageHandler):
         runner = AllocationAnsibleRunner(self.directory_path)
         runner.prepare_ssh_dir(self.allocation_unit.pool, self.sandbox)
         runner.prepare_inventory_file(self.sandbox)
+        runner.prepare_containers_directory(self.sandbox)
 
         container = runner.run_ansible_playbook(self.stage.repo_url, self.stage.rev, self.stage)
         try:
