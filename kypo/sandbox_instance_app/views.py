@@ -1,3 +1,4 @@
+import uuid
 from wsgiref.util import FileWrapper
 
 import structlog
@@ -442,7 +443,7 @@ class SandboxGetAndLockView(generics.RetrieveAPIView):
 class SandboxDetailView(generics.RetrieveAPIView):
     """get: Retrieve a sandbox."""
     serializer_class = serializers.SandboxSerializer
-    lookup_url_kwarg = "sandbox_id"
+    lookup_url_kwarg = "sandbox_uuid"
     queryset = Sandbox.objects.all()
 
 
@@ -494,7 +495,7 @@ class SandboxTopologyView(generics.RetrieveAPIView):
     Hosts specified as hidden are filtered out, but the network is still visible.
     """
     queryset = Sandbox.objects.all()
-    lookup_url_kwarg = "sandbox_id"
+    lookup_url_kwarg = "sandbox_uuid"
     serializer_class = serializers.TopologySerializer
 
     def get_object(self):
@@ -504,7 +505,7 @@ class SandboxTopologyView(generics.RetrieveAPIView):
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class SandboxVMDetailView(generics.GenericAPIView):
     queryset = Sandbox.objects.all()
-    lookup_url_kwarg = "sandbox_id"
+    lookup_url_kwarg = "sandbox_uuid"
     serializer_class = serializers.NodeSerializer
 
     def get(self, request, *args, **kwargs):
@@ -548,9 +549,10 @@ class SandboxVMConsoleView(APIView):
         """Get a console for given machine. It is active for 2 hours.
         But when the connection is active, it does not disconnect.
         """
-        sandbox = sandboxes.get_sandbox(kwargs.get('sandbox_id'))
-        console = nodes.get_console_url(sandbox, kwargs.get('vm_name'))
-        return Response({'url': console})
+        sandbox = sandboxes.get_sandbox(kwargs.get('sandbox_uuid'))
+        console_url = nodes.get_console_url(sandbox, kwargs.get('vm_name'))
+        return Response({'url': console_url}) if console_url else \
+            Response(status=status.HTTP_202_ACCEPTED)
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
@@ -561,7 +563,7 @@ class SandboxUserSSHAccessView(APIView):
     def get(self, request, *args, **kwargs):
         """Generate SSH config for User access to this sandbox.
         Some values are user specific, the config contains placeholders for them."""
-        sandbox = sandboxes.get_sandbox(kwargs.get('sandbox_id'))
+        sandbox = sandboxes.get_sandbox(kwargs.get('sandbox_uuid'))
         in_memory_zip_file = sandboxes.get_user_ssh_access(sandbox)
         response = HttpResponse(FileWrapper(in_memory_zip_file),
                                 content_type='application/zip')
@@ -576,7 +578,7 @@ class SandboxManOutPortIPView(APIView):
     # noinspection PyMethodMayBeStatic
     def get(self, request, *args, **kwargs):
         """Retrieve a man out port ip address."""
-        sandbox = sandboxes.get_sandbox(kwargs.get('sandbox_id'))
+        sandbox = sandboxes.get_sandbox(kwargs.get('sandbox_uuid'))
         man_ip = sandboxes.get_topology_instance(sandbox).ip
         return Response({"ip": man_ip})
 
@@ -605,7 +607,7 @@ class SandboxConsolesView(APIView):
     def get(self, request, *args, **kwargs):
         """Retrieve spice console urls for all machines in the topology. Returns 202 if
         consoles are not ready yet."""
-        sandbox = sandboxes.get_sandbox(kwargs.get('sandbox_id'))
+        sandbox = sandboxes.get_sandbox(kwargs.get('sandbox_uuid'))
         topology_instance = sandboxes.get_topology_instance(sandbox)
         node_names = [host.name for host in topology_instance.get_hosts() if not host.hidden] + \
                      [router.name for router in topology_instance.get_routers()]

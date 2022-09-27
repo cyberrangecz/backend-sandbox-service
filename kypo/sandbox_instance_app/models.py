@@ -1,3 +1,4 @@
+import uuid
 from django.conf import settings
 from django.db import models
 from django.db.models import PositiveIntegerField
@@ -6,6 +7,8 @@ from django.contrib.auth.models import User
 
 from kypo.sandbox_common_lib import utils
 from kypo.sandbox_definition_app.models import Definition
+
+DEFAULT_SANDBOX_UUID = '1'
 
 
 class Pool(models.Model):
@@ -74,7 +77,8 @@ class SandboxAllocationUnit(models.Model):
 
 
 class Sandbox(models.Model):
-    id = PositiveIntegerField(primary_key=True, auto_created=False, default=-1024)
+    id = models.CharField(primary_key=True, auto_created=False, max_length=36,
+                          default=DEFAULT_SANDBOX_UUID, editable=False)
     allocation_unit = models.OneToOneField(
         SandboxAllocationUnit,
         on_delete=models.PROTECT,

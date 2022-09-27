@@ -71,24 +71,24 @@ urlpatterns = [
          name='pool-management-ssh-access'),
 
     # Sandboxes
-    path('sandboxes/<int:sandbox_id>', views.SandboxDetailView.as_view(), name='sandbox-detail'),
-    path('sandboxes/<int:sandbox_id>/topology',
+    path('sandboxes/<str:sandbox_uuid>', views.SandboxDetailView.as_view(), name='sandbox-detail'),
+    path('sandboxes/<str:sandbox_uuid>/topology',
          views.SandboxTopologyView.as_view(), name='sandbox-topology'),
 
-    path('sandboxes/<int:sandbox_id>/vms/<str:vm_name>',
+    path('sandboxes/<str:sandbox_uuid>/vms/<str:vm_name>',
          views.SandboxVMDetailView.as_view(),  name='sandbox-vm-detail'),
-    path('sandboxes/<int:sandbox_id>/vms/<str:vm_name>/console',
+    path('sandboxes/<str:sandbox_uuid>/vms/<str:vm_name>/console',
          views.SandboxVMConsoleView.as_view(), name='sandbox-vm-console'),
 
-    path('sandboxes/<int:sandbox_id>/user-ssh-access',
+    path('sandboxes/<str:sandbox_uuid>/user-ssh-access',
          views.SandboxUserSSHAccessView.as_view(),
          name='sandbox-user-ssh-access'),
 
-    path('sandboxes/<int:sandbox_id>/man-out-port-ip',
+    path('sandboxes/<str:sandbox_uuid>/man-out-port-ip',
          views.SandboxManOutPortIPView.as_view(),
          name='man-out-port-ip'),
 
-    path('sandboxes/<int:sandbox_id>/consoles',
+    path('sandboxes/<str:sandbox_uuid>/consoles',
          views.SandboxConsolesView.as_view(),
          name='consoles')
 ]

@@ -1,3 +1,4 @@
+import uuid
 import zipfile
 import pytest
 from django.db import IntegrityError
@@ -11,11 +12,12 @@ from kypo.sandbox_instance_app.models import Sandbox, SandboxAllocationUnit
 pytestmark = pytest.mark.django_db
 
 SANDBOX_ID = 1
+SANDBOX_UUID = '1'
 
 
 class TestGetSandbox:
     def test_get_sandbox_success(self):
-        assert sandboxes.get_sandbox(SANDBOX_ID).id == SANDBOX_ID
+        assert sandboxes.get_sandbox(SANDBOX_ID).id == SANDBOX_UUID
 
     def test_get_sandbox_404(self):
         with pytest.raises(Http404):

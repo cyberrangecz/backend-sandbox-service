@@ -1,6 +1,7 @@
 """
 Sandbox Service module for Sandbox management.
 """
+import uuid
 from typing import Optional
 
 import os
@@ -171,3 +172,11 @@ def clear_cache(sandbox: Sandbox) -> None:
 
 def get_cache_key(sandbox: Sandbox) -> str:
     return SANDBOX_CACHE_PREFIX.format(sandbox.id)
+
+
+def generate_new_sandbox_uuid():
+    while True:
+        new_uuid = str(uuid.uuid4())
+        if not Sandbox.objects.filter(pk=new_uuid).count():
+            return new_uuid
+
