@@ -199,6 +199,7 @@ class AllocationAnsibleRunner(AnsibleRunner):
     def prepare_containers_directory(self, sandbox: Sandbox):
         top_ins = sandboxes.get_topology_instance(sandbox)
         if top_ins.containers:
+            self._prepare_container_directory()
             self._generate_docker_composes(top_ins)
             self._generate_dockerfiles(sandbox)
 
