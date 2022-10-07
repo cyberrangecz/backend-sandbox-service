@@ -200,6 +200,12 @@ class KubernetesContainer(BaseContainer):
                 mount_path=self.ANSIBLE_INVENTORY_PATH.bind,
                 sub_path=self.inventory_path[
                          len(settings.KYPO_CONFIG.ansible_runner_settings.volumes_path)+1:]
+            ),
+            client.V1VolumeMount(
+                name=ANSIBLE_FILE_VOLUME_NAME,
+                mount_path=self.ANSIBLE_DOCKER_CONTAINER_PATH.bind,
+                sub_path=self.inventory_path[
+                         len(settings.KYPO_CONFIG.ansible_runner_settings.volumes_path) + 1:]
             )
         ]
 
