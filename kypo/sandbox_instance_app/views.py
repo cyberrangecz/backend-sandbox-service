@@ -143,7 +143,7 @@ class PoolCleanupRequestsListCreateView(generics.ListCreateAPIView):
                               type=openapi.TYPE_BOOLEAN, default=False),
         ])
     def post(self, request, *args, **kwargs):
-        """Deletes multiple sandboxes. With an optional parameter *force*,
+        """Deletes all sandboxes in the pool. With an optional parameter *force*,
         it forces the deletion."""
         pool_id = kwargs.get('pool_id')
         get_object_or_404(Pool, pk=pool_id)
@@ -309,7 +309,8 @@ class SandboxCleanupRequestView(generics.RetrieveDestroyAPIView,
     def post(self, request, *args, **kwargs):
         """ Create cleanup request."""
         unit = self.get_object()
-        cleanup_req = sandbox_requests.create_cleanup_request(unit)
+        force = request.GET.get('force', 'false') == 'true'
+        cleanup_req = sandbox_requests.create_cleanup_request(unit, force)
         serializer = self.serializer_class(cleanup_req)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
