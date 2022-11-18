@@ -219,6 +219,7 @@ class AllocationAnsibleRunner(AnsibleRunner):
         terraformstack = sas.terraformstack
         extra_vars = {
             'kypo_global_sandbox_allocation_unit_id': sau.id,
+            'kypo_global_sandbox_id': sau.sandbox.id,
             'kypo_global_openstack_stack_id': terraformstack.stack_id,
             'kypo_global_pool_id': sau.pool.id,
             'kypo_global_head_ip': settings.KYPO_CONFIG.kypo_head_ip,
@@ -240,6 +241,7 @@ class CleanupAnsibleRunner(AnsibleRunner):
                                          allocation_unit.get_stack_name())
         inventory_object.add_variables(
             kypo_global_sandbox_allocation_unit_id=allocation_unit.id,
+            kypo_global_sandbox_id=allocation_unit.sandbox.id,
             kypo_global_pool_id=allocation_unit.pool.id
         )
 
