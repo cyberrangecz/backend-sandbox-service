@@ -50,6 +50,10 @@ class DefinitionProvider(ABC):
         except giturlparse.parser.ParserError:
             raise exceptions.GitError(f"Could not parse GIT URL: url={url}")
 
+        if re.search("\.git$", url) is None:
+            raise exceptions.GitError(
+                f"Not a GIT URL, GIT URL cloned with SSH required: url="
+                f"{url}")
         if url_parsed.resource != config.git_server:
             raise exceptions.GitError(
                 f"The GIT host does not match the configured value for this instance: expected="
