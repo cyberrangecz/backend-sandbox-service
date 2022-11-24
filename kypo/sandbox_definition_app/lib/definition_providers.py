@@ -49,7 +49,7 @@ class DefinitionProvider(ABC):
         except giturlparse.parser.ParserError:
             raise exceptions.GitError(f"Could not parse GIT URL: url={url}")
 
-        if not url.startswith("git") or not url.endswith(".git"):
+        if not (url.startswith("git") or url.startswith("ssh://git")) or not url.endswith(".git"):
             raise exceptions.GitError(
                 f"Invalid URL. Has to be a GIT URL cloned with SSH: expected="
                 f"git@{config.git_server}:[url path].git, actual={url}")
