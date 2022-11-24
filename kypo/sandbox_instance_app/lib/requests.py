@@ -73,6 +73,12 @@ def create_cleanup_request(allocation_unit: SandboxAllocationUnit,
             else:
                 raise exceptions.ValidationError('Sandbox ID={} is locked. Unlock it first.'
                                                  .format(sandbox.id))
+
+    if not (allocation_unit.allocation_request.stackallocationstage.finished or
+            allocation_unit.allocation_request.stackallocationstage.failed):
+        raise exceptions.ValidationError('Cleanup while the first stage is running is not allowed. '
+                                         'Retry once the first stage is finished or fails.')
+
     if not allocation_unit.allocation_request.is_finished:
         if force:
             cancel_allocation_request(allocation_unit.allocation_request)
