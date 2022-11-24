@@ -1,4 +1,3 @@
-import re
 from abc import ABC, abstractmethod
 from urllib import parse
 
@@ -50,10 +49,10 @@ class DefinitionProvider(ABC):
         except giturlparse.parser.ParserError:
             raise exceptions.GitError(f"Could not parse GIT URL: url={url}")
 
-        if re.search("\.git$", url) is None:
+        if not url.startswith("git") or not url.endswith(".git"):
             raise exceptions.GitError(
-                f"Not a GIT URL, GIT URL cloned with SSH required: url="
-                f"{url}")
+                f"Invalid URL. Has to be a GIT URL cloned with SSH: expected="
+                f"git@{config.git_server}:[url path].git, actual={url}")
         if url_parsed.resource != config.git_server:
             raise exceptions.GitError(
                 f"The GIT host does not match the configured value for this instance: expected="
