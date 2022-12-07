@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 import zipfile
 from django.conf import settings
@@ -18,6 +20,7 @@ pytestmark = pytest.mark.django_db
 DEFINITION_ID = 1
 POOL_ID = 1
 FULL_POOL_ID = 2
+SANDBOX_UUID = '1'
 
 
 class TestCreatePool:
@@ -27,6 +30,7 @@ class TestCreatePool:
     def set_up(self, mocker):
         self.client = mocker.patch("kypo.sandbox_common_lib.utils.get_terraform_client")
         mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_definition")
+        mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_containers")
         mock_repo = mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_def_provider")
         mock_repo.return_value.get_rev_sha = mocker.MagicMock(return_value='sha')
         self.arf = APIRequestFactory()
@@ -119,7 +123,7 @@ class TestGetUnlockedSandbox:
     def test_get_unlocked_sandbox_success(self):
         pool = pools.get_pool(POOL_ID)
         sb = pools.get_unlocked_sandbox(pool)
-        assert sb.id == 1
+        assert sb.id == SANDBOX_UUID
         assert sb.lock
 
     def test_get_unlocked_sandbox_empty(self):

@@ -2,13 +2,16 @@ import os
 import shutil
 
 import docker
+from jinja2 import Environment, FileSystemLoader
 import structlog
 from django.conf import settings
+from kypo.cloud_commons import TopologyInstance
 
 from kypo.sandbox_ansible_app.lib.container import KubernetesContainer, DockerContainer, \
     BaseContainer
 from kypo.sandbox_ansible_app.lib.inventory import Inventory, BaseInventory
 from kypo.sandbox_common_lib import exceptions
+from kypo.sandbox_definition_app.lib import definitions
 from kypo.sandbox_instance_app.lib import sandboxes, sshconfig
 from kypo.sandbox_instance_app.models import Sandbox, Pool, SandboxAllocationUnit
 
@@ -27,6 +30,10 @@ MGMT_PRIVATE_KEY_FILENAME = 'pool_mng_key'
 MGMT_CERTIFICATE_FILENAME = 'pool_mng_cert'
 MGMT_PUBLIC_KEY_FILENAME = 'pool_mng_key.pub'
 USER_PUBLIC_KEY_FILENAME = 'user_key.pub'
+ANSIBLE_DOCKER_CONTAINER_DIR = 'containers'
+TEMPLATES_DIR_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'templates')
+DOCKER_COMPOSE_TEMPLATE = 'docker-compose.j2'
+DOCKERFILE_TEMPLATE = 'Dockerfile.j2'
 
 
 class AnsibleRunner:
@@ -44,11 +51,17 @@ class AnsibleRunner:
         bind='/app/inventory.yml',
         mode='ro'
     )
+    ANSIBLE_DOCKER_CONTAINER_PATH = DockerVolume(
+        name='docker-containers-path',
+        bind='/root/containers',
+        mode='rw'
+    )
 
     def __init__(self, directory_path: str):
         self.directory_path = directory_path
         self.ssh_directory = os.path.join(self.directory_path, 'ssh')
         self.inventory_path = os.path.join(self.directory_path, ANSIBLE_INVENTORY_FILENAME)
+        self.containers_path = os.path.join(self.directory_path, ANSIBLE_DOCKER_CONTAINER_DIR)
 
         self.container_mgmt_private_key = self.container_ssh_path(MGMT_PRIVATE_KEY_FILENAME)
         self.container_git_private_key =\
@@ -59,13 +72,14 @@ class AnsibleRunner:
         self.container_manager = KubernetesContainer\
             if settings.KYPO_CONFIG.ansible_runner_settings.backend == 'kubernetes'\
             else DockerContainer
+        self.template_environment = Environment(loader=(FileSystemLoader(TEMPLATES_DIR_PATH)))
 
     def run_ansible_playbook(self, url, rev, stage, cleanup=False) -> BaseContainer:
         """
         Run Ansible playbook in container.
         """
         return self.container_manager(url, rev, stage, self.ssh_directory,
-                                      self.inventory_path, cleanup)
+                                      self.inventory_path, self.containers_path, cleanup)
 
     def delete_container(self, container_name: str) -> None:
         """
@@ -80,6 +94,9 @@ class AnsibleRunner:
         self.make_dir(self.ssh_directory)
         shutil.copy(settings.KYPO_CONFIG.git_private_key, self.ssh_directory)
         shutil.copy(settings.KYPO_CONFIG.proxy_jump_to_man.IdentityFile, self.ssh_directory)
+
+    def _prepare_container_directory(self):
+        self.make_dir(self.containers_path)
 
     @staticmethod
     def make_dir(dir_path: str) -> None:
@@ -136,6 +153,56 @@ class AllocationAnsibleRunner(AnsibleRunner):
         inventory_object = self.create_inventory(sandbox)
         self.save_file(self.inventory_path, inventory_object.serialize())
 
+    def _generate_docker_composes(self, top_ins: TopologyInstance):
+        parsed_docker_hosts = []
+        for container_mapping in top_ins.containers.container_mappings:
+            if container_mapping.host not in parsed_docker_hosts:
+                containers_host_path = os.path.join(self.containers_path, container_mapping.host)
+                self.make_dir(containers_host_path)
+                current_container_mappings = [mapping for mapping
+                                              in top_ins.containers.container_mappings
+                                              if mapping.host == container_mapping.host]
+                try:
+                    template = self.template_environment.get_template(DOCKER_COMPOSE_TEMPLATE)
+                    docker_compose = template.render(container_mappings=current_container_mappings,
+                                                     containers=top_ins.containers.containers)
+                    docker_compose_path = os.path.join(containers_host_path, 'docker-compose.yml')
+                    self.save_file(docker_compose_path, docker_compose)
+                except Exception as e:
+                    raise exceptions.ApiException("Error while generating docker-compose "
+                                                  "template: ", e)
+                parsed_docker_hosts.append(container_mapping.host)
+
+    def _generate_dockerfiles(self, sandbox: Sandbox):
+        top_ins = sandboxes.get_topology_instance(sandbox)
+        for container_mapping in top_ins.containers.container_mappings:
+            host_path = os.path.join(self.containers_path, container_mapping.host)
+            host_container_path = os.path.join(host_path, container_mapping.container)
+            self.make_dir(host_container_path)
+            container_definition = [cont for cont in top_ins.containers.containers
+                                    if cont.name == container_mapping.container][0]
+            if container_definition.image:
+                try:
+                    template = self.template_environment.get_template(DOCKERFILE_TEMPLATE)
+                    dockerfile = template.render(container_definition=container_definition)
+                except Exception as e:
+                    raise exceptions.ApiException(
+                        "Error while generating dockerfile from template: ", e)
+            else:
+                dockerfile_path = container_definition.dockerfile
+                url = sandbox.allocation_unit.pool.definition.url
+                rev = sandbox.allocation_unit.pool.definition.rev
+                dockerfile = definitions.get_dockerfile(url, rev, settings.KYPO_CONFIG,
+                                                        dockerfile_path)
+            self.save_file(os.path.join(host_container_path, "Dockerfile"), dockerfile)
+
+    def prepare_containers_directory(self, sandbox: Sandbox):
+        top_ins = sandboxes.get_topology_instance(sandbox)
+        if top_ins.containers:
+            self._prepare_container_directory()
+            self._generate_docker_composes(top_ins)
+            self._generate_dockerfiles(sandbox)
+
     def create_inventory(self, sandbox):
         """
         Return Ansible inventory file.
@@ -152,6 +219,7 @@ class AllocationAnsibleRunner(AnsibleRunner):
         terraformstack = sas.terraformstack
         extra_vars = {
             'kypo_global_sandbox_allocation_unit_id': sau.id,
+            'kypo_global_sandbox_id': sau.sandbox.id,
             'kypo_global_openstack_stack_id': terraformstack.stack_id,
             'kypo_global_pool_id': sau.pool.id,
             'kypo_global_head_ip': settings.KYPO_CONFIG.kypo_head_ip,

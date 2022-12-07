@@ -63,6 +63,11 @@ class ProjectImagesView(generics.ListAPIView):
                                                           "owner_specified.openstack.created_by "
                                                           "set to munikypo",
                                               type=openapi.TYPE_BOOLEAN, default=False),
+                            openapi.Parameter('GUI', openapi.IN_QUERY,
+                                              description="Returns only images with the attribute "
+                                                          "owner_specified.openstack.gui_access"
+                                                          "set to true",
+                                              type=openapi.TYPE_BOOLEAN, default=False),
                             openapi.Parameter('cached', openapi.IN_QUERY,
                                               description="Performs the faster version of this "
                                                           "endpoint but does retrieve a fresh list"
@@ -85,6 +90,11 @@ class ProjectImagesView(generics.ListAPIView):
             image_set = [image for image in image_set if
                          image.owner_specified.get('owner_specified.openstack.created_by', 'other')
                          == 'munikypo']
+        if request.GET.get('GUI') == "true":
+            image_set = [image for image in image_set if
+                         image.owner_specified.get('owner_specified.openstack.gui_access', 'other')
+                         == 'true']
+
         if image_set:
             image_attributes = [attribute for attribute in dir(image_set[0])
                                 if not attribute.startswith('__')]

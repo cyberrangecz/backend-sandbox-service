@@ -26,6 +26,7 @@ class DefaultAnsibleHostsGroups(Enum):
     WINRM_NODES = 'winrm_nodes'
     USER_ACCESSIBLE_NODES = 'user_accessible_nodes'
     HIDDEN_HOSTS = 'hidden_hosts'
+    DOCKER_HOSTS = 'docker_hosts'
 
 
 class Base(abc.ABC):
@@ -285,6 +286,8 @@ class Inventory(BaseInventory):
                            kypo_global_ssh_public_mgmt_key=mgmt_public_key)
         if extra_vars:
             self.add_variables(**extra_vars)
+        if topology_instance.containers:
+            self._update_docker_hosts()
 
     def _create_hosts(self) -> None:
         """
@@ -321,7 +324,7 @@ class Inventory(BaseInventory):
         Create KYPO default Ansible group entries.
 
         Default groups: 'hosts', 'management', 'routers', 'winrm_nodes', 'ssh_nodes',
-         'user_accessible_nodes' and 'hidden_hosts'.
+         'user_accessible_nodes', 'hidden_hosts' and 'docker_hosts'.
         """
         man = self.topology_instance.man
 
@@ -347,6 +350,13 @@ class Inventory(BaseInventory):
         hidden_hosts = [self.hosts[node.name] for node in self.topology_instance.get_hosts()
                         if node.hidden]
         self.add_group(Group(DefaultAnsibleHostsGroups.HIDDEN_HOSTS.value, hidden_hosts))
+
+        self.docker_hosts = None
+        if self.topology_instance.containers:
+            self.docker_hosts = [self.hosts[container_mapping.host] for container_mapping
+                            in self.topology_instance.containers.container_mappings]
+            self.docker_hosts = list(set(self.docker_hosts))
+            self.add_group(Group(DefaultAnsibleHostsGroups.DOCKER_HOSTS.value, self.docker_hosts))
 
     def get_user_accessible_nodes(self) -> List[Host]:
         """
@@ -375,6 +385,15 @@ class Inventory(BaseInventory):
             if link.node.name == 'uan':
                 continue
             self.hosts[link.node.name].add_variables(user_network_ip=link.ip)
+
+    def _update_docker_hosts(self) -> None:
+        print("Updating docker hosts")
+        docker_host_names = [host.name for host in self.docker_hosts]
+        for hostname in self.hosts:
+            if hostname in docker_host_names:
+                print(f"Found docker host: {hostname}")
+                print(f"Docker containers host path: /root/containers/{hostname}/")
+                self.get_host(hostname).add_variables(containers_path=f"/root/containers/{hostname}/")
 
     @staticmethod
     def _get_winrm_connection_variables(mgmt_private_key: str,

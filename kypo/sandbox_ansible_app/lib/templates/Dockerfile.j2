@@ -1,0 +1,3 @@
+FROM {{ container_definition.image }}
+
+RUN apt update && apt install -y openssh-server procps

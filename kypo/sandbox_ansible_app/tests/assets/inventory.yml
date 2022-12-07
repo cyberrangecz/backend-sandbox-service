@@ -89,6 +89,7 @@ all:
     kypo_global_openstack_stack_id: terraformstack-stack-id
     kypo_global_pool_id: 1
     kypo_global_sandbox_allocation_unit_id: 1
+    kypo_global_sandbox_id: '1'
     kypo_global_sandbox_ip: 10.10.10.10
     kypo_global_sandbox_name: stack-name
     kypo_global_ssh_public_mgmt_key: /root/.ssh/pool_mng_key.pub

@@ -29,7 +29,7 @@ def create_allocation_request(pool: Pool, created_by: Optional[User]) -> Sandbox
     unit = SandboxAllocationUnit.objects.create(pool=pool, created_by=created_by)
     request = AllocationRequest.objects.create(allocation_unit=unit)
     pri_key, pub_key = utils.generate_ssh_keypair()
-    sandbox = Sandbox(id=unit.id, allocation_unit=unit,
+    sandbox = Sandbox(id=sandboxes.generate_new_sandbox_uuid(), allocation_unit=unit,
                       private_user_key=pri_key, public_user_key=pub_key)
     request_handlers.AllocationRequestHandler(request).enqueue_request(sandbox)
     return unit
@@ -41,7 +41,7 @@ def restart_allocation_stages(unit: SandboxAllocationUnit) -> SandboxAllocationU
     """
     request = unit.allocation_request
     pri_key, pub_key = utils.generate_ssh_keypair()
-    sandbox = Sandbox(id=unit.id, allocation_unit=unit,
+    sandbox = Sandbox(id=sandboxes.generate_new_sandbox_uuid(), allocation_unit=unit,
                       private_user_key=pri_key, public_user_key=pub_key)
     request_handlers.AllocationRequestHandler(request).enqueue_request(sandbox, restart_stages=True)
     return unit
@@ -73,6 +73,12 @@ def create_cleanup_request(allocation_unit: SandboxAllocationUnit,
             else:
                 raise exceptions.ValidationError('Sandbox ID={} is locked. Unlock it first.'
                                                  .format(sandbox.id))
+
+    if not (allocation_unit.allocation_request.stackallocationstage.finished or
+            allocation_unit.allocation_request.stackallocationstage.failed):
+        raise exceptions.ValidationError('Cleanup while the first stage is running is not allowed. '
+                                         'Retry once the first stage is finished or fails.')
+
     if not allocation_unit.allocation_request.is_finished:
         if force:
             cancel_allocation_request(allocation_unit.allocation_request)

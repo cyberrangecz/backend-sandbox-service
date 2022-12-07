@@ -20,7 +20,9 @@ class TestAllocationRequest:
         self.handler = mocker.patch('kypo.sandbox_instance_app.lib.requests.request_handlers.'
                                     'AllocationRequestHandler')
 
-    def test_create_allocation_request_success(self, pool, created_by):
+    def test_create_allocation_request_success(self, pool, created_by, mocker):
+        mocker.patch('kypo.sandbox_instance_app.lib.sandboxes.generate_new_sandbox_uuid',
+                     return_value=2)
         sandbox_allocation_unit = requests.create_allocation_request(pool, created_by)
 
         assert sandbox_allocation_unit.pool_id == pool.id
