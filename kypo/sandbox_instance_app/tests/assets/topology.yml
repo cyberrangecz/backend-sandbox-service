@@ -4,6 +4,7 @@ hosts:
 - name: home
   os_type: debian
   gui_access: False
+  containers: []
 links:
 - port_a: link-2_internet
   port_b: link-2_wan

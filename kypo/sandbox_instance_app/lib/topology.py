@@ -3,6 +3,7 @@ import structlog
 from kypo.cloud_commons import TopologyInstance
 from kypo.sandbox_cloud_app.lib.projects import list_images
 from kypo.topology_definition.models import Host
+from kypo.sandbox_instance_app.lib import sandboxes
 
 LOG = structlog.getLogger()
 INTERNET_NODE_NAME = 'internet'
@@ -44,6 +45,7 @@ class Topology:
         self.add_nodes(top_inst)
         self.add_special_nodes_and_switches(top_inst)
         self.add_ports_and_links(top_inst)
+        self.add_containers(top_inst)
 
     def add_nodes(self, top_inst: TopologyInstance) -> None:
         images = list_images()
@@ -55,6 +57,7 @@ class Topology:
             new_node = self.Node(node.name, image.os_type, gui_access)
             if type(node) == Host:
                 self.hosts.append(new_node)
+                new_node.containers = []
             else:
                 self.routers.append(new_node)
 
@@ -81,3 +84,21 @@ class Topology:
             self.links.append(self.Link(real_port, dummy_port))
             self.ports.append(real_port)
             self.ports.append(dummy_port)
+
+    def add_containers(self, top_inst: TopologyInstance):
+        if top_inst.containers is None or top_inst.containers.hide_all:
+            return
+
+        containers_by_host = {}
+        for mapping in top_inst.containers.container_mappings:
+            if mapping.hidden:
+                continue
+
+            if mapping.host in containers_by_host.keys():
+                containers_by_host[mapping.host].append(mapping.host + "-" + mapping.container)
+            else:
+                containers_by_host[mapping.host] = [mapping.host + "-" + mapping.container]
+
+        for host in self.hosts:
+            if host.name in containers_by_host.keys():
+                host.containers = containers_by_host[host.name]
