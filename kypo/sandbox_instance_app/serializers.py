@@ -202,11 +202,22 @@ class LibSpecialNodeSerializer(serializers.Serializer):
     name = serializers.CharField()
 
 
-class LibNodeSerializer(serializers.Serializer):
+class RouterSerializer(serializers.Serializer):
     """KYPO OS lib Host and Router topology serializer"""
     name = serializers.CharField()
     os_type = serializers.CharField()
     gui_access = serializers.BooleanField()
+
+
+class HostSerializer(serializers.Serializer):
+    """KYPO OS lib Host and Router topology serializer"""
+    name = serializers.CharField()
+    os_type = serializers.CharField()
+    gui_access = serializers.BooleanField()
+    containers = serializers.ListField(
+        child=serializers.CharField(),
+        allow_empty=True
+    )
 
 
 class LibNetworkSerializer(serializers.Serializer):
@@ -234,12 +245,25 @@ class PortSerializer(serializers.Serializer):
     parent = serializers.CharField()
     name = serializers.CharField()
 
+"""
+class ContainerSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    image = serializers.CharField()
+    dockerfile = serializers.CharField()
+"""
+
+
+class ContainerSerializer(serializers.Serializer):
+    container = serializers.CharField()
+    host = serializers.CharField()
+    # port = serializers.IntegerField()
+
 
 class TopologySerializer(serializers.Serializer):
     """Serializer for topology"""
     special_nodes = LibSpecialNodeSerializer(many=True)
-    hosts = LibNodeSerializer(many=True)
-    routers = LibNodeSerializer(many=True)
+    hosts = HostSerializer(many=True)
+    routers = RouterSerializer(many=True)
     switches = LibNetworkSerializer(many=True)
     links = LinkSerializer(many=True)
     ports = PortSerializer(many=True)
@@ -278,3 +302,6 @@ class HardwareUsageSerializer(serializers.Serializer):
     network = serializers.DecimalField(decimal_places=3, max_digits=7)
     subnet = serializers.DecimalField(decimal_places=3, max_digits=7)
     port = serializers.DecimalField(decimal_places=3, max_digits=7)
+
+
+

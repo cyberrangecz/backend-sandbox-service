@@ -49,7 +49,13 @@ def create_definition(url: str, created_by: Optional[User], rev: str = None) -> 
 
     serializer = serializers.DefinitionSerializerCreate(
         data=dict(name=top_def.name, url=url, rev=rev))
-    serializer.is_valid(raise_exception=True)
+    if not serializer.is_valid():
+        if str(serializer.errors).find("code='unique'") != -1:
+            error_message = "Error: Definition with these parameters already exists"
+        else:
+            error_message = f"Unknown error: {serializer.errors}"
+
+        raise exceptions.ValidationError(error_message)
     return serializer.save(created_by=created_by)
 
 

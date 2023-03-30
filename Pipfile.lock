@@ -535,10 +535,10 @@
         },
         "kypo-topology-definition": {
             "hashes": [
-                "sha256:63979b6ace1abc4168a0d68beb6b61ea5361d0bee71c26f4e66489c2493191cb"
+                "sha256:7e7f52c91afc656bc91b1f7838109e5fb3c90aab600c94c20bcf8ce58f57bdcf"
             ],
             "markers": "python_version >= '3'",
-            "version": "==0.5.3"
+            "version": "==0.5.4"
         },
         "markupsafe": {
             "hashes": [

@@ -42,7 +42,7 @@ class TestCreateDefinition:
     def test_create_definition_nonunique(self, mocker, topology_definition, created_by):
         mocker.patch("kypo.sandbox_definition_app.lib.definitions.validate_topology_definition")
         definitions.create_definition(url=self.URL, rev=self.REV, created_by=created_by)
-        with pytest.raises(RestValidationError):
+        with pytest.raises(exceptions.ValidationError):
             definitions.create_definition(url=self.URL, rev=self.REV, created_by=created_by)
 
     def test_create_definition_invalid_hosts_group(self, mocker, topology_definition, created_by):

@@ -75,7 +75,8 @@ def create_cleanup_request(allocation_unit: SandboxAllocationUnit,
                                                  .format(sandbox.id))
 
     if not (allocation_unit.allocation_request.stackallocationstage.finished or
-            allocation_unit.allocation_request.stackallocationstage.failed):
+            allocation_unit.allocation_request.stackallocationstage.failed) and \
+            allocation_unit.allocation_request.stackallocationstage.start is not None:
         raise exceptions.ValidationError('Cleanup while the first stage is running is not allowed. '
                                          'Retry once the first stage is finished or fails.')
 
