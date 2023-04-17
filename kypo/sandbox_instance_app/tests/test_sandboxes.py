@@ -3,6 +3,7 @@ import zipfile
 import pytest
 from django.db import IntegrityError
 from django.http import Http404
+from django.contrib.auth.models import User
 
 from kypo.sandbox_instance_app import serializers
 from kypo.sandbox_common_lib import exceptions
@@ -44,14 +45,23 @@ class TestSandboxesManipulation:
         self.mock_get_top_ins.return_value = top_ins
         yield
 
-    def test_lock_sandbox_success(self):
+    def test_lock_sandbox_success_anonymous_user(self):
         sandbox = sandboxes.get_sandbox(SANDBOX_ID)
-        assert sandboxes.lock_sandbox(sandbox).sandbox.id == sandbox.id
+        assert sandboxes.lock_sandbox(sandbox, None).sandbox.id == sandbox.id
 
-    def test_lock_sandbox_already_locked(self, mocker):
+    def test_lock_sandbox_already_locked_anonymous_user(self, mocker):
         mocker.patch('kypo.sandbox_instance_app.lib.sandboxes.Sandbox')
         with pytest.raises(exceptions.ValidationError):
-            sandboxes.lock_sandbox(mocker.Mock())
+            sandboxes.lock_sandbox(mocker.Mock(), None)
+
+    def test_lock_sandbox_success(self, created_by):
+        sandbox = sandboxes.get_sandbox(SANDBOX_ID)
+        assert sandboxes.lock_sandbox(sandbox, created_by).sandbox.id == sandbox.id
+
+    def test_lock_sandbox_already_locked(self, mocker, created_by):
+        mocker.patch('kypo.sandbox_instance_app.lib.sandboxes.Sandbox')
+        with pytest.raises(exceptions.ValidationError):
+            sandboxes.lock_sandbox(mocker.Mock(), created_by)
 
     def test_get_sandbox_topology(self, mocker, topology, image):
         mock_images = mocker.patch(

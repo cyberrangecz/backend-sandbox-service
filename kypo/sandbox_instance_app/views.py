@@ -429,7 +429,8 @@ class SandboxGetAndLockView(generics.RetrieveAPIView):
         """Get unlocked sandbox in given pool and lock it. Return 409 if all are locked."""
         pool_id = self.kwargs.get('pool_id')
         pool = get_object_or_404(Pool, id=pool_id)
-        sandbox = pools.get_unlocked_sandbox(pool)
+        created_by = None if isinstance(request.user, AnonymousUser) else request.user
+        sandbox = pools.get_unlocked_sandbox(pool, created_by)
         if not sandbox:
             return Response({'detail': 'All sandboxes are already locked.'},
                             status=status.HTTP_409_CONFLICT)
@@ -474,7 +475,8 @@ class SandboxAllocationUnitLockRetrieveCreateDestroyView(generics.RetrieveDestro
         if not hasattr(allocation_unit, "sandbox"):
             raise Http404(f'Sandbox allocation unit {allocation_unit.id} has no sandbox.')
         sandbox = allocation_unit.sandbox
-        lock = sandboxes.lock_sandbox(sandbox)
+        created_by = None if isinstance(request.user, AnonymousUser) else request.user
+        lock = sandboxes.lock_sandbox(sandbox=sandbox, created_by=created_by)
         return Response(self.get_serializer(lock).data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, *args, **kwargs):

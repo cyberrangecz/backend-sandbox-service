@@ -174,7 +174,7 @@ class SandboxLockSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.SandboxLock
-        fields = ('id', 'sandbox_id',)
+        fields = ('id', 'sandbox_id', 'created_by')
         read_only_fields = fields
 
 

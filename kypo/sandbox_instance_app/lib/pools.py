@@ -183,7 +183,7 @@ def create_sandboxes_in_pool(pool: Pool, created_by: Optional[User], count: int 
         return requests.create_allocations_requests(pool, count, created_by)
 
 
-def get_unlocked_sandbox(pool: Pool) -> Optional[Sandbox]:
+def get_unlocked_sandbox(pool: Pool, created_by: Optional[User]) -> Optional[Sandbox]:
     """Return unlocked sandbox."""
     # TODO: Create Locks immediately on Sandbox creation
     with transaction.atomic():
@@ -193,11 +193,21 @@ def get_unlocked_sandbox(pool: Pool) -> Optional[Sandbox]:
             .filter(allocation_unit__pool=pool)
         # Lock filtering needs to be done in Python.
         # FOR UPDATE cannot be applied to the nullable side of a relation.
+        if _has_locked_sandbox(sb_queryset, created_by):
+            raise KypoException("You already have a sandbox assigned. Use that one or ask your tutor for help.")
         sandbox = next((sb for sb in sb_queryset if not hasattr(sb, 'lock')), None)
+
         if not sandbox:
             return None
-        SandboxLock.objects.create(sandbox=sandbox)
+        SandboxLock.objects.create(sandbox=sandbox, created_by=created_by)
         return sandbox
+
+
+def _has_locked_sandbox(sb_queryset, created_by: Optional[User]):
+    """Check if User locked a sandbox in queryset"""
+    if created_by is None:
+        return False
+    return len(sb_queryset.filter(lock__created_by=created_by)) != 0
 
 
 def lock_pool(pool: Pool) -> PoolLock:

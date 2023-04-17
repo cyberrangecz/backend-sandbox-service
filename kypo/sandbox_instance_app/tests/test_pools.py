@@ -120,15 +120,26 @@ class TestCreateSandboxesInPool:
 
 
 class TestGetUnlockedSandbox:
-    def test_get_unlocked_sandbox_success(self):
+    def test_get_unlocked_sandbox_success_anonymous(self):
         pool = pools.get_pool(POOL_ID)
-        sb = pools.get_unlocked_sandbox(pool)
+        sb = pools.get_unlocked_sandbox(pool, None)
         assert sb.id == SANDBOX_UUID
         assert sb.lock
 
-    def test_get_unlocked_sandbox_empty(self):
+    def test_get_unlocked_sandbox_empty_anonymous(self):
         pool = pools.get_pool(FULL_POOL_ID)
-        sb = pools.get_unlocked_sandbox(pool)
+        sb = pools.get_unlocked_sandbox(pool, None)
+        assert sb is None
+
+    def test_get_unlocked_sandbox_success(self, created_by):
+        pool = pools.get_pool(POOL_ID)
+        sb = pools.get_unlocked_sandbox(pool, created_by)
+        assert sb.id == SANDBOX_UUID
+        assert sb.lock
+
+    def test_get_unlocked_sandbox_empty(self, created_by):
+        pool = pools.get_pool(FULL_POOL_ID)
+        sb = pools.get_unlocked_sandbox(pool, created_by)
         assert sb is None
 
 

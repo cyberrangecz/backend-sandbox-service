@@ -13,6 +13,7 @@ import json
 from django.conf import settings
 from django.core.cache import cache
 from django.db import transaction
+from django.contrib.auth.models import User
 from kypo.cloud_commons import TopologyInstance
 from kypo.topology_definition.models import TopologyDefinition, DockerContainers
 from rest_framework.generics import get_object_or_404
@@ -83,13 +84,13 @@ def get_topology_definition_and_containers(sandbox: Sandbox) -> (TopologyDefinit
         definition.url, pool.rev_sha, settings.KYPO_CONFIG)
 
 
-def lock_sandbox(sandbox: Sandbox) -> SandboxLock:
+def lock_sandbox(sandbox: Sandbox, created_by: Optional[User]) -> SandboxLock:
     """Lock given sandbox. Raise ValidationError if already locked."""
     with transaction.atomic():
         sandbox = Sandbox.objects.select_for_update().get(pk=sandbox.id)
         if hasattr(sandbox, 'lock'):
             raise exceptions.ValidationError("Sandbox already locked.")
-        return SandboxLock.objects.create(sandbox=sandbox)
+        return SandboxLock.objects.create(sandbox=sandbox, created_by=created_by)
 
 
 def get_sandbox_topology(sandbox: Sandbox) -> Topology:

@@ -105,6 +105,8 @@ class SandboxLock(models.Model):
         on_delete=models.PROTECT,
         related_name='lock',
     )
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT, null=True,
+                                   help_text='The user that created this lock.')
 
     def __str__(self):
         return f'ID: {self.id}, Sandbox: {self.sandbox.id}'
