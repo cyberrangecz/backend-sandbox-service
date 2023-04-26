@@ -110,8 +110,14 @@ def delete_pool(pool: Pool) -> None:
     try:
         pool.delete()
         utils.clear_cache(pool_cache_key)
-    except ProtectedError:
-        raise exceptions.ValidationError('Cannot delete locked pool.')
+    except ProtectedError as e:
+        error_message = str(e)
+        if 'PoolLock' in error_message:
+            raise exceptions.ValidationError(f'Cannot delete locked pool (ID="{pool.id}").')
+        if 'AllocationUnit' in error_message:
+            raise exceptions.ValidationError(f'Cannot delete non-empty pool (ID="{pool.id}"). '
+                                             'Delete all allocation units before deleting the pool.')
+        raise exceptions.ValidationError('Unknown error: ' + error_message)
 
     client = utils.get_terraform_client()
     try:

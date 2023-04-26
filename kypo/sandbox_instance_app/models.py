@@ -65,7 +65,7 @@ class Pool(models.Model):
 class SandboxAllocationUnit(models.Model):
     pool = models.ForeignKey(
         Pool,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name='allocation_units',
     )
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, null=True,
