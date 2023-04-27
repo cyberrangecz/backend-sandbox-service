@@ -8,9 +8,10 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.reverse import reverse
 from rest_framework.test import APIRequestFactory
 
+from django.db.models import ProtectedError
 from kypo.sandbox_common_lib.exceptions import ApiException, StackError
 from kypo.sandbox_instance_app.lib import pools, sshconfig
-from kypo.sandbox_instance_app.models import SandboxAllocationUnit, Sandbox
+from kypo.sandbox_instance_app.models import SandboxAllocationUnit, Sandbox, Pool
 from kypo.sandbox_instance_app.views import PoolListCreateView
 
 from kypo.cloud_commons import exceptions, HardwareUsage
@@ -61,6 +62,38 @@ class TestCreatePool:
         request = self.arf.get(reverse('pool-list'))
         response = PoolListCreateView.as_view()(request)
         assert len(response.data['results']) == 2
+
+
+class TestDeletePool:
+    @pytest.fixture(autouse=True)
+    def set_up(self, mocker):
+        self.client = mocker.patch("kypo.sandbox_common_lib.utils.get_terraform_client")
+        mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_definition")
+        mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_containers")
+        mock_repo = mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_def_provider")
+        mock_repo.return_value.get_rev_sha = mocker.MagicMock(return_value='sha')
+        self.arf = APIRequestFactory()
+        yield
+
+    def test_delete_pool_fail(self, definition, created_by):
+        pool_1: Pool = Pool.objects.get(id=1)
+        pool_2: Pool = Pool.objects.get(id=2)
+        pools.lock_pool(pool_2)
+
+        with pytest.raises(Exception) as exc_info:
+            pools.delete_pool(pool_1)
+        assert 'Cannot delete non-empty pool' in str(exc_info)
+
+        with pytest.raises(Exception) as exc_info:
+            pools.delete_pool(pool_2)
+        assert 'Cannot delete locked pool' in str(exc_info)
+
+    def test_delete_pool_success(self, definition, created_by):
+        pool_2: Pool = Pool.objects.get(id=2)
+        pools.delete_pool(pool_2)
+        with pytest.raises(Pool.DoesNotExist):
+            Pool.objects.get(id=2)
+
 
 
 class TestSandboxAllocationUnit:
