@@ -1,6 +1,6 @@
 import pytest
 from django_rq import get_worker, get_queue
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 from kypo.sandbox_common_lib import exceptions as api_exceptions
 from kypo.sandbox_ansible_app.models import NetworkingAnsibleAllocationStage,\
@@ -9,7 +9,7 @@ from kypo.sandbox_instance_app.models import StackAllocationStage, StackCleanupS
 
 from kypo.sandbox_instance_app.lib import request_handlers
 
-pytestmark = [pytest.mark.django_db, pytest.mark.integration]
+pytestmark = [pytest.mark.django_db]
 
 
 class PicklableMock(MagicMock):
@@ -58,6 +58,188 @@ def assert_jobs_dependencies(jobs, default_queue):
     assert dependents == []
 
 
+class TestAllocationRequestHandlerUnit:
+
+    @pytest.fixture(autouse=True)
+    def set_up(self, mocker):
+        mocker.patch(
+            'kypo.sandbox_instance_app.lib.request_handlers.LOG'
+        )
+        mocker.patch(
+            'kypo.sandbox_instance_app.lib.request_handlers.sandboxes.generate_new_sandbox_uuid', return_value='123'
+        )
+        fake_kypo_config = MagicMock(ansible_networking_url='fake_repo_url', ansible_networking_rev='fake_rev')
+        mocker.patch('kypo.sandbox_instance_app.lib.request_handlers.settings.KYPO_CONFIG', new=fake_kypo_config)
+        self.handler = request_handlers.AllocationRequestHandler()
+        self.fake_gen_ssh = mocker.patch(
+            'kypo.sandbox_instance_app.lib.request_handlers.utils.generate_ssh_keypair'
+        )
+        self.fake_gen_ssh.return_value = ('fake_private_key', 'fake_public_key')
+
+    @staticmethod
+    def assert_handlers(handlers, stages):
+        stack_handler = handlers[0]
+        assert stack_handler.stage == stages[0]
+        network_handler = handlers[1]
+        assert network_handler.stage == stages[1]
+        user_handler = handlers[2]
+        assert user_handler.stage == stages[2]
+
+    def test_enqueue_stages(self, sandbox, mocker):
+        fake_get_fin_stage_fn = mocker.patch(
+            'kypo.sandbox_instance_app.lib.request_handlers.RequestHandler._get_finalizing_stage_function'
+        )
+        fake_get_fin_stage_fn.return_value = 'fake_finalization_fn'
+        fake_transaction = mocker.patch(
+            'kypo.sandbox_instance_app.lib.request_handlers.transaction'
+        )
+        fake_partial = mocker.patch(
+            'kypo.sandbox_instance_app.lib.request_handlers.partial'
+        )
+        fake_partial.return_value = 'fake_partial'
+
+        self.handler._enqueue_stages(sandbox, 'stage_handlers')
+        fake_partial.assert_called_once_with(self.handler._enqueue_request, 'stage_handlers', 'fake_finalization_fn')
+        fake_transaction.on_commit.assert_called_once_with('fake_partial')  # partial messes with assert_called_once_with
+
+    def test_create_allocation_jobs(self, pool, mocker):
+        self.handler._enqueue_stages = MagicMock()
+        self.handler._create_stage_handlers = MagicMock()
+        fake_sandbox = MagicMock()
+        fake_sandbox_class = mocker.patch(
+            'kypo.sandbox_instance_app.lib.request_handlers.Sandbox', return_value=fake_sandbox
+        )
+
+        self.handler._create_allocation_jobs(pool, 2, None)
+
+        created_units = pool.allocation_units.all()
+        assert len(created_units) == 2
+        for unit in created_units:
+            assert hasattr(unit, 'allocation_request')
+            assert not hasattr(unit, 'sandbox')
+            fake_sandbox_class.assert_has_calls([call(id='123', allocation_unit=unit, private_user_key='fake_private_key', public_user_key='fake_public_key')])
+            self.handler._enqueue_stages.assert_has_calls([call(fake_sandbox, self.handler._create_stage_handlers.return_value)])
+
+    def test_enqueue_request(self, pool, created_by):
+        self.handler.queue_default.enqueue = MagicMock()
+        self.handler.enqueue_request(pool, 1, created_by)
+        self.handler.queue_default.enqueue.assert_called_once_with(
+            self.handler._create_allocation_jobs, pool, 1, created_by
+        )
+
+    def test_create_restart_jobs(self, allocation_unit, allocation_request, mocker):
+        fake_sandbox = MagicMock()
+        fake_sandbox_class = mocker.patch(
+            'kypo.sandbox_instance_app.lib.request_handlers.Sandbox', return_value=fake_sandbox
+        )
+        self.handler._restart_stage_handlers = MagicMock()
+        self.handler._enqueue_stages = MagicMock()
+
+        self.handler._create_restart_jobs(allocation_unit)
+
+        assert self.handler.request == allocation_request
+        fake_sandbox_class.assert_called_once_with(
+            id='123', allocation_unit=allocation_unit, private_user_key='fake_private_key', public_user_key='fake_public_key'
+        )
+        self.handler._restart_stage_handlers.assert_called_once_with(fake_sandbox)
+        self.handler._enqueue_stages.assert_called_once_with(fake_sandbox, self.handler._restart_stage_handlers.return_value)
+
+    def test_restart_request(self, allocation_request):
+        self.handler.queue_default.enqueue = MagicMock()
+        self.handler.restart_request(allocation_request.allocation_unit)
+        self.handler.queue_default.enqueue.assert_called_once_with(
+            self.handler._create_restart_jobs, allocation_request.allocation_unit
+        )
+
+    def test_create_db_stage(self, allocation_request):
+        self.handler.request = allocation_request
+        self.handler._create_db_stage(NetworkingAnsibleAllocationStage, repo_url='fake_repo_url', rev='fake_rev')
+
+        assert allocation_request.stages.count() == 1
+        stage = NetworkingAnsibleAllocationStage.objects.get(allocation_request=allocation_request)
+        assert stage.repo_url == 'fake_repo_url'
+        assert stage.rev == 'fake_rev'
+
+    def test_create_stage_handlers(self, sandbox, allocation_request, mocker):
+        self.handler.request = allocation_request
+
+        fake_stack_stage = MagicMock()
+        fake_network_stage = MagicMock()
+        fake_user_stage = MagicMock()
+        self.handler._create_db_stage = MagicMock()
+        self.handler._create_db_stage.side_effect = [fake_stack_stage, fake_network_stage, fake_user_stage]
+
+        handlers = self.handler._create_stage_handlers(sandbox)
+
+        self.handler._create_db_stage.assert_has_calls([
+            call(StackAllocationStage),
+            call(NetworkingAnsibleAllocationStage, repo_url='fake_repo_url', rev='fake_rev'),
+            call(UserAnsibleAllocationStage, repo_url=allocation_request.allocation_unit.pool.definition.url,
+                 rev=allocation_request.allocation_unit.pool.rev_sha)
+        ])
+        self.assert_handlers(handlers, [fake_stack_stage, fake_network_stage, fake_user_stage])
+
+    def test_restart_stage_handlers_not_finished(self, allocation_request_started, sandbox):
+        self.handler.request = allocation_request_started
+        with pytest.raises(api_exceptions.ValidationError) as cm:
+            self.handler._restart_stage_handlers(sandbox)
+
+        assert str(cm.value) == 'Allocation of the sandbox is still in progress.'
+
+    def test_restart_stage_handlers_finished_successfully(self, sandbox_finished):
+        self.handler.request = sandbox_finished.allocation_unit.allocation_request
+        with pytest.raises(api_exceptions.ValidationError) as cm:
+            self.handler._restart_stage_handlers(sandbox_finished)
+
+        assert str(cm.value) == 'All stages finished without failing. Only failed stages can be restarted.'
+
+    def test_restart_stage_handlers(self, sandbox_failed_stack_stage):
+        self.handler.request = sandbox_failed_stack_stage.allocation_unit.allocation_request
+
+        fake_stack_stage = MagicMock()
+        fake_network_stage = MagicMock()
+        fake_user_stage = MagicMock()
+        self.handler._create_db_stage = MagicMock()
+        self.handler._create_db_stage.side_effect = [fake_stack_stage, fake_network_stage, fake_user_stage]
+
+        handlers = self.handler._restart_stage_handlers(sandbox_failed_stack_stage)
+
+        self.handler._create_db_stage.assert_has_calls([
+            call(StackAllocationStage),
+            call(NetworkingAnsibleAllocationStage, repo_url='fake_repo_url', rev='fake_rev'),
+            call(UserAnsibleAllocationStage, repo_url=sandbox_failed_stack_stage.allocation_unit.pool.definition.url,
+                 rev=sandbox_failed_stack_stage.allocation_unit.pool.rev_sha)
+        ])
+        self.assert_handlers(handlers, [fake_stack_stage, fake_network_stage, fake_user_stage])
+
+    def test_restart_stage_handler_user_stage_failed(self, sandbox_failed_user_stage):
+        self.handler.request = sandbox_failed_user_stage.allocation_unit.allocation_request
+
+        fake_user_stage = MagicMock()
+        self.handler._create_db_stage = MagicMock(return_value=fake_user_stage)
+
+        handlers = self.handler._restart_stage_handlers(sandbox_failed_user_stage)
+
+        self.handler._create_db_stage.assert_called_once_with(
+            UserAnsibleAllocationStage, repo_url=sandbox_failed_user_stage.allocation_unit.pool.definition.url,
+            rev=sandbox_failed_user_stage.allocation_unit.pool.rev_sha
+        )
+        user_stage = handlers[0]
+        assert user_stage.stage == fake_user_stage
+
+    def test_get_stage_handlers(self, allocation_request_started):
+        self.handler.request = allocation_request_started
+
+        handlers = self.handler._get_stage_handlers()
+
+        self.assert_handlers(handlers, [
+            allocation_request_started.useransibleallocationstage,
+            allocation_request_started.networkingansibleallocationstage,
+            allocation_request_started.stackallocationstage
+        ])
+
+
+@pytest.mark.integration
 class TestAllocationRequestHandler:
     @pytest.fixture(autouse=True)
     def set_up(self, mocker):
@@ -131,6 +313,7 @@ class TestAllocationRequestHandler:
         self.ansible_cancel.assert_not_called()
 
 
+@pytest.mark.integration
 class TestCleanupRequestHandler:
     @pytest.fixture(autouse=True)
     def set_up(self, mocker):

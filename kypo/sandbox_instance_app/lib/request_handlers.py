@@ -1,25 +1,26 @@
 import abc
 import structlog
 from functools import partial
-from typing import List, Type, Callable, Union
+from typing import List, Type, Callable, Union, Optional
 from rq import Queue
 from rq.job import Job
 import django_rq
 from django.db import transaction
 from django.conf import settings
+from django.contrib.auth.models import User
 
-from kypo.sandbox_common_lib import exceptions
+from kypo.sandbox_common_lib import exceptions, utils
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage,\
     NetworkingAnsibleAllocationStage, NetworkingAnsibleCleanupStage,\
     UserAnsibleAllocationStage, UserAnsibleCleanupStage
 
 from kypo.sandbox_instance_app.models import Sandbox, SandboxAllocationUnit,\
     SandboxRequest, AllocationRequest, CleanupRequest,\
-    StackAllocationStage, CleanupStage, StackCleanupStage, AllocationRQJob, CleanupRQJob
+    StackAllocationStage, CleanupStage, StackCleanupStage, AllocationRQJob, CleanupRQJob, Pool
 from kypo.sandbox_instance_app.lib.stage_handlers import StageHandler, StackStageHandler,\
     AllocationStackStageHandler, CleanupStackStageHandler, AnsibleStageHandler,\
     AllocationAnsibleStageHandler, CleanupAnsibleStageHandler
-from kypo.sandbox_instance_app.lib import requests
+from kypo.sandbox_instance_app.lib import requests, sandboxes
 
 LOG = structlog.get_logger()
 
@@ -38,7 +39,7 @@ class RequestHandler(abc.ABC):
     queue_ansible: Queue = django_rq\
         .get_queue(ANSIBLE_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_ansible_timeout)
 
-    def __init__(self, request: SandboxRequest):
+    def __init__(self, request: SandboxRequest = None):
         self.request = request
 
     @abc.abstractmethod
@@ -116,18 +117,42 @@ class AllocationRequestHandler(RequestHandler):
     request: AllocationRequest
 
     @transaction.atomic
-    def enqueue_request(self, sandbox: Sandbox,  restart_stages: bool = False) -> None:
+    def _enqueue_stages(self, sandbox: Sandbox, stage_handlers) -> None:
         """
         Handles request stages creation (or restart) and their enqueuing.
         """
-        stage_handlers = self._restart_stage_handlers(sandbox) if restart_stages else \
-            self._create_stage_handlers(sandbox)
         finalizing_stage_function = \
             self._get_finalizing_stage_function(self._save_sandbox_to_database, sandbox)
         on_commit_method = \
             partial(self._enqueue_request, stage_handlers, finalizing_stage_function)
 
         transaction.on_commit(on_commit_method)
+
+    def _create_allocation_jobs(self, pool: Pool, count: int, created_by: Optional[User]):
+        LOG.info('Creating %s sandboxes in pool %s', count, pool.id)
+        for _ in range(count):
+            unit = SandboxAllocationUnit.objects.create(pool=pool, created_by=created_by)
+            self.request = AllocationRequest.objects.create(allocation_unit=unit)
+            pri_key, pub_key = utils.generate_ssh_keypair()
+            sandbox = Sandbox(id=sandboxes.generate_new_sandbox_uuid(), allocation_unit=unit,
+                              private_user_key=pri_key, public_user_key=pub_key)
+            stage_handlers = self._create_stage_handlers(sandbox)
+            self._enqueue_stages(sandbox, stage_handlers)
+
+    def enqueue_request(self, pool: Pool, count: int, created_by: Optional[User]) -> None:
+        self.queue_default.enqueue(self._create_allocation_jobs, pool, count, created_by)
+
+    def _create_restart_jobs(self, unit: SandboxAllocationUnit):
+        LOG.info('Restarting sandbox allocation unit: %s', unit.id)
+        self.request = unit.allocation_request
+        pri_key, pub_key = utils.generate_ssh_keypair()
+        sandbox = Sandbox(id=sandboxes.generate_new_sandbox_uuid(), allocation_unit=unit,
+                          private_user_key=pri_key, public_user_key=pub_key)
+        stage_handlers = self._restart_stage_handlers(sandbox)
+        self._enqueue_stages(sandbox, stage_handlers)
+
+    def restart_request(self, unit: SandboxAllocationUnit) -> None:
+        self.queue_default.enqueue(self._create_restart_jobs, unit)
 
     def _create_db_stage(self, stage_class: Type[AllocationStage],
                          *args, **kwargs) -> AllocationStage:

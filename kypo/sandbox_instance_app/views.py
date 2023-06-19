@@ -233,9 +233,8 @@ class SandboxAllocationUnitListCreateView(generics.ListCreateAPIView):
                 raise exceptions.ValidationError("Invalid parameter count: %s" % count)
 
         created_by = None if isinstance(request.user, AnonymousUser) else request.user
-        requests = pools.create_sandboxes_in_pool(pool, created_by, count=count)
-        serializer = self.serializer_class(requests, many=True)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        pools.create_sandboxes_in_pool(pool, created_by, count=count)
+        return Response(status=status.HTTP_201_CREATED)
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])

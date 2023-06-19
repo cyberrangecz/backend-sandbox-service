@@ -129,6 +129,17 @@ def set_stage_finished(stage):
     stage.save()
 
 
+def set_stage_failed(stage):
+    set_stage_started(stage)
+    stage.failed = True
+    stage.error_message = 'Stack CREATE failed'
+    stage.finished = True
+    stage.end = timezone.now()
+    stage.status = 'CREATE_FAILED'
+    stage.status_reason = 'Stack CREATE failed'
+    stage.save()
+
+
 @pytest.fixture
 def stack():
     return {
@@ -270,6 +281,22 @@ def sandbox(allocation_unit):
 @pytest.fixture
 def sandbox_finished(allocation_stage_user_started, sandbox):
     set_stage_finished(allocation_stage_user_started)
+    return sandbox
+
+
+@pytest.fixture
+def sandbox_failed_stack_stage(allocation_stage_stack, allocation_stage_networking, allocation_stage_user, sandbox):
+    set_stage_failed(allocation_stage_stack)
+    set_stage_failed(allocation_stage_networking)
+    set_stage_failed(allocation_stage_user)
+    return sandbox
+
+
+@pytest.fixture
+def sandbox_failed_user_stage(allocation_stage_stack, allocation_stage_networking, allocation_stage_user, sandbox):
+    set_stage_finished(allocation_stage_stack)
+    set_stage_finished(allocation_stage_networking)
+    set_stage_failed(allocation_stage_user)
     return sandbox
 
 

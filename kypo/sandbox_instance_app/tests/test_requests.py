@@ -20,28 +20,10 @@ class TestAllocationRequest:
         self.handler = mocker.patch('kypo.sandbox_instance_app.lib.requests.request_handlers.'
                                     'AllocationRequestHandler')
 
-    def test_create_allocation_request_success(self, pool, created_by, mocker):
-        mocker.patch('kypo.sandbox_instance_app.lib.sandboxes.generate_new_sandbox_uuid',
-                     return_value=2)
-        sandbox_allocation_unit = requests.create_allocation_request(pool, created_by)
-
-        assert sandbox_allocation_unit.pool_id == pool.id
-        assert sandbox_allocation_unit.allocation_request
-        self.gen_ssh.assert_called_once()
-        self.sandbox.assert_called_once_with(id=sandbox_allocation_unit.id,
-                                             allocation_unit=sandbox_allocation_unit,
-                                             private_user_key=self.gen_ssh.return_value[0],
-                                             public_user_key=self.gen_ssh.return_value[1])
-        self.handler.assert_called_once_with(sandbox_allocation_unit.allocation_request)
-        self.handler.return_value.enqueue_request.assert_called_once_with(self.sandbox.return_value)
-
     def test_create_allocation_requests_success(self, pool, created_by):
-        sandbox_allocation_units = requests.create_allocations_requests(pool, 2, created_by)
+        requests.create_allocations_requests(pool, 2, created_by)
 
-        assert len(sandbox_allocation_units) == 2
-        for sandbox_allocation_unit in sandbox_allocation_units:
-            assert sandbox_allocation_unit.pool_id == pool.id
-            assert sandbox_allocation_unit.allocation_request
+        self.handler.return_value.enqueue_request.assert_called_once_with(pool, 2, created_by)
 
     def test_cancel_allocation_request_success(self, allocation_request_started):
         requests.cancel_allocation_request(allocation_request_started)

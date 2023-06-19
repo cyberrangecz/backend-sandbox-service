@@ -161,8 +161,7 @@ def validate_hardware_usage_of_sandboxes(pool, count) -> None:
         raise exceptions.StackError(f'Cannot build {count} sandboxes: {exc}')
 
 
-def create_sandboxes_in_pool(pool: Pool, created_by: Optional[User], count: int = None)\
-        -> List[SandboxAllocationUnit]:
+def create_sandboxes_in_pool(pool: Pool, created_by: Optional[User], count: int = None) -> None:
     """
     Creates count sandboxes in given pool.
 
@@ -185,8 +184,7 @@ def create_sandboxes_in_pool(pool: Pool, created_by: Optional[User], count: int 
                 )
 
         validate_hardware_usage_of_sandboxes(pool, count)
-
-        return requests.create_allocations_requests(pool, count, created_by)
+        requests.create_allocations_requests(pool, count, created_by)
 
 
 def get_unlocked_sandbox(pool: Pool, created_by: Optional[User]) -> Optional[Sandbox]:

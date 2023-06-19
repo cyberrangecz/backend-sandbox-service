@@ -83,27 +83,20 @@ class TestCreateSandboxesInPool:
         mock_get_client = mocker.patch("kypo.sandbox_common_lib.utils.get_terraform_client")
         mock_get_client.return_value = self.client
         mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_definition")
-        self.create_mock = mocker.patch(
-            "kypo.sandbox_instance_app.lib.request_handlers.AllocationRequestHandler")
-        yield
+        self.fake_create_allocation_requests = mocker.patch(
+            "kypo.sandbox_instance_app.lib.requests.create_allocations_requests")
 
     def test_create_sandboxes_in_pool_success_one(self, created_by):
         pool = pools.get_pool(POOL_ID)
-        requests = pools.create_sandboxes_in_pool(pool, created_by, 1)
-
-        assert len(requests) == 1
-        assert all([req.pool.id == pool.id
-                    for req in requests])
+        pools.create_sandboxes_in_pool(pool, created_by, 1)
+        self.fake_create_allocation_requests.assert_called_once_with(pool, 1, created_by)
 
     def test_create_sandboxes_in_pool_success_all(self, created_by):
         pool = pools.get_pool(POOL_ID)
         size_before = pools.get_pool_size(pool)
 
-        requests = pools.create_sandboxes_in_pool(pool, created_by)
-
-        assert len(requests) == pool.max_size - size_before
-        assert all([req.pool.id == pool.id
-                    for req in requests])
+        pools.create_sandboxes_in_pool(pool, created_by)
+        self.fake_create_allocation_requests.assert_called_once_with(pool, pool.max_size - size_before, created_by)
 
     def test_create_sandboxes_in_pool_full(self, created_by):
         pool = pools.get_pool(FULL_POOL_ID)

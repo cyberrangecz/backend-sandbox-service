@@ -21,36 +21,19 @@ class StageState(enum.Enum):
     FAILED = "FAILED"
 
 
-def create_allocation_request(pool: Pool, created_by: Optional[User]) -> SandboxAllocationUnit:
-    """Create Sandbox Allocation Request.
-    Also create sandbox, but do not save it to the database until
-    successfully created.
-    """
-    unit = SandboxAllocationUnit.objects.create(pool=pool, created_by=created_by)
-    request = AllocationRequest.objects.create(allocation_unit=unit)
-    pri_key, pub_key = utils.generate_ssh_keypair()
-    sandbox = Sandbox(id=sandboxes.generate_new_sandbox_uuid(), allocation_unit=unit,
-                      private_user_key=pri_key, public_user_key=pub_key)
-    request_handlers.AllocationRequestHandler(request).enqueue_request(sandbox)
-    return unit
-
-
 def restart_allocation_stages(unit: SandboxAllocationUnit) -> SandboxAllocationUnit:
     """Restarts failed allocation stages and recreates the existing sandbox and request in the
      database.
     """
-    request = unit.allocation_request
-    pri_key, pub_key = utils.generate_ssh_keypair()
-    sandbox = Sandbox(id=sandboxes.generate_new_sandbox_uuid(), allocation_unit=unit,
-                      private_user_key=pri_key, public_user_key=pub_key)
-    request_handlers.AllocationRequestHandler(request).enqueue_request(sandbox, restart_stages=True)
+
+    request_handlers.AllocationRequestHandler().restart_request(unit)
     return unit
 
 
-def create_allocations_requests(pool: Pool, count: int, created_by: Optional[User])\
-        -> List[SandboxAllocationUnit]:
+def create_allocations_requests(pool: Pool, count: int, created_by: Optional[User]) -> None:
     """Batch version of create_allocation_request. Create count Sandbox Requests."""
-    return [create_allocation_request(pool, created_by) for _ in range(count)]
+
+    request_handlers.AllocationRequestHandler().enqueue_request(pool, count, created_by)
 
 
 def cancel_allocation_request(alloc_req: AllocationRequest):
