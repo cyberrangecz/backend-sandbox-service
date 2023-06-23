@@ -1,6 +1,7 @@
 """
 Serializers for ostack_proxy_elements classes.
 """
+from typing import Optional
 
 from rest_framework import serializers
 from kypo.cloud_commons import Image
@@ -40,7 +41,9 @@ class ImageSerializer(serializers.Serializer):
     owner_specified = serializers.SerializerMethodField()
 
     @staticmethod
-    def get_size(obj: Image) -> int:
+    def get_size(obj: Image) -> Optional[int]:
+        if obj.size is None:
+            return None
         return obj.size/1024**3
 
     @staticmethod
