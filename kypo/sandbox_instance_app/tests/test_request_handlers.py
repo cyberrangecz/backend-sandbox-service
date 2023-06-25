@@ -239,6 +239,99 @@ class TestAllocationRequestHandlerUnit:
         ])
 
 
+class TestCleanupRequestHandlerUnit:
+
+    @pytest.fixture(autouse=True)
+    def set_up(self, mocker):
+        mocker.patch(
+            'kypo.sandbox_instance_app.lib.request_handlers.LOG'
+        )
+        self.handler = request_handlers.CleanupRequestHandler()
+
+    @staticmethod
+    def assert_handlers(handlers, stages):
+        assert len(handlers) == len(stages)
+        for handler, stage in zip(handlers, stages):
+            assert handler.stage == stage
+
+    def test_enqueue_stages(self, mocker, allocation_request):
+        self.handler.request = allocation_request
+        self.handler._create_stage_handlers = MagicMock(return_value='fake_handlers')
+        self.handler._get_finalizing_stage_function = MagicMock(return_value='fake_finalizing_function')
+        fake_partial = mocker.patch('kypo.sandbox_instance_app.lib.request_handlers.partial')
+        fake_transaction = mocker.patch('kypo.sandbox_instance_app.lib.request_handlers.transaction')
+
+        self.handler._enqueue_stages()
+
+        self.handler._create_stage_handlers.assert_called_once()
+        self.handler._get_finalizing_stage_function.assert_called_once_with(self.handler._delete_allocation_unit,
+                                                                            allocation_request.allocation_unit, allocation_request)
+        fake_partial.assert_called_once_with(self.handler._enqueue_request, 'fake_handlers', 'fake_finalizing_function')
+        fake_transaction.on_commit.assert_called_once_with(fake_partial.return_value)
+
+    def test_create_cleanup_jobs(self, cleanup_request):
+        self.handler.request = cleanup_request
+        self.handler._enqueue_stages = MagicMock()
+
+        self.handler._create_cleanup_jobs(cleanup_request.allocation_unit)
+
+        self.handler._enqueue_stages.assert_called_once()
+        assert self.handler.request == cleanup_request
+
+    def test_create_cleanup_jobs_no_request(self, allocation_unit):
+        self.handler._enqueue_stages = MagicMock()
+
+        self.handler._create_cleanup_jobs(allocation_unit)
+
+        self.handler._enqueue_stages.assert_called_once()
+        assert self.handler.request == allocation_unit.cleanup_request
+
+    def test_create_db_stage(self, cleanup_request):
+        self.handler.request = cleanup_request
+        self.handler._create_db_stage(NetworkingAnsibleCleanupStage)
+
+        assert self.handler.request.networkingansiblecleanupstage is not None
+
+    def test_create_stage_handlers(self, cleanup_request_finished):
+        self.handler.request = cleanup_request_finished
+        fake_user_stage = MagicMock()
+        fake_network_stage = MagicMock()
+        fake_stack_stage = MagicMock()
+        self.handler._create_db_stage = MagicMock(side_effect=[fake_user_stage, fake_network_stage, fake_stack_stage])
+
+        handlers = self.handler._create_stage_handlers()
+
+        self.handler._create_db_stage.assert_has_calls([
+            call(UserAnsibleCleanupStage), call(NetworkingAnsibleCleanupStage), call(StackCleanupStage)
+        ])
+        self.assert_handlers(handlers, [fake_user_stage, fake_network_stage, fake_stack_stage])
+
+    def test_create_stage_handlers_no_user_stage(self, cleanup_stage_networking_started):
+        self.handler.request = cleanup_stage_networking_started.cleanup_request
+        StackCleanupStage.delete = MagicMock()
+        UserAnsibleCleanupStage.delete = MagicMock()
+        self.handler._create_db_stage = MagicMock(side_effect=[MagicMock(), MagicMock(), MagicMock()])
+
+        self.handler._create_stage_handlers()
+
+        self.handler._create_db_stage.assert_has_calls([
+            call(UserAnsibleCleanupStage), call(NetworkingAnsibleCleanupStage), call(StackCleanupStage)
+        ])
+        UserAnsibleCleanupStage.delete.assert_called_once()
+        StackCleanupStage.delete.assert_not_called()
+
+    def test_get_stage_handlers(self, cleanup_request_finished):
+        self.handler.request = cleanup_request_finished
+
+        handlers = self.handler._get_stage_handlers()
+
+        self.assert_handlers(handlers, [
+            cleanup_request_finished.stackcleanupstage,
+            cleanup_request_finished.networkingansiblecleanupstage,
+            cleanup_request_finished.useransiblecleanupstage
+        ])
+
+
 @pytest.mark.integration
 class TestAllocationRequestHandler:
     @pytest.fixture(autouse=True)

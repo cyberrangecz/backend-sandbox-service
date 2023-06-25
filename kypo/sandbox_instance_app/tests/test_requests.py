@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import call
 from django.db.models import ObjectDoesNotExist
 from django.utils import timezone
 
@@ -63,13 +64,11 @@ class TestCleanupRequest:
                                     'CleanupRequestHandler')
 
     def assert_cleanup_request_success(self, allocation_unit, force=False):
-        sandbox_cleanup_request = requests.create_cleanup_request(allocation_unit, force)
+        requests.create_cleanup_requests([allocation_unit], force)
 
-        assert sandbox_cleanup_request.allocation_unit_id == allocation_unit.id
         with pytest.raises(ObjectDoesNotExist):
-            assert Sandbox.objects.get(pk=sandbox_cleanup_request.allocation_unit.sandbox.id)
-        self.handler.assert_called_once_with(sandbox_cleanup_request)
-        self.handler.return_value.enqueue_request.assert_called_once()
+            assert Sandbox.objects.get(pk=allocation_unit.sandbox.id)
+        self.handler.return_value.enqueue_request.assert_called_once_with(allocation_unit)
 
     def assert_cleanup_request_failed(self, allocation_unit):
         with pytest.raises(api_exceptions.ValidationError):
@@ -78,6 +77,14 @@ class TestCleanupRequest:
         with pytest.raises(ObjectDoesNotExist):
             assert CleanupRequest.objects.get(pk=allocation_unit.id)
         self.handler.assert_not_called()
+
+    def assert_multiple_cleanup_requests_success(self, allocation_units):
+        for allocation_unit in allocation_units:
+            with pytest.raises(ObjectDoesNotExist):
+                assert Sandbox.objects.get(pk=allocation_unit.sandbox.id)
+
+        self.handler.return_value.enqueue_request.assert_has_calls(
+            [call(allocation_unit) for allocation_unit in allocation_units])
 
     def test_create_cleanup_request_success(self, sandbox_finished):
         allocation_unit = sandbox_finished.allocation_unit
@@ -124,13 +131,8 @@ class TestCleanupRequest:
     def test_create_cleanup_requests(self, sandbox_finished):
         allocation_unit = sandbox_finished.allocation_unit
 
-        cleanup_requests = requests.create_cleanup_requests([allocation_unit])
-
-        assert len(cleanup_requests) == 1
-        for cleanup_request in cleanup_requests:
-            assert cleanup_request.allocation_unit_id == allocation_unit.id
-            with pytest.raises(ObjectDoesNotExist):
-                assert Sandbox.objects.get(pk=cleanup_request.allocation_unit.sandbox.id)
+        requests.create_cleanup_requests([allocation_unit])
+        self.assert_multiple_cleanup_requests_success([allocation_unit])
 
     @staticmethod
     def assert_cleanup_request_all_failed(allocation_units):
@@ -158,14 +160,8 @@ class TestCleanupRequest:
         unit_alloc_unfinished = SandboxAllocationUnit.objects.get(pk=1)
         allocation_units = [unit_alloc_unfinished, sandbox_lock.sandbox.allocation_unit]
 
-        cleanup_requests = requests.create_cleanup_requests(
-            [allocation_unit for allocation_unit in allocation_units], True)
-
-        assert len(cleanup_requests) == len(allocation_units)
-        for cleanup_request, allocation_unit in zip(cleanup_requests, allocation_units):
-            assert cleanup_request.allocation_unit_id == allocation_unit.id
-            with pytest.raises(ObjectDoesNotExist):
-                assert Sandbox.objects.get(pk=allocation_unit.sandbox.id)
+        requests.create_cleanup_requests([allocation_unit for allocation_unit in allocation_units], True)
+        self.assert_multiple_cleanup_requests_success(allocation_units)
 
     def test_cancel_cleanup_request_success(self, cleanup_request_started):
         requests.cancel_cleanup_request(cleanup_request_started)

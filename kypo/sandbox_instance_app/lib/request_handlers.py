@@ -246,7 +246,7 @@ class CleanupRequestHandler(RequestHandler):
     request: CleanupRequest
 
     @transaction.atomic
-    def enqueue_request(self) -> None:
+    def _enqueue_stages(self) -> None:
         """
         Handles request stages creation and their enqueuing.
         """
@@ -259,6 +259,19 @@ class CleanupRequestHandler(RequestHandler):
 
         transaction.on_commit(on_commit_method)
 
+    def _create_cleanup_jobs(self, unit: SandboxAllocationUnit):
+        if hasattr(unit, 'cleanup_request'):
+            self.request = unit.cleanup_request
+            LOG.info("Reusing cleanup request %s for allocation unit %s", self.request.id, unit.id)
+        else:
+            self.request = CleanupRequest.objects.create(allocation_unit=unit)
+            LOG.info("Created cleanup request %s for allocation unit %s", self.request.id, unit.id)
+
+        self._enqueue_stages()
+
+    def enqueue_request(self, unit: SandboxAllocationUnit) -> None:
+        self.queue_default.enqueue(self._create_cleanup_jobs, unit)
+
     def _create_db_stage(self, stage_class: Type[CleanupStage], *args, **kwargs) -> CleanupStage:
         """
         Simplifies stage creation in database.
@@ -270,12 +283,19 @@ class CleanupRequestHandler(RequestHandler):
         """
         Create a new DB stages for this request and return their handlers.
         """
+
+        if hasattr(self.request, 'useransiblecleanupstage'):
+            self.request.useransiblecleanupstage.delete()
         user_stage = self._create_db_stage(UserAnsibleCleanupStage)
         user_stage_handler = CleanupAnsibleStageHandler(user_stage)
 
+        if hasattr(self.request, 'networkingansiblecleanupstage'):
+            self.request.networkingansiblecleanupstage.delete()
         networking_stage = self._create_db_stage(NetworkingAnsibleCleanupStage)
         networking_stage_handler = CleanupAnsibleStageHandler(networking_stage)
 
+        if hasattr(self.request, 'stackcleanupstage'):
+            self.request.stackcleanupstage.delete()
         stack_stage = self._create_db_stage(StackCleanupStage)
         stack_stage_handler = CleanupStackStageHandler(stack_stage)
 
