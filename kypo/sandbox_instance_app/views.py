@@ -149,9 +149,8 @@ class PoolCleanupRequestsListCreateView(generics.ListCreateAPIView):
         get_object_or_404(Pool, pk=pool_id)
         pool_units = SandboxAllocationUnit.objects.filter(pool_id=pool_id)
         force = request.GET.get('force', 'false') == 'true'
-        cleanup_requests = sandbox_requests.create_cleanup_requests(pool_units, force)
-        serializer = serializers.CleanupRequestSerializer(cleanup_requests, many=True)
-        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+        sandbox_requests.create_cleanup_requests(pool_units, force)
+        return Response(status=status.HTTP_201_CREATED)
 
 
 class PoolCleanupRequestUnlockedCreateView(APIView):
@@ -172,9 +171,8 @@ class PoolCleanupRequestUnlockedCreateView(APIView):
         pool_units = [unit for unit in pool_units if hasattr(unit, 'sandbox') and
                       not hasattr(unit.sandbox, "lock")]
         force = request.GET.get('force', 'false') == 'true'
-        cleanup_requests = sandbox_requests.create_cleanup_requests(pool_units, force)
-        serializer = serializers.CleanupRequestSerializer(cleanup_requests, many=True)
-        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+        sandbox_requests.create_cleanup_requests(pool_units, force)
+        return Response(status=status.HTTP_201_CREATED)
 
 
 class PoolCleanupRequestFailedCreateView(APIView):
@@ -194,9 +192,8 @@ class PoolCleanupRequestFailedCreateView(APIView):
         pool_units = SandboxAllocationUnit.objects.filter(pool_id=pool_id)
         force = request.GET.get('force', 'false') == 'true'
         pool_units = [unit for unit in pool_units if unit.allocation_request.stages.filter(failed=True).count()]
-        cleanup_requests = sandbox_requests.create_cleanup_requests(pool_units, force)
-        serializer = serializers.CleanupRequestSerializer(cleanup_requests, many=True)
-        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+        sandbox_requests.create_cleanup_requests(pool_units, force)
+        return Response(status=status.HTTP_201_CREATED)
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
@@ -309,9 +306,8 @@ class SandboxCleanupRequestView(generics.RetrieveDestroyAPIView,
         """ Create cleanup request."""
         unit = self.get_object()
         force = request.GET.get('force', 'false') == 'true'
-        cleanup_req = sandbox_requests.create_cleanup_request(unit, force)
-        serializer = self.serializer_class(cleanup_req)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        sandbox_requests.create_cleanup_requests([unit], force)
+        return Response(status=status.HTTP_201_CREATED)
 
     def delete(self, request, *args, **kwargs):
         """ Delete cleanup request. Must be finished or cancelled."""
