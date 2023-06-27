@@ -132,16 +132,22 @@ def delete_cleanup_request(request: CleanupRequest) -> None:
 
 def get_allocation_request_stages_state(request: AllocationRequest) -> List[str]:
     """Get AllocationRequests stages state."""
-    stages = [request.stackallocationstage, request.networkingansibleallocationstage,
-              request.useransibleallocationstage]
+    try:
+        stages = [request.stackallocationstage, request.networkingansibleallocationstage,
+                  request.useransibleallocationstage]
+    except ObjectDoesNotExist:
+        return [StageState.IN_QUEUE.value, StageState.IN_QUEUE.value, StageState.IN_QUEUE.value]
 
     return _get_request_stages_state(stages)
 
 
 def get_cleanup_request_stages_state(request: CleanupRequest) -> List[str]:
     """Get CleanupRequests stages state."""
-    stages = [request.stackcleanupstage, request.networkingansiblecleanupstage,
-              request.useransiblecleanupstage]
+    try:
+        stages = [request.stackcleanupstage, request.networkingansiblecleanupstage,
+                  request.useransiblecleanupstage]
+    except ObjectDoesNotExist:
+        return [StageState.IN_QUEUE.value, StageState.IN_QUEUE.value, StageState.IN_QUEUE.value]
 
     return _get_request_stages_state(stages)
 
