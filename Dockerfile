@@ -28,11 +28,11 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PATH="/app/.venv/bin:$PATH"
 
-RUN apt-get update && apt-get install -y git redis supervisor netcat gnupg software-properties-common curl
+RUN apt-get update && apt-get install -y git redis supervisor gnupg software-properties-common curl
 
 ## Install Terraform
-RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
-RUN apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+RUN curl https://apt.releases.hashicorp.com/gpg | gpg --dearmor | tee /usr/share/keyrings/hashicorp-archive-keyring.gpg
+RUN echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/hashicorp.list
 RUN apt-get update && apt-get install -y terraform
 
 COPY bin bin
