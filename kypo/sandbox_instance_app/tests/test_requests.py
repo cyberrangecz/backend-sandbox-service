@@ -14,10 +14,6 @@ pytestmark = pytest.mark.django_db
 class TestAllocationRequest:
     @pytest.fixture(autouse=True)
     def set_up(self, mocker):
-        self.gen_ssh = mocker\
-            .patch('kypo.sandbox_instance_app.lib.requests.utils.generate_ssh_keypair')
-        self.gen_ssh.return_value = 'private-key', 'public-key'
-        self.sandbox = mocker.patch('kypo.sandbox_instance_app.lib.requests.Sandbox')
         self.handler = mocker.patch('kypo.sandbox_instance_app.lib.requests.request_handlers.'
                                     'AllocationRequestHandler')
 
@@ -29,8 +25,7 @@ class TestAllocationRequest:
     def test_cancel_allocation_request_success(self, allocation_request_started):
         requests.cancel_allocation_request(allocation_request_started)
 
-        self.handler.assert_called_once_with(allocation_request_started)
-        self.handler.return_value.cancel_request.assert_called_once()
+        self.handler.return_value.cancel_request.assert_called_once_with(allocation_request_started)
 
     def test_get_allocation_request_stages_state(self, allocation_request,
                                                  allocation_stage_networking_started,
@@ -68,6 +63,7 @@ class TestCleanupRequest:
 
         with pytest.raises(ObjectDoesNotExist):
             assert Sandbox.objects.get(pk=allocation_unit.sandbox.id)
+
         self.handler.return_value.enqueue_request.assert_called_once_with(allocation_unit)
 
     def assert_cleanup_request_failed(self, allocation_unit):
@@ -165,9 +161,7 @@ class TestCleanupRequest:
 
     def test_cancel_cleanup_request_success(self, cleanup_request_started):
         requests.cancel_cleanup_request(cleanup_request_started)
-
-        self.handler.assert_called_once_with(cleanup_request_started)
-        self.handler.return_value.cancel_request.assert_called_once()
+        self.handler.return_value.cancel_request.assert_called_once_with(cleanup_request_started)
 
     def test_delete_cleanup_request_success(self, cleanup_request_finished):
         requests.delete_cleanup_request(cleanup_request_finished)

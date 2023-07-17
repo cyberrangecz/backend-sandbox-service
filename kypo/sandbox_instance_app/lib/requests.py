@@ -1,15 +1,14 @@
 import enum
 from typing import List, Optional
+
 import structlog
-from django.core.exceptions import ObjectDoesNotExist
-from django.db import transaction
 from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
 
-from kypo.sandbox_common_lib import exceptions, utils
-
-from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit,\
-    AllocationRequest, CleanupRequest, SandboxLock
+from kypo.sandbox_common_lib import exceptions
 from kypo.sandbox_instance_app.lib import request_handlers, sandboxes
+from kypo.sandbox_instance_app.models import Pool, SandboxAllocationUnit, \
+    AllocationRequest, CleanupRequest
 
 LOG = structlog.get_logger()
 
@@ -38,7 +37,7 @@ def create_allocations_requests(pool: Pool, count: int, created_by: Optional[Use
 
 def cancel_allocation_request(alloc_req: AllocationRequest):
     """(Soft) cancel all stages of the Allocation Request."""
-    request_handlers.AllocationRequestHandler(alloc_req).cancel_request()
+    request_handlers.AllocationRequestHandler().cancel_request(alloc_req)
 
 
 def create_cleanup_request_force(allocation_unit: SandboxAllocationUnit):
@@ -119,7 +118,7 @@ def create_cleanup_requests(allocation_units: List[SandboxAllocationUnit], force
 
 def cancel_cleanup_request(cleanup_req: CleanupRequest) -> None:
     """(Soft) cancel all stages of the Cleanup Request."""
-    request_handlers.CleanupRequestHandler(cleanup_req).cancel_request()
+    request_handlers.CleanupRequestHandler().cancel_request(cleanup_req)
 
 
 def delete_cleanup_request(request: CleanupRequest) -> None:

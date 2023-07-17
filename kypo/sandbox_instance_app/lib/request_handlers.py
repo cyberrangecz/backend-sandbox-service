@@ -38,9 +38,7 @@ class RequestHandler(abc.ABC):
         .get_queue(OPENSTACK_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_build_timeout)
     queue_ansible: Queue = django_rq\
         .get_queue(ANSIBLE_QUEUE, default_timeout=settings.KYPO_CONFIG.sandbox_ansible_timeout)
-
-    def __init__(self, request: SandboxRequest = None):
-        self.request = request
+    request: SandboxRequest = None
 
     @abc.abstractmethod
     def enqueue_request(self, *args, **kwargs) -> None:
@@ -49,10 +47,11 @@ class RequestHandler(abc.ABC):
         """
         pass
 
-    def cancel_request(self) -> None:
+    def cancel_request(self, request: SandboxRequest) -> None:
         """
         (Soft) cancel of all request stages.
         """
+        self.request = request
         if hasattr(self.request, 'is_finished') and self.request.is_finished:
             msg = f'Request {self.request.__class__.__name__} with ID {self.request.id}' \
                   f' is finished and does not need cancelling.'
@@ -332,17 +331,18 @@ def request_exception_handler(job: Job, exc_type, exc_value, traceback) -> None:
     :param traceback: Traceback object which encapsulates the call stack.
     """
     request_handler = None
+    request = None
     try:
         request = AllocationRQJob.objects.get(job_id=job.id)\
             .allocation_stage.allocation_request_fk_many
-        request_handler = AllocationRequestHandler(request)
+        request_handler = AllocationRequestHandler()
     except AllocationRQJob.DoesNotExist:
         try:
             request = CleanupRQJob.objects.get(job_id=job.id)\
                 .cleanup_stage.cleanup_request_fk_many
-            request_handler = CleanupRequestHandler(request)
+            request_handler = CleanupRequestHandler()
         except CleanupRQJob.DoesNotExist:
             pass
 
-    if request_handler:
-        request_handler.cancel_request()
+    if request_handler and request:
+        request_handler.cancel_request(request)
