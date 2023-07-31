@@ -93,7 +93,7 @@ class TestCreateSandboxesInPool:
 
     def test_create_sandboxes_in_pool_success_all(self, created_by):
         pool = pools.get_pool(POOL_ID)
-        size_before = pools.get_pool_size(pool)
+        size_before = pool.size
 
         pools.create_sandboxes_in_pool(pool, created_by)
         self.fake_create_allocation_requests.assert_called_once_with(pool, pool.max_size - size_before, created_by)

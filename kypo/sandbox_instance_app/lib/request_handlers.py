@@ -315,6 +315,11 @@ class CleanupRequestHandler(RequestHandler):
         """
         Named method used as finalizing stage function.
         """
+        with transaction.atomic():  # avoid race condition with decrementing pool size in DB
+            pool = Pool.objects.select_for_update().get(id=allocation_unit.pool.id)
+            pool.size -= 1
+            pool.save()
+
         allocation_unit.delete()
         LOG.info('Allocation Unit deleted from DB', allocation_unit=allocation_unit)
         requests.delete_cleanup_request(request)

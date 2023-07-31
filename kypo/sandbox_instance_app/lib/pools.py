@@ -131,11 +131,6 @@ def delete_pool(pool: Pool) -> None:
         LOG.warning(exc)
 
 
-def get_pool_size(pool: Pool) -> int:
-    """Updates sandboxes in given pool and returns current size of pool."""
-    return pool.allocation_units.count()
-
-
 def get_sandboxes_in_pool(pool: Pool) -> QuerySet:
     """Returns DB QuerySet of sandboxes from given pool."""
     alloc_unit_ids = [unit.id for unit in pool.allocation_units.all()]
@@ -173,7 +168,7 @@ def create_sandboxes_in_pool(pool: Pool, created_by: Optional[User], count: int 
     with transaction.atomic():
         pool = Pool.objects.select_for_update().get(pk=pool.id)
 
-        current_size = get_pool_size(pool)
+        current_size = pool.size
         if count is None:
             count = pool.max_size - current_size
 
@@ -185,6 +180,8 @@ def create_sandboxes_in_pool(pool: Pool, created_by: Optional[User], count: int 
 
         validate_hardware_usage_of_sandboxes(pool, count)
         requests.create_allocations_requests(pool, count, created_by)
+        pool.size += count
+        pool.save()
 
 
 def get_unlocked_sandbox(pool: Pool, created_by: Optional[User]) -> Optional[Sandbox]:
@@ -288,7 +285,7 @@ def get_hardware_usage_of_sandbox(pool: Pool) -> Optional[HardwareUsage]:
 
     hardware_usage_pool = hardware_usage
     if hardware_usage_pool:
-        hardware_usage_pool *= get_pool_size(pool)
+        hardware_usage_pool *= pool.size
         hardware_usage_pool /= limits
 
     cache.set(get_cache_key(pool), hardware_usage, POOL_CACHE_TIMEOUT)

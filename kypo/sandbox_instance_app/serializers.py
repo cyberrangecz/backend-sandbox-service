@@ -19,7 +19,8 @@ from kypo.sandbox_cloud_app import serializers as cloud_serializers
 
 
 class PoolSerializer(serializers.ModelSerializer):
-    size = serializers.SerializerMethodField(
+    size = serializers.IntegerField(
+        default=0,
         help_text="Number of allocation units associated with this pool.")
     lock_id = serializers.SerializerMethodField()
     definition = serializers.SerializerMethodField()
@@ -41,10 +42,6 @@ class PoolSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 f'Pool max_size value must be greater than 0. Your value: {value}.')
         return value
-
-    @staticmethod
-    def get_size(obj: models.Pool) -> int:
-        return pools.get_pool_size(obj)
 
     @staticmethod
     def get_lock_id(obj: models.Pool) -> Optional[int]:
