@@ -18,6 +18,10 @@ class Pool(models.Model):
     )
     max_size = models.IntegerField(
         help_text='Maximum amount of Allocation Units associated with this pool.')
+    size = models.PositiveIntegerField(
+        default=0,
+        help_text='Current amount of Allocation Units associated with this pool.',
+    )
     private_management_key = models.TextField(
         help_text='Private key for management access.'
     )
