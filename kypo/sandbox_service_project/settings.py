@@ -214,6 +214,15 @@ CACHES = {
             'MAX_ENTRIES': 500
         }
     },
+    'topology_cache': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'topology_cache',
+        'TIMEOUT': None,
+        'OPTIONS': {
+            'CULL_FREQUENCY': 0,  # culls the entire cache, makes culling more efficient
+            'MAX_ENTRIES': 300
+        }
+    },
 }
 
 RQ_QUEUES = {

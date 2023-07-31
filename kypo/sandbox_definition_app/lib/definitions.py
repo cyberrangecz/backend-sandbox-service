@@ -8,6 +8,7 @@ import structlog
 import yaml
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.cache import caches
 from kypo.topology_definition.models import TopologyDefinition, DockerContainers
 from kypo.topology_definition.image_naming import image_name_replace
 from yamlize import YamlizingError
@@ -110,14 +111,23 @@ def get_definition(url: str, rev: str, config: KypoConfiguration) -> TopologyDef
     :return: Topology definition
     :raise: GitError if GIT error occurs, ValidationError if definition is incorrect
     """
+    cache = caches['topology_cache']
+    provider = get_def_provider(url, config)
+    rev_sha = provider.get_rev_sha(rev)
+    cache_key = f'definition-{url}-rev-sha-{rev_sha}-topology'
+    top_def = cache.get(cache_key, None)
+    if top_def is not None:
+        return top_def
+
     try:
-        provider = get_def_provider(url, config)
-        definition = provider.get_file(SANDBOX_DEFINITION_FILENAME, rev)
+        definition = provider.get_file(SANDBOX_DEFINITION_FILENAME, rev_sha)
     except exceptions.GitError as ex:
         raise exceptions.GitError("Failed to get sandbox definition file {}.\n"
                                   .format(SANDBOX_DEFINITION_FILENAME) + str(ex))
 
-    return load_definition(io.StringIO(definition))
+    top_def = load_definition(io.StringIO(definition))
+    cache.set(cache_key, top_def)
+    return top_def
 
 
 def get_containers(url: str, rev: str, config: KypoConfiguration) -> DockerContainers:

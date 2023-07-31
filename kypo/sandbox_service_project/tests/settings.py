@@ -161,6 +161,15 @@ CACHES = {
         'OPTIONS': {
             'MAX_ENTRIES': 300  # Django default value is 300 (2 kB per item = 0.6 MB)
         }
+    },
+    'topology_cache': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'topology_cache',
+        'TIMEOUT': None,
+        'OPTIONS': {
+            'CULL_FREQUENCY': 0,  # culls the entire cache, makes culling more efficient
+            'MAX_ENTRIES': 300
+        }
     }
 }
 
