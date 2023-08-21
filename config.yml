@@ -141,8 +141,11 @@ application_configuration:
 
     # Configuration for KYPO Terraform client
     terraform_configuration:
-        # The type of backend that Terraform is using. The 'local' is suitable only for the
-        # development, for production user 'pg'
+        # The type of backend that Terraform is using.
+        # Choices:
+        #  * local: storing state file to local disk (suitable for development)
+        #  * pg: storing state file to Postgres database (specified in the `database` section)
+        #  * kubernetes: storing state file as Kubernetes secret (preferred)
         backend_type: 'local'
 
     sandbox_configuration:

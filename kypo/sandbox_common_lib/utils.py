@@ -158,6 +158,7 @@ def get_terraform_client() -> KypoTerraformClient:
             settings.KYPO_CONFIG.terraform_configuration.backend_type
         ),
         db_configuration=get_database_settings(),
+        kube_namespace=settings.KYPO_CONFIG.ansible_runner_settings.namespace,
     )
 
 
