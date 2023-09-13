@@ -27,6 +27,7 @@ class DefaultAnsibleHostsGroups(Enum):
     USER_ACCESSIBLE_NODES = 'user_accessible_nodes'
     HIDDEN_HOSTS = 'hidden_hosts'
     DOCKER_HOSTS = 'docker_hosts'
+    MONITORED_HOSTS = 'monitored_hosts'
 
 
 class Base(abc.ABC):
@@ -62,11 +63,12 @@ class Group(Base):
     """
     Represents Ansible inventory group entry.
     """
-    def __init__(self, name: str, hosts: List[Host] = None):
+    def __init__(self, name: str, hosts: List[Host] = None, hosts_vars=None):
         super().__init__()
         self.name = name
         self.hosts = {host.name: host for host in hosts} if hosts else {}
         self.groups = {}
+        self.hosts_vars = {} if hosts_vars is None else hosts_vars
 
     def to_dict(self) -> dict:
         """
@@ -75,6 +77,10 @@ class Group(Base):
         dictionary = {}
         if self.hosts:
             dictionary['hosts'] = {host.name: None for host in self.hosts.values()}
+            if self.hosts_vars:
+                for host in self.hosts_vars.keys():
+                    dictionary['hosts'][host] = self.hosts_vars[host]
+
         children = {group.name: group.to_dict() for group in self.groups.values()}
         if children:
             dictionary['children'] = children
@@ -354,9 +360,21 @@ class Inventory(BaseInventory):
         self.docker_hosts = None
         if self.topology_instance.containers:
             self.docker_hosts = [self.hosts[container_mapping.host] for container_mapping
-                            in self.topology_instance.containers.container_mappings]
+                                 in self.topology_instance.containers.container_mappings]
             self.docker_hosts = list(set(self.docker_hosts))
             self.add_group(Group(DefaultAnsibleHostsGroups.DOCKER_HOSTS.value, self.docker_hosts))
+
+        if self.topology_instance.topology_definition.monitoring_targets:
+            hosts_variables = {}
+            hosts = []
+            for monitored_host in self.topology_instance.get_monitored_hosts():
+                host = self.hosts[monitored_host.host]
+                hosts.append(host)
+                hosts_variables[host.name] = [{'port': target.port, 'interface': target.interface}
+                                              for target in monitored_host.targets]
+            group = Group(DefaultAnsibleHostsGroups.MONITORED_HOSTS.value,
+                          hosts, hosts_variables)
+            self.add_group(group)
 
     def get_user_accessible_nodes(self) -> List[Host]:
         """

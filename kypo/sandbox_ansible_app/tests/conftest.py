@@ -14,7 +14,9 @@ TESTING_TRC_CONFIG = 'trc-config.yml'
 TESTING_LINKS = 'links.yml'
 TESTING_TOPOLOGY_INSTANCE = 'topology_instance.json'
 TESTING_INVENTORY = 'inventory.yml'
+TESTING_INVENTORY_MONITOR = 'inventory-monitoring.yml'
 TESTING_DEFINITION = 'definition.yml'
+TESTING_DEFINITION_MONITOR = 'definition-monitoring.yml'
 TESTING_DATABASE = 'database.yaml'
 
 
@@ -46,6 +48,13 @@ def top_def():
 
 
 @pytest.fixture
+def top_def_monitoring():
+    """Creates example topology definition for a sandbox."""
+    with open(data_path_join(TESTING_DEFINITION_MONITOR)) as f:
+        return TopologyDefinition.load(f)
+
+
+@pytest.fixture
 def links():
     """Creates example links definition"""
     with open(data_path_join(TESTING_LINKS)) as f:
@@ -67,7 +76,28 @@ def top_ins(top_def, trc_config, links):
 
 
 @pytest.fixture
+def top_ins_monitoring(top_def_monitoring, trc_config, links):
+    """Creates example topology instance."""
+    topology_instance = TopologyInstance(top_def_monitoring, trc_config)
+    topology_instance.name = 'stack-name'
+    topology_instance.ip = '10.10.10.10'
+
+    for link in topology_instance.get_links():
+        link.ip = links[link.name]['ip']
+        link.mac = links[link.name]['mac']
+
+    return topology_instance
+
+
+@pytest.fixture
 def inventory():
     """Creates example inventory for a Stack."""
     with open(data_path_join(TESTING_INVENTORY)) as f:
+        return yaml.full_load(f)
+
+
+@pytest.fixture
+def inventory_monitoring():
+    """Creates example inventory for a Stack."""
+    with open(data_path_join(TESTING_INVENTORY_MONITOR)) as f:
         return yaml.full_load(f)
