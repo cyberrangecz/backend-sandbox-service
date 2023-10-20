@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, call
 from kypo.sandbox_common_lib import exceptions as api_exceptions
 from kypo.sandbox_ansible_app.models import NetworkingAnsibleAllocationStage,\
     UserAnsibleAllocationStage, NetworkingAnsibleCleanupStage, UserAnsibleCleanupStage
-from kypo.sandbox_instance_app.models import StackAllocationStage, StackCleanupStage
+from kypo.sandbox_instance_app.models import StackAllocationStage, StackCleanupStage, SandboxAllocationUnit
 
 from kypo.sandbox_instance_app.lib import request_handlers
 
@@ -110,21 +110,21 @@ class TestAllocationRequestHandlerUnit:
             'kypo.sandbox_instance_app.lib.request_handlers.Sandbox', return_value=fake_sandbox
         )
 
-        self.handler._create_allocation_jobs(pool, 2, None)
+        units = [SandboxAllocationUnit.objects.create(pool=pool) for _ in range(2)]
 
-        created_units = pool.allocation_units.all()
-        assert len(created_units) == 2
-        for unit in created_units:
+        self.handler._create_allocation_jobs(units, None)
+
+        for unit in units:
             assert hasattr(unit, 'allocation_request')
             assert not hasattr(unit, 'sandbox')
             fake_sandbox_class.assert_has_calls([call(id='123', allocation_unit=unit, private_user_key='fake_private_key', public_user_key='fake_public_key')])
             self.handler._enqueue_stages.assert_has_calls([call(fake_sandbox, self.handler._create_stage_handlers.return_value)])
 
-    def test_enqueue_request(self, pool, created_by):
+    def test_enqueue_request(self, allocation_unit, created_by):
         self.handler.queue_default.enqueue = MagicMock()
-        self.handler.enqueue_request(pool, 1, created_by)
+        self.handler.enqueue_request(allocation_unit, created_by)
         self.handler.queue_default.enqueue.assert_called_once_with(
-            self.handler._create_allocation_jobs, pool, 1, created_by
+            self.handler._create_allocation_jobs, allocation_unit, created_by
         )
 
     def test_create_restart_jobs(self, allocation_unit, allocation_request, mocker):

@@ -29,10 +29,14 @@ def restart_allocation_stages(unit: SandboxAllocationUnit) -> SandboxAllocationU
     return unit
 
 
-def create_allocations_requests(pool: Pool, count: int, created_by: Optional[User]) -> None:
+def create_allocations_requests(pool: Pool, count: int, created_by: Optional[User]) -> List[SandboxAllocationUnit]:
     """Batch version of create_allocation_request. Create count Sandbox Requests."""
 
-    request_handlers.AllocationRequestHandler().enqueue_request(pool, count, created_by)
+    units = [SandboxAllocationUnit.objects.create(pool=pool, created_by=created_by)
+             for _ in range(count)]
+    request_handlers.AllocationRequestHandler().enqueue_request(units, created_by)
+
+    return units
 
 
 def cancel_allocation_request(alloc_req: AllocationRequest):

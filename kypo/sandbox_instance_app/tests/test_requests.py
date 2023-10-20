@@ -19,8 +19,9 @@ class TestAllocationRequest:
 
     def test_create_allocation_requests_success(self, pool, created_by):
         requests.create_allocations_requests(pool, 2, created_by)
+        created_units = list(SandboxAllocationUnit.objects.filter(pool=pool))
 
-        self.handler.return_value.enqueue_request.assert_called_once_with(pool, 2, created_by)
+        self.handler.return_value.enqueue_request.assert_called_once_with(created_units, created_by)
 
     def test_cancel_allocation_request_success(self, allocation_request_started):
         requests.cancel_allocation_request(allocation_request_started)

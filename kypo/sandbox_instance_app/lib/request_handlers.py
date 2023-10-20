@@ -127,10 +127,10 @@ class AllocationRequestHandler(RequestHandler):
 
         transaction.on_commit(on_commit_method)
 
-    def _create_allocation_jobs(self, pool: Pool, count: int, created_by: Optional[User]):
-        LOG.info('Creating %s sandboxes in pool %s', count, pool.id)
-        for _ in range(count):
-            unit = SandboxAllocationUnit.objects.create(pool=pool, created_by=created_by)
+    def _create_allocation_jobs(self, units: List[SandboxAllocationUnit],
+                                created_by: Optional[User]):
+        for unit in units:
+            LOG.info('Creating sandbox for allocation unit: %s', unit.id)
             self.request = AllocationRequest.objects.create(allocation_unit=unit)
             pri_key, pub_key = utils.generate_ssh_keypair()
             sandbox = Sandbox(id=sandboxes.generate_new_sandbox_uuid(), allocation_unit=unit,
@@ -138,8 +138,8 @@ class AllocationRequestHandler(RequestHandler):
             stage_handlers = self._create_stage_handlers(sandbox)
             self._enqueue_stages(sandbox, stage_handlers)
 
-    def enqueue_request(self, pool: Pool, count: int, created_by: Optional[User]) -> None:
-        self.queue_default.enqueue(self._create_allocation_jobs, pool, count, created_by)
+    def enqueue_request(self, units, created_by: Optional[User]) -> None:
+        self.queue_default.enqueue(self._create_allocation_jobs, units, created_by)
 
     def _create_restart_jobs(self, unit: SandboxAllocationUnit):
         LOG.info('Restarting sandbox allocation unit: %s', unit.id)

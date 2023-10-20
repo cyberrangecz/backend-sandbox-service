@@ -230,8 +230,13 @@ class SandboxAllocationUnitListCreateView(generics.ListCreateAPIView):
                 raise exceptions.ValidationError("Invalid parameter count: %s" % count)
 
         created_by = None if isinstance(request.user, AnonymousUser) else request.user
-        pools.create_sandboxes_in_pool(pool, created_by, count=count)
-        return Response(status=status.HTTP_201_CREATED)
+        units = pools.create_sandboxes_in_pool(pool, created_by, count=count)
+        serializer = self.serializer_class(units, many=True)
+        page = self.paginate_queryset(serializer.data)
+        if page is not None:
+            return self.get_paginated_response(page)
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
