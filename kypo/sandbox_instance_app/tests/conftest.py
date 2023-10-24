@@ -26,9 +26,12 @@ TESTING_SSH_CONFIG_USER = 'ssh_config_user'
 TESTING_SSH_CONFIG_MANAGEMENT = 'ssh_config_management'
 TESTING_SSH_CONFIG_ANSIBLE = 'ssh_config_ansible'
 TESTING_DEFINITION = 'definition.yml'
+TESTING_DEFINITION_HIDDEN = 'definition_hidden.yml'
 TESTING_TOPOLOGY = 'topology.yml'
+TESTING_TOPOLOGY_HIDDEN = 'topology_hidden.yml'
 TESTING_TRC_CONFIG = 'trc-config.yml'
 TESTING_LINKS = 'links.yml'
+TESTING_LINKS_HIDDEN = 'links_hidden.yml'
 
 
 def data_path_join(file: str, data_dir: str = TESTING_DATA_DIR) -> str:
@@ -59,6 +62,13 @@ def top_def():
 
 
 @pytest.fixture
+def top_def_hidden():
+    """Creates example topology definition for a sandbox."""
+    with open(data_path_join(TESTING_DEFINITION_HIDDEN)) as f:
+        return TopologyDefinition.load(f)
+
+
+@pytest.fixture
 def links():
     """Creates example links definition"""
     with open(data_path_join(TESTING_LINKS)) as f:
@@ -75,6 +85,16 @@ def top_ins(top_def, trc_config, links):
     for link in topology_instance.get_links():
         link.ip = links[link.name]['ip']
         link.mac = links[link.name]['mac']
+
+    return topology_instance
+
+
+@pytest.fixture
+def top_ins_hidden(top_def_hidden, trc_config):
+    """Creates example topology instance."""
+    topology_instance = TopologyInstance(top_def_hidden, trc_config)
+    topology_instance.name = 'stack-name'
+    topology_instance.ip = '10.10.10.10'
 
     return topology_instance
 
@@ -101,6 +121,13 @@ def ansible_ssh_config():
 def topology():
     """Creates example topology for a sandbox."""
     with open(data_path_join(TESTING_TOPOLOGY)) as f:
+        return yaml.full_load(f)
+
+
+@pytest.fixture
+def topology_hidden():
+    """Creates example topology for a sandbox."""
+    with open(data_path_join(TESTING_TOPOLOGY_HIDDEN)) as f:
         return yaml.full_load(f)
 
 

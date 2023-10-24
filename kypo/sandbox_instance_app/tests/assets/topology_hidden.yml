@@ -1,0 +1,58 @@
+special_nodes:
+- name: internet
+hosts:
+- name: deb
+  os_type: debian
+  gui_access: false
+  containers: []
+routers:
+- name: router
+  os_type: debian
+  gui_access: false
+switches:
+- name: switch
+  cidr: 10.10.30.0/24
+- name: wan
+  cidr: 100.100.100.0/24
+links:
+- port_a: link-2_internet
+  port_b: link-2_wan
+- port_a: link-7_deb
+  port_b: link-7_switch
+- port_a: link-12_router
+  port_b: link-12_wan
+- port_a: link-15_router
+  port_b: link-15_switch
+ports:
+- ip:
+  mac:
+  parent: internet
+  name: link-2_internet
+- ip:
+  mac:
+  parent: wan
+  name: link-2_wan
+- ip: 10.10.30.5
+  mac:
+  parent: deb
+  name: link-7_deb
+- ip:
+  mac:
+  parent: switch
+  name: link-7_switch
+- ip:
+  mac:
+  parent: router
+  name: link-12_router
+- ip:
+  mac:
+  parent: wan
+  name: link-12_wan
+- ip: 10.10.30.1
+  mac:
+  parent: router
+  name: link-15_router
+- ip:
+  mac:
+  parent: switch
+  name: link-15_switch

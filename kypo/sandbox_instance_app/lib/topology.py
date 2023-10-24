@@ -2,8 +2,7 @@ import structlog
 
 from kypo.cloud_commons import TopologyInstance
 from kypo.sandbox_cloud_app.lib.projects import list_images
-from kypo.topology_definition.models import Host
-from kypo.sandbox_instance_app.lib import sandboxes
+from kypo.topology_definition.models import Host, Network
 
 LOG = structlog.getLogger()
 INTERNET_NODE_NAME = 'internet'
@@ -49,12 +48,11 @@ class Topology:
 
     def add_nodes(self, top_inst: TopologyInstance) -> None:
         images = list_images()
-        for node in top_inst.get_nodes_without_man():
-            if (type(node) == Host) and node.hidden:
-                continue
+        for node in top_inst.get_visible_routers() + top_inst.get_visible_hosts():
             image = next(image for image in images if image.name == node.base_box.image)
             gui_access = image.owner_specified.get('owner_specified.openstack.gui_access') == 'true'
             new_node = self.Node(node.name, image.os_type, gui_access)
+
             if type(node) == Host:
                 self.hosts.append(new_node)
                 new_node.containers = []
@@ -63,14 +61,13 @@ class Topology:
 
     def add_special_nodes_and_switches(self, top_inst: TopologyInstance) -> None:
         self.special_nodes = [self.SpecialNode(INTERNET_NODE_NAME)]
-        self.switches = [n for n in top_inst.get_networks()
-                         if n != top_inst.man_network]
+        self.switches = top_inst.get_visible_networks()
 
     def add_ports_and_links(self, top_inst: TopologyInstance) -> None:
-        hidden_hosts = top_inst.get_hidden_hosts()
-
         for ln in top_inst.get_links():
-            if ln.node in hidden_hosts or ln.network == top_inst.man_network:
+            if ((ln.node != top_inst.man and ln.node.hidden) or ln.network == top_inst.man_network
+                    # assumes this function it called after add_special_nodes_and_switches()
+                    or ln.network not in self.switches):
                 continue
 
             if ln.node == top_inst.man:
