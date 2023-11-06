@@ -87,13 +87,19 @@ all:
     monitored_hosts:
       hosts:
         server:
-          - port: 45
-            interface: eth0
-          - port: 200
-            interface: eth1
+          targets:
+            - port: 45
+              interface: eth0
+            - port: 200
+              interface: eth1
         home:
-          - port: 55
-            interface: eth0
+          targets:
+            - port: 55
+              interface: eth0
+        home-router:
+          targets:
+            - port: 555
+              interface: eth0
 
   vars:
     kypo_global_head_ip: 0.0.0.0

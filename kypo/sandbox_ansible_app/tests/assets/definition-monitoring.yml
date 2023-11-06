@@ -51,13 +51,17 @@ groups:
       - server-router
 
 monitoring_targets:
-  - host: server
+  - node: server
     targets:
       - port: 45
         interface: eth0
       - port: 200
         interface: eth1
-  - host: home
+  - node: home
     targets:
       - port: 55
+        interface: eth0
+  - node: home-router
+    targets:
+      - port: 555
         interface: eth0

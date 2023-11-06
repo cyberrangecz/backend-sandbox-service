@@ -367,11 +367,12 @@ class Inventory(BaseInventory):
         if self.topology_instance.topology_definition.monitoring_targets:
             hosts_variables = {}
             hosts = []
-            for monitored_host in self.topology_instance.get_monitored_hosts():
-                host = self.hosts[monitored_host.host]
+            for monitored_node in self.topology_instance.get_monitored_hosts():
+                # inventory.hosts includes routers and switches
+                host = self.hosts[monitored_node.node]
                 hosts.append(host)
-                hosts_variables[host.name] = [{'port': target.port, 'interface': target.interface}
-                                              for target in monitored_host.targets]
+                hosts_variables[host.name] = {'targets': [{'port': target.port, 'interface': target.interface}
+                                              for target in monitored_node.targets]}
             group = Group(DefaultAnsibleHostsGroups.MONITORED_HOSTS.value,
                           hosts, hosts_variables)
             self.add_group(group)
