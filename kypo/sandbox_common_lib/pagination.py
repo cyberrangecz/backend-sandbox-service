@@ -11,6 +11,7 @@ class PageNumberWithPageSizePagination(PageNumberPagination):
     page_size_query_param = 'page_size'
     sort_by_default_param = 'id'
     order_default_param = 'asc'
+    sorting_default_values = {}
 
     def get_schema_fields(self, view):
         fields = super().get_schema_fields(view)
@@ -56,6 +57,24 @@ class PageNumberWithPageSizePagination(PageNumberPagination):
             sort_by_param = '-'+sort_by_param if order_param == "desc" else sort_by_param
             queryset = queryset.order_by(sort_by_param)
         else:
-            queryset = sorted(queryset, key=lambda item: item.get(sort_by_param, ''),
-                              reverse=order_param == 'desc')
+            queryset = sorted(queryset, key=lambda item: self._ensure_comparable(
+                item.get(sort_by_param, ''), sort_by_param), reverse=order_param == 'desc')
         return super().paginate_queryset(queryset, request, view)
+
+    def _ensure_comparable(self, value, sort_by):
+        """
+        None values in parameters cause problems with sorting. This method
+        replaces None with orderable values in the sorting function.
+
+        If you want to add sorting by a parameter that can be None, adjust
+        paginator.sorting_default_values in the given list view
+        """
+        if value is not None:
+            return value
+
+        default = self.sorting_default_values.get(sort_by, None)
+        if default is not None:
+            return default
+
+        raise ValueError(f"Unexpected None value for the attribute {sort_by}, cannot sort.")
+

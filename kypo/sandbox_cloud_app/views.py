@@ -1,3 +1,5 @@
+import datetime
+
 import structlog
 from kypo.sandbox_common_lib import utils
 from kypo.sandbox_cloud_app.lib import projects
@@ -44,6 +46,11 @@ class ProjectImagesView(generics.ListAPIView):
     def paginator(self):
         _paginator = super().paginator
         _paginator.sort_by_default_param = 'name'
+        _paginator.sorting_default_values = {
+            # values replace None during sorting
+            "size": float('-inf'),
+            "updated_at": datetime.MINYEAR,
+        }
         return _paginator
 
     # noinspection PyMethodMayBeStatic
