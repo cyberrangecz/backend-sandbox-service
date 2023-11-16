@@ -88,7 +88,7 @@ def create_self_signed_certificate(private_key: str) -> str:
     ).serial_number(
         x509.random_serial_number()
     ).not_valid_before(
-        datetime.datetime.utcnow()
+        datetime.datetime.utcnow() - datetime.timedelta(hours=48)
     ).not_valid_after(
         datetime.datetime.max
     ).add_extension(
