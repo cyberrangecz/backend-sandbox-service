@@ -4,6 +4,8 @@ from typing import List, Optional
 import structlog
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
+from functools import partial
 
 from kypo.sandbox_common_lib import exceptions
 from kypo.sandbox_instance_app.lib import request_handlers, sandboxes
@@ -32,9 +34,13 @@ def restart_allocation_stages(unit: SandboxAllocationUnit) -> SandboxAllocationU
 def create_allocations_requests(pool: Pool, count: int, created_by: Optional[User]) -> List[SandboxAllocationUnit]:
     """Batch version of create_allocation_request. Create count Sandbox Requests."""
 
-    units = [SandboxAllocationUnit.objects.create(pool=pool, created_by=created_by)
-             for _ in range(count)]
-    request_handlers.AllocationRequestHandler().enqueue_request(units, created_by)
+    with transaction.atomic():
+        units = [SandboxAllocationUnit.objects.create(pool=pool, created_by=created_by)
+                 for _ in range(count)]
+
+        transaction.on_commit(
+            partial(request_handlers.AllocationRequestHandler().enqueue_request, units, created_by)
+        )
 
     return units
 

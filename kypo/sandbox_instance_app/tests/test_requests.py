@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import call
 from django.db.models import ObjectDoesNotExist
 from django.utils import timezone
+from functools import partial
 
 from kypo.sandbox_instance_app.models import Sandbox, CleanupRequest, SandboxAllocationUnit
 from kypo.sandbox_instance_app.lib import requests
@@ -17,11 +18,18 @@ class TestAllocationRequest:
         self.handler = mocker.patch('kypo.sandbox_instance_app.lib.requests.request_handlers.'
                                     'AllocationRequestHandler')
 
-    def test_create_allocation_requests_success(self, pool, created_by):
+    def test_create_allocation_requests_success(self, pool, created_by, mocker):
+        fake_on_commit = mocker.patch('django.db.transaction.on_commit')
         requests.create_allocations_requests(pool, 2, created_by)
         created_units = list(SandboxAllocationUnit.objects.filter(pool=pool))
 
-        self.handler.return_value.enqueue_request.assert_called_once_with(created_units, created_by)
+        expected_partial = partial(self.handler.return_value.enqueue_request, created_units, created_by)
+        actual_partial = fake_on_commit.call_args.args[0]
+
+        # Assert the correct transaction.on_commit args are passed
+        assert expected_partial.func == actual_partial.func
+        assert expected_partial.args == actual_partial.args
+        assert expected_partial.keywords == actual_partial.keywords
 
     def test_cancel_allocation_request_success(self, allocation_request_started):
         requests.cancel_allocation_request(allocation_request_started)
