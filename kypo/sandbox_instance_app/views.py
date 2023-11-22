@@ -71,7 +71,7 @@ class PoolListCreateView(generics.ListCreateAPIView):
            if k in [401, 403, 404, 500]}
     }
 ))
-class PoolDetailDeleteView(generics.RetrieveDestroyAPIView):
+class PoolDetailDeleteUpdateView(generics.RetrieveDestroyAPIView):
     """
     get: Retrieve a pool.
     """
@@ -80,12 +80,22 @@ class PoolDetailDeleteView(generics.RetrieveDestroyAPIView):
     lookup_url_kwarg = "pool_id"
 
     def delete(self, request, *args, **kwargs):
-        """Delete pool. The pool must be empty.
+        """
+        Delete pool. The pool must be empty.
         First delete all sandboxes in given Pool.
         """
         pool = self.get_object()
         pools.delete_pool(pool)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def patch(self, request, *args, **kwargs):
+        pool = self.get_object()
+        serializer = self.serializer_class(pool, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @method_decorator(name='get', decorator=swagger_auto_schema(
@@ -272,11 +282,20 @@ class SandboxAllocationUnitListCreateView(generics.ListCreateAPIView):
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
-class SandboxAllocationUnitDetailView(generics.RetrieveAPIView):
+@utils.add_error_responses_doc('patch', [400, 401, 403, 404, 500])
+class SandboxAllocationUnitDetailUpdateView(generics.RetrieveAPIView):
     """get: Retrieve a Sandbox Allocation Unit."""
     serializer_class = serializers.SandboxAllocationUnitSerializer
     queryset = SandboxAllocationUnit.objects.all()
     lookup_url_kwarg = "unit_id"
+
+    def patch(self, request, *args, **kwargs):
+        allocation_unit = self.get_object()
+        serializer = self.serializer_class(allocation_unit, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])

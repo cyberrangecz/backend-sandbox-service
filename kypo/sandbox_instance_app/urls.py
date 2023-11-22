@@ -6,7 +6,7 @@ from kypo.sandbox_instance_app import views
 
 urlpatterns = [
     path('pools', views.PoolListCreateView.as_view(), name='pool-list'),
-    path('pools/<int:pool_id>', views.PoolDetailDeleteView.as_view(), name='pool-detail'),
+    path('pools/<int:pool_id>', views.PoolDetailDeleteUpdateView.as_view(), name='pool-detail'),
     path('pools/<int:pool_id>/definition', views.PoolDefinitionView.as_view(), name='pool-definition'),
     path('pools/<int:pool_id>/locks', views.PoolLockListCreateView.as_view(), name='pool-lock-list'),
     path('pools/<int:pool_id>/locks/<int:lock_id>', views.PoolLockDetailDeleteView.as_view(),
@@ -26,7 +26,7 @@ urlpatterns = [
 
     # Sandbox allocation units
     path('sandbox-allocation-units/<int:unit_id>',
-         views.SandboxAllocationUnitDetailView.as_view(), name='sandbox-allocation-unit-detail'),
+         views.SandboxAllocationUnitDetailUpdateView.as_view(), name='sandbox-allocation-unit-detail'),
     path('sandbox-allocation-units/<int:unit_id>/allocation-request',
          views.SandboxAllocationRequestView.as_view(), name='sandbox-allocation-request'),
     path('sandbox-allocation-units/<int:unit_id>/cleanup-request',

@@ -14,7 +14,7 @@ DEFAULT_SANDBOX_UUID = '1'
 class Pool(models.Model):
     definition = models.ForeignKey(
         Definition,
-        on_delete=models.PROTECT
+        on_delete=models.PROTECT,
     )
     max_size = models.IntegerField(
         help_text='Maximum amount of Allocation Units associated with this pool.')
@@ -40,6 +40,16 @@ class Pool(models.Model):
     )
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, null=True,
                                    help_text='The user that created this pool.')
+    comment = models.CharField(
+        default='',
+        blank=True,
+        max_length=256,
+        help_text='Comment about specifics of this pool'
+    )
+    visible = models.BooleanField(
+        default=True,
+        help_text='Visibility to other instructors. If False, pool is only visible to owner and admins.'
+    )
 
     class Meta:
         ordering = ['id']
@@ -74,6 +84,12 @@ class SandboxAllocationUnit(models.Model):
     )
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, null=True,
                                    help_text='The user that created this sandbox allocation unit.')
+    comment = models.CharField(
+        default='',
+        blank=True,
+        max_length=256,
+        help_text='Comment about specifics of this sandbox'
+    )
 
     def get_stack_name(self) -> str:
         """Returns a name of the stack for this sandbox"""

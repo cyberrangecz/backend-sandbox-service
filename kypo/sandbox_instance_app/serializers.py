@@ -24,16 +24,24 @@ class PoolSerializer(serializers.ModelSerializer):
         help_text="Number of allocation units associated with this pool.")
     lock_id = serializers.SerializerMethodField()
     definition = serializers.SerializerMethodField()
-    definition_id = serializers.PrimaryKeyRelatedField(source='definition', queryset=Definition.objects.all(), write_only=True)
+    definition_id = serializers.PrimaryKeyRelatedField(source='definition', queryset=Definition.objects.all(),
+                                                       write_only=True)
     created_by = serializers.SerializerMethodField()
     hardware_usage = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Pool
-        fields = ('id', 'definition_id', 'size', 'max_size', 'lock_id', 'rev', 'rev_sha',
+        fields = ('id', 'definition_id', 'size', 'max_size', 'lock_id', 'rev', 'rev_sha', 'comment', 'visible',
                   'created_by', 'hardware_usage', 'definition')
-        read_only_fields = ('id', 'size', 'lock', 'rev', 'rev_sha', 'created_by', 'hardware_usage',
+        read_only_fields = ('id', 'definition_id', 'size', 'lock', 'rev', 'rev_sha', 'created_by', 'hardware_usage',
                             'definition')
+
+    def update(self, instance: Meta.model, validated_data):
+        instance.max_size = validated_data.get('max_size', instance.max_size)
+        instance.comment = validated_data.get('comment', instance.comment)
+        instance.visible = validated_data.get('visible', instance.visible)
+        instance.save()
+        return instance
 
     @staticmethod
     def validate_max_size(value):
@@ -117,9 +125,14 @@ class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.SandboxAllocationUnit
-        fields = ('id', 'pool_id', 'allocation_request', 'cleanup_request', 'created_by', 'locked')
+        fields = ('id', 'pool_id', 'allocation_request', 'cleanup_request', 'created_by', 'locked', 'comment')
         read_only_fields = ('id', 'pool_id', 'allocation_request', 'cleanup_request', 'created_by',
                             'locked')
+
+    def update(self, instance: Meta.model, validated_data):
+        instance.comment = validated_data.get('comment', instance.comment)
+        instance.save()
+        return instance
 
     @staticmethod
     def get_created_by(obj: models.SandboxAllocationUnit):
