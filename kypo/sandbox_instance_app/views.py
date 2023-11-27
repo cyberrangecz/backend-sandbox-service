@@ -5,6 +5,7 @@ import structlog
 from django.conf import settings
 from django.http import HttpResponse, Http404
 from django.contrib.auth.models import AnonymousUser
+from django.utils.decorators import method_decorator
 from drf_yasg2 import openapi
 from drf_yasg2.utils import swagger_auto_schema
 from rest_framework import status, generics
@@ -22,12 +23,19 @@ from kypo.sandbox_instance_app.lib import pools, sandboxes, nodes,\
 from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit, \
     AllocationRequest, CleanupRequest, SandboxLock, PoolLock
 from kypo.sandbox_instance_app.lib import stage_handlers
+from kypo.sandbox_common_lib.swagger_typing import POOL_RESPONSE_SCHEMA, SANDBOX_DEFINITION_SCHEMA, list_response, \
+    POOL_REQUEST_BODY
 
 LOG = structlog.get_logger()
 
 
-@utils.add_error_responses_doc('get', [401, 403, 500])
-@utils.add_error_responses_doc('post', [400, 401, 403, 404, 500])
+@method_decorator(name='get', decorator=swagger_auto_schema(
+    responses={
+        200: list_response(POOL_RESPONSE_SCHEMA),
+        **{k: v for k, v in utils.ERROR_RESPONSES.items()
+           if k in [401, 403, 500]}
+    }
+))
 class PoolListCreateView(generics.ListCreateAPIView):
     """
     get: Get a list of pools.
@@ -35,6 +43,14 @@ class PoolListCreateView(generics.ListCreateAPIView):
     queryset = Pool.objects.all()
     serializer_class = serializers.PoolSerializer
 
+    @swagger_auto_schema(
+        request_body=POOL_REQUEST_BODY,
+        responses={
+            201: POOL_RESPONSE_SCHEMA,
+            **{k: v for k, v in utils.ERROR_RESPONSES.items()
+               if k in [400, 401, 403, 404, 500]}
+        }
+    )
     def post(self, request, *args, **kwargs):
         """Creates new pool.
         Also creates a new key-pair and certificate, which is then passed to terraform client.
@@ -47,8 +63,14 @@ class PoolListCreateView(generics.ListCreateAPIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 @utils.add_error_responses_doc('delete', [401, 403, 404, 500])
+@method_decorator(name='get', decorator=swagger_auto_schema(
+    responses={
+        200: POOL_RESPONSE_SCHEMA,
+        **{k: v for k, v in utils.ERROR_RESPONSES.items()
+           if k in [401, 403, 404, 500]}
+    }
+))
 class PoolDetailDeleteView(generics.RetrieveDestroyAPIView):
     """
     get: Retrieve a pool.
@@ -66,7 +88,13 @@ class PoolDetailDeleteView(generics.RetrieveDestroyAPIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@utils.add_error_responses_doc('get', [401, 403, 404, 500])
+@method_decorator(name='get', decorator=swagger_auto_schema(
+    responses={
+        200: SANDBOX_DEFINITION_SCHEMA,
+        **{k: v for k, v in utils.ERROR_RESPONSES.items()
+           if k in [401, 403, 404, 500]}
+    }
+))
 class PoolDefinitionView(generics.RetrieveAPIView):
     """
     get: Retrieve the definition associated with a pool.

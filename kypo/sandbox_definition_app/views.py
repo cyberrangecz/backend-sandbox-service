@@ -1,6 +1,7 @@
 import structlog
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
+from django.utils.decorators import method_decorator
 from drf_yasg2.utils import swagger_auto_schema
 from rest_framework import status, generics
 from rest_framework.response import Response
@@ -9,6 +10,7 @@ from rest_framework.views import APIView
 from generator.var_generator import generate
 
 from kypo.sandbox_common_lib import utils, exceptions
+from kypo.sandbox_common_lib.swagger_typing import SANDBOX_DEFINITION_SCHEMA, DEFINITION_REQUEST_BODY, list_response
 from kypo.sandbox_definition_app import serializers
 from kypo.sandbox_definition_app.lib import definitions
 from kypo.sandbox_definition_app.lib.definition_providers import DefinitionProvider
@@ -21,8 +23,13 @@ from kypo.sandbox_instance_app.lib.topology import Topology
 LOG = structlog.get_logger()
 
 
-@utils.add_error_responses_doc('get', [401, 403, 500])
-@utils.add_error_responses_doc('post', [400, 401, 403, 500])
+@method_decorator(name='get', decorator=swagger_auto_schema(
+    responses={
+        200: list_response(SANDBOX_DEFINITION_SCHEMA),
+        **{k: v for k, v in utils.ERROR_RESPONSES.items()
+           if k in [401, 403, 500]}
+    }
+))
 class DefinitionListCreateView(generics.ListCreateAPIView):
     """
     get: Retrieve a list of sandbox definitions.
@@ -30,6 +37,14 @@ class DefinitionListCreateView(generics.ListCreateAPIView):
     queryset = Definition.objects.all()
     serializer_class = serializers.DefinitionSerializer
 
+    @swagger_auto_schema(
+        request_body=DEFINITION_REQUEST_BODY,
+        responses={
+            201: SANDBOX_DEFINITION_SCHEMA,
+            **{k: v for k, v in utils.ERROR_RESPONSES.items()
+               if k in [400, 401, 403, 500]}
+        }
+    )
     def post(self, request, *args, **kwargs):
         """
         Create a new sandbox definition. Optional parameter *rev* defaults to master.
@@ -42,8 +57,14 @@ class DefinitionListCreateView(generics.ListCreateAPIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-@utils.add_error_responses_doc('get', [401, 403, 404, 500])
 @utils.add_error_responses_doc('delete', [401, 403, 404, 500])
+@method_decorator(name='get', decorator=swagger_auto_schema(
+    responses={
+        200: SANDBOX_DEFINITION_SCHEMA,
+        **{k: v for k, v in utils.ERROR_RESPONSES.items()
+           if k in [401, 403, 404, 500]}
+    }
+))
 class DefinitionDetailDeleteView(generics.RetrieveDestroyAPIView):
     """
     get: Retrieve the definition.
