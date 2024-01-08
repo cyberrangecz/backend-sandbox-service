@@ -154,6 +154,26 @@ SWAGGER_SETTINGS = {
     ],
 }
 
+# MOVE OF CSIRTMU LIBS TO KYPO-SANDBOX-SERVICE --> DEFAULTS ACCOMODATED
+SANDBOX_UAG = {
+    # Need to be set when using JWTAccessTokenAuthentication,
+    # which supports multiple OIDC providers (parsing them from the token).
+    # Only those listed here will be allowed.
+    'ALLOWED_OIDC_PROVIDERS': tuple(KYPO_SERVICE_CONFIG.authentication.allowed_oidc_providers),
+
+    # User and Group roles registration endpoint URL
+    'ROLES_REGISTRATION_URL': None,
+    # User and Group roles acquisition endpoint URL
+    'ROLES_ACQUISITION_URL': None,
+    # Path to roles definition file
+    'ROLES_DEFINITION_PATH': None,
+
+    # User and Group information configuration
+    'MICROSERVICE_NAME': KYPO_SERVICE_CONFIG.microservice_name,
+    'ROLE_PREFIX': "ROLE",
+    'ENDPOINT': __package__,
+}
+
 if KYPO_SERVICE_CONFIG.authentication.authenticated_rest_api:
     REST_FRAMEWORK.update({
         'DEFAULT_PERMISSION_CLASSES': (
@@ -163,7 +183,7 @@ if KYPO_SERVICE_CONFIG.authentication.authenticated_rest_api:
             # For testing purposes, uncomment BasicAuthentication.
             # It allows login using name & password (nice for permission testing).
             # 'rest_framework.authentication.BasicAuthentication',
-            'csirtmu.oidc_client.authentication.JWTAccessTokenAuthentication',
+            'kypo.sandbox_uag.oidc_jwt.JWTAccessTokenAuthentication',
         ),
     })
 
@@ -173,17 +193,10 @@ if KYPO_SERVICE_CONFIG.authentication.authenticated_rest_api:
         # return a User object. The default implementation tries to find the user
         # based on username (natural key) taken from the 'sub'-claim of the
         # id_token.
-        'OIDC_RESOLVE_USER_FUNCTION': 'csirtmu.uag_auth.auth.get_or_create_user',
+        'OIDC_RESOLVE_USER_FUNCTION': 'kypo.sandbox_uag.auth.get_or_create_user',
     }
 
-    CSIRTMU_OIDC_CLIENT = {
-        # Need to be set when using JWTAccessTokenAuthentication,
-        # which supports multiple OIDC providers (parsing them from the token).
-        # Only those listed here will be allowed.
-        'ALLOWED_OIDC_PROVIDERS': tuple(KYPO_SERVICE_CONFIG.authentication.allowed_oidc_providers)
-    }
-
-    CSIRTMU_UAG_AUTH = {
+    SANDBOX_UAG.update({
         # User and Group roles registration endpoint URL
         'ROLES_REGISTRATION_URL': KYPO_SERVICE_CONFIG.authentication.roles_registration_url,
         # User and Group roles acquisition endpoint URL
@@ -191,12 +204,7 @@ if KYPO_SERVICE_CONFIG.authentication.authenticated_rest_api:
         # Path to roles definition file
         'ROLES_DEFINITION_PATH': os.path.join(BASE_DIR,
                                               'kypo/sandbox_service_project/permissions/roles.yml'),
-
-        # User and Group information configuration
-        'MICROSERVICE_NAME': KYPO_SERVICE_CONFIG.microservice_name,
-        'ROLE_PREFIX': "ROLE",
-        'ENDPOINT': __package__,
-    }
+    })
 
 CACHES = {
     'default': {
