@@ -20,7 +20,8 @@ pytest-mock = "*"
 pytest-django = "*"
 
 [packages]
-drf-oidc-auth = { index = "kypo", version = ">=2.0.1" }
+drf-oidc-auth = "*"
+pyjwkest = "*"
 kypo-terraform-client = { index = "kypo", version = "~=0.2.4" }
 automated-problem-generation-lib = { index = "kypo", version = ">=0.1.2" }
 better-profanity = "*"  # tox cannot install it correctly for automated-problem-generation-lib
