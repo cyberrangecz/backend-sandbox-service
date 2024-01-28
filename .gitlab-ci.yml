@@ -3,7 +3,7 @@ stages:
   - docker_image_push
 
 unit_tests:
-  image: python:3.8
+  image: python:3.12
   stage: unit_tests
   script:
     - pip3 install tox

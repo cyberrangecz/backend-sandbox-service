@@ -1,4 +1,5 @@
 import uuid
+import drf_yasg.openapi as openapi
 from wsgiref.util import FileWrapper
 
 import structlog
@@ -6,8 +7,7 @@ from django.conf import settings
 from django.http import HttpResponse, Http404
 from django.contrib.auth.models import AnonymousUser
 from django.utils.decorators import method_decorator
-from drf_yasg2 import openapi
-from drf_yasg2.utils import swagger_auto_schema
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, generics
 from rest_framework.response import Response
 from rest_framework.views import APIView

@@ -5,15 +5,15 @@ import json
 import logging
 import uuid
 import jinja2
+import drf_yasg.openapi as openapi
 from typing import Tuple, Union, Iterable, Callable
 import structlog
 from django.conf import settings
 from django.core.cache import cache
 from django.http import Http404
 from django.utils.decorators import method_decorator
-from drf_yasg2 import openapi
 from rest_framework import status
-from drf_yasg2.utils import swagger_auto_schema
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404 as gen_get_object_or_404
 from rest_framework.response import Response

@@ -1,4 +1,4 @@
-from drf_yasg2 import openapi
+import drf_yasg.openapi as openapi
 
 
 USER_SCHEMA = openapi.Schema(

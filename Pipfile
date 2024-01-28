@@ -9,7 +9,7 @@ name = "kypo"
 verify_ssl = true
 
 [requires]
-python_version = "3.8"
+python_version = "3.12"
 
 [dev-packages]
 # tox
@@ -20,12 +20,18 @@ pytest-mock = "*"
 pytest-django = "*"
 
 [packages]
+kypo-terraform-client = { index = "kypo", version = "~=0.2.4" }
+# newer versions of pipenv require all dependencies from custom index to be specified
+kypo-python-commons = { index = "kypo", version = "~=0.1.0" }
+kypo-openstack-lib = { index = "kypo", version = "~=0.38.0" }
+kypo-topology-definition = { index = "kypo", version = "~=0.5.0" }
 drf-oidc-auth = "*"
 pyjwkest = "*"
-kypo-terraform-client = { index = "kypo", version = "~=0.2.4" }
 automated-problem-generation-lib = { index = "kypo", version = ">=0.1.2" }
-better-profanity = "*"  # tox cannot install it correctly for automated-problem-generation-lib
-django = "<3"
+# According to official GitHub repo, 0.6.1 is more performant.
+# Markers are used to rewrite the python version required by the package.
+better-profanity = {version = "==0.6.1", markers = "python_version >= '3'"}
+django = "~=5.0"
 djangorestframework = "*"
 coreapi = "*"  # Generating REST api documentation (swagger dependency)
 structlog = "*"
@@ -44,11 +50,11 @@ ssh_config = "==0.0.22"
 python-gitlab = "*"
 jinja2 = "*"
 # Project dependencies
-django-cors-headers = "==3.11.0"  # Newer version requires Django>3.0
-psycopg2-binary = "==2.8.6"
+django-cors-headers = "*"
+psycopg2-binary = "*"
 packaging = "*"
 six = "*"
-drf-yasg2 = "*"
+drf-yasg = "*"
 cryptography = "*"
 git-url-parse = "*"
 pyparsing = "*"

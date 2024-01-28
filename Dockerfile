@@ -1,4 +1,4 @@
-FROM python:3.8-slim as builder
+FROM python:3.12-slim as builder
 WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -7,15 +7,16 @@ ENV PIPENV_VENV_IN_PROJECT="true"
 
 ARG KYPO_PYPI_DOWNLOAD_URL="https://localhost.lan/repository"
 
-RUN pip3 install pipenv==2022.4.21
+RUN pip3 install pipenv
+RUN apt-get update && apt-get install -y gcc
 
 RUN mkdir -p /var/log/supervisor
 
 COPY manage.py Pipfile Pipfile.lock ./
 RUN pipenv sync
-RUN pipenv run pip3 install gunicorn
+RUN pipenv run pip3 install gunicorn setuptools
 
-FROM python:3.8-slim as app
+FROM python:3.12-slim as app
 WORKDIR /app
 
 ARG DJNG_ADMIN_USER="admin"

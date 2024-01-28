@@ -1,4 +1,5 @@
 import datetime
+import drf_yasg.openapi as openapi
 
 import structlog
 from kypo.sandbox_common_lib import utils
@@ -10,8 +11,7 @@ from rest_framework.response import Response
 
 from kypo.sandbox_instance_app.models import Pool
 
-from drf_yasg2 import openapi
-from drf_yasg2.utils import swagger_auto_schema
+from drf_yasg.utils import swagger_auto_schema
 
 from django.core.cache import cache
 
@@ -19,14 +19,19 @@ LOG = structlog.get_logger()
 IMAGE_LIST_CACHE_TIMEOUT = None
 
 
-@utils.add_error_responses_doc('get', [401, 403, 500])
 class ProjectInfoView(generics.RetrieveAPIView):
     # Exploitation of the Pool model permissions, Since the Cloud App does not have any models.
     queryset = Pool.objects.none()  # Required for DjangoModelPermissions
     serializer_class = serializers.QuotaSetSerializer
 
     # noinspection PyMethodMayBeStatic
-    @swagger_auto_schema(tags=['cloud'])
+    @swagger_auto_schema(tags=['cloud'],
+                         responses={
+                             200: openapi.Response('Project name and quotas',
+                                                   serializers.QuotaSetSerializer),
+                             **{k: v for k, v in utils.ERROR_RESPONSES.items()
+                                if k in [401, 403, 500]}
+                         })
     def get(self, request, *args, **kwargs):
         """
         Get the quota set and name of project.
@@ -37,7 +42,6 @@ class ProjectInfoView(generics.RetrieveAPIView):
         return Response({'project_name': project_name, 'quotas': serialized_quota.data})
 
 
-@utils.add_error_responses_doc('get', [401, 403, 500])
 class ProjectImagesView(generics.ListAPIView):
     queryset = Pool.objects.none()
     serializer_class = serializers.ImageSerializer
@@ -80,7 +84,13 @@ class ProjectImagesView(generics.ListAPIView):
                                                           "endpoint but does retrieve a fresh list"
                                                           " of images.",
                                               type=openapi.TYPE_BOOLEAN, default=False),
-                        ])
+                        ],
+                         responses={
+                             200: openapi.Response('List of images',
+                                                   serializers.ImageSerializer(many=True)),
+                             **{k: v for k, v in utils.ERROR_RESPONSES.items()
+                                if k in [401, 403, 500]}
+                         })
     def get(self, request, *args, **kwargs):
         """
         Get list of images.
@@ -117,12 +127,17 @@ class ProjectImagesView(generics.ListAPIView):
         return Response({'image_set': serialized_image_set.data})
 
 
-@utils.add_error_responses_doc('get', [401, 403, 500])
 class ProjectLimitsView(generics.RetrieveAPIView):
     queryset = Pool.objects.none()
     serializer_class = serializers.ProjectLimitsSerializer
 
-    @swagger_auto_schema(tags=['cloud'])
+    @swagger_auto_schema(tags=['cloud'],
+                         responses={
+                             200: openapi.Response('Absolute limits of OpenStack project',
+                                                   serializers.ProjectLimitsSerializer),
+                             **{k: v for k, v in utils.ERROR_RESPONSES.items()
+                                if k in [401, 403, 500]}
+                         })
     def get(self, request, *args, **kwargs):
         """
         Get Absolute limits of OpenStack project.

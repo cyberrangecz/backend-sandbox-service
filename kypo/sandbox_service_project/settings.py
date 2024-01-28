@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'drf_yasg2',
+    'drf_yasg',
     'corsheaders',
     'django_rq',
 
@@ -101,6 +101,8 @@ DATABASES = {
     },
 }
 
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
 
@@ -149,8 +151,8 @@ REST_FRAMEWORK = {
 SWAGGER_SETTINGS = {
     'DEFAULT_PAGINATOR_INSPECTORS': [
         'kypo.sandbox_common_lib.inspectors.PageNumberWithPageSizePaginationInspector',
-        'drf_yasg2.inspectors.DjangoRestResponsePagination',
-        'drf_yasg2.inspectors.CoreAPICompatInspector',
+        'drf_yasg.inspectors.DjangoRestResponsePagination',
+        'drf_yasg.inspectors.CoreAPICompatInspector',
     ],
 }
 
