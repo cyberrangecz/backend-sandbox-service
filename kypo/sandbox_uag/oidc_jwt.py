@@ -5,7 +5,7 @@ import base64
 from urllib.parse import urlparse
 from django.conf import settings
 from django.core.cache import caches
-from django.utils.translation import ugettext as _
+from django.utils.translation import gettext as _
 from jwkest.jwt import JWT
 from rest_framework.exceptions import AuthenticationFailed
 

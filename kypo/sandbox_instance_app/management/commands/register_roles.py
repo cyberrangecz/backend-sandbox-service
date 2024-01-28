@@ -17,5 +17,5 @@ class Command(BaseCommand):
                 'The `authenticated_rest_api` must be turned on (set to True) to register the roles.'
             )
         # The module can be imported only if the required settings are set. It fails otherwise.
-        from kypo.sandbox_uag.uag_auth import auth
+        from kypo.sandbox_uag import auth
         auth.post_user_roles()

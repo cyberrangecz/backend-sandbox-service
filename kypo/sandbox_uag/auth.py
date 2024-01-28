@@ -13,7 +13,7 @@ from django.conf import settings
 from rest_framework.exceptions import AuthenticationFailed
 
 from . import exceptions
-from kypo.sandbox_uag.oidc_client.authentication import JWTAccessTokenAuthentication
+from kypo.sandbox_uag.oidc_jwt import JWTAccessTokenAuthentication
 
 LOG = structlog.get_logger()
 authenticator_class = JWTAccessTokenAuthentication()
