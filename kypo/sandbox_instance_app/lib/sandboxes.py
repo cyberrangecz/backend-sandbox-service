@@ -142,14 +142,12 @@ def get_management_sshconfig(sandbox: Sandbox,
                              proxy_private_key_path=pool_private_key_path)
 
 
-def get_ansible_sshconfig(sandbox: Sandbox, mng_key: str, git_key: str,
+def get_ansible_sshconfig(sandbox: Sandbox, mng_key: str,
                           proxy_key: Optional[str] = None) -> KypoAnsibleSSHConfig:
     """Get Ansible SSH config."""
     ti = get_topology_instance(sandbox)
     proxy_jump = settings.KYPO_CONFIG.proxy_jump_to_man
-    return KypoAnsibleSSHConfig(ti, mng_key, proxy_jump.Host, proxy_jump.User, proxy_key,
-                                settings.KYPO_CONFIG.git_server, settings.KYPO_CONFIG.git_user,
-                                git_key)
+    return KypoAnsibleSSHConfig(ti, mng_key, proxy_jump.Host, proxy_jump.User, proxy_key)
 
 
 def get_topology_instance(sandbox: Sandbox) -> TopologyInstance:

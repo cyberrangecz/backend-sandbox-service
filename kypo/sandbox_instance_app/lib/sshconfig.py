@@ -146,13 +146,10 @@ class KypoAnsibleSSHConfig(KypoMgmtSSHConfig):
     Represents SSH config file used by KYPO automated provisioning using Ansible.
     """
     def __init__(self, top_ins: TopologyInstance, pool_private_key_path: str,
-                 proxy_host: str, proxy_user: str, proxy_private_key_path: str,
-                 git_host: str, git_user: str, git_private_key_path: str):
+                 proxy_host: str, proxy_user: str, proxy_private_key_path: str):
         super().__init__(top_ins, proxy_host, proxy_user,
                          pool_private_key_path=pool_private_key_path,
                          proxy_private_key_path=proxy_private_key_path)
-        # Create an entry for Git repository.
-        self.add_host(git_host, git_user, git_private_key_path)
 
 
 class KypoAnsibleCleanupSSHConfig(KypoSSHConfig):
@@ -160,8 +157,6 @@ class KypoAnsibleCleanupSSHConfig(KypoSSHConfig):
     Represents SSH config file used by KYPO AnsibleCleanupStage.
     """
 
-    def __init__(self, proxy_jump_host: str, proxy_jump_user: str, pool_private_key_path: str,
-                 git_host: str, git_user: str, git_private_key_path: str):
+    def __init__(self, proxy_jump_host: str, proxy_jump_user: str, pool_private_key_path: str):
         super().__init__('')
         self.add_host(proxy_jump_host, proxy_jump_user, pool_private_key_path)
-        self.add_host(git_host, git_user, git_private_key_path)

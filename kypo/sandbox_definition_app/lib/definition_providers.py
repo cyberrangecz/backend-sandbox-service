@@ -43,33 +43,16 @@ class DefinitionProvider(ABC):
             return False
 
     @staticmethod
-    def validate(url: str, config: KypoConfiguration) -> giturlparse.parser.Parsed:
+    def validate_https(url: str, config: KypoConfiguration) -> giturlparse.parser.Parsed:
         try:
             url_parsed = giturlparse.parse(url)
         except giturlparse.parser.ParserError:
             raise exceptions.GitError(f"Could not parse GIT URL: url={url}")
 
-        if not (url.startswith("git") or url.startswith("ssh://git")) or not url.endswith(".git"):
+        if not (url.startswith("https://")): # or not url.endswith(".git"):
             raise exceptions.GitError(
-                f"Invalid URL. Has to be a GIT URL cloned with SSH: expected="
-                f"git@{config.git_server}:[url path].git, actual={url}")
-        if url_parsed.resource != config.git_server:
-            raise exceptions.GitError(
-                f"The GIT host does not match the configured value for this instance: expected="
-                f"{config.git_server}, actual={url_parsed.resource}")
-        if (url_parsed.port is not None) and (int(url_parsed.port) != config.git_ssh_port):
-            raise exceptions.GitError(
-                f"The GIT port does not match the configured value for this instance: "
-                f"expected={config.git_ssh_port}, actual={url_parsed.port}")
-        if url_parsed.protocol != 'ssh':
-            raise exceptions.GitError(
-                f"The GIT protocol does not match the configured value for this instance: "
-                f"expected='ssh', actual={url_parsed.protocol}")
-        user = url_parsed.user[6:] if url_parsed.user.startswith("ssh://") else url_parsed.user
-        if user != config.git_user:
-            raise exceptions.GitError(
-                f"The GIT user does not match the configured value for this instance: "
-                f"expected='{config.git_user}', actual={user}")
+                f"Invalid URL. Has to be a GIT URL cloned with HTTPS: expected="
+                f"{config.git_rest_server}[url path].git, actual={url}")
 
         return url_parsed
 
@@ -78,7 +61,7 @@ class GitlabProvider(DefinitionProvider):
     """Definition provider for Gitlab API."""
 
     def __init__(self, url: str, config: KypoConfiguration):
-        url_parsed = self.validate(url, config)
+        url_parsed = self.validate_https(url, config)
         self.project_path = self.get_project_path(url_parsed)
         self.gl = gitlab.Gitlab(config.git_rest_server, private_token=config.git_access_token)
 
@@ -123,8 +106,10 @@ class GitlabProvider(DefinitionProvider):
     def get_project_path(url_parsed) -> str:
         project_path = url_parsed.pathname[:-4] if url_parsed.pathname[-4:] == '.git'\
             else url_parsed.pathname
-        # custom port results in an additional / at the beginning of the project path
-        return project_path[1:] if project_path[0] == '/' else project_path
+        # https leaves two // at the start
+        path = project_path[2:] if project_path[0:2] == '//' else project_path
+        path_start = path.index('/') + 1
+        return path[path_start:]
 
 
 class InternalGitProvider(DefinitionProvider):
@@ -135,7 +120,7 @@ class InternalGitProvider(DefinitionProvider):
         self.rest_url = self.get_rest_url(config, url_parsed)
 
     def validate(self, url: str, config: KypoConfiguration):
-        url_parsed = DefinitionProvider.validate(url, config)
+        url_parsed = DefinitionProvider.validate_https(url, config)
         pathname = url_parsed.pathname.split('/')
         actual_prefix = pathname[0] \
             if pathname[0] != '' and pathname[0] != str(config.git_ssh_port) else pathname[1]

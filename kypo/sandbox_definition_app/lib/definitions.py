@@ -45,8 +45,6 @@ def create_definition(url: str, created_by: Optional[User], rev: str = None) -> 
 
     client = utils.get_terraform_client()
     client.validate_topology_definition(top_def)
-    if not DefinitionProvider.has_key_access(url, settings.KYPO_CONFIG):
-        raise exceptions.ValidationError('Repository is not accessible using SSH key.')
 
     serializer = serializers.DefinitionSerializerCreate(
         data=dict(name=top_def.name, url=url, rev=rev))

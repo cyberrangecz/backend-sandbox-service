@@ -1,7 +1,6 @@
 import os
 import shutil
 
-import docker
 from jinja2 import Environment, FileSystemLoader
 import structlog
 from django.conf import settings
@@ -34,6 +33,7 @@ ANSIBLE_DOCKER_CONTAINER_DIR = 'containers'
 TEMPLATES_DIR_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'templates')
 DOCKER_COMPOSE_TEMPLATE = 'docker-compose.j2'
 DOCKERFILE_TEMPLATE = 'Dockerfile.j2'
+GIT_CREDENTIALS_FILENAME = '.git-credentials'
 
 
 class AnsibleRunner:
@@ -56,16 +56,20 @@ class AnsibleRunner:
         bind='/root/containers',
         mode='rw'
     )
+    GIT_CREDENTIALS_PATH = DockerVolume(
+        name='git-credentials-path',
+        bind='/app/.git-credentials',
+        mode='ro'
+    )
 
     def __init__(self, directory_path: str):
         self.directory_path = directory_path
         self.ssh_directory = os.path.join(self.directory_path, 'ssh')
         self.inventory_path = os.path.join(self.directory_path, ANSIBLE_INVENTORY_FILENAME)
         self.containers_path = os.path.join(self.directory_path, ANSIBLE_DOCKER_CONTAINER_DIR)
+        self.git_credentials = os.path.join(self.directory_path, GIT_CREDENTIALS_FILENAME)
 
         self.container_mgmt_private_key = self.container_ssh_path(MGMT_PRIVATE_KEY_FILENAME)
-        self.container_git_private_key =\
-            self.container_ssh_path(settings.KYPO_CONFIG.git_private_key)
         self.container_proxy_private_key =\
             self.container_ssh_path(settings.KYPO_CONFIG.proxy_jump_to_man.IdentityFile)
 
@@ -79,7 +83,8 @@ class AnsibleRunner:
         Run Ansible playbook in container.
         """
         return self.container_manager(url, rev, stage, self.ssh_directory,
-                                      self.inventory_path, self.containers_path, cleanup)
+                                      self.inventory_path, self.containers_path,
+                                      self.git_credentials, cleanup)
 
     def delete_container(self, container_name: str) -> None:
         """
@@ -89,10 +94,9 @@ class AnsibleRunner:
 
     def _prepare_ssh_dir(self):
         """
-        Create SSH directory with private keys for communication with Git and KYPO Proxy.
+        Create SSH directory with private key for communication with KYPO Proxy.
         """
         self.make_dir(self.ssh_directory)
-        shutil.copy(settings.KYPO_CONFIG.git_private_key, self.ssh_directory)
         shutil.copy(settings.KYPO_CONFIG.proxy_jump_to_man.IdentityFile, self.ssh_directory)
 
     def _prepare_container_directory(self):
@@ -125,6 +129,15 @@ class AnsibleRunner:
         """
         return os.path.join(self.ANSIBLE_DOCKER_SSH_DIR.bind, os.path.basename(filename))
 
+    def prepare_git_credentials(self):
+        # TODO refactor with multiple gitlab feature
+        host = settings.KYPO_CONFIG.git_server
+        token = settings.KYPO_CONFIG.git_access_token
+        username = settings.KYPO_CONFIG.git_user
+        config = f'https://{username}:{token}@{host}'
+        return self.save_file(self.git_credentials, config)
+
+
 
 class AllocationAnsibleRunner(AnsibleRunner):
     """
@@ -142,9 +155,9 @@ class AllocationAnsibleRunner(AnsibleRunner):
         self.save_file(self.host_ssh_path(MGMT_CERTIFICATE_FILENAME), pool.management_certificate)
 
         ans_ssh_config = sandboxes.get_ansible_sshconfig(sandbox, self.container_mgmt_private_key,
-                                                         self.container_git_private_key,
                                                          self.container_proxy_private_key)
         self.save_file(self.host_ssh_path('config'), str(ans_ssh_config))
+
 
     def prepare_inventory_file(self, sandbox: Sandbox):
         """
@@ -256,8 +269,5 @@ class CleanupAnsibleRunner(AnsibleRunner):
         proxy_jump = settings.KYPO_CONFIG.proxy_jump_to_man
         ans_ssh_config = \
             sshconfig.KypoAnsibleCleanupSSHConfig(proxy_jump.Host, proxy_jump.User,
-                                                  self.container_proxy_private_key,
-                                                  settings.KYPO_CONFIG.git_server,
-                                                  settings.KYPO_CONFIG.git_user,
-                                                  self.container_git_private_key)
+                                                  self.container_proxy_private_key)
         self.save_file(self.host_ssh_path('config'), str(ans_ssh_config))
