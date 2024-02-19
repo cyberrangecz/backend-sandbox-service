@@ -152,7 +152,6 @@ class PoolAllocationRequestListView(generics.ListAPIView):
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
-@utils.add_error_responses_doc('post', [400, 401, 403, 404, 500])
 class PoolCleanupRequestsListCreateView(generics.ListCreateAPIView):
     """
     get: List Cleanup Requests for this pool.
@@ -169,7 +168,12 @@ class PoolCleanupRequestsListCreateView(generics.ListCreateAPIView):
             openapi.Parameter('force', openapi.IN_QUERY,
                               description="Force the deletion of sandboxes",
                               type=openapi.TYPE_BOOLEAN, default=False),
-        ])
+        ],
+        responses={
+            **{k: v for k, v in utils.ERROR_RESPONSES.items()
+               if k in [400, 401, 403, 404, 500]}
+        }
+    )
     def post(self, request, *args, **kwargs):
         """Deletes all sandboxes in the pool. With an optional parameter *force*,
         it forces the deletion."""
@@ -302,13 +306,18 @@ class AllocationRequestDetailView(generics.RetrieveAPIView):
     lookup_url_kwarg = 'request_id'
 
 
-@utils.add_error_responses_doc('patch', [401, 403, 404, 500])
 class AllocationRequestCancelView(generics.GenericAPIView):
     serializer_class = serializers.AllocationRequestSerializer
     queryset = AllocationRequest.objects.all()
     lookup_url_kwarg = "request_id"
 
-    @swagger_auto_schema(responses={status.HTTP_200_OK: serializers.serializers.Serializer()})
+    @swagger_auto_schema(
+        responses={
+            status.HTTP_200_OK: serializers.serializers.Serializer(),
+            **{k: v for k, v in utils.ERROR_RESPONSES.items()
+               if k in [400, 401, 403, 404, 500]}
+        }
+    )
     def patch(self, request, *args, **kwargs):
         """Cancel given Allocation Request. Returns no data if OK (200)."""
         sandbox_requests.cancel_allocation_request(self.get_object())
@@ -377,13 +386,18 @@ class CleanupRequestDetailView(generics.RetrieveAPIView):
     lookup_url_kwarg = "request_id"
 
 
-@utils.add_error_responses_doc('patch', [401, 403, 404, 500])
 class CleanupRequestCancelView(generics.GenericAPIView):
     serializer_class = serializers.CleanupRequestSerializer
     queryset = CleanupRequest.objects.all()
     lookup_url_kwarg = "request_id"
 
-    @swagger_auto_schema(responses={status.HTTP_200_OK: serializers.serializers.Serializer()})
+    @swagger_auto_schema(
+        responses={
+            status.HTTP_200_OK: serializers.serializers.Serializer(),
+            **{k: v for k, v in utils.ERROR_RESPONSES.items()
+               if k in [401, 403, 404, 500]}
+        }
+    )
     def patch(self, request, *args, **kwargs):
         """Cancel given Cleanup Request. Returns no data if OK (200)."""
         sandbox_requests.cancel_cleanup_request(self.get_object())

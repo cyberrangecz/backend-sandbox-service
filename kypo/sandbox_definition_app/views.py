@@ -110,13 +110,18 @@ class DefinitionTopologyView(generics.RetrieveAPIView):
         return Topology(client.get_topology_instance(topology_definition, containers))
 
 
-@utils.add_error_responses_doc('post', [401, 403, 404, 500])
 class LocalSandboxVariablesView(generics.CreateAPIView):
     queryset = Definition.objects.all()
     lookup_url_kwarg = "definition_id"
     serializer_class = serializers.LocalSandboxVariablesSerializer
 
-    @swagger_auto_schema(responses={201: serializers.LocalVariableSerializer(many=True)})
+    @swagger_auto_schema(
+        responses={
+            201: serializers.LocalVariableSerializer(many=True),
+            **{k: v for k, v in utils.ERROR_RESPONSES.items()
+               if k in [400, 401, 403, 404, 500]}
+        }
+    )
     def post(self, request, *args, **kwargs):
         """Generate variables for local sandboxes, send it to answers-storage."""
         user_id = request.data.get('user_id')
