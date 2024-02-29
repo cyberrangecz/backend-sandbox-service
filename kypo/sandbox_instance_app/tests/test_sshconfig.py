@@ -17,7 +17,5 @@ class TestGetSshConfig:
         proxy_jump = settings.KYPO_CONFIG.proxy_jump_to_man
         result = sshconfig.KypoAnsibleSSHConfig(
             top_ins, '/root/.ssh/pool_mng_key',
-            proxy_jump.Host, proxy_jump.User, '/root/.ssh/id_rsa',
-            settings.KYPO_CONFIG.git_server, settings.KYPO_CONFIG.git_user,
-            '/root/.ssh/git_rsa_key')
+            proxy_jump.Host, proxy_jump.User, '/root/.ssh/id_rsa')
         assert result.asdict() == ansible_ssh_config.asdict()

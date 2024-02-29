@@ -120,6 +120,5 @@ class TestSandboxesManipulation:
     def test_get_ansible_ssh_config(self, mocker, ansible_ssh_config):
         ssh_conf = sandboxes.get_ansible_sshconfig(mocker.Mock(),
                                                    mng_key='/root/.ssh/pool_mng_key',
-                                                   git_key='/root/.ssh/git_rsa_key',
                                                    proxy_key='/root/.ssh/id_rsa')
         assert ssh_conf.asdict() == ansible_ssh_config.asdict()

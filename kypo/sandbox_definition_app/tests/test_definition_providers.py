@@ -13,14 +13,15 @@ EXPECTED_RESULT_STR = "test"
 
 
 class TestGitlabProvider:
-    URL1 = 'git@gitlab.com:kypo-crp/backend-python/kypo-sandbox-service.git'
-    URL2 = 'git@gitlab.com:kypo-crp/backend-python/sub-group/GRPX/kypo-sandbox-service.git'
-    URL3 = 'git@gitlab.com:123456/kypo-sandbox-service.git'
-    CFG = KypoConfiguration(git_server='gitlab.com', git_rest_server='http://gitlab.com:8081')
+    URL1 = 'https://gitlab.com/kypo-crp/backend-python/kypo-sandbox-service.git'
+    URL2 = 'https://gitlab.com/kypo-crp/backend-python/sub-group/GRPX/kypo-sandbox-service.git'
+    URL3 = 'https://gitlab.com:123456/kypo-sandbox-service.git'
+    CFG = KypoConfiguration(git_providers={'https://gitlab.com:8081': "not-token"})
 
     @staticmethod
     def get_expected_url(url):
-        return url[url.find(':') + 1:-4]
+        no_prefix = url.replace('https://', '')
+        return no_prefix[no_prefix.find('/') + 1:-4]
 
     @pytest.mark.parametrize('url', [URL1, URL2, URL3])
     def test_get_project_path(self, url):
@@ -134,12 +135,12 @@ class TestGitlabProvider:
 
 
 class TestInternalGitProvider:
-    URL_VALID_1 = 'git@localhost.lan:/repos/nested-folder/myrepo.git'
+    URL_VALID_1 = 'http://localhost.lan:/repos/nested-folder/myrepo.git'
     URL_VALID_1_REST = 'http://localhost.lan:8081/repos/nested-folder;myrepo.git'
-    URL_VALID_2 = 'ssh://git@localhost.lan/repos/myrepo.git'
+    URL_VALID_2 = 'http://localhost.lan/repos/myrepo.git'
     URL_VALID_2_REST = 'http://localhost.lan:8081/repos/myrepo.git'
-    URL_INVALID = 'git@localhost.lan:repositories/nested-folder/next-folder/myrepo.git'
-    CFG = KypoConfiguration(git_server='localhost.lan', git_rest_server='http://localhost.lan:8081')
+    URL_INVALID = 'http://localhost.lan:repositories/nested-folder/next-folder/myrepo.git'
+    CFG = KypoConfiguration(git_providers={'http://localhost.lan:8081': "not-token"})
 
     @pytest.mark.parametrize('valid_url, expected_rest_url', [(URL_VALID_1, URL_VALID_1_REST),
                                                               (URL_VALID_2, URL_VALID_2_REST)])
@@ -153,7 +154,7 @@ class TestInternalGitProvider:
 
     @pytest.fixture
     def internal_provider(self):
-        return InternalGitProvider(self.URL_VALID_1, self.CFG)
+        return InternalGitProvider(self.URL_VALID_1_REST, self.CFG)
 
     @pytest.fixture
     def internal_provider_request(self, mocker, internal_provider):

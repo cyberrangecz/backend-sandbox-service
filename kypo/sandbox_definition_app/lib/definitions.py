@@ -21,6 +21,7 @@ from kypo.sandbox_definition_app import serializers
 from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider, DefinitionProvider, InternalGitProvider
 from kypo.sandbox_definition_app.models import Definition
 from kypo.sandbox_ansible_app.lib.inventory import DefaultAnsibleHostsGroups
+from kypo.sandbox_common_lib import git_config
 
 LOG = structlog.get_logger()
 
@@ -192,11 +193,13 @@ def get_variables(url: str, rev: str, config: KypoConfiguration) -> list:
 
 def get_def_provider(url: str, config: KypoConfiguration) -> DefinitionProvider:
     """Return correct provider according to the repository url."""
-    if config.git_type == GitType.INTERNAL:
+    git_type = git_config.get_git_type(url)
+    if git_type == GitType.INTERNAL:
         return InternalGitProvider(url, config)
-    if config.git_type == GitType.GITLAB:
+    if git_type == GitType.GITLAB:
         return GitlabProvider(url, config)
-    raise exceptions.ImproperlyConfigured(f"Cannot determine provider type. provider_type={config.git_type}.")
+    raise exceptions.ImproperlyConfigured(f"Cannot determine provider type: {git_config.get_rest_server(url)} "
+                                          f"Supported types: gitlab; git-internal.kypo")
 
 
 def validate_topology_definition(topology_definition: TopologyDefinition) -> None:

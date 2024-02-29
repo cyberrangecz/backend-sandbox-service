@@ -58,25 +58,27 @@ application_configuration:
     #log_level: INFO
 
     # The type of Git repositories. One of: INTERNAL, GITLAB.
-    git_type: INTERNAL
+    #git_type: INTERNAL
 
     # Git server hostname or IP.
-    git_server: 192.168.55.101
+    #git_server: 192.168.55.101
 
     # Git server ssh port
     #git_ssh_port: 22
 
     # The address of Git REST server with protocol (optionally port)
-    git_rest_server: http://192.168.55.102:5000/
+    #git_rest_server: http://192.168.55.102:5000/
 
     # The name of user used for communication with Git repository.
     #git_user: git
 
     # The SSH private key that kypo2-django-openstack uses to communicate with Git repository.
-    git_private_key: ./kypo/sandbox_service_project/tests/assets/kypo-it-compose/git-keys/git-ssh-key
+    #git_private_key: ./kypo/sandbox_service_project/tests/assets/kypo-it-compose/git-keys/git-ssh-key
 
     # The access token for Gitlab API
-    git_access_token: ""
+    #git_access_token: ""
+
+    git_providers: {"http://192.168.55.102:5000/": ""}
 
     # The URL of Ansible networking Git repository.
     ansible_networking_url: "git@192.168.55.101:/repos/backend-python/ansible-networking-stage/kypo-ansible-stage-one.git"

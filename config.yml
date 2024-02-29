@@ -60,26 +60,14 @@ application_configuration:
     # The level of log verbosity. One of: NOTSET, DEBUG, INFO, WARNING, ERROR, FATAL, CRITICAL.
     #log_level: INFO
 
-    # The type of Git repositories. One of: INTERNAL, GITLAB.
-    #git_type: INTERNAL
-
-    # Git server hostname or IP.
-    #git_server: gitlab.com
-
     # Git server ssh port
     #git_ssh_port: 22
-
-    # The address of Git REST server with protocol (optionally port)
-    #git_rest_server: https://gitlab.com/
 
     # The name of user used for communication with Git repository.
     #git_user: git
 
-    # The SSH private key that kypo2-django-openstack uses to communicate with Git repository.
-    #git_private_key: ~/.ssh/git_rsa_key
-
-    # The access token for Gitlab API
-    git_access_token: ""
+    # A dictionary of git providers where we can access private repositories, with the corresponding git access token.
+    git_providers: {"https://gitlab.com/": "access-token"}
 
     # The URL of Ansible networking Git repository.
     ansible_networking_url: ""

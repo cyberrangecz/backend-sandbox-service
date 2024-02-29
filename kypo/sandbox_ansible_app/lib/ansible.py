@@ -1,9 +1,12 @@
 import os
 import shutil
+import docker  # used by unit tests
 
 from jinja2 import Environment, FileSystemLoader
 import structlog
-from django.conf import settings
+
+from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
+from kypo.sandbox_service_project import settings
 from kypo.cloud_commons import TopologyInstance
 
 from kypo.sandbox_ansible_app.lib.container import KubernetesContainer, DockerContainer, \
@@ -13,6 +16,7 @@ from kypo.sandbox_common_lib import exceptions
 from kypo.sandbox_definition_app.lib import definitions
 from kypo.sandbox_instance_app.lib import sandboxes, sshconfig
 from kypo.sandbox_instance_app.models import Sandbox, Pool, SandboxAllocationUnit
+from kypo.sandbox_common_lib.git_config import get_git_server
 
 LOG = structlog.get_logger()
 
@@ -129,14 +133,13 @@ class AnsibleRunner:
         """
         return os.path.join(self.ANSIBLE_DOCKER_SSH_DIR.bind, os.path.basename(filename))
 
-    def prepare_git_credentials(self):
+    def prepare_git_credentials(self, config: KypoConfiguration):
         # TODO refactor with multiple gitlab feature
-        host = settings.KYPO_CONFIG.git_server
-        token = settings.KYPO_CONFIG.git_access_token
-        username = settings.KYPO_CONFIG.git_user
-        config = f'https://{username}:{token}@{host}'
-        return self.save_file(self.git_credentials, config)
-
+        username = config.git_user
+        credentials = ""
+        for host, token in config.git_providers.items():
+            credentials += f'https://{username}:{token}@{get_git_server(host)}\n'
+        return self.save_file(self.git_credentials, credentials)
 
 
 class AllocationAnsibleRunner(AnsibleRunner):

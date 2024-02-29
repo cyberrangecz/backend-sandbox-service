@@ -51,14 +51,6 @@ class TestCreateDefinition:
         with pytest.raises(exceptions.ValidationError):
             definitions.create_definition(url=self.URL, rev=self.REV, created_by=created_by)
 
-    def test_create_definition_inaccessible_by_ssh(self, mocker, topology_definition, created_by):
-        mocker.patch("kypo.sandbox_definition_app.lib.definitions.validate_topology_definition")
-        mocker.patch("kypo.sandbox_definition_app.lib.definitions.DefinitionProvider"
-                     ".has_key_access", return_value=False)
-
-        with pytest.raises(exceptions.ValidationError):
-            definitions.create_definition(url=self.URL, rev=self.REV, created_by=created_by)
-
 
 class TestLoadDefinition:
     def test_load_definition(self, topology_definition_stream):
@@ -82,8 +74,7 @@ class TestLoadDefinition:
 
 
 class TestGetDefinition:
-    CFG = KypoConfiguration(git_server='localhost.lan',
-                            git_rest_server='http://localhost.lan:8081')
+    CFG = KypoConfiguration(git_providers={'http://localhost.lan:8081': 'no-token'})
 
     def test_get_definition(self, mocker):
         topology_provider = mocker.MagicMock()
@@ -108,24 +99,13 @@ class TestGetDefinition:
 
 class TestGetDefProvider:
     def test_get_def_provider_internal(self):
-        url_internal = 'git@localhost.lan:/repos/nested-folder/myrepo.git'
-        cfg_internal = KypoConfiguration(git_server='localhost.lan',
-                                    git_rest_server='http://localhost.lan:8081',
-                                    git_type=GitType.INTERNAL)
+        url_internal = 'https://localhost.lan:/repos/nested-folder/myrepo.git'
+        cfg_internal = KypoConfiguration(git_providers={'http://localhost.lan:8081': 'no-token'})
         assert isinstance(definitions.get_def_provider(url_internal, cfg_internal),
                           InternalGitProvider)
 
     def test_get_def_provider_gitlab(self):
-        url_git = 'git@gitlab.com:kypo-crp/backend-python/kypo-sandbox-service.git'
-        cfg_git = KypoConfiguration(git_server='gitlab.com',
-                                    git_rest_server='http://gitlab.com:8081',
-                                    git_type=GitType.GITLAB)
+        url_git = 'https://gitlab.com/kypo-crp/backend-python/kypo-sandbox-service.git'
+        cfg_git = KypoConfiguration(git_providers={'https://gitlab.com:8081': "not-token"})
         assert isinstance(definitions.get_def_provider(url_git, cfg_git),
                           GitlabProvider)
-
-    def test_get_def_improperly_configured(self, mocker):
-        url_git = 'git@gitlab.com:kypo-crp/backend-python/kypo-sandbox-service.git'
-        cfg_git = mocker.MagicMock()
-        cfg_git.git_type = 3
-        with pytest.raises(exceptions.ImproperlyConfigured):
-            definitions.get_def_provider(url_git, cfg_git)

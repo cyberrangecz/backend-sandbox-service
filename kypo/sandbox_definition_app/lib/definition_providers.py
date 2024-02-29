@@ -7,7 +7,7 @@ import requests
 import structlog
 import giturlparse
 
-from kypo.sandbox_common_lib import exceptions
+from kypo.sandbox_common_lib import exceptions, git_config
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
 
 LOG = structlog.get_logger()
@@ -33,26 +33,16 @@ class DefinitionProvider(ABC):
         pass
 
     @staticmethod
-    def has_key_access(url: str, config: KypoConfiguration) -> bool:
-        """Test whether the repo is accessible using SSH key."""
-        git_ssh_cmd = 'ssh -o StrictHostKeyChecking=no -i {0}'.format(config.git_private_key)
-        try:
-            git.cmd.Git().ls_remote(url, env={'GIT_SSH_COMMAND': git_ssh_cmd})
-            return True
-        except git.exc.GitCommandError:
-            return False
-
-    @staticmethod
-    def validate_https(url: str, config: KypoConfiguration) -> giturlparse.parser.Parsed:
+    def validate_https(url: str) -> giturlparse.parser.Parsed:
         try:
             url_parsed = giturlparse.parse(url)
         except giturlparse.parser.ParserError:
             raise exceptions.GitError(f"Could not parse GIT URL: url={url}")
 
-        if not (url.startswith("https://")): # or not url.endswith(".git"):
+        if not (url.startswith("https://")) and not (url.startswith("http://")): # or not url.endswith(".git"):
             raise exceptions.GitError(
                 f"Invalid URL. Has to be a GIT URL cloned with HTTPS: expected="
-                f"{config.git_rest_server}[url path].git, actual={url}")
+                f"https://example.gitlab.com/[url path].git, actual={url}")
 
         return url_parsed
 
@@ -61,9 +51,15 @@ class GitlabProvider(DefinitionProvider):
     """Definition provider for Gitlab API."""
 
     def __init__(self, url: str, config: KypoConfiguration):
-        url_parsed = self.validate_https(url, config)
+        url_parsed = self.validate_https(url)
         self.project_path = self.get_project_path(url_parsed)
-        self.gl = gitlab.Gitlab(config.git_rest_server, private_token=config.git_access_token)
+        git_rest_server = git_config.get_rest_server(url)
+        git_access_token = git_config.get_git_token(git_rest_server, config)
+
+        if git_access_token:
+            self.gl = gitlab.Gitlab(git_rest_server, private_token=git_access_token)
+        else:
+            self.gl = gitlab.Gitlab(git_rest_server)
 
     def get_file(self, path: str, rev: str) -> str:
         """Get file from repo as a string."""
@@ -77,6 +73,7 @@ class GitlabProvider(DefinitionProvider):
     def get_branches(self):
         try:
             project = self.gl.projects.get(self.project_path)
+
             return project.branches.list()
         except (requests.exceptions.RequestException, gitlab.exceptions.GitlabError) as ex:
             raise exceptions.GitError(ex)
@@ -120,7 +117,7 @@ class InternalGitProvider(DefinitionProvider):
         self.rest_url = self.get_rest_url(config, url_parsed)
 
     def validate(self, url: str, config: KypoConfiguration):
-        url_parsed = DefinitionProvider.validate_https(url, config)
+        url_parsed = DefinitionProvider.validate_https(url)
         pathname = url_parsed.pathname.split('/')
         actual_prefix = pathname[0] \
             if pathname[0] != '' and pathname[0] != str(config.git_ssh_port) else pathname[1]
@@ -178,7 +175,8 @@ class InternalGitProvider(DefinitionProvider):
         if pathname[1] == str(config.git_ssh_port):
             pathname.pop(1)
         pathname = f'/{pathname[1]}/{";".join(pathname[2:])}'
-        return parse.urljoin(config.git_rest_server, pathname)
+        internal_git_server = "http://git-internal.kypo:5000/"
+        return parse.urljoin(internal_git_server, pathname)
 
     @staticmethod
     def get_request(url: str):

@@ -10,7 +10,6 @@ from rest_framework import status
 from rq import SimpleWorker
 
 from kypo.sandbox_ansible_app.models import AllocationAnsibleOutput
-from kypo.sandbox_common_lib import utils
 from kypo.sandbox_instance_app.models import Sandbox
 
 LOG = structlog.get_logger()

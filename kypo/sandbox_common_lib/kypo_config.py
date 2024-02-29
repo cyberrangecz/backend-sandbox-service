@@ -13,12 +13,8 @@ from kypo.sandbox_common_lib.exceptions import ImproperlyConfigured
 KYPO_HEAD_IP = '0.0.0.0'
 LOG_FILE = 'kypo-sandbox-service.log'
 LOG_LEVEL = 'INFO'
-GIT_TOKEN = '<default_token>'
-GIT_SERVER = 'gitlab.com'
 GIT_SSH_PORT = 22
-GIT_REST_SERVER = 'https://gitlab.com/'
 GIT_USER = 'git'
-GIT_PRIVATE_KEY = os.path.expanduser('~/.ssh/git_rsa_key')
 ANSIBLE_NETWORKING_REV = 'master'
 SANDBOX_BUILD_TIMEOUT = 3600 * 2
 SANDBOX_DELETE_TIMEOUT = 3600
@@ -133,21 +129,9 @@ class KypoConfiguration(Object):
     log_level = Attribute(type=str, default=LOG_LEVEL)
 
     # Sandbox creation configuration
-    git_access_token = Attribute(type=str, default=GIT_TOKEN)
-    git_server = Attribute(type=str, default=GIT_SERVER)
     git_ssh_port = Attribute(type=int, default=GIT_SSH_PORT)
-    git_rest_server = Attribute(type=str, default=GIT_REST_SERVER,
-                                validator=kypo_config_validation.validate_git_rest_url)
     git_user = Attribute(type=str, default=GIT_USER)
-    git_private_key = Attribute(type=str, default=GIT_PRIVATE_KEY)
-    git_type = Attribute(
-        type=Typed(
-            GitType,
-            from_yaml=(lambda loader, node, rtd: GitType[loader.construct_object(node)]),
-            to_yaml=(lambda dumper, data, rtd: dumper.represent_data(data.name))
-        ),
-        default=GitType.INTERNAL
-    )
+    git_providers = Attribute()
 
     ansible_networking_url = Attribute(type=str)
     ansible_networking_rev = Attribute(type=str, default=ANSIBLE_NETWORKING_REV)
@@ -191,7 +175,6 @@ class KypoConfiguration(Object):
 
         # TODO deal with absolute paths in ProxyJump object validation
         # Key-paths need to be absolute
-        obj.git_private_key = os.path.abspath(os.path.expanduser(obj.git_private_key))
         obj.proxy_jump_to_man.IdentityFile = os.path.abspath(
             os.path.expanduser(obj.proxy_jump_to_man.IdentityFile))
 

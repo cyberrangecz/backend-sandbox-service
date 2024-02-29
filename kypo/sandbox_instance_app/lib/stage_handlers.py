@@ -328,7 +328,7 @@ class AllocationAnsibleStageHandler(AnsibleStageHandler):
         runner.prepare_ssh_dir(self.allocation_unit.pool, self.sandbox)
         runner.prepare_inventory_file(self.sandbox)
         runner.prepare_containers_directory(self.sandbox)
-        runner.prepare_git_credentials()
+        runner.prepare_git_credentials(settings.KYPO_CONFIG)
 
         container = runner.run_ansible_playbook(self.stage.repo_url, self.stage.rev, self.stage)
         try:
@@ -375,7 +375,7 @@ class CleanupAnsibleStageHandler(AnsibleStageHandler):
         runner = CleanupAnsibleRunner(self.directory_path)
         runner.prepare_ssh_dir(self.allocation_unit.pool)
         runner.prepare_inventory_file(self.allocation_unit)
-        runner.prepare_git_credentials()
+        runner.prepare_git_credentials(settings.KYPO_CONFIG)
 
         allocation_request = self.allocation_unit.allocation_request
         allocation_stage = allocation_request.networkingansibleallocationstage
