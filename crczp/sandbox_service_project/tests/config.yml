@@ -1,0 +1,176 @@
+# Name of the microservice.
+#microservice_name: sandbox-service
+
+# A prefix of the stack in the cloud with maximum 8 characters.
+stack_name_prefix: test
+
+# A boolean that turns on/off debug mode.
+# SECURITY WARNING: don't run with debug turned on in production!
+debug: True
+
+# A secret key used by django to provide cryptographic signing.
+# SECURITY WARNING: change this key for production environment and keep it secret!
+#django_secret_key: "-^mu0=6s@*x4jdbrz5yr!++p*02#%m$_4&0uw8h1)&r5u!v=12ASS"
+
+# A list of strings representing the host/domain names that this Django site can serve.
+#allowed_hosts: []
+
+# If True, the whitelist will not be used and all origins will be accepted.
+#cors_origin_allow_all: True
+
+# A list of origins that are authorized to make cross-site HTTP requests.
+#cors_origin_whitelist: []
+
+authentication:
+    # Whether the REST API authentication is on.
+    # If set to False, other authentication variables are not used.
+    #authenticated_rest_api: False
+
+    # List of OIDC provider host/domain names that are allowed.
+    allowed_oidc_providers: []
+
+    # User and Group roles registration endpoint URL.
+    roles_registration_url: ""
+
+    # User and Group roles acquisition endpoint URL.
+    roles_acquisition_url: ""
+
+application_configuration:
+    # The IP address of the head server.
+    #head_host: 0.0.0.0
+
+    # The URL of OpenStack Identity service API.
+    os_auth_url: ""
+
+    # The ID of application credentials to authenticate at OpenStack cloud platform.
+    os_application_credential_id: ""
+
+    # The secret string of APPLICATION_CREDENTIAL_ID.
+    os_application_credential_secret: ""
+
+    # The OpenStack console type. One of: novnc, xvpvnc, spice-html5, rdp-html5, serial, webmks.
+    #os_console_type: spice-html5
+
+    # The path to project log file.
+    log_file: /dev/null
+
+    # The level of log verbosity. One of: NOTSET, DEBUG, INFO, WARNING, ERROR, FATAL, CRITICAL.
+    #log_level: INFO
+
+    # The name of user used for communication with Git repository.
+    git_user: git
+
+    git_providers: { "http://192.168.55.102:5000/": "" }
+
+    # The URL of Ansible networking Git repository.
+    ansible_networking_url: "https://github.com/cyberrangecz/ansible-stage-one.git"
+
+    # The rev of Ansible networking Git repository.
+    ansible_networking_rev: master
+
+    # The pattern to be replaced in image names of sandbox definitions.
+    image_naming_strategy:
+        pattern: onlyCustom/
+
+    # The mapping of flavor names to be replaced in sandbox definition.
+    flavor_mapping:
+        standard.tiny: a1.tiny1x2
+        custom.small: a2.small2x4
+
+    # The object that represents SSH Host entry (see man page of ssh_config).
+    proxy_jump_to_man:
+        Host: jump-host-ip
+        User: debian
+        IdentityFile: /tmp/id_rsa
+
+    # Timeout of sandbox (stack) creation in cloud in seconds.
+    sandbox_build_timeout: 1200
+
+    # Timeout of sandbox (stack) deletion in cloud in seconds.
+    sandbox_delete_timeout: 1200
+
+    # Timeout for Ansible.
+    sandbox_ansible_timeout: 1800
+
+    # The name of the Docker image that is able to run Ansible playbook.
+    ansible_docker_image: ghcr.io/cyberrangecz/crczp-ansible-runner:1.4.1
+
+    # The name of the Docker network that the Runner will use.
+    ansible_docker_network: platform-net-it
+
+    # The settings for the ansible runner container.
+    # ansible_runner_settings:
+    # The container backend. One of: docker, kubernetes.
+    #backend: docker
+
+    # The namespace where the container will be created. Only used when backend is kubernetes.
+    #namespace: crczp
+
+    # The path to local temporary directory where CyberRangeCZ Platform will prepare Docker volumes if container
+    # backend is set to docker. Path to temporary directory of similar purpose in Persistent
+    # Volume if backend is set to kubernetes.
+    #volumes_name: /tmp/crczp
+
+    # Name of persistent volume claim, only used when backend is kubernetes.
+    #persistent_volume_claim_name: sandbox-service
+
+    # A path to directory of CA certificates or file of CA certificates, i.e. CA bundle.
+    # Use in case of self-signed certificates in related services.
+    #ssl_ca_certificate_verify: ""
+
+    terraform_configuration:
+        # The type of backend that Terraform is using.
+        # Choices:
+        #  * local: storing state file to local disk (suitable for development)
+        #  * pg: storing state file to Postgres database (specified in the `database` section)
+        #  * kubernetes: storing state file as Kubernetes secret (preferred)
+        backend_type: 'local'
+
+    sandbox_configuration:
+        # The name or ID of network in OpenStack where all sandboxes will be deployed.
+        base_network: jump_network
+
+        # The name of the image in OpenStack that will be used for MAN.  A dedicated debian image is recommended.
+        man_image: debian-12-x86_64
+
+        # The name of user in MAN.
+        man_user: debian
+
+        # The name of the flavor in OpenStack that will be used for MAN.
+        man_flavor: standard.small
+        # The cidr notation of network between MAN and every other node in sandbox.
+        #sb_man_cidr: 192.168.128.0/17
+
+        # The cidr notation of network between UAN and MAN node.
+        #sb_uan_cidr: 192.168.0.0/28
+
+        # The cidr notation of network between BR and MAN node.
+        #sb_br_cidr: 192.168.0.16/28
+
+        # The list of IP addresses to custom DNS servers.
+        #dns_name_servers: []
+
+        # Django database settings.
+    database:
+        # The database backend to use.
+        engine: "django.db.backends.sqlite3"
+
+        # Which host to use when connecting to the database.
+        host: ""
+
+        # The name of the database to use.
+        name: 'db.sqlite3'
+
+        # The password to use when connecting to the database.
+        password: ""
+
+        # The port to use when connecting to the database.
+        port: ""
+
+        # The username to use when connecting to the database.
+        user: ""
+
+    redis:
+        host: "localhost"
+        port: 6379
+        db: 0

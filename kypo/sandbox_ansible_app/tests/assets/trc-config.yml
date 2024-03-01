@@ -1,8 +1,0 @@
-# The name of the image in OpenStack that will be used for MAN.
-man_image: debian-10-man
-
-# The name of user in MAN.
-man_user: kypo-man
-
-# The name of the flavor in OpenStack that will be used for MAN.
-man_flavor: csirtmu.tiny1x2

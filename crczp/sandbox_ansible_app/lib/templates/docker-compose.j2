@@ -1,0 +1,16 @@
+version: '3.7'
+
+services:
+{%- for mapping in container_mappings %}
+  {{ mapping.container }}:
+    container_name: {{ mapping.container }}
+    network_mode: bridge
+    ports:
+      - "{{ mapping.port }}:22"
+    build:
+      context: {{ mapping.container }}
+      dockerfile: Dockerfile
+    volumes:
+      - /home/user/.ssh/user_rsa.pub:/root/.ssh/authorized_keys
+    command: bash -c "service ssh start && chown root /root/.ssh/authorized_keys && tail -f /dev/null"
+{% endfor %}

@@ -5,8 +5,6 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PIPENV_VENV_IN_PROJECT="true"
 
-ARG KYPO_PYPI_DOWNLOAD_URL="https://localhost.lan/repository"
-
 RUN pip3 install pipenv
 RUN apt-get update && apt-get install -y gcc
 
@@ -29,7 +27,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PATH="/app/.venv/bin:$PATH"
 
-RUN apt-get update && apt-get install -y git redis supervisor gnupg software-properties-common curl
+RUN apt-get update && apt-get install -y git gnupg software-properties-common curl
 
 ## Install OpenTofu from script
 RUN apt-get install unzip
@@ -40,16 +38,13 @@ RUN ./install-opentofu.sh --install-method standalone
 RUN rm install-opentofu.sh
 
 COPY bin bin
-COPY kypo kypo
+COPY crczp crczp
 COPY config.yml-template ./config.yml
 COPY manage.py ./
 COPY --from=builder /app/.venv ./.venv
-
-COPY supervisord.conf /etc/supervisord.conf
-RUN mkdir -p /var/log/supervisor
 
 # static files must be served from proxy server, expose them via volume bind
 RUN python3 manage.py collectstatic --no-input -v 2
 
 EXPOSE 8000
-ENTRYPOINT ["/app/bin/entrypoint.sh"]
+ENTRYPOINT ["/app/bin/run-sandbox-service.sh"]

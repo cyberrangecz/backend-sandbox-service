@@ -1,0 +1,51 @@
+name: small-sandbox
+hosts:
+  - name: server
+    base_box: { image: debian-12-x86_64, mgmt_user: debian }
+    flavor: standard.small
+    hidden: True
+
+  - name: home
+    base_box: { image: windows-10, mgmt_user: windows, mgmt_protocol: WINRM }
+    flavor: standard.small
+
+routers:
+  - name: server-router
+    base_box: { image: debian-12-x86_64, mgmt_user: debian }
+    flavor: standard.small
+
+  - name: home-router
+    base_box: { image: debian-12-x86_64, mgmt_user: debian }
+    flavor: standard.small
+
+networks:
+  - name: server-switch
+    cidr: 10.10.20.0/24
+    accessible_by_user: False
+
+  - name: home-switch
+    cidr: 10.10.30.0/24
+
+net_mappings:
+  - host: server
+    network: server-switch
+    ip: 10.10.20.5
+
+  - host: home
+    network: home-switch
+    ip: 10.10.30.5
+
+router_mappings:
+  - router: server-router
+    network: server-switch
+    ip: 10.10.20.1
+
+  - router: home-router
+    network: home-switch
+    ip: 10.10.30.1
+
+groups:
+  - name: custom-group
+    nodes:
+      - home
+      - server-router

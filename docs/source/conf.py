@@ -15,13 +15,13 @@ import sys
 import django
 
 sys.path.insert(0, os.path.abspath('../../'))
-os.environ['DJANGO_SETTINGS_MODULE'] = 'kypo.sandbox_service_project.settings'
+os.environ['DJANGO_SETTINGS_MODULE'] = 'crczp.sandbox_service_project.settings'
 django.setup()
 
 # -- Project information -----------------------------------------------------
 
-project = 'KYPO Sandbox Service'
-copyright = '2020, Masaryk University'
+project = 'Sandbox Service'
+copyright = '2020, Masaryk University; 2025, CyberSecurity Hub, z.s.'
 
 
 # -- General configuration ---------------------------------------------------
