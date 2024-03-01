@@ -106,6 +106,15 @@ class OpenStackConsoleType(Enum):
             raise ValueError(f'Invalid value for OpenStackConsoleType: {value}')
 
 
+class AwsConfiguration(Object):
+    access_key_id = Attribute(type=str, default='')
+    secret_access_key = Attribute(type=str, default='')
+    region = Attribute(type=str, default='')
+    availability_zone = Attribute(type=str, default='')
+    base_vpc = Attribute(type=str, default='Base VPC')
+    base_subnet = Attribute(type=str, default='Base Subnet')
+
+
 class NamingStrategy(Object):
     pattern = Attribute(type=str)
     replace = Attribute(type=str, default='')
@@ -143,6 +152,8 @@ class KypoConfiguration(Object):
         ),
         default=OpenStackConsoleType.SPICE_HTML5,
     )
+
+    aws = Attribute(type=AwsConfiguration, default=None)
 
     log_file = Attribute(type=str, default=LOG_FILE)
     log_level = Attribute(type=str, default=LOG_LEVEL)

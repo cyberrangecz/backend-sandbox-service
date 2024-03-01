@@ -54,6 +54,28 @@ application_configuration:
     # The OpenStack console type. One of: novnc, xvpvnc, spice-html5, rdp-html5, serial, webmks.
     #os_console_type: spice-html5
 
+    # AWS specific configuration.
+    # Keeps configuration file backwards compatible.
+    # If AWS configuration is present, it will be used instead of OpenStack configuration.
+    # aws:
+    #   # The access key ID for AWS API.
+    #   access_key_id: ""
+
+    #   # The secret access key for AWS API.
+    #   secret_access_key: ""
+
+    #   # The region of AWS where the base infrastructure is deployed.
+    #   region: ""
+
+    #   # The availability zone of AWS where the base infrastructure is deployed.
+    #   availability_zone: ""
+
+    #   # The name of base VPC, where MAN instance will be deployed.
+    #   base_vpc: "Base Net"
+
+    #   # The name of base subnet, where MAN instance will be deployed.
+    #   base_subnet: "Base Subnet"
+
     # The path to project log file.
     #log_file: kypo-sandbox-service.log
 
