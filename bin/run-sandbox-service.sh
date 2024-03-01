@@ -20,4 +20,4 @@ python manage.py shell << EOF
 ${CREATE_SUPERUSER}
 EOF
 python manage.py register_roles
-gunicorn --bind ${LISTEN_IP}:${LISTEN_PORT} --timeout 600 --workers 5 kypo.sandbox_service_project.wsgi:application
+gunicorn --bind ${LISTEN_IP}:${LISTEN_PORT} --timeout 600 --workers 5 crczp.sandbox_service_project.wsgi:application

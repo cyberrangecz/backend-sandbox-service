@@ -1,5 +1,5 @@
 # Name of the microservice.
-#microservice_name: kypo-sandbox-service
+#microservice_name: sandbox-service
 
 # A prefix of the stack in the cloud with maximum 8 characters.
 #stack_name_prefix: default0
@@ -39,8 +39,8 @@ authentication:
     roles_acquisition_url: ""
 
 application_configuration:
-    # The IP address of the KYPO head server.
-    #kypo_head_ip: 0.0.0.0
+    # The URL of the head server.
+    #head_host: head
 
     # The URL of OpenStack Identity service API.
     os_auth_url: ""
@@ -54,32 +54,42 @@ application_configuration:
     # The OpenStack console type. One of: novnc, xvpvnc, spice-html5, rdp-html5, serial, webmks.
     #os_console_type: spice-html5
 
+    # AWS specific configuration.
+    # Keeps configuration file backwards compatible.
+    # If AWS configuration is present, it will be used instead of OpenStack configuration.
+    # aws:
+    #   # The access key ID for AWS API.
+    #   access_key_id: ""
+
+    #   # The secret access key for AWS API.
+    #   secret_access_key: ""
+
+    #   # The region of AWS where the base infrastructure is deployed.
+    #   region: ""
+
+    #   # The availability zone of AWS where the base infrastructure is deployed.
+    #   availability_zone: ""
+
+    #   # The name of base VPC, where MAN instance will be deployed.
+    #   base_vpc: "Base Net"
+
+    #   # The name of base subnet, where MAN instance will be deployed.
+    #   base_subnet: "Base Subnet"
+
     # The path to project log file.
-    #log_file: kypo-sandbox-service.log
+    #log_file: sandbox-service.log
 
     # The level of log verbosity. One of: NOTSET, DEBUG, INFO, WARNING, ERROR, FATAL, CRITICAL.
     #log_level: INFO
-
-    # DEPRECATED The type of Git repositories. One of: INTERNAL, GITLAB.
-    git_type: INTERNAL
-
-    # DEPRECATED Git server hostname or IP.
-    git_server: gitlab.com
-
-    # DEPRECATED Git server ssh port
-    git_ssh_port: 22
-
-    # DEPRECATED The address of Git REST server with protocol (optionally port)
-    git_rest_server: https://gitlab.com/
-
-    # DEPRECATED The SSH private key that kypo2-django-openstack uses to communicate with Git repository.
-    git_private_key: ~/.ssh/git_rsa_key
 
     # The name of user used for communication with Git repository.
     git_user: git
 
     # A dictionary of git providers where we can access private repositories, with the corresponding git access token.
-    git_providers: {"https://gitlab.com/": "access-token"}
+    git_providers: {
+        "https://gitlab.com/": "access-token",
+        "https://github.com/": "access-token",
+    }
 
     # The URL of Ansible networking Git repository.
     ansible_networking_url: ""
@@ -111,7 +121,7 @@ application_configuration:
     #sandbox_ansible_timeout: 7200
 
     # The name of the Docker image that is able to run Ansible playbook.
-    #ansible_docker_image: csirtmu/kypo-ansible-runner
+    #ansible_docker_image: ghcr.io/cyberrangecz/crczp-ansible-runner:1.4.1
 
     # The name of the Docker network that the Runner will use.
     #ansible_docker_network: bridge
@@ -122,24 +132,24 @@ application_configuration:
         #backend: docker
 
         # The namespace where the container will be created. Only used when backend is kubernetes.
-        #namespace: kypo
+        #namespace: crczp
 
-        # The path to local temporary directory where KYPO will prepare Docker volumes if container
+        # The path to local temporary directory where CyberRangeCZ Platform will prepare Docker volumes if container
         # backend is set to docker. Path to temporary directory of similar purpose in persistent
         # volume if backend is kubernetes.
-        #volumes_path: /tmp/kypo
+        #volumes_path: /tmp/crczp
 
         # Name of persistent volume claim, only used when backend is kubernetes.
         #persistent_volume_claim_name: sandbox-service
 
-    # The address of kypo-answers-storage REST API
-    #answers_storage_api: http://answers-storage:8087/kypo-answers-storage/api/v1
+    # The address of answers-storage REST API
+    #answers_storage_api: http://answers-storage:8087/answers-storage/api/v1
 
     # A path to directory of CA certificates or file of CA certificates, i.e. CA bundle.
     # Use in case of self-signed certificates in related services.
     #ssl_ca_certificate_verify: ""
 
-    # Configuration for KYPO Terraform client
+    # Configuration for Terraform client
     terraform_configuration:
         # The type of backend that Terraform is using.
         # Choices:
@@ -159,7 +169,7 @@ application_configuration:
     #smtp_encryption: INSECURE
 
     # Email used to send allocation notifications
-    #sender_email: "sandbox.service@kypo.cz"
+    #sender_email: "sandbox.service@cyberrange.cz"
 
     # Password for sender_email, not necessary if using INSECURE encryption
     #sender_email_password: ""
@@ -168,7 +178,7 @@ application_configuration:
         # The name or ID of network in OpenStack where all sandboxes will be deployed.
         #base_network: base_network
 
-        # The name of the image in OpenStack that will be used for MAN. A dedicated debian-10-man image is recommended.
+        # The name of the image in OpenStack that will be used for MAN. A dedicated debian image is recommended.
         man_image: ""
 
         # The name of user in MAN.

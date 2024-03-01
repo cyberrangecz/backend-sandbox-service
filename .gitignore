@@ -131,10 +131,9 @@ dmypy.json
 *.iml
 
 devel-config.yml
-config.yml
 empty-sandbox.git.zip
-kypo/openstack_driver
-kypo/topology_definition
+crczp/openstack_driver
+crczp/topology_definition
 
 create-db.sh
 

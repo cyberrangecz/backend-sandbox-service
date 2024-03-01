@@ -1,0 +1,18 @@
+version: '3.7'
+
+services:
+  redis:
+    image: redis
+    container_name: it-redis
+    networks:
+      - platform-net-it
+    ports:
+      - 127.0.0.1:6379:6379 # TODO fix to IP in the settings
+networks:
+  platform-net-it:
+    name: platform-net-it
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.55.0/24

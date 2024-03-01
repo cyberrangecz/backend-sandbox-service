@@ -1,12 +1,12 @@
-.. KYPO Sandbox Service documentation master file, created by
+.. Sandbox Service documentation master file, created by
    sphinx-quickstart on Wed Apr 29 20:12:06 2020.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to KYPO Sandbox Service's documentation!
+Welcome to Sandbox Service's documentation!
 ================================================
 
-This project simplifies manipulation of OpenStack cloud platform for KYPO purposes.
+This project simplifies manipulation of OpenStack cloud platform for CyberRangeCZ Platform purposes.
 It provides REST calls for manipulation with:
 
 - Sandbox definitions
@@ -17,12 +17,12 @@ It provides REST calls for manipulation with:
 .. toctree::
    :maxdepth: 3
    :caption: Contents:
-   
-   kypo.sandbox_common_lib
-   kypo.sandbox_definition_app
-   kypo.sandbox_ansible_app
-   kypo.sandbox_instance_app
-   kypo.sandbox_service_project
+
+   crczp.sandbox_common_lib
+   crczp.sandbox_definition_app
+   crczp.sandbox_ansible_app
+   crczp.sandbox_instance_app
+   crczp.sandbox_service_project
 
 Indices and tables
 ==================

@@ -1,0 +1,8 @@
+# The name of the image in OpenStack that will be used for MAN.
+man_image: debian-12-x86_64
+
+# The name of user in MAN.
+man_user: debian
+
+# The name of the flavor in OpenStack that will be used for MAN.
+man_flavor: standard.small
