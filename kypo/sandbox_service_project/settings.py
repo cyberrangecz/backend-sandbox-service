@@ -210,28 +210,23 @@ if KYPO_SERVICE_CONFIG.authentication.authenticated_rest_api:
 
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-        'LOCATION': 'call_cache',
-        'TIMEOUT': None,  # Expire never
-        'OPTIONS': {
-            'MAX_ENTRIES': 300  # Django default value is 300 (2 kB per item = 0.6 MB)
-        }
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        # Use DB 1 for caching
+        'LOCATION': 'redis://{}:{}/1'.format(KYPO_CONFIG.redis.host, KYPO_CONFIG.redis.port),
+        # Mitigate missing max entries setting for Redis cache
+        'TIMEOUT': 86400 * 30,  # Expire after 30 days
     },
     'uag_auth_groups_cache': {
-        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-        'LOCATION': 'uag_auth_groups_cache',
-        'OPTIONS': {
-            'MAX_ENTRIES': 500
-        }
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        # Use DB 1 for caching
+        'LOCATION': 'redis://{}:{}/1'.format(KYPO_CONFIG.redis.host, KYPO_CONFIG.redis.port),
+        'TIMEOUT': 86400 * 30,  # Expire after 30 days
     },
     'topology_cache': {
-        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-        'LOCATION': 'topology_cache',
-        'TIMEOUT': None,
-        'OPTIONS': {
-            'CULL_FREQUENCY': 0,  # culls the entire cache, makes culling more efficient
-            'MAX_ENTRIES': 300
-        }
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        # Use DB 1 for caching
+        'LOCATION': 'redis://{}:{}/1'.format(KYPO_CONFIG.redis.host, KYPO_CONFIG.redis.port),
+        'TIMEOUT': 86400 * 30,  # Expire after 30 days
     },
 }
 
