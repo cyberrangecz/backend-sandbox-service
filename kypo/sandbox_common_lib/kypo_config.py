@@ -13,8 +13,6 @@ from kypo.sandbox_common_lib.exceptions import ImproperlyConfigured
 KYPO_HEAD_IP = '0.0.0.0'
 LOG_FILE = 'kypo-sandbox-service.log'
 LOG_LEVEL = 'INFO'
-GIT_SSH_PORT = 22
-GIT_USER = 'git'
 ANSIBLE_NETWORKING_REV = 'master'
 SANDBOX_BUILD_TIMEOUT = 3600 * 2
 SANDBOX_DELETE_TIMEOUT = 3600
@@ -79,7 +77,6 @@ class Redis(Object):
 
 class GitType(Enum):
     GITLAB = 1
-    INTERNAL = 2
 
 
 class OpenStackConsoleType(Enum):
@@ -129,8 +126,7 @@ class KypoConfiguration(Object):
     log_level = Attribute(type=str, default=LOG_LEVEL)
 
     # Sandbox creation configuration
-    git_ssh_port = Attribute(type=int, default=GIT_SSH_PORT)
-    git_user = Attribute(type=str, default=GIT_USER)
+    git_user = Attribute(type=str)
     git_providers = Attribute()
 
     ansible_networking_url = Attribute(type=str)

@@ -60,11 +60,8 @@ application_configuration:
     # The level of log verbosity. One of: NOTSET, DEBUG, INFO, WARNING, ERROR, FATAL, CRITICAL.
     #log_level: INFO
 
-    # Git server ssh port
-    #git_ssh_port: 22
-
     # The name of user used for communication with Git repository.
-    #git_user: git
+    git_user: git
 
     # A dictionary of git providers where we can access private repositories, with the corresponding git access token.
     git_providers: {"https://gitlab.com/": "access-token"}

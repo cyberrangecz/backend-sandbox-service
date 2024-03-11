@@ -2,9 +2,9 @@ import pytest
 from yamlize import YamlizingError
 
 
-from kypo.sandbox_common_lib.kypo_config import KypoConfiguration, GitType
+from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
 from kypo.sandbox_definition_app.lib import definitions
-from kypo.sandbox_definition_app.lib.definition_providers import InternalGitProvider, GitlabProvider
+from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider
 from kypo.sandbox_definition_app.models import Definition
 from kypo.sandbox_common_lib import exceptions
 
@@ -98,12 +98,6 @@ class TestGetDefinition:
 
 
 class TestGetDefProvider:
-    def test_get_def_provider_internal(self):
-        url_internal = 'https://localhost.lan:/repos/nested-folder/myrepo.git'
-        cfg_internal = KypoConfiguration(git_providers={'http://localhost.lan:8081': 'no-token'})
-        assert isinstance(definitions.get_def_provider(url_internal, cfg_internal),
-                          InternalGitProvider)
-
     def test_get_def_provider_gitlab(self):
         url_git = 'https://gitlab.com/kypo-crp/backend-python/kypo-sandbox-service.git'
         cfg_git = KypoConfiguration(git_providers={'https://gitlab.com:8081': "not-token"})

@@ -30,10 +30,8 @@ def get_git_type(rest_server) -> GitType:
     """
     if rest_server.find('gitlab.'):
         return GitType.GITLAB
-    if rest_server.find('git-internal.kypo.'):
-        return GitType.INTERNAL
     raise ImproperlyConfigured(f"Trying to use unsupported git type: {rest_server} "
-                               f"Supported types: gitlab; git-internal.kypo")
+                               f"Supported types: gitlab")
 
 
 def get_git_server(rest_server) -> str:

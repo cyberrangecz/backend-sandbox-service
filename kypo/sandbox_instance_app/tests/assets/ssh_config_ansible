@@ -50,11 +50,3 @@ Host server 192.168.128.2
     UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
     IdentitiesOnly yes
-
-Host 192.168.55.101
-    HostName 192.168.55.101
-    User git
-    IdentityFile /root/.ssh/git_rsa_key
-    UserKnownHostsFile /dev/null
-    StrictHostKeyChecking no
-    IdentitiesOnly yes
