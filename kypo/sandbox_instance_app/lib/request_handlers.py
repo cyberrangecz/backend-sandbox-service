@@ -243,6 +243,10 @@ class CleanupRequestHandler(RequestHandler):
     Specifies cleanup request stages and tasks for their manipulation.
     """
     request: CleanupRequest
+    delete_pool: bool
+
+    def __init__(self, delete_pool=False):
+        self.delete_pool = delete_pool
 
     @transaction.atomic
     def _enqueue_stages(self) -> None:
@@ -309,8 +313,7 @@ class CleanupRequestHandler(RequestHandler):
         user_handler = CleanupAnsibleStageHandler(self.request.useransiblecleanupstage)
         return [stack_handler, networking_handler, user_handler]
 
-    @staticmethod
-    def _delete_allocation_unit(allocation_unit: SandboxAllocationUnit, request: CleanupRequest)\
+    def _delete_allocation_unit(self, allocation_unit: SandboxAllocationUnit, request: CleanupRequest)\
             -> None:
         """
         Named method used as finalizing stage function.
@@ -324,6 +327,9 @@ class CleanupRequestHandler(RequestHandler):
         LOG.info('Allocation Unit deleted from DB', allocation_unit=allocation_unit)
         requests.delete_cleanup_request(request)
         LOG.info('Cleanup request deleted from DB', cleanup_request=request)
+        if pool.size == 0 and self.delete_pool:
+            pool.delete()
+            LOG.info('Pool deleted from DB by final cleanup finishing', cleanup_request=request, pool=pool)
 
 
 def request_exception_handler(job: Job, exc_type, exc_value, traceback) -> None:

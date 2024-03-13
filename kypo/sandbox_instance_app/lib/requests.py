@@ -50,7 +50,7 @@ def cancel_allocation_request(alloc_req: AllocationRequest):
     request_handlers.AllocationRequestHandler().cancel_request(alloc_req)
 
 
-def create_cleanup_request_force(allocation_unit: SandboxAllocationUnit):
+def create_cleanup_request_force(allocation_unit: SandboxAllocationUnit, delete_pool):
     """Create cleanup request and enqueue it. Immediately delete sandbox from database.
     The force parameter forces the deletion."""
     try:
@@ -79,7 +79,7 @@ def create_cleanup_request_force(allocation_unit: SandboxAllocationUnit):
         sandboxes.clear_cache(sandbox)
         sandbox.delete()
 
-    request_handlers.CleanupRequestHandler().enqueue_request(allocation_unit)
+    request_handlers.CleanupRequestHandler(delete_pool=delete_pool).enqueue_request(allocation_unit)
 
 
 def create_cleanup_request(allocation_unit: SandboxAllocationUnit):
@@ -117,11 +117,12 @@ def create_cleanup_request(allocation_unit: SandboxAllocationUnit):
     request_handlers.CleanupRequestHandler().enqueue_request(allocation_unit)
 
 
-def create_cleanup_requests(allocation_units: List[SandboxAllocationUnit], force: bool = False):
+def create_cleanup_requests(allocation_units: List[SandboxAllocationUnit], force: bool = False,
+                            delete_pool: bool = False):
     """Batch version of create_cleanup_request."""
     for unit in allocation_units:
         if force:
-            create_cleanup_request_force(unit)
+            create_cleanup_request_force(unit, delete_pool)
         else:
             create_cleanup_request(unit)
 

@@ -1,4 +1,3 @@
-import uuid
 import drf_yasg.openapi as openapi
 from wsgiref.util import FileWrapper
 
@@ -63,7 +62,6 @@ class PoolListCreateView(generics.ListCreateAPIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-@utils.add_error_responses_doc('delete', [401, 403, 404, 500])
 @method_decorator(name='get', decorator=swagger_auto_schema(
     responses={
         200: POOL_RESPONSE_SCHEMA,
@@ -79,12 +77,30 @@ class PoolDetailDeleteUpdateView(generics.RetrieveDestroyAPIView):
     serializer_class = serializers.PoolSerializer
     lookup_url_kwarg = "pool_id"
 
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter('force', openapi.IN_QUERY,
+                              description="Force the deletion of sandboxes",
+                              type=openapi.TYPE_BOOLEAN, default=False),
+        ],
+        responses={
+            **{k: v for k, v in utils.ERROR_RESPONSES.items()
+               if k in [400, 401, 403, 404, 500]}
+        }
+    )
     def delete(self, request, *args, **kwargs):
         """
         Delete pool. The pool must be empty.
         First delete all sandboxes in given Pool.
         """
         pool = self.get_object()
+        force = request.GET.get('force', 'false') == 'true'
+
+        if force and pool.size > 0:
+            pool_units = SandboxAllocationUnit.objects.filter(pool_id=pool.id)
+            sandbox_requests.create_cleanup_requests(pool_units, force, delete_pool=True)
+            return Response(status=status.HTTP_201_CREATED)
+
         pools.delete_pool(pool)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
