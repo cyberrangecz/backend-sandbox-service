@@ -41,7 +41,6 @@ def create_definition(url: str, created_by: Optional[User], rev: str = None) -> 
     """
     top_def = get_definition(url, rev, settings.KYPO_CONFIG)
     validate_topology_definition(top_def)
-
     validate_docker_containers(url, rev, settings.KYPO_CONFIG)
 
     client = utils.get_terraform_client()
@@ -125,6 +124,7 @@ def get_definition(url: str, rev: str, config: KypoConfiguration) -> TopologyDef
                                   .format(SANDBOX_DEFINITION_FILENAME) + str(ex))
 
     top_def = load_definition(io.StringIO(definition))
+    validate_topology_definition(top_def)
     cache.set(cache_key, top_def)
     return top_def
 
@@ -220,6 +220,7 @@ def validate_topology_definition(topology_definition: TopologyDefinition) -> Non
     terraform_flavors = client.get_flavors_dict()
     used_flavors = [host.flavor for host in topology_definition.hosts] +\
                    [router.flavor for router in topology_definition.routers]
+
     for flavor in used_flavors:
         if flavor not in terraform_flavors:
             raise exceptions.ValidationError(f"Flavor {flavor} was not found on the terraform "

@@ -85,6 +85,8 @@ class TestGetDefinition:
                      return_value="test2")
         mocker.patch("kypo.sandbox_definition_app.lib.definitions.load_definition",
                      return_value="test3")
+        mocker.patch("kypo.sandbox_definition_app.lib.definitions.validate_topology_definition",
+                     return_value="")
         assert definitions.get_definition('url', 'rev', self.CFG) == "test3"
         definitions.load_definition.assert_called_with(definitions.io.StringIO("test1"))
 
