@@ -1,14 +1,17 @@
-import uuid
+import structlog
+from functools import partial
 from django.conf import settings
-from django.db import models
-from django.db.models import PositiveIntegerField
+from django.db import models, transaction
 from django.utils import timezone
 from django.contrib.auth.models import User
 
 from kypo.sandbox_common_lib import utils
 from kypo.sandbox_definition_app.models import Definition
+from kypo.sandbox_instance_app.lib.email_notifications import send_email, validate_emails_enabled
+from kypo.sandbox_service_project.settings import KYPO_CONFIG
 
 DEFAULT_SANDBOX_UUID = '1'
+LOG = structlog.get_logger()
 
 
 class Pool(models.Model):
@@ -40,6 +43,7 @@ class Pool(models.Model):
     )
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, null=True,
                                    help_text='The user that created this pool.')
+    send_emails = models.BooleanField(default=False, validators=[validate_emails_enabled])
     comment = models.CharField(
         default='',
         blank=True,
@@ -344,3 +348,59 @@ class SystemProcess(ExternalDependency):
 
     def __str__(self):
         return f'STAGE: {self.allocation_stage.id}, PROCESS: {self.process_id}'
+
+
+class SandboxRequestGroup(models.Model):
+    """
+    Represents allocation/cleanup requests created at the same time.
+
+    Keeps track of the request progress and sends email notifications.
+    """
+    pool = models.ForeignKey(Pool, on_delete=models.PROTECT)
+    unit_count = models.IntegerField()
+    email = models.EmailField()
+    failed_count = models.IntegerField(default=0)
+    finished_count = models.IntegerField(default=0)
+
+    def on_allocation_fail(self, exc):
+        with transaction.atomic():
+            self.refresh_from_db()
+            if self.failed_count == 0:
+                transaction.on_commit(partial(self._send_fail_notification, exc=exc))
+                LOG.debug("Sandbox allocation Failure email notification sent.")
+            self.failed_count += 1
+            self.finished_count += 1
+            self.save()
+            if self.finished_count == self.unit_count:
+                transaction.on_commit(self._send_summary_notification)
+                LOG.debug("Sandbox allocation End email notification sent.")
+
+    def on_allocation_end(self):
+        with transaction.atomic():
+            self.refresh_from_db()
+            self.finished_count += 1
+            self.save()
+            if self.finished_count == self.unit_count:
+                transaction.on_commit(self._send_summary_notification)
+                LOG.debug("Sandbox allocation End email notification sent.")
+
+    def _send_fail_notification(self, exc):
+        body = f"""
+        Something went wrong during sandbox allocation in Pool {self.pool.id}.
+        
+        Error detail: {str(exc)}
+        """
+        send_email(self.email, f"KYPO Pool {self.pool.id} - FAILED sandbox allocation",
+                   body, KYPO_CONFIG)
+
+    def _send_summary_notification(self):
+        body = f"""
+        All allocations you created in Pool {self.pool.id} have finished.
+
+        Successful - {self.finished_count - self.failed_count}
+        Failed - {self.failed_count}
+        """
+        self.delete()
+        send_email(self.email, f"KYPO Pool {self.pool.id} - FINAL sandbox allocations report",
+                   body, KYPO_CONFIG)
+

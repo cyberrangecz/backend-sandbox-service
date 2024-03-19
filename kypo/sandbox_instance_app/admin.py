@@ -24,3 +24,5 @@ admin.site.register(models.StackCleanupStage, ShowIdAdmin)
 admin.site.register(models.TerraformStack)
 admin.site.register(models.AllocationTerraformOutput, ShowIdAdmin)
 admin.site.register(models.CleanupTerraformOutput, ShowIdAdmin)
+
+admin.site.register(models.SandboxRequestGroup, ShowIdAdmin)

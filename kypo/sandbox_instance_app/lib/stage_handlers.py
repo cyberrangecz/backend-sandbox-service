@@ -1,7 +1,7 @@
 import abc
 import os
 import signal
-from typing import Type
+from typing import Type, Optional
 
 import docker.errors
 import structlog
@@ -15,12 +15,12 @@ from rq.job import Job
 from kypo.sandbox_ansible_app.lib.ansible import CleanupAnsibleRunner, \
     AllocationAnsibleRunner, AnsibleRunner
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage, AnsibleCleanupStage, \
-    Container, UserAnsibleCleanupStage, CleanupStage, ContainerCleanup
+    Container, UserAnsibleCleanupStage, CleanupStage, ContainerCleanup, UserAnsibleAllocationStage
 from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_definition_app.lib import definitions
 from kypo.sandbox_instance_app.models import Sandbox, TerraformStack, \
     SandboxAllocationUnit, StackAllocationStage, StackCleanupStage, \
-    RQJob, AllocationRQJob, CleanupRQJob, AllocationTerraformOutput, CleanupTerraformOutput
+    RQJob, AllocationRQJob, CleanupRQJob, AllocationTerraformOutput, CleanupTerraformOutput, SandboxRequestGroup
 
 LOG = structlog.get_logger()
 ALLOCATION_JOB_NAME = 'ansible-allocation-{}'
@@ -36,9 +36,10 @@ class StageHandler(abc.ABC):
     """
     _job_class: Type[RQJob]
 
-    def __init__(self, stage, name: str = None):
+    def __init__(self, stage, name: str = None, request_group: Optional[SandboxRequestGroup] = None):
         self.stage = stage
         self.name = name if name is not None else self.stage.__class__.__name__
+        self.request_group = request_group
 
     def execute(self) -> None:
         """
@@ -56,6 +57,8 @@ class StageHandler(abc.ABC):
         except Exception as ex:
             self.stage.failed = True
             self.stage.error_message = str(ex)
+            if self.request_group:
+                self.request_group.on_allocation_fail(ex)
             raise
         finally:
             self.stage.end = timezone.now()
@@ -203,9 +206,9 @@ class AllocationStackStageHandler(StackStageHandler):
     stage: StackAllocationStage
     _job_class: Type[AllocationRQJob] = AllocationRQJob
 
-    def __init__(self, stage):
+    def __init__(self, stage, request_group: Optional[SandboxRequestGroup] = None):
         self.process = None
-        super().__init__(stage)
+        super().__init__(stage, request_group=request_group)
 
     def _execute(self) -> None:
         """
@@ -272,8 +275,9 @@ class AnsibleStageHandler(StageHandler):
     Generalizes common tasks of stages executing Ansible tasks on the remote infrastructure.
     """
 
-    def __init__(self, stage: [AnsibleCleanupStage, AnsibleAllocationStage], name: str = None):
-        super().__init__(stage, name)
+    def __init__(self, stage: [AnsibleCleanupStage, AnsibleAllocationStage], name: str = None,
+                 request_group: Optional[SandboxRequestGroup] = None):
+        super().__init__(stage, name,  request_group=request_group)
         self.stage = stage
 
     @abc.abstractmethod
@@ -310,8 +314,9 @@ class AllocationAnsibleStageHandler(AnsibleStageHandler):
     stage: AnsibleAllocationStage
     _job_class: Type[AllocationRQJob] = AllocationRQJob
 
-    def __init__(self, stage: AnsibleAllocationStage, sandbox: Sandbox = None, name: str = None):
-        super().__init__(stage, name)
+    def __init__(self, stage: AnsibleAllocationStage, sandbox: Sandbox = None, name: str = None,
+                 request_group: Optional[SandboxRequestGroup] = None):
+        super().__init__(stage, name, request_group=request_group)
 
         self.allocation_unit = stage.allocation_request_fk_many.allocation_unit
         self.directory_path = self.create_directory_path(self.allocation_unit)
@@ -337,6 +342,9 @@ class AllocationAnsibleStageHandler(AnsibleStageHandler):
 
             container.get_container_outputs()
             container.check_container_status()
+            if isinstance(self.stage, UserAnsibleAllocationStage) and self.request_group:
+                LOG.debug(f"Allocation {self.allocation_unit.id} finished, incrementing finished allocation count.")
+                self.request_group.on_allocation_end()
         finally:
             container.delete()
 

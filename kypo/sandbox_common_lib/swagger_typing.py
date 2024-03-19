@@ -79,6 +79,8 @@ POOL_REQUEST_BODY = openapi.Schema(
         'definition_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='Sandbox definition ID'),
         'max_size': openapi.Schema(type=openapi.TYPE_INTEGER,
                                    description='Maximum number of SandboxAllocationUnits'),
+        'send_emails': openapi.Schema(type=openapi.TYPE_BOOLEAN,
+                                      description='Send email notifications of allocation progress.')
     },
     required=['definition_id', 'max_size']
 )

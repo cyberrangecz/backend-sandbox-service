@@ -73,3 +73,9 @@ class ImproperlyConfigured(ApiException):
     Raised when application was not configured properly.
     """
     pass
+
+
+class EmailException(ApiException):
+    """
+    Raised when email notifications are not sent successfully.
+    """

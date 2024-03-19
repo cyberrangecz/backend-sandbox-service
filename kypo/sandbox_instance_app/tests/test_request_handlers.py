@@ -5,7 +5,8 @@ from unittest.mock import MagicMock, call
 from kypo.sandbox_common_lib import exceptions as api_exceptions
 from kypo.sandbox_ansible_app.models import NetworkingAnsibleAllocationStage,\
     UserAnsibleAllocationStage, NetworkingAnsibleCleanupStage, UserAnsibleCleanupStage
-from kypo.sandbox_instance_app.models import StackAllocationStage, StackCleanupStage, SandboxAllocationUnit
+from kypo.sandbox_instance_app.models import StackAllocationStage, StackCleanupStage, SandboxAllocationUnit, \
+    SandboxRequestGroup
 
 from kypo.sandbox_instance_app.lib import request_handlers
 
@@ -169,7 +170,7 @@ class TestAllocationRequestHandlerUnit:
         self.handler._create_db_stage = MagicMock()
         self.handler._create_db_stage.side_effect = [fake_stack_stage, fake_network_stage, fake_user_stage]
 
-        handlers = self.handler._create_stage_handlers(sandbox)
+        handlers = self.handler._create_stage_handlers(sandbox, SandboxRequestGroup())
 
         self.handler._create_db_stage.assert_has_calls([
             call(StackAllocationStage),

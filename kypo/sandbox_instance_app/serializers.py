@@ -32,7 +32,7 @@ class PoolSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Pool
         fields = ('id', 'definition_id', 'size', 'max_size', 'lock_id', 'rev', 'rev_sha', 'comment', 'visible',
-                  'created_by', 'hardware_usage', 'definition')
+                  'created_by', 'hardware_usage', 'definition', 'send_emails')
         read_only_fields = ('id', 'definition_id', 'size', 'lock', 'rev', 'rev_sha', 'created_by', 'hardware_usage',
                             'definition')
 

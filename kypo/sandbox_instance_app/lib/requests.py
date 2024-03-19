@@ -31,7 +31,8 @@ def restart_allocation_stages(unit: SandboxAllocationUnit) -> SandboxAllocationU
     return unit
 
 
-def create_allocations_requests(pool: Pool, count: int, created_by: Optional[User]) -> List[SandboxAllocationUnit]:
+def create_allocations_requests(pool: Pool, count: int, created_by: Optional[User]) \
+        -> List[SandboxAllocationUnit]:
     """Batch version of create_allocation_request. Create count Sandbox Requests."""
 
     with transaction.atomic():

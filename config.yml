@@ -148,6 +148,18 @@ application_configuration:
         #  * kubernetes: storing state file as Kubernetes secret (preferred)
         backend_type: 'local'
 
+    # SMPT server used for sending the email
+    #smtp_server: ""
+
+    # Port used by the used protocol, ex. ssl: 465
+    #smtp_port: 25
+
+    # Email used to send allocation notifications
+    #sender_email: "sandbox.service@kypo.cz"
+
+    # Password for sender_email, LEAVE BLANCK for unauthenticated and unsecured emails
+    #sender_email_password: ""
+
     sandbox_configuration:
         # The name or ID of network in OpenStack where all sandboxes will be deployed.
         #base_network: base_network

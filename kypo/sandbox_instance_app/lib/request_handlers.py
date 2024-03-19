@@ -2,21 +2,20 @@ import abc
 import structlog
 from functools import partial
 from typing import List, Type, Callable, Union, Optional
+
+from django.contrib.auth.models import User
 from rq import Queue
 from rq.job import Job
 import django_rq
 from django.db import transaction
 from django.conf import settings
-from django.contrib.auth.models import User
-
 from kypo.sandbox_common_lib import exceptions, utils
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage,\
     NetworkingAnsibleAllocationStage, NetworkingAnsibleCleanupStage,\
     UserAnsibleAllocationStage, UserAnsibleCleanupStage
-
-from kypo.sandbox_instance_app.models import Sandbox, SandboxAllocationUnit,\
-    SandboxRequest, AllocationRequest, CleanupRequest,\
-    StackAllocationStage, CleanupStage, StackCleanupStage, AllocationRQJob, CleanupRQJob, Pool
+from kypo.sandbox_instance_app.models import Sandbox, SandboxAllocationUnit, \
+    SandboxRequest, AllocationRequest, CleanupRequest, \
+    StackAllocationStage, CleanupStage, StackCleanupStage, AllocationRQJob, CleanupRQJob, Pool, SandboxRequestGroup
 from kypo.sandbox_instance_app.lib.stage_handlers import StageHandler, StackStageHandler,\
     AllocationStackStageHandler, CleanupStackStageHandler, AnsibleStageHandler,\
     AllocationAnsibleStageHandler, CleanupAnsibleStageHandler
@@ -108,6 +107,13 @@ class RequestHandler(abc.ABC):
         finalizing_stage_function.__module__ = func.__module__
         return finalizing_stage_function
 
+    @staticmethod
+    def create_request_group(units: List[SandboxAllocationUnit]):
+        email = units[0].created_by.email
+        group = SandboxRequestGroup.objects.create(pool=units[0].pool, unit_count=len(units), email=email)
+        group.save()
+        return group
+
 
 class AllocationRequestHandler(RequestHandler):
     """
@@ -129,13 +135,18 @@ class AllocationRequestHandler(RequestHandler):
 
     def _create_allocation_jobs(self, units: List[SandboxAllocationUnit],
                                 created_by: Optional[User]):
+        if units[0].pool.send_emails and created_by.email:
+            allocation_group = self.create_request_group(units)
+        else:
+            allocation_group = None
+
         for unit in units:
             LOG.info('Creating sandbox for allocation unit: %s', unit.id)
             self.request = AllocationRequest.objects.create(allocation_unit=unit)
             pri_key, pub_key = utils.generate_ssh_keypair()
             sandbox = Sandbox(id=sandboxes.generate_new_sandbox_uuid(), allocation_unit=unit,
                               private_user_key=pri_key, public_user_key=pub_key)
-            stage_handlers = self._create_stage_handlers(sandbox)
+            stage_handlers = self._create_stage_handlers(sandbox, allocation_group)
             self._enqueue_stages(sandbox, stage_handlers)
 
     def enqueue_request(self, units, created_by: Optional[User]) -> None:
@@ -161,24 +172,24 @@ class AllocationRequestHandler(RequestHandler):
         return stage_class.objects.create(allocation_request=self.request,
                                           allocation_request_fk_many=self.request, *args, **kwargs)
 
-    def _create_stage_handlers(self, sandbox: Sandbox) -> List[StageHandler]:
+    def _create_stage_handlers(self, sandbox: Sandbox, group: Optional[SandboxRequestGroup]) -> List[StageHandler]:
         """
         Create a new DB stages for this request and return their handlers.
         """
         stack_stage = self._create_db_stage(StackAllocationStage)
-        stack_stage_handler = AllocationStackStageHandler(stack_stage)
+        stack_stage_handler = AllocationStackStageHandler(stack_stage, request_group=group)
 
         networking_stage = \
             self._create_db_stage(NetworkingAnsibleAllocationStage,
                                   repo_url=settings.KYPO_CONFIG.ansible_networking_url,
                                   rev=settings.KYPO_CONFIG.ansible_networking_rev)
-        networking_stage_handler = AllocationAnsibleStageHandler(networking_stage, sandbox)
+        networking_stage_handler = AllocationAnsibleStageHandler(networking_stage, sandbox, request_group=group)
 
         user_stage = \
             self._create_db_stage(UserAnsibleAllocationStage,
                                   repo_url=self.request.allocation_unit.pool.definition.url,
                                   rev=self.request.allocation_unit.pool.rev_sha)
-        user_stage_handler = AllocationAnsibleStageHandler(user_stage, sandbox)
+        user_stage_handler = AllocationAnsibleStageHandler(user_stage, sandbox, request_group=group)
 
         return [stack_stage_handler, networking_stage_handler, user_stage_handler]
 

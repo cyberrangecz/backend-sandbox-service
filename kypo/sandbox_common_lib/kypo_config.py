@@ -187,6 +187,13 @@ class KypoConfiguration(Object):
 
     trc = Attribute(type=TransformationConfiguration, key='sandbox_configuration')
 
+    # Email allocation notifications
+    smtp_server = Attribute(type=str, default=None)
+    # Port of the used encryption protocol, ex. ssl, tsl
+    smtp_port = Attribute(type=int, default=25)
+    sender_email = Attribute(type=str, default="sandbox.service@kypo.cz")
+    sender_email_password = Attribute(type=str, default=None)
+
     def __init__(self, **kwargs):
         for key, val in kwargs.items():
             setattr(self, key, val)
