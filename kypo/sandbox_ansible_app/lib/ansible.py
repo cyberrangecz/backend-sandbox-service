@@ -134,7 +134,6 @@ class AnsibleRunner:
         return os.path.join(self.ANSIBLE_DOCKER_SSH_DIR.bind, os.path.basename(filename))
 
     def prepare_git_credentials(self, config: KypoConfiguration):
-        # TODO refactor with multiple gitlab feature
         username = config.git_user
         credentials = ""
         for host, token in config.git_providers.items():
@@ -160,7 +159,6 @@ class AllocationAnsibleRunner(AnsibleRunner):
         ans_ssh_config = sandboxes.get_ansible_sshconfig(sandbox, self.container_mgmt_private_key,
                                                          self.container_proxy_private_key)
         self.save_file(self.host_ssh_path('config'), str(ans_ssh_config))
-
 
     def prepare_inventory_file(self, sandbox: Sandbox):
         """

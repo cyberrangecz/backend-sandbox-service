@@ -14,7 +14,6 @@ def get_rest_server(url) -> str:
     return f"https://{git_server[:slash_index]}/"
 
 
-
 def get_git_token(rest_server, config: KypoConfiguration) -> Optional[str]:
     """
     Takes a base git url, tries to find a match in config.

@@ -16,7 +16,7 @@ class TestGitlabProvider:
     URL1 = 'https://gitlab.com/kypo-crp/backend-python/kypo-sandbox-service.git'
     URL2 = 'https://gitlab.com/kypo-crp/backend-python/sub-group/GRPX/kypo-sandbox-service.git'
     URL3 = 'https://gitlab.com:123456/kypo-sandbox-service.git'
-    CFG = KypoConfiguration(git_providers={'https://gitlab.com:8081': "not-token"})
+    CFG = KypoConfiguration()
 
     @staticmethod
     def get_expected_url(url):

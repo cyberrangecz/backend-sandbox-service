@@ -60,6 +60,21 @@ application_configuration:
     # The level of log verbosity. One of: NOTSET, DEBUG, INFO, WARNING, ERROR, FATAL, CRITICAL.
     #log_level: INFO
 
+    # DEPRECATED The type of Git repositories. One of: INTERNAL, GITLAB.
+    git_type: INTERNAL
+
+    # DEPRECATED Git server hostname or IP.
+    git_server: gitlab.com
+
+    # DEPRECATED Git server ssh port
+    git_ssh_port: 22
+
+    # DEPRECATED The address of Git REST server with protocol (optionally port)
+    git_rest_server: https://gitlab.com/
+
+    # DEPRECATED The SSH private key that kypo2-django-openstack uses to communicate with Git repository.
+    git_private_key: ~/.ssh/git_rsa_key
+
     # The name of user used for communication with Git repository.
     git_user: git
 

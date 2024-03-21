@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
-from urllib import parse
 
-import git
 import gitlab
 import requests
 import structlog
@@ -39,7 +37,7 @@ class DefinitionProvider(ABC):
         except giturlparse.parser.ParserError:
             raise exceptions.GitError(f"Could not parse GIT URL: url={url}")
 
-        if not (url.startswith("https://")) and not (url.startswith("http://")): # or not url.endswith(".git"):
+        if not url.startswith("https://") or not url.endswith(".git"):
             raise exceptions.GitError(
                 f"Invalid URL. Has to be a GIT URL cloned with HTTPS: expected="
                 f"https://example.gitlab.com/[url path].git, actual={url}")

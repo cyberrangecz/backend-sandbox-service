@@ -74,7 +74,7 @@ class TestLoadDefinition:
 
 
 class TestGetDefinition:
-    CFG = KypoConfiguration(git_providers={'http://localhost.lan:8081': 'no-token'})
+    CFG = KypoConfiguration()
 
     def test_get_definition(self, mocker):
         topology_provider = mocker.MagicMock()
@@ -100,6 +100,6 @@ class TestGetDefinition:
 class TestGetDefProvider:
     def test_get_def_provider_gitlab(self):
         url_git = 'https://gitlab.com/kypo-crp/backend-python/kypo-sandbox-service.git'
-        cfg_git = KypoConfiguration(git_providers={'https://gitlab.com:8081': "not-token"})
+        cfg_git = KypoConfiguration()
         assert isinstance(definitions.get_def_provider(url_git, cfg_git),
                           GitlabProvider)
