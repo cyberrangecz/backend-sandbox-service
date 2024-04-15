@@ -214,19 +214,19 @@ CACHES = {
         # Use DB 1 for caching
         'LOCATION': 'redis://{}:{}/1'.format(KYPO_CONFIG.redis.host, KYPO_CONFIG.redis.port),
         # Mitigate missing max entries setting for Redis cache
-        'TIMEOUT': 86400 * 30,  # Expire after 30 days
+        'TIMEOUT': KYPO_CONFIG.redis.default_cache_timeout,
     },
     'uag_auth_groups_cache': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
         # Use DB 1 for caching
         'LOCATION': 'redis://{}:{}/1'.format(KYPO_CONFIG.redis.host, KYPO_CONFIG.redis.port),
-        'TIMEOUT': 86400 * 30,  # Expire after 30 days
+        'TIMEOUT': KYPO_CONFIG.redis.uag_cache_timeout,
     },
     'topology_cache': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
         # Use DB 1 for caching
         'LOCATION': 'redis://{}:{}/1'.format(KYPO_CONFIG.redis.host, KYPO_CONFIG.redis.port),
-        'TIMEOUT': 86400 * 30,  # Expire after 30 days
+        'TIMEOUT': KYPO_CONFIG.redis.topology_cache_timeout,
     },
 }
 

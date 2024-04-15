@@ -192,3 +192,7 @@ application_configuration:
         host: "localhost"
         port: 6379
         db: 0
+        # In seconds
+        default_cache_timeout: 86400
+        uag_cache_timeout: 86400
+        topology_cache_timeout: 86400

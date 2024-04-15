@@ -38,6 +38,7 @@ DATABASE_USER = "postgres"
 REDIS_HOST = "localhost"
 REDIS_PORT = 6379
 REDIS_DB = 0
+REDIS_TIMEOUT = 86400 * 30
 
 
 class ProxyJump(Object):
@@ -79,6 +80,9 @@ class Redis(Object):
     host = Attribute(type=str, default=REDIS_HOST)
     port = Attribute(type=int, default=REDIS_PORT)
     db = Attribute(type=int, default=REDIS_DB)
+    default_cache_timeout = Attribute(type=int, default=REDIS_TIMEOUT)
+    uag_cache_timeout = Attribute(type=int, default=REDIS_TIMEOUT)
+    topology_cache_timeout = Attribute(type=int, default=REDIS_TIMEOUT)
 
 
 class GitType(Enum):
