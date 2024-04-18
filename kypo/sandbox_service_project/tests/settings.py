@@ -164,6 +164,13 @@ CACHES = {
             'MAX_ENTRIES': 300  # Django default value is 300 (2 kB per item = 0.6 MB)
         }
     },
+    'uag_auth_groups_cache': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'uag_auth_groups_cache',
+        'OPTIONS': {
+            'MAX_ENTRIES': 500
+        }
+    },
     'topology_cache': {
         'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
         'LOCATION': 'topology_cache',
@@ -172,7 +179,27 @@ CACHES = {
             'CULL_FREQUENCY': 0,  # culls the entire cache, makes culling more efficient
             'MAX_ENTRIES': 300
         }
-    }
+    },
+}
+
+
+SANDBOX_UAG = {
+    # Need to be set when using JWTAccessTokenAuthentication,
+    # which supports multiple OIDC providers (parsing them from the token).
+    # Only those listed here will be allowed.
+    'ALLOWED_OIDC_PROVIDERS': tuple(KYPO_SERVICE_CONFIG.authentication.allowed_oidc_providers),
+
+    # User and Group roles registration endpoint URL
+    'ROLES_REGISTRATION_URL': None,
+    # User and Group roles acquisition endpoint URL
+    'ROLES_ACQUISITION_URL': None,
+    # Path to roles definition file
+    'ROLES_DEFINITION_PATH': None,
+
+    # User and Group information configuration
+    'MICROSERVICE_NAME': KYPO_SERVICE_CONFIG.microservice_name,
+    'ROLE_PREFIX': "ROLE",
+    'ENDPOINT': __package__,
 }
 
 RQ_QUEUES = {

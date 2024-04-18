@@ -24,6 +24,7 @@ from kypo.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUni
 from kypo.sandbox_instance_app.lib import stage_handlers
 from kypo.sandbox_common_lib.swagger_typing import POOL_RESPONSE_SCHEMA, SANDBOX_DEFINITION_SCHEMA, list_response, \
     POOL_REQUEST_BODY
+from kypo.sandbox_uag.permissions import AdminPermission, OrganizerPermission
 
 LOG = structlog.get_logger()
 
@@ -483,6 +484,7 @@ class TerraformAllocationStageOutputListView(generics.ListAPIView):
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
 class PoolSandboxListView(generics.ListAPIView):
     serializer_class = serializers.SandboxSerializer
+    permission_classes = [OrganizerPermission | AdminPermission]
 
     def get_queryset(self):
         pool_id = self.kwargs.get('pool_id')
@@ -524,6 +526,7 @@ class SandboxDetailView(generics.RetrieveAPIView):
     serializer_class = serializers.SandboxSerializer
     lookup_url_kwarg = "sandbox_uuid"
     queryset = Sandbox.objects.all()
+    permissions_classes = [OrganizerPermission | AdminPermission]
 
 
 @utils.add_error_responses_doc('get', [401, 403, 404, 500])
