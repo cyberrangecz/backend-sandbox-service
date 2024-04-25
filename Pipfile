@@ -20,7 +20,7 @@ pytest-mock = "*"
 pytest-django = "*"
 
 [packages]
-kypo-terraform-client = { index = "kypo", version = "~=0.2.4" }
+kypo-terraform-client = { index = "kypo", version = ">=0.2.8" }
 # newer versions of pipenv require all dependencies from custom index to be specified
 kypo-python-commons = { index = "kypo", version = "~=0.1.0" }
 kypo-openstack-lib = { index = "kypo", version = "~=0.38.0" }

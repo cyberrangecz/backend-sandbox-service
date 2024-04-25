@@ -31,10 +31,13 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 RUN apt-get update && apt-get install -y git redis supervisor gnupg software-properties-common curl
 
-## Install Terraform
-RUN curl https://apt.releases.hashicorp.com/gpg | gpg --dearmor | tee /usr/share/keyrings/hashicorp-archive-keyring.gpg
-RUN echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/hashicorp.list
-RUN apt-get update && apt-get install -y terraform
+## Install OpenTofu from script
+RUN apt-get install unzip
+
+RUN curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh -o install-opentofu.sh
+RUN chmod +x install-opentofu.sh
+RUN ./install-opentofu.sh --install-method standalone
+RUN rm install-opentofu.sh
 
 COPY bin bin
 COPY kypo kypo
