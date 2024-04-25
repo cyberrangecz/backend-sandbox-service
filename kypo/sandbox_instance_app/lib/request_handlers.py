@@ -127,7 +127,7 @@ class AllocationRequestHandler(RequestHandler):
         Handles request stages creation (or restart) and their enqueuing.
         """
         finalizing_stage_function = \
-            self._get_finalizing_stage_function(self._save_sandbox_to_database, sandbox)
+            self._get_finalizing_stage_function(self._mark_sandbox_as_ready, sandbox)
         on_commit_method = \
             partial(self._enqueue_request, stage_handlers, finalizing_stage_function)
 
@@ -146,6 +146,7 @@ class AllocationRequestHandler(RequestHandler):
             pri_key, pub_key = utils.generate_ssh_keypair()
             sandbox = Sandbox(id=sandboxes.generate_new_sandbox_uuid(), allocation_unit=unit,
                               private_user_key=pri_key, public_user_key=pub_key)
+            sandbox.save()
             stage_handlers = self._create_stage_handlers(sandbox, allocation_group)
             self._enqueue_stages(sandbox, stage_handlers)
 
@@ -155,9 +156,11 @@ class AllocationRequestHandler(RequestHandler):
     def _create_restart_jobs(self, unit: SandboxAllocationUnit):
         LOG.info('Restarting sandbox allocation unit: %s', unit.id)
         self.request = unit.allocation_request
+        Sandbox.objects.get(allocation_unit=unit).delete()
         pri_key, pub_key = utils.generate_ssh_keypair()
         sandbox = Sandbox(id=sandboxes.generate_new_sandbox_uuid(), allocation_unit=unit,
                           private_user_key=pri_key, public_user_key=pub_key)
+        sandbox.save()
         stage_handlers = self._restart_stage_handlers(sandbox)
         self._enqueue_stages(sandbox, stage_handlers)
 
@@ -242,10 +245,13 @@ class AllocationRequestHandler(RequestHandler):
         return [user_handler, networking_handler, stack_handler]
 
     @staticmethod
-    def _save_sandbox_to_database(sandbox) -> None:
+    def _mark_sandbox_as_ready(sandbox) -> None:
         """
         Named method used as finalizing stage function.
+
+        Sets sandbox.ready to True, meaning it can be used for trainings.
         """
+        sandbox.ready = True
         sandbox.save()
 
 

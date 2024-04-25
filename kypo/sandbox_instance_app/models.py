@@ -114,6 +114,10 @@ class Sandbox(models.Model):
     public_user_key = models.TextField(
         help_text='Public key for management access.'
     )
+    ready = models.BooleanField(
+        default=False,
+        help_text='Is the sandbox ready to use for trainings.'
+    )
 
     class Meta:
         ordering = ['id']

@@ -45,6 +45,7 @@
     allocation_unit: 1
     private_user_key: private_user_key
     public_user_key: public_user_key
+    ready: True
 
 - model: sandbox_instance_app.allocationrequest
   pk: 1

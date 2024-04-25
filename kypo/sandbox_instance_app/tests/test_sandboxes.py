@@ -33,7 +33,9 @@ class TestGetSandbox:
     def test_id_generation_success(self, created_by):
         au: SandboxAllocationUnit = SandboxAllocationUnit.objects.create(pool_id=1,
                                                                          created_by=created_by)
-        sandbox: Sandbox = Sandbox.objects.create(id=64, allocation_unit=au)
+        sandbox: Sandbox = Sandbox.objects.create(id=64, allocation_unit=au, ready=True)
+        print(sandbox.id)
+        print(Sandbox.objects.all())
         assert sandboxes.get_sandbox(sandbox.id) is not None
 
 

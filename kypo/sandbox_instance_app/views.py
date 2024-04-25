@@ -580,12 +580,12 @@ class PoolSandboxListView(generics.ListAPIView):
         pool_id = self.kwargs.get('pool_id')
         pool = get_object_or_404(Pool, pk=pool_id)
         alloc_unit_ids = [unit.id for unit in pool.allocation_units.all()]
-        return Sandbox.objects.filter(allocation_unit_id__in=alloc_unit_ids)
+        return Sandbox.objects.filter(allocation_unit_id__in=alloc_unit_ids, ready=True)
 
 
 class SandboxGetAndLockView(generics.RetrieveAPIView):
     serializer_class = serializers.SandboxSerializer
-    queryset = Sandbox.objects.all()  # To allow trainee to access training run!
+    queryset = Sandbox.objects.filter(ready=True)  # To allow trainee to access training run!
     lookup_url_kwarg = "pool_id"
 
     @swagger_auto_schema(
@@ -633,7 +633,7 @@ class SandboxDetailView(generics.RetrieveAPIView):
     """get: Retrieve a sandbox."""
     serializer_class = serializers.SandboxSerializer
     lookup_url_kwarg = "sandbox_uuid"
-    queryset = Sandbox.objects.all()
+    queryset = Sandbox.objects.filter(ready=True)
     permissions_classes = [OrganizerPermission | AdminPermission]
 
 
@@ -691,7 +691,7 @@ class SandboxTopologyView(generics.RetrieveAPIView):
     get: Get topology data for given sandbox.
     Hosts specified as hidden are filtered out, but the network is still visible.
     """
-    queryset = Sandbox.objects.all()
+    queryset = Sandbox.objects.filter(ready=True)
     lookup_url_kwarg = "sandbox_uuid"
     serializer_class = serializers.TopologySerializer
 
@@ -710,7 +710,7 @@ class SandboxTopologyView(generics.RetrieveAPIView):
     }
 ))
 class SandboxVMDetailView(generics.GenericAPIView):
-    queryset = Sandbox.objects.all()
+    queryset = Sandbox.objects.filter(ready=True)
     lookup_url_kwarg = "sandbox_uuid"
     serializer_class = serializers.NodeSerializer
 

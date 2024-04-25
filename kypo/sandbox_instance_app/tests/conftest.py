@@ -395,7 +395,8 @@ def sandbox(allocation_unit):
         id=allocation_unit.id,
         allocation_unit=allocation_unit,
         private_user_key='private-key',
-        public_user_key='public-key'
+        public_user_key='public-key',
+        ready=True
     )
 
 

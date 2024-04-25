@@ -64,16 +64,19 @@ def post_answers(user_id, access_token, generated_variables):
         raise exceptions.ApiException(f'Sending generated variables failed. Error: {exc}')
 
 
-def get_sandbox(sb_pk: int) -> Sandbox:
+def get_sandbox(sb_pk: int, include_unfinished=False) -> Sandbox:
     """
     Retrieve sandbox instance from DB (or raises 404)
     and possibly update its state.
 
     :param sb_pk: Sandbox primary key (ID)
+    :param include_unfinished: Allow returning an unfinished sandbox
     :return: Sandbox instance from DB
     :raise Http404: if sandbox does not exist
     """
-    return get_object_or_404(Sandbox, pk=sb_pk)
+    if include_unfinished:
+        return get_object_or_404(Sandbox, pk=sb_pk)
+    return get_object_or_404(Sandbox, pk=sb_pk, ready=True)
 
 
 def get_topology_definition_and_containers(sandbox: Sandbox) -> (TopologyDefinition, DockerContainers):

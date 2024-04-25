@@ -185,8 +185,8 @@ class SandboxSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Sandbox
-        fields = ('id', 'lock_id', 'allocation_unit_id')
-        read_only_fields = ('id', 'lock', 'allocation_unit_id')
+        fields = ('id', 'lock_id', 'allocation_unit_id', 'ready')
+        read_only_fields = ('id', 'lock', 'allocation_unit_id', 'ready')
 
     @staticmethod
     def get_lock_id(obj: models.Sandbox) -> Optional[int]:
