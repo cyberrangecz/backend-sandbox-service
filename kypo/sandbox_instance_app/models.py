@@ -356,7 +356,7 @@ class SandboxRequestGroup(models.Model):
 
     Keeps track of the request progress and sends email notifications.
     """
-    pool = models.ForeignKey(Pool, on_delete=models.PROTECT)
+    pool = models.ForeignKey(Pool, on_delete=models.CASCADE)
     unit_count = models.IntegerField()
     email = models.EmailField()
     failed_count = models.IntegerField(default=0)

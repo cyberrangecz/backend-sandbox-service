@@ -40,6 +40,7 @@ class PoolSerializer(serializers.ModelSerializer):
         instance.max_size = validated_data.get('max_size', instance.max_size)
         instance.comment = validated_data.get('comment', instance.comment)
         instance.visible = validated_data.get('visible', instance.visible)
+        instance.send_emails = validated_data.get('send_emails', instance.send_emails)
         instance.save()
         return instance
 

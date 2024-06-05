@@ -21,7 +21,7 @@ def send_email(receiver_email, subject, body, kypo_config: KypoConfiguration):
     em['Subject'] = subject
     em.set_content(body)
 
-    if kypo_config.sender_email_password is None:
+    if not kypo_config.sender_email_password:
         send_insecure_email(receiver_email, em, kypo_config)
     else:
         send_secure_email(receiver_email, em, kypo_config)

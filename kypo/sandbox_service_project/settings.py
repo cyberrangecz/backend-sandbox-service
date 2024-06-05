@@ -180,7 +180,7 @@ if KYPO_SERVICE_CONFIG.authentication.authenticated_rest_api:
     REST_FRAMEWORK.update({
         'DEFAULT_PERMISSION_CLASSES': (
             'kypo.sandbox_common_lib.permissions.ModelPermissions',
-            'kypo.sandbox_common_lib.permissions.IsAuthenticated',
+            'rest_framework.permissions.IsAuthenticated',
         ),
         'DEFAULT_AUTHENTICATION_CLASSES': (
             # For testing purposes, uncomment BasicAuthentication.
