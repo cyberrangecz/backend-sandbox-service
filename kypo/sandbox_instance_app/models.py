@@ -394,13 +394,14 @@ class SandboxRequestGroup(models.Model):
                    body, KYPO_CONFIG)
 
     def _send_summary_notification(self):
-        body = f"""
-        All allocations you created in Pool {self.pool.id} have finished.
-
-        Successful - {self.finished_count - self.failed_count}
-        Failed - {self.failed_count}
-        """
-        self.delete()
-        send_email(self.email, f"KYPO Pool {self.pool.id} - FINAL sandbox allocations report",
-                   body, KYPO_CONFIG)
-
+        try:
+            body = f"""
+            All allocations you created in Pool {self.pool.id} have finished.
+    
+            Successful - {self.finished_count - self.failed_count}
+            Failed - {self.failed_count}
+            """
+            send_email(self.email, f"KYPO Pool {self.pool.id} - FINAL sandbox allocations report",
+                       body, KYPO_CONFIG)
+        finally:
+            self.delete()
