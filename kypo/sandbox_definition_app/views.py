@@ -19,13 +19,21 @@ from kypo.sandbox_definition_app.models import Definition
 from kypo.sandbox_instance_app import serializers as instance_serializers
 from kypo.sandbox_instance_app.lib import sandboxes
 from kypo.sandbox_instance_app.lib.topology import Topology
+import drf_yasg.openapi as openapi
 
 LOG = structlog.get_logger()
+
+COMMON_RESPONSE_PATTERNS = {
+    401: openapi.Response('Unauthorized'),
+    403: openapi.Response('Forbidden'),
+    404: openapi.Response('Not Found'),
+    500: openapi.Response('Internal Server Error')
+}
 
 
 @method_decorator(name='get', decorator=swagger_auto_schema(
     responses={
-        200: list_response(SANDBOX_DEFINITION_SCHEMA),
+        200: openapi.Response('List of Sandbox Definitions', SANDBOX_DEFINITION_SCHEMA),
         **{k: v for k, v in utils.ERROR_RESPONSES.items()
            if k in [401, 403, 500]}
     }
@@ -57,13 +65,11 @@ class DefinitionListCreateView(generics.ListCreateAPIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-@utils.add_error_responses_doc('delete', [401, 403, 404, 500])
 @method_decorator(name='get', decorator=swagger_auto_schema(
-    responses={
-        200: SANDBOX_DEFINITION_SCHEMA,
-        **{k: v for k, v in utils.ERROR_RESPONSES.items()
-           if k in [401, 403, 404, 500]}
-    }
+    responses={200: SANDBOX_DEFINITION_SCHEMA, **COMMON_RESPONSE_PATTERNS}
+))
+@method_decorator(name='delete', decorator=swagger_auto_schema(
+    responses={**COMMON_RESPONSE_PATTERNS}
 ))
 class DefinitionDetailDeleteView(generics.RetrieveDestroyAPIView):
     """
@@ -76,7 +82,13 @@ class DefinitionDetailDeleteView(generics.RetrieveDestroyAPIView):
     lookup_url_kwarg = "definition_id"
 
 
-@utils.add_error_responses_doc('get', [401, 403, 404, 500])
+@method_decorator(name='get', decorator=swagger_auto_schema(
+    responses={
+        200: openapi.Response('List of Definition Refs',
+                              serializers.DefinitionSerializer(many=True)),
+        **COMMON_RESPONSE_PATTERNS
+    }
+))
 class DefinitionRefsListView(generics.ListAPIView):
     """
     get: Retrieve a list of definition refs (branches and tags).
@@ -91,7 +103,12 @@ class DefinitionRefsListView(generics.ListAPIView):
         return provider.get_refs()
 
 
-@utils.add_error_responses_doc('get', [401, 403, 404, 500])
+@method_decorator(name='get', decorator=swagger_auto_schema(
+    responses={
+        200: instance_serializers.TopologySerializer(many=True),
+        **COMMON_RESPONSE_PATTERNS
+    }
+))
 class DefinitionTopologyView(generics.RetrieveAPIView):
     """
     get: Retrieve topology visualisation data from TopologyDefinition
@@ -110,18 +127,17 @@ class DefinitionTopologyView(generics.RetrieveAPIView):
         return Topology(client.get_topology_instance(topology_definition, containers))
 
 
+@method_decorator(name='post', decorator=swagger_auto_schema(
+    responses={
+        201: serializers.LocalVariableSerializer(many=True),
+        **COMMON_RESPONSE_PATTERNS
+    }
+))
 class LocalSandboxVariablesView(generics.CreateAPIView):
     queryset = Definition.objects.all()
     lookup_url_kwarg = "definition_id"
     serializer_class = serializers.LocalSandboxVariablesSerializer
 
-    @swagger_auto_schema(
-        responses={
-            201: serializers.LocalVariableSerializer(many=True),
-            **{k: v for k, v in utils.ERROR_RESPONSES.items()
-               if k in [400, 401, 403, 404, 500]}
-        }
-    )
     def post(self, request, *args, **kwargs):
         """Generate variables for local sandboxes, send it to answers-storage."""
         user_id = request.data.get('user_id')
@@ -136,7 +152,9 @@ class LocalSandboxVariablesView(generics.CreateAPIView):
         return Response(serialized_variables.data)
 
 
-@utils.add_error_responses_doc('get', [401, 403, 404, 500])
+@method_decorator(name='get', decorator=swagger_auto_schema(
+    responses={200: openapi.Response('Variables List'), **COMMON_RESPONSE_PATTERNS}
+))
 class DefinitionVariablesView(APIView):
     queryset = Definition.objects.none()
 

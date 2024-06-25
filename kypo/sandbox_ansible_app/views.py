@@ -1,6 +1,9 @@
 import structlog
 from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
 from rest_framework import generics
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 from kypo.sandbox_common_lib import utils
 from kypo.sandbox_instance_app.models import AllocationRequest, CleanupRequest
@@ -8,8 +11,18 @@ from kypo.sandbox_ansible_app import serializers
 
 LOG = structlog.get_logger()
 
+COMMON_RESPONSE_PATTERNS = {
+    401: openapi.Response('Unauthorized'),
+    403: openapi.Response('Forbidden'),
+    404: openapi.Response('Not Found'),
+    500: openapi.Response('Internal Server Error')
+}
 
-@utils.add_error_responses_doc('get', [401, 403, 404, 500])
+
+@method_decorator(name='get', decorator=swagger_auto_schema(
+    responses={200: serializers.NetworkingAnsibleAllocationStageSerializer(many=True),
+               **COMMON_RESPONSE_PATTERNS}
+))
 class NetworkingAnsibleAllocationStageDetailView(generics.RetrieveAPIView):
     """
     get: Retrieve a `Networking Ansible` Allocation stage.
@@ -23,7 +36,10 @@ class NetworkingAnsibleAllocationStageDetailView(generics.RetrieveAPIView):
         return request.networkingansibleallocationstage
 
 
-@utils.add_error_responses_doc('get', [401, 403, 404, 500])
+@method_decorator(name='get', decorator=swagger_auto_schema(
+    responses={200: serializers.UserAnsibleAllocationStageSerializer(many=True),
+               **COMMON_RESPONSE_PATTERNS}
+))
 class UserAnsibleAllocationStageDetailView(generics.RetrieveAPIView):
     """
     get: Retrieve a `User Ansible` Allocation stage.
@@ -37,7 +53,10 @@ class UserAnsibleAllocationStageDetailView(generics.RetrieveAPIView):
         return request.useransibleallocationstage
 
 
-@utils.add_error_responses_doc('get', [401, 403, 404, 500])
+@method_decorator(name='get', decorator=swagger_auto_schema(
+    responses={200: serializers.NetworkingAnsibleCleanupStageSerializer(many=True),
+               **COMMON_RESPONSE_PATTERNS}
+))
 class NetworkingAnsibleCleanupStageDetailView(generics.RetrieveAPIView):
     """
     get: Retrieve a `Networking Ansible` Cleanup stage.
@@ -51,7 +70,10 @@ class NetworkingAnsibleCleanupStageDetailView(generics.RetrieveAPIView):
         return request.networkingansiblecleanupstage
 
 
-@utils.add_error_responses_doc('get', [401, 403, 404, 500])
+@method_decorator(name='get', decorator=swagger_auto_schema(
+    responses={200: serializers.UserAnsibleCleanupStageSerializer(many=True),
+               **COMMON_RESPONSE_PATTERNS}
+))
 class UserAnsibleCleanupStageDetailView(generics.RetrieveAPIView):
     """
     get: Retrieve a `User Ansible` Cleanup stage.
@@ -65,7 +87,10 @@ class UserAnsibleCleanupStageDetailView(generics.RetrieveAPIView):
         return request.useransiblecleanupstage
 
 
-@utils.add_error_responses_doc('get', [401, 403, 404, 500])
+@method_decorator(name='get', decorator=swagger_auto_schema(
+    responses={200: serializers.AllocationAnsibleOutputSerializer(many=True),
+               **COMMON_RESPONSE_PATTERNS}
+))
 class NetworkingAnsibleOutputListView(generics.ListAPIView):
     """
     get: Retrieve a list of Ansible Outputs.
@@ -78,7 +103,10 @@ class NetworkingAnsibleOutputListView(generics.ListAPIView):
         return request.networkingansibleallocationstage.outputs.all()
 
 
-@utils.add_error_responses_doc('get', [401, 403, 404, 500])
+@method_decorator(name='get', decorator=swagger_auto_schema(
+    responses={200: serializers.AllocationAnsibleOutputSerializer(many=True),
+               **COMMON_RESPONSE_PATTERNS}
+))
 class UserAnsibleOutputListView(generics.ListAPIView):
     """
     get: Retrieve a list of Ansible Outputs.
