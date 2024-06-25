@@ -63,7 +63,7 @@ urlpatterns = [
     # Pool manipulation
     path('pools/<int:pool_id>/sandboxes', views.PoolSandboxListView.as_view(),
          name='pool-sandbox-list'),
-    path('pools/<int:pool_id>/sandboxes/get-and-lock', views.SandboxGetAndLockView.as_view(),
+    path('pools/<int:pool_id>/sandboxes/get-and-lock/<str:training_access_token>', views.SandboxGetAndLockView.as_view(),
          name='pool-sandbox-get-and-lock'),
     path('pools/<int:pool_id>/management-ssh-access',
          views.PoolManagementSSHAccessView.as_view(),

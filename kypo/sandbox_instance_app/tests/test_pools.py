@@ -1,8 +1,7 @@
-import uuid
-
 import pytest
 import zipfile
 from django.conf import settings
+from django.contrib.auth.models import AnonymousUser
 from django.http import Http404
 from rest_framework.exceptions import ValidationError
 from rest_framework.reverse import reverse
@@ -11,9 +10,10 @@ from rest_framework.test import APIRequestFactory
 from kypo.sandbox_common_lib.exceptions import ApiException, StackError
 from kypo.sandbox_instance_app.lib import pools, sshconfig
 from kypo.sandbox_instance_app.models import SandboxAllocationUnit, Sandbox
-from kypo.sandbox_instance_app.views import PoolListCreateView
+from kypo.sandbox_instance_app.views import PoolListCreateView, SandboxGetAndLockView
 
 from kypo.cloud_commons import exceptions, HardwareUsage
+
 
 pytestmark = pytest.mark.django_db
 
@@ -173,3 +173,51 @@ class TestGetManagementSSHAccess:
                 assert file.read().decode('utf-8') == pool.private_management_key
             with zip_file.open(f'{private_key}.pub') as file:
                 assert file.read().decode('utf-8') == pool.public_management_key
+
+
+class TestPoolLock:
+    @pytest.fixture(autouse=True)
+    def set_up(self, mocker, pool):
+        self.factory = APIRequestFactory()
+        self.wrong_training_access_token = "token-5768"
+        mocker.patch('kypo.sandbox_common_lib.utils.get_object_or_404', return_value=pool)
+        yield
+
+    def test_sandbox_get_and_lock_view_correct_token_successful(self, pool, pool_lock, sandbox, training_access_token):
+        request = self.factory.get(f"/pools/{pool.id}/sandboxes/get-and-lock/{training_access_token}")
+        request.user = AnonymousUser()
+
+        view = SandboxGetAndLockView()
+        view.kwargs = {'training_access_token': training_access_token, 'pool_id': pool.id}
+        response = view.get(request)
+
+        assert response.status_code == 200
+        assert response.data['lock_id'] == sandbox.lock.id
+        assert response.data['allocation_unit_id'] == sandbox.allocation_unit_id
+
+    def test_sandbox_get_and_lock_view_incorrect_token_unsuccessful(self, pool, pool_lock, training_access_token):
+        request = self.factory.get(f"/pools/{pool.id}/sandboxes/get-and-lock/{training_access_token}")
+        request.user = AnonymousUser()
+
+        view = SandboxGetAndLockView()
+        view.kwargs = {'training_access_token': self.wrong_training_access_token, 'pool_id': pool.id}
+        response = view.get(request)
+
+        assert response.status_code == 403
+
+    def test_sandbox_get_and_lock_view_correct_token_full_pool(self, mocker, pool, pool_lock, sandbox, training_access_token):
+        response = None
+
+        responses_list = [sandbox] * (pool.max_size - 1)
+        responses_list.append(None)
+        mocker.patch('kypo.sandbox_instance_app.lib.pools.get_unlocked_sandbox', side_effect=responses_list)
+
+        request = self.factory.get(f"/pools/{pool.id}/sandboxes/get-and-lock/{training_access_token}")
+        request.user = AnonymousUser()
+        view = SandboxGetAndLockView()
+        view.kwargs = {'training_access_token': training_access_token, 'pool_id': pool.id}
+
+        for _ in range(pool.max_size):
+            response = view.get(request)
+
+        assert response.status_code == 409

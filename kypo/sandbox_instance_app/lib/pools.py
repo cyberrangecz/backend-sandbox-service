@@ -212,13 +212,13 @@ def _has_locked_sandbox(sb_queryset, created_by: Optional[User]):
     return len(sb_queryset.filter(lock__created_by=created_by)) != 0
 
 
-def lock_pool(pool: Pool) -> PoolLock:
+def lock_pool(pool: Pool,  training_access_token: str = None) -> PoolLock:
     """Lock given Pool. Raise ValidationError if already locked."""
     with transaction.atomic():
         pool = Pool.objects.select_for_update().get(pk=pool.id)
         if hasattr(pool, 'lock'):
             raise exceptions.ValidationError("Pool already locked.")
-        return PoolLock.objects.create(pool=pool)
+        return PoolLock.objects.create(pool=pool, training_access_token=training_access_token)
 
 
 def get_management_ssh_access(pool: Pool) -> io.BytesIO:

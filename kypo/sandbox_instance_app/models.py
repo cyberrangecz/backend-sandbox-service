@@ -9,6 +9,7 @@ from kypo.sandbox_common_lib import utils
 from kypo.sandbox_definition_app.models import Definition
 from kypo.sandbox_instance_app.lib.email_notifications import send_email, validate_emails_enabled
 
+
 DEFAULT_SANDBOX_UUID = '1'
 LOG = structlog.get_logger()
 
@@ -140,6 +141,12 @@ class PoolLock(models.Model):
         Pool,
         on_delete=models.PROTECT,
         related_name='lock',
+    )
+
+    training_access_token = models.CharField(
+        max_length=256,
+        default=None,
+        null=True
     )
 
     def __str__(self):

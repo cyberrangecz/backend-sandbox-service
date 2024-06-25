@@ -209,6 +209,7 @@ class PoolLockSerializer(serializers.ModelSerializer):
         model = models.PoolLock
         fields = ('id', 'pool_id')
         read_only_fields = ('id', 'pool_id')
+        write_only_fields = ('training_access_token',)
 
 
 class NodeActionSerializer(serializers.Serializer):
@@ -269,6 +270,7 @@ class PortSerializer(serializers.Serializer):
     parent = serializers.CharField()
     name = serializers.CharField()
 
+
 """
 class ContainerSerializer(serializers.Serializer):
     name = serializers.CharField()
@@ -326,6 +328,3 @@ class HardwareUsageSerializer(serializers.Serializer):
     network = serializers.DecimalField(decimal_places=3, max_digits=7)
     subnet = serializers.DecimalField(decimal_places=3, max_digits=7)
     port = serializers.DecimalField(decimal_places=3, max_digits=7)
-
-
-

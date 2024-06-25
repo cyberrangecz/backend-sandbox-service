@@ -8,6 +8,7 @@ from kypo.topology_definition.models import TopologyDefinition
 from kypo.cloud_commons import TopologyInstance, TransformationConfiguration
 
 from kypo.sandbox_definition_app.models import Definition
+from kypo.sandbox_instance_app.lib import pools
 from kypo.sandbox_instance_app.models import StackAllocationStage, SandboxAllocationUnit, \
     AllocationRequest, TerraformStack, AllocationRQJob, Sandbox, CleanupRequest, StackCleanupStage, \
     Pool, SandboxLock
@@ -34,6 +35,7 @@ TESTING_TOPOLOGY_HIDDEN = 'topology_hidden.yml'
 TESTING_TRC_CONFIG = 'trc-config.yml'
 TESTING_LINKS = 'links.yml'
 TESTING_LINKS_HIDDEN = 'links_hidden.yml'
+
 
 
 def mock_topology_cache(top_ins):
@@ -343,6 +345,16 @@ def sandbox_failed_user_stage(allocation_stage_stack, allocation_stage_networkin
 @pytest.fixture
 def sandbox_lock(sandbox_finished):
     return SandboxLock.objects.create(sandbox=sandbox_finished)
+
+
+@pytest.fixture
+def pool_lock(pool, training_access_token):
+    return pools.lock_pool(pool=pool, training_access_token=training_access_token)
+
+
+@pytest.fixture
+def training_access_token():
+    return "token-1234"
 
 
 @pytest.fixture

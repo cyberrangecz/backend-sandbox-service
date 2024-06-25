@@ -150,7 +150,8 @@ class PoolLockListCreateView(generics.ListCreateAPIView):
     def post(self, request, *args, **kwargs):
         """Lock given pool."""
         pool = pools.get_pool(kwargs.get('pool_id'))
-        lock = pools.lock_pool(pool)
+        training_access_token = request.data.get('training_access_token', None)
+        lock = pools.lock_pool(pool, training_access_token)
         return Response(self.serializer_class(lock).data, status=status.HTTP_201_CREATED)
 
 
@@ -502,12 +503,32 @@ class SandboxGetAndLockView(generics.RetrieveAPIView):
         responses={status.HTTP_409_CONFLICT:
                    openapi.Response('No free sandboxes; all sandboxes are locked.',
                                     utils.ErrorSerilizer()),
+                   status.HTTP_403_FORBIDDEN:
+                   openapi.Response('The provided training access token does not '
+                                    'match the training instance access token',
+                                    utils.ErrorSerilizer()),
                    **{k: v for k, v in utils.ERROR_RESPONSES.items() if
                       k in [400, 401, 403, 404, 500]}})
     def get(self, request, *args, **kwargs):
-        """Get unlocked sandbox in given pool and lock it. Return 409 if all are locked."""
+        """
+        Get unlocked sandbox in given pool and lock it.
+        Return 409 if all are locked, 403 if training access token invalid or 400 if there is no lock.
+        """
         pool_id = self.kwargs.get('pool_id')
         pool = get_object_or_404(Pool, id=pool_id)
+        training_access_token = self.kwargs.get('training_access_token')
+
+        if hasattr(pool, 'lock'):
+            if pool.lock.training_access_token is None:
+                return Response({'detail': 'This pool does not have a training assigned'},
+                                status=status.HTTP_403_FORBIDDEN)
+            elif pool.lock.training_access_token != training_access_token:
+                return Response({'detail': 'Provided training access token is not valid.'},
+                                status=status.HTTP_403_FORBIDDEN)
+        else:
+            return Response({'detail': 'The pool is not locked.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
         created_by = None if isinstance(request.user, AnonymousUser) else request.user
         sandbox = pools.get_unlocked_sandbox(pool, created_by)
         if not sandbox:
