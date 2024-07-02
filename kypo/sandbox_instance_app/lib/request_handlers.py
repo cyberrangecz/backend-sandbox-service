@@ -16,8 +16,8 @@ from kypo.sandbox_ansible_app.models import AnsibleAllocationStage,\
 from kypo.sandbox_instance_app.models import Sandbox, SandboxAllocationUnit, \
     SandboxRequest, AllocationRequest, CleanupRequest, \
     StackAllocationStage, CleanupStage, StackCleanupStage, AllocationRQJob, CleanupRQJob, Pool, SandboxRequestGroup
-from kypo.sandbox_instance_app.lib.stage_handlers import StageHandler, StackStageHandler,\
-    AllocationStackStageHandler, CleanupStackStageHandler, AnsibleStageHandler,\
+from kypo.sandbox_instance_app.lib.stage_handlers import StageHandler, StackStageHandler, \
+    AllocationStackStageHandler, CleanupStackStageHandler, AnsibleStageHandler, \
     AllocationAnsibleStageHandler, CleanupAnsibleStageHandler
 from kypo.sandbox_instance_app.lib import requests, sandboxes
 

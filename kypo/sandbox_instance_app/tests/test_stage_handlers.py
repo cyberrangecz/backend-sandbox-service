@@ -244,16 +244,6 @@ class TestCleanupAnsibleStageHandler:
         self.runner = runner
         self.container_class = container_class
 
-    def test_execute_success(self, now, cleanup_stage_networking, allocation_stage_networking):
-        cleanup_stage_networking.cleanup_request.allocation_unit.allocation_request\
-            .networkingansibleallocationstage = allocation_stage_networking
-
-        handler = stage_handlers.CleanupAnsibleStageHandler(cleanup_stage_networking)
-
-        handler.execute()
-
-        assert_db_stage(cleanup_stage_networking, now, failed=False)
-
     @pytest.mark.xfail(reason='cancellation should set error_message to \'canceled\'')
     def test_cancel_success(self, now, cleanup_stage_networking_started):
         handler = stage_handlers.CleanupAnsibleStageHandler(cleanup_stage_networking_started)

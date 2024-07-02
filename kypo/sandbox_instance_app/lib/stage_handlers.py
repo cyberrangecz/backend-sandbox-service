@@ -12,12 +12,12 @@ from redis import Redis
 from rq.exceptions import NoSuchJobError
 from rq.job import Job
 
-from kypo.sandbox_ansible_app.lib.ansible import CleanupAnsibleRunner, \
-    AllocationAnsibleRunner, AnsibleRunner
+from kypo.sandbox_ansible_app.lib.ansible import AllocationAnsibleRunner, AnsibleRunner
 from kypo.sandbox_ansible_app.models import AnsibleAllocationStage, AnsibleCleanupStage, \
-    Container, UserAnsibleCleanupStage, CleanupStage, ContainerCleanup, UserAnsibleAllocationStage
+    Container, UserAnsibleCleanupStage, CleanupStage, UserAnsibleAllocationStage
 from kypo.sandbox_common_lib import utils, exceptions
 from kypo.sandbox_definition_app.lib import definitions
+from kypo.sandbox_instance_app.lib.jump_proxy_cleanup import delete_jump_ssh_key
 from kypo.sandbox_instance_app.models import Sandbox, TerraformStack, \
     SandboxAllocationUnit, StackAllocationStage, StackCleanupStage, \
     RQJob, AllocationRQJob, CleanupRQJob, AllocationTerraformOutput, CleanupTerraformOutput, SandboxRequestGroup
@@ -380,23 +380,8 @@ class CleanupAnsibleStageHandler(AnsibleStageHandler):
         """
         if isinstance(self.stage, UserAnsibleCleanupStage):
             return
-        runner = CleanupAnsibleRunner(self.directory_path)
-        runner.prepare_ssh_dir(self.allocation_unit.pool)
-        runner.prepare_inventory_file(self.allocation_unit)
-        runner.prepare_git_credentials(settings.KYPO_CONFIG)
-
-        allocation_request = self.allocation_unit.allocation_request
-        allocation_stage = allocation_request.networkingansibleallocationstage
-
-        container = runner.run_ansible_playbook(allocation_stage.repo_url, allocation_stage.rev,
-                                                self.stage, cleanup=True)
-        try:
-            ContainerCleanup.objects.create(cleanup_stage=self.stage,
-                                            container_name=container.get_container_name())
-            container.get_container_outputs()
-            container.check_container_status()
-        finally:
-            container.delete()
+        allocation_unit = self.stage.cleanup_request_fk_many.allocation_unit
+        delete_jump_ssh_key(allocation_unit)
 
     def _cancel(self) -> None:
         """
