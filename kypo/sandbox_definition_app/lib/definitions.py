@@ -15,7 +15,9 @@ from yamlize import YamlizingError
 from typing import Optional, TextIO
 
 from generator.var_object import Variable
+
 from kypo.sandbox_common_lib import utils, exceptions
+from kypo.sandbox_common_lib.common_cloud import list_images
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration, GitType
 from kypo.sandbox_definition_app import serializers
 from kypo.sandbox_definition_app.lib.definition_providers import GitlabProvider, DefinitionProvider
@@ -218,13 +220,22 @@ def validate_topology_definition(topology_definition: TopologyDefinition) -> Non
 
     client = utils.get_terraform_client()
     terraform_flavors = client.get_flavors_dict()
+    terraform_images = [image.name for image in list_images()]
+
     used_flavors = [host.flavor for host in topology_definition.hosts] +\
                    [router.flavor for router in topology_definition.routers]
+
+    used_images = [host.base_box.image for host in topology_definition.hosts] +\
+                  [router.base_box.image for router in topology_definition.routers]
 
     for flavor in used_flavors:
         if flavor not in terraform_flavors:
             raise exceptions.ValidationError(f"Flavor {flavor} was not found on the terraform "
                                              f"backend.")
+
+    for image in used_images:
+        if image not in terraform_images:
+            raise exceptions.ValidationError(f"Image {image} was not found on the terraform backend.")
 
 
 def validate_docker_containers(url: str, rev: str, config: KypoConfiguration) -> None:

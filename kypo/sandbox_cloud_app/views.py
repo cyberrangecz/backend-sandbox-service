@@ -9,6 +9,7 @@ from kypo.sandbox_cloud_app import serializers
 from rest_framework import generics
 from rest_framework.response import Response
 
+from kypo.sandbox_common_lib.common_cloud import list_images
 from kypo.sandbox_instance_app.models import Pool
 
 from drf_yasg.utils import swagger_auto_schema
@@ -92,7 +93,7 @@ class ProjectImagesView(generics.ListAPIView):
         Get list of images.
         """
         cached_request = request.GET.get('cached', 'false').lower() == 'true'
-        image_set = projects.list_images(cached=cached_request)
+        image_set = list_images(cached=cached_request)
 
         if request.GET.get('munikypo') == "true":
             image_set = [image for image in image_set if

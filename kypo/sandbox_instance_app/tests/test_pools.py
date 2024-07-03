@@ -27,8 +27,9 @@ class TestCreatePool:
     MAX_SIZE = 10
 
     @pytest.fixture(autouse=True)
-    def set_up(self, mocker):
+    def set_up(self, mocker, image):
         self.client = mocker.patch("kypo.sandbox_common_lib.utils.get_terraform_client")
+        mocker.patch("kypo.sandbox_cloud_app.lib.projects.list_images", return_value=[image])
         mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_definition")
         mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_containers")
         mock_repo = mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_def_provider")
@@ -36,7 +37,7 @@ class TestCreatePool:
         self.arf = APIRequestFactory()
         yield
 
-    def test_create_pool_success(self, definition, created_by):
+    def test_create_pool_success(self, definition, created_by, get_terraform_client):
         pool = pools.create_pool(dict(definition_id=DEFINITION_ID,
                                       max_size=self.MAX_SIZE), created_by=created_by)
 

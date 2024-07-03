@@ -2,6 +2,7 @@ import pytest
 import os
 import io
 
+from kypo.cloud_commons import Image
 from ruamel.yaml import YAML
 
 from django.contrib.auth.models import User
@@ -30,10 +31,21 @@ def topology_definition_stream():
 
 
 @pytest.fixture
-def get_terraform_client(mocker):
+def image():
+    return Image(os_distro=None, os_type="debian",
+                 disk_format=None, container_format=None,
+                 visibility=None, size=None, status=None,
+                 min_ram=None, min_disk=None,
+                 created_at=None, updated_at=None, tags=[],
+                 default_user=None, name="debian-9-x86_64",
+                 owner_specified={"": ""})
+
+
+@pytest.fixture
+def get_terraform_client(mocker, image):
     mock_client = mocker.MagicMock()
-    mock_client.get_flavors_dict.return_value = {"csirtmu.small2x8": "", "csirtmu.tiny1x2": ""}
-    mock_client.list_images.return_value = []
+    mock_client.get_flavors_dict.return_value = {"csirtmu.small2x8": "", "csirtmu.tiny1x2": "", "csirtmu.small2x4": ""}
+    mock_client.list_images.return_value = [image]
 
     mocker.patch('kypo.sandbox_common_lib.utils.get_terraform_client', return_value=mock_client)
     return mock_client

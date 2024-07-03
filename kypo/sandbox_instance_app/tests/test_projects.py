@@ -1,7 +1,7 @@
 import pytest
 from unittest import mock
 from django.core.cache import cache
-from kypo.sandbox_cloud_app.lib import projects
+from kypo.sandbox_common_lib.common_cloud import list_images
 
 IMAGE_LIST_CACHE_KEY = 'image_list'
 
@@ -23,22 +23,22 @@ def setup_cache():
 @pytest.mark.django_db
 def test_list_images_cached(mock_terraform_client, setup_cache):
     with mock.patch('kypo.sandbox_common_lib.utils.get_terraform_client', return_value=mock_terraform_client):
-        images = projects.list_images(cached=True)
+        images = list_images(cached=True)
         assert images == ['image1', 'image2', 'image3']
 
         mock_terraform_client.list_images.return_value = ['image4', 'image5']
 
-        images = projects.list_images(cached=True)
+        images = list_images(cached=True)
         assert images == ['image1', 'image2', 'image3']
 
 
 @pytest.mark.django_db
 def test_list_images_not_cached(mock_terraform_client, setup_cache):
     with mock.patch('kypo.sandbox_common_lib.utils.get_terraform_client', return_value=mock_terraform_client):
-        images = projects.list_images(cached=False)
+        images = list_images(cached=False)
         assert images == ['image1', 'image2', 'image3']
 
         mock_terraform_client.list_images.return_value = ['image4', 'image5']
 
-        images = projects.list_images(cached=False)
+        images = list_images(cached=False)
         assert images == ['image4', 'image5']

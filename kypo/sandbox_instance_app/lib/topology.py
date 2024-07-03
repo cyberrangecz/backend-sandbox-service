@@ -1,8 +1,9 @@
 import structlog
 
 from kypo.cloud_commons import TopologyInstance
-from kypo.sandbox_cloud_app.lib.projects import list_images
 from kypo.topology_definition.models import Host
+
+from kypo.sandbox_common_lib.common_cloud import list_images
 
 LOG = structlog.getLogger()
 INTERNET_NODE_NAME = 'internet'
