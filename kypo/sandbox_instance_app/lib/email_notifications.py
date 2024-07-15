@@ -11,9 +11,9 @@ LOG = structlog.get_logger()
 
 
 def send_email(receiver_email, subject, body, kypo_config: KypoConfiguration):
-    if kypo_config.smtp_server is None:
-        LOG.info("ERROR: SMTP server is not configured, email notifications disabled.")
-        raise EmailException("SMTP server is not configured, sending email failed.")
+    if not kypo_config.smtp_server:
+        LOG.warning("ERROR: SMTP server is not configured, email notifications disabled. No email sent.")
+        return
 
     em = EmailMessage()
     em['From'] = kypo_config.sender_email
@@ -28,7 +28,7 @@ def send_email(receiver_email, subject, body, kypo_config: KypoConfiguration):
 
 
 def validate_emails_enabled(value: bool):
-    if value and settings.KYPO_CONFIG.smtp_server is None:
+    if value and not settings.KYPO_CONFIG.smtp_server:
         raise ValidationError("Email SMTP server is not configured, "
                               "email notifications are disabled.")
 
