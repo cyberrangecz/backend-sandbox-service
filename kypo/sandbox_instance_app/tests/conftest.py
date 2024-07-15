@@ -1,3 +1,5 @@
+import io
+
 import yaml
 import pytest
 import os
@@ -5,8 +7,9 @@ from django.core.management import call_command
 from django.contrib.auth.models import User
 
 from kypo.topology_definition.models import TopologyDefinition
-from kypo.cloud_commons import TopologyInstance, TransformationConfiguration
+from kypo.cloud_commons import TopologyInstance, TransformationConfiguration, Image
 
+from kypo.sandbox_definition_app.lib.definitions import load_docker_containers
 from kypo.sandbox_definition_app.models import Definition
 from kypo.sandbox_instance_app.lib import pools
 from kypo.sandbox_instance_app.models import StackAllocationStage, SandboxAllocationUnit, \
@@ -20,6 +23,8 @@ from kypo.sandbox_ansible_app.lib.container import DockerContainer
 from django.utils import timezone
 from unittest import mock
 from kypo.sandbox_instance_app.lib.topology import Topology
+
+from ruamel.yaml import YAML
 
 TESTING_DATA_DIR = 'assets'
 
@@ -35,6 +40,10 @@ TESTING_TOPOLOGY_HIDDEN = 'topology_hidden.yml'
 TESTING_TRC_CONFIG = 'trc-config.yml'
 TESTING_LINKS = 'links.yml'
 TESTING_LINKS_HIDDEN = 'links_hidden.yml'
+TESTING_CONTAINERS = 'containers.yml'
+TESTING_TOPOLOGY_CONTAINERS = 'topology_containers.yml'
+
+TESTING_TOPOLOGY_CUSTOM_FLAVORS = 'definition_flavor_mapping.yml'
 
 
 
@@ -113,6 +122,63 @@ def top_ins_hidden(top_def_hidden, trc_config):
 
 
 @pytest.fixture
+def flavor_dict():
+    return {"csirtmu.tiny1x2": "", "csirtmu.tiny1x4": "", "csirtmu.small2x4": "",
+            "csirtmu.small2x8": "", "csirtmu.medium4x8": "", "csirtmu.medium4x16": "",
+            "csirtmu.large8x16": "", "csirtmu.large8x32": "", "csirtmu.jumbo16x32": "",
+            "csirtmu.jumbo16x64": ""
+            }
+
+
+@pytest.fixture
+def top_ins_with_containers(top_def, trc_config, links, containers):
+    """Creates example topology instance."""
+    loaded_containers = load_docker_containers(io.StringIO(containers))
+    loaded_containers.hide_all = False
+    topology_instance = TopologyInstance(top_def, trc_config, containers=loaded_containers)
+    topology_instance.name = 'stack-name'
+    topology_instance.ip = '10.10.10.10'
+
+    for link in topology_instance.get_links():
+        link.ip = links[link.name]['ip']
+        link.mac = links[link.name]['mac']
+
+    return topology_instance
+
+
+@pytest.fixture
+def top_ins_with_containers_with_server(top_def, trc_config, links, containers):
+    """Creates example topology instance."""
+    containers = containers.replace("home", "server", 1)
+    loaded_containers = load_docker_containers(io.StringIO(containers))
+    loaded_containers.hide_all = False
+    topology_instance = TopologyInstance(top_def, trc_config, containers=loaded_containers)
+    topology_instance.name = 'stack-name'
+    topology_instance.ip = '10.10.10.10'
+
+    return topology_instance
+
+
+@pytest.fixture
+def topology_containers():
+    """Creates container topology. Not to be mistaken with topology instance."""
+    with open(data_path_join(TESTING_TOPOLOGY_CONTAINERS)) as f:
+        return yaml.full_load(f)
+
+
+@pytest.fixture
+def containers() -> str:
+    """Imitates containers.yml file from sandbox-definition git repository."""
+    # the ruamel.yaml library keeps the order of the keys in the yaml file
+    ruamel_yaml = YAML()
+    stream = io.StringIO()
+
+    with open(data_path_join(TESTING_CONTAINERS)) as f:
+        ruamel_yaml.dump(ruamel_yaml.load(f), stream)
+        return stream.getvalue()
+
+
+@pytest.fixture
 def user_ssh_config():
     """Creates example User ssh config for a sandbox."""
     return KypoSSHConfig.load(data_path_join(TESTING_SSH_CONFIG_USER))
@@ -145,13 +211,26 @@ def topology_hidden():
 
 
 @pytest.fixture
-def image(mocker):
-    class MockedImage:
-        name = "debian-9-x86_64"
-        owner_specified = mocker.Mock()
-        os_type = "debian"
+def definition_custom_flavors():
+    """Creates example definition with custom flavors for a sandbox."""
+    # the ruamel.yaml library keeps the order of the keys in the yaml file
+    ruamel_yaml = YAML()
+    stream = io.StringIO()
 
-    return MockedImage()
+    with open(data_path_join(TESTING_TOPOLOGY_CUSTOM_FLAVORS)) as f:
+        ruamel_yaml.dump(yaml.unsafe_load(f), stream)
+        return stream.getvalue()
+
+
+@pytest.fixture
+def image():
+    return Image(os_distro=None, os_type="debian",
+                 disk_format=None, container_format=None,
+                 visibility=None, size=None, status=None,
+                 min_ram=None, min_disk=None,
+                 created_at=None, updated_at=None, tags=[],
+                 default_user=None, name="debian-9-x86_64",
+                 owner_specified={"": ""})
 
 
 def set_stage_started(stage):

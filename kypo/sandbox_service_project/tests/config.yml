@@ -75,6 +75,7 @@ application_configuration:
     # The mapping of flavor names to be replaced in sandbox definition.
     flavor_mapping:
         standard.tiny: csirtmu.tiny1x2
+        custom.small: csirtmu.small2x4
 
     # The object that represents SSH Host entry (see man page of ssh_config).
     proxy_jump_to_man:

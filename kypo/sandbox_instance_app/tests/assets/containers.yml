@@ -1,0 +1,13 @@
+containers:
+  - name: docker
+    image: debian
+  - name: docker2
+    dockerfile: docker2/
+
+container_mappings:
+  - container: docker
+    host: home
+    port: 2222
+  - container: docker2
+    host: home
+    port: 2223

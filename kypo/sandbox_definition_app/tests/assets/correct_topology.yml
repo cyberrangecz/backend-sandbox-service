@@ -1,0 +1,34 @@
+name: kypo-sandbox-definition
+
+hosts:
+  - name: deb
+    base_box:
+      image: debian-9-x86_64
+      mgmt_user: debian
+    flavor: csirtmu.small2x8
+routers:
+  - name: router
+    base_box:
+      image: debian-9-x86_64
+      mgmt_user: debian
+    flavor: csirtmu.tiny1x2
+
+networks:
+  - name: switch
+    cidr: 10.10.30.0/24
+
+net_mappings:
+    - host: deb
+      network: switch
+      ip: 10.10.30.5
+
+router_mappings:
+    - router: router
+      network: switch
+      ip: 10.10.30.1
+
+groups:
+  - name: linux-machines
+    nodes:
+      - router
+      - deb

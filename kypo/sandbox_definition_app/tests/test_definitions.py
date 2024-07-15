@@ -1,6 +1,6 @@
 import pytest
+import io
 from yamlize import YamlizingError
-
 
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
 from kypo.sandbox_definition_app.lib import definitions
@@ -23,11 +23,11 @@ class TestCreateDefinition:
 
     @pytest.fixture
     def topology_definition(self, mocker):
-        topology_definition = mocker.Mock()
-        topology_definition.name = self.NAME
+        definition = mocker.Mock()
+        definition.name = self.NAME
         mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_definition",
-                     return_value=topology_definition)
-        return topology_definition
+                     return_value=definition)
+        return definition
 
     def test_create_definition(self, mocker, topology_definition, created_by):
         mocker.patch("kypo.sandbox_definition_app.lib.definitions.validate_topology_definition")
@@ -65,7 +65,7 @@ class TestLoadDefinition:
             assert router.flavor == 'csirtmu.tiny1x2'
 
     def test_load_definition_invalid_definition(self, mocker, topology_definition_stream):
-        topology_definition = mocker\
+        topology_definition = mocker \
             .patch("kypo.sandbox_definition_app.lib.definitions.TopologyDefinition")
         topology_definition.load.side_effect = YamlizingError('exception-text')
 
@@ -83,12 +83,12 @@ class TestGetDefinition:
                      return_value=topology_provider)
         mocker.patch("kypo.sandbox_definition_app.lib.definitions.io.StringIO",
                      return_value="test2")
-        mocker.patch("kypo.sandbox_definition_app.lib.definitions.load_definition",
-                     return_value="test3")
+        mock_load_definition = mocker.patch("kypo.sandbox_definition_app.lib.definitions.load_definition",
+                                            return_value="test3")
         mocker.patch("kypo.sandbox_definition_app.lib.definitions.validate_topology_definition",
                      return_value="")
         assert definitions.get_definition('url', 'rev', self.CFG) == "test3"
-        definitions.load_definition.assert_called_with(definitions.io.StringIO("test1"))
+        mock_load_definition.assert_called_with(definitions.io.StringIO("test1"))
 
     def test_get_definition_file_not_found(self, mocker):
         topology_provider = mocker.MagicMock()
@@ -105,3 +105,79 @@ class TestGetDefProvider:
         cfg_git = KypoConfiguration()
         assert isinstance(definitions.get_def_provider(url_git, cfg_git),
                           GitlabProvider)
+
+
+class TestTopologyDefinitionValidation:
+    @pytest.mark.skip(reason="fix for this implemented in issue 291")
+    def test_incorrect_image_name(self, get_terraform_client, correct_topology):
+        print(correct_topology)
+        bad_topology = correct_topology.replace("image: debian", "image: debn", 1)
+        stream = io.StringIO(bad_topology)
+        definition = definitions.load_definition(stream)
+
+        with pytest.raises(exceptions.ValidationError):
+            definitions.validate_topology_definition(definition)
+
+    @pytest.mark.parametrize('name, raises',
+                             [
+                                 ("First-is-not-lower-case12", True),
+                                 ("first-is-lower-case12", False),
+                                 ("invalid_character", True),
+                                 ("-cannot-be-first", True),
+                                 ("cAPITAL-LETTERS-ok", False),
+                                 ("okay-name-without-numbers", False),
+                                 ("2-number-cannot-be-first", True)
+                             ])
+    def test_definition_name_validness(self, get_terraform_client, name, raises, correct_topology):
+        new_topology = correct_topology.replace("kypo-sandbox-definition", name, 1)
+        stream = io.StringIO(new_topology)
+
+        if raises:
+            with pytest.raises(exceptions.ValidationError):
+                definitions.load_definition(stream)
+        else:
+            definition = definitions.load_definition(stream)
+            definitions.validate_topology_definition(definition)
+
+    def test_unique_host_network_router_names(self, get_terraform_client, correct_topology):
+        new_topology = (correct_topology
+                        .replace("- name: deb", "- name: same-name", 1)
+                        .replace("- name: router", "- name: same-name", 1)
+                        .replace("- name: switch", "- name: same-name", 1))
+        stream = io.StringIO(new_topology)
+        with pytest.raises(exceptions.ValidationError):
+            definitions.load_definition(stream)
+
+    def test_unique_host_network_names(self, get_terraform_client, correct_topology):
+        new_topology = (correct_topology
+                        .replace("- name: deb", "- name: same-name", 1)
+                        .replace("- name: router", "- name: same-name", 1))
+        stream = io.StringIO(new_topology)
+        with pytest.raises(exceptions.ValidationError):
+            definitions.load_definition(stream)
+
+    @pytest.mark.parametrize('group_name', ["management", "routers", "hosts"])
+    def test_redefinition_of_default_groups_fails(self, get_terraform_client, group_name, correct_topology):
+        new_topology = (correct_topology.replace("- name: linux-machines", "- name: " + group_name, 1))
+        stream = io.StringIO(new_topology)
+        definition = definitions.load_definition(stream)
+
+        with pytest.raises(exceptions.ValidationError):
+            definitions.validate_topology_definition(definition)
+
+    @pytest.mark.parametrize('group_name', ["ssh_nodes", "winrm_nodes", "user_accessible_nodes", "hidden_hosts"])
+    def test_redefinition_of_default_groups_with_invalid_names_fails(self, mocker, group_name):
+        """Some of the default names use underscore, which wouldn't pass the load_definition function.
+        To test if the redefinition fails, we need to bypass the load_definition function."""
+
+        hosts_group = mocker.Mock()
+        hosts_group.name = group_name
+
+        topology_definition = mocker.Mock()
+        topology_definition.name = "name"
+        topology_definition.groups = [hosts_group]
+        mocker.patch("kypo.sandbox_definition_app.lib.definitions.get_definition",
+                     return_value=topology_definition)
+
+        with pytest.raises(exceptions.ValidationError):
+            definitions.validate_topology_definition(topology_definition)

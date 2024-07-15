@@ -43,3 +43,22 @@ class TestCreateInventory:
         expected = {'home-switch': 'home-router', 'server-switch': 'server-router'}
         result = Routing._get_network_to_router_mapping(top_ins)
         assert expected == result
+
+
+class TestContainersInInventory:
+    def test_containers_added_to_inventory(self, top_ins_with_containers, inventory, inventory_containers):
+        ssh_public_mgmt_key = '/root/.ssh/pool_mng_key.pub'
+        ssh_public_user_key = '/root/.ssh/user_key.pub'
+        all_vars = dict(kypo_global_sandbox_name=top_ins_with_containers.name,
+                        kypo_global_sandbox_ip=top_ins_with_containers.ip,
+                        kypo_global_ssh_public_mgmt_key=ssh_public_mgmt_key,
+                        kypo_global_ssh_public_user_key=ssh_public_user_key)
+        extra_vars = {'a': 1, 'b': 'b'}
+        all_vars.update(extra_vars)
+        inventory['all']['vars'] = all_vars
+
+        result = Inventory('pool-prefix', 'stack-name',
+                           top_ins_with_containers, '/root/.ssh/pool_mng_key', '/root/.ssh/pool_mng_cert',
+                           ssh_public_mgmt_key, ssh_public_user_key, extra_vars)
+
+        assert sorted(result.to_dict()) == sorted(inventory_containers)
