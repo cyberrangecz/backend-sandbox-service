@@ -3,7 +3,7 @@ import zipfile
 import pytest
 from django.db import IntegrityError
 from django.http import Http404
-from django.contrib.auth.models import User
+from unittest import mock
 
 from kypo.sandbox_instance_app import serializers
 from kypo.sandbox_common_lib import exceptions
@@ -67,7 +67,11 @@ class TestSandboxesManipulation:
         mock_images = mocker.patch(
             'kypo.terraform_driver.KypoTerraformClient.list_images')
         mock_images.return_value = [image]
-        topo = sandboxes.get_sandbox_topology(mocker.Mock())
+
+        with mock.patch('django.core.cache.cache.get') as mock_cache_get, \
+             mock.patch('django.core.cache.cache.set') as mock_cache_set:
+            mock_cache_get.return_value = None
+            topo = sandboxes.get_sandbox_topology(mocker.Mock())
 
         result = serializers.TopologySerializer(topo).data
 

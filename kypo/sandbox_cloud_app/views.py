@@ -13,10 +13,7 @@ from kypo.sandbox_instance_app.models import Pool
 
 from drf_yasg.utils import swagger_auto_schema
 
-from django.core.cache import cache
-
 LOG = structlog.get_logger()
-IMAGE_LIST_CACHE_TIMEOUT = None
 
 
 class ProjectInfoView(generics.RetrieveAPIView):
@@ -81,9 +78,8 @@ class ProjectImagesView(generics.ListAPIView):
                                               type=openapi.TYPE_BOOLEAN, default=False),
                             openapi.Parameter('cached', openapi.IN_QUERY,
                                               description="Performs the faster version of this "
-                                                          "endpoint but does retrieve a fresh list"
-                                                          " of images.",
-                                              type=openapi.TYPE_BOOLEAN, default=False),
+                                                          "endpoint.",
+                                              type=openapi.TYPE_BOOLEAN, default=True),
                         ],
                          responses={
                              200: openapi.Response('List of images',
@@ -95,13 +91,8 @@ class ProjectImagesView(generics.ListAPIView):
         """
         Get list of images.
         """
-        if request.GET.get('cached') == "true":
-            image_set = cache.get("image_list", None)
-            if not image_set:
-                image_set = projects.list_images()
-        else:
-            image_set = projects.list_images()
-        cache.set("image_list", image_set, IMAGE_LIST_CACHE_TIMEOUT)
+        cached_request = request.GET.get('cached', 'true').lower() == 'true'
+        image_set = projects.list_images(cached=cached_request)
 
         if request.GET.get('munikypo') == "true":
             image_set = [image for image in image_set if

@@ -9,7 +9,7 @@ from kypo.cloud_commons import TopologyInstance, TransformationConfiguration
 
 from kypo.sandbox_definition_app.models import Definition
 from kypo.sandbox_instance_app.models import StackAllocationStage, SandboxAllocationUnit, \
-    AllocationRequest, TerraformStack, AllocationRQJob, Sandbox, CleanupRequest, StackCleanupStage,\
+    AllocationRequest, TerraformStack, AllocationRQJob, Sandbox, CleanupRequest, StackCleanupStage, \
     Pool, SandboxLock
 from kypo.sandbox_instance_app.lib.sshconfig import KypoSSHConfig
 from kypo.sandbox_ansible_app.models import NetworkingAnsibleAllocationStage, \
@@ -17,6 +17,8 @@ from kypo.sandbox_ansible_app.models import NetworkingAnsibleAllocationStage, \
     Container
 from kypo.sandbox_ansible_app.lib.container import DockerContainer
 from django.utils import timezone
+from unittest import mock
+from kypo.sandbox_instance_app.lib.topology import Topology
 
 TESTING_DATA_DIR = 'assets'
 
@@ -32,6 +34,15 @@ TESTING_TOPOLOGY_HIDDEN = 'topology_hidden.yml'
 TESTING_TRC_CONFIG = 'trc-config.yml'
 TESTING_LINKS = 'links.yml'
 TESTING_LINKS_HIDDEN = 'links_hidden.yml'
+
+
+def mock_cache(top_ins):
+    with mock.patch('django.core.cache.cache.get') as mock_cache_get, \
+            mock.patch('django.core.cache.cache.set') as mock_cache_set:
+        # Simulate cache miss
+        mock_cache_get.return_value = None
+        topo = Topology(top_ins)
+    return topo
 
 
 def data_path_join(file: str, data_dir: str = TESTING_DATA_DIR) -> str:
@@ -137,6 +148,7 @@ def image(mocker):
         name = "debian-9-x86_64"
         owner_specified = mocker.Mock()
         os_type = "debian"
+
     return MockedImage()
 
 
@@ -187,6 +199,7 @@ def process(mocker):
 def created_by():
     return User.objects.create(username='test-user', first_name='test-first-name',
                                last_name='test-last-name', email='test@email.com')
+
 
 @pytest.fixture
 def definition(created_by):
