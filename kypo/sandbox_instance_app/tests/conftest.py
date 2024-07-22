@@ -36,7 +36,7 @@ TESTING_LINKS = 'links.yml'
 TESTING_LINKS_HIDDEN = 'links_hidden.yml'
 
 
-def mock_cache(top_ins):
+def mock_topology_cache(top_ins):
     with mock.patch('django.core.cache.cache.get') as mock_cache_get, \
             mock.patch('django.core.cache.cache.set') as mock_cache_set:
         # Simulate cache miss

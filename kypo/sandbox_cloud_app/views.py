@@ -79,7 +79,7 @@ class ProjectImagesView(generics.ListAPIView):
                             openapi.Parameter('cached', openapi.IN_QUERY,
                                               description="Performs the faster version of this "
                                                           "endpoint.",
-                                              type=openapi.TYPE_BOOLEAN, default=True),
+                                              type=openapi.TYPE_BOOLEAN, default=False),
                         ],
                          responses={
                              200: openapi.Response('List of images',
@@ -91,7 +91,7 @@ class ProjectImagesView(generics.ListAPIView):
         """
         Get list of images.
         """
-        cached_request = request.GET.get('cached', 'true').lower() == 'true'
+        cached_request = request.GET.get('cached', 'false').lower() == 'true'
         image_set = projects.list_images(cached=cached_request)
 
         if request.GET.get('munikypo') == "true":

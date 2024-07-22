@@ -1,7 +1,7 @@
 import pytest
 
 from kypo.sandbox_instance_app import serializers
-from kypo.sandbox_instance_app.tests.conftest import mock_cache
+from kypo.sandbox_instance_app.tests.conftest import mock_topology_cache
 
 pytestmark = pytest.mark.django_db
 
@@ -11,7 +11,7 @@ class TestTopology:
         mock_images = mocker.patch(
             'kypo.terraform_driver.KypoTerraformClient.list_images')
         mock_images.return_value = [image]
-        topo = mock_cache(top_ins)
+        topo = mock_topology_cache(top_ins)
 
         result = serializers.TopologySerializer(topo).data
 
@@ -26,7 +26,7 @@ class TestTopology:
         mock_images = mocker.patch(
             'kypo.terraform_driver.KypoTerraformClient.list_images')
         mock_images.return_value = [image]
-        topo = mock_cache(top_ins_hidden)
+        topo = mock_topology_cache(top_ins_hidden)
 
         result = serializers.TopologySerializer(topo).data
 
