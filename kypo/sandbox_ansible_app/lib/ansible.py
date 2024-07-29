@@ -6,7 +6,7 @@ from jinja2 import Environment, FileSystemLoader
 import structlog
 
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
-from kypo.sandbox_service_project import settings
+from django.conf import settings
 from kypo.cloud_commons import TopologyInstance
 
 from kypo.sandbox_ansible_app.lib.container import KubernetesContainer, DockerContainer, \

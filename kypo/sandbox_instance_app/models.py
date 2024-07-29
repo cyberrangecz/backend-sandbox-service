@@ -8,7 +8,6 @@ from django.contrib.auth.models import User
 from kypo.sandbox_common_lib import utils
 from kypo.sandbox_definition_app.models import Definition
 from kypo.sandbox_instance_app.lib.email_notifications import send_email, validate_emails_enabled
-from kypo.sandbox_service_project.settings import KYPO_CONFIG
 
 DEFAULT_SANDBOX_UUID = '1'
 LOG = structlog.get_logger()
@@ -391,7 +390,7 @@ class SandboxRequestGroup(models.Model):
         Error detail: {str(exc)}
         """
         send_email(self.email, f"KYPO Pool {self.pool.id} - FAILED sandbox allocation",
-                   body, KYPO_CONFIG)
+                   body, settings.KYPO_CONFIG)
 
     def _send_summary_notification(self):
         try:
@@ -402,6 +401,6 @@ class SandboxRequestGroup(models.Model):
             Failed - {self.failed_count}
             """
             send_email(self.email, f"KYPO Pool {self.pool.id} - FINAL sandbox allocations report",
-                       body, KYPO_CONFIG)
+                       body, settings.KYPO_CONFIG)
         finally:
             self.delete()

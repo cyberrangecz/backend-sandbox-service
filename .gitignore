@@ -131,6 +131,7 @@ dmypy.json
 *.iml
 
 devel-config.yml
+config.yml
 empty-sandbox.git.zip
 kypo/openstack_driver
 kypo/topology_definition

@@ -1,7 +1,7 @@
 from enum import Enum
 from rest_framework import permissions
 
-from kypo.sandbox_service_project import settings
+from django.conf import settings
 from kypo.sandbox_uag.auth import get_user_roles
 from kypo.sandbox_uag.oidc_jwt import JWTAccessTokenAuthentication
 
