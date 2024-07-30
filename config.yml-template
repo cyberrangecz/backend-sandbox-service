@@ -154,10 +154,14 @@ application_configuration:
     # Port used by the used protocol, ex. ssl: 465
     #smtp_port: 25
 
+    # Choose email encryption protocol, must fit with configured port
+    # Options: SSL, TLS, INSECURE
+    #smtp_encryption: INSECURE
+
     # Email used to send allocation notifications
     #sender_email: "sandbox.service@kypo.cz"
 
-    # Password for sender_email, LEAVE BLANCK for unauthenticated and unsecured emails
+    # Password for sender_email, not necessary if using INSECURE encryption
     #sender_email_password: ""
 
     sandbox_configuration:

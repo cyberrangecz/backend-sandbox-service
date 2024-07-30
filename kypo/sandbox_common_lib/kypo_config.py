@@ -121,6 +121,12 @@ class GitProviders(Map):
     value_type = Typed(str)
 
 
+class SMTPEncryption(Enum):
+    TSL = 1
+    SSL = 2
+    INSECURE = 3
+
+
 class KypoConfiguration(Object):
     kypo_head_ip = Attribute(type=str, default=KYPO_HEAD_IP,
                              validator=kypo_config_validation.validate_kypo_head_ip)
@@ -191,6 +197,15 @@ class KypoConfiguration(Object):
     smtp_server = Attribute(type=str, default=None)
     # Port of the used encryption protocol, ex. ssl, tsl
     smtp_port = Attribute(type=int, default=25)
+    smtp_encryption = Attribute(
+        type=Typed(
+            SMTPEncryption,
+            from_yaml=(lambda loader, node, rtd: SMTPEncryption[loader.construct_object(node)]),
+            to_yaml=(lambda dumper, data, rtd: dumper.represent_data(data.name))
+        ),
+        default=SMTPEncryption.INSECURE
+    )
+
     sender_email = Attribute(type=str, default="sandbox.service@kypo.cz")
     sender_email_password = Attribute(type=str, default=None)
 
