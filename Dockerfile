@@ -41,7 +41,8 @@ RUN rm install-opentofu.sh
 
 COPY bin bin
 COPY kypo kypo
-COPY config.yml manage.py ./
+COPY config.yml-template ./config.yml
+COPY manage.py ./
 COPY --from=builder /app/.venv ./.venv
 
 COPY supervisord.conf /etc/supervisord.conf
