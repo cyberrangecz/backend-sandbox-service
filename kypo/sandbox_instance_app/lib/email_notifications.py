@@ -15,27 +15,15 @@ def send_email(receiver_email, subject, body, kypo_config: KypoConfiguration):
         LOG.warning("ERROR: SMTP server is not configured, email notifications disabled. No email sent.")
         return
 
+    sender_email = kypo_config.sender_email
     em = EmailMessage()
-    em['From'] = kypo_config.sender_email
+    em['From'] = sender_email
     em['To'] = receiver_email
     em['Subject'] = subject
     em.set_content(body)
 
-    sender_email = kypo_config.sender_email
-
-    try:
-        with EmailManager(kypo_config) as smtp:
-            smtp.sendmail(sender_email, receiver_email, em.as_string())
-            LOG.debug("Email sent successfully!")
-    except smtplib.SMTPAuthenticationError as exc:
-        LOG.warning(f"Email {sender_email} login failed. "
-                    f"Please check the sender_email/password in config.yml. Detail: {exc}")
-        raise EmailException(
-            f"Email authentication failed. Check configured credentials or contact the administrator."
-            f"Detail: {exc}")
-    except Exception as exc:
-        LOG.warning(f"Email notification failed to send for unknown reason. Detail: {exc}")
-        raise EmailException(f"Email notification failed to send for unknown reason. Detail: {exc}")
+    with EmailManager(kypo_config) as mail:
+        mail.send_email(sender_email, receiver_email, em)
 
 
 def validate_emails_enabled(value: bool):
@@ -75,7 +63,21 @@ class EmailManager:
                 self.config.sender_email_password,
             )
 
-        return self.smtp
+        return self
+
+    def send_email(self, sender_email, receiver_email, message: EmailMessage):
+        try:
+            self.smtp.sendmail(sender_email, receiver_email, message.as_string())
+            LOG.debug("Email sent successfully!")
+        except smtplib.SMTPAuthenticationError as exc:
+            LOG.warning(f"Email {sender_email} login failed. "
+                        f"Please check the sender_email/password in config.yml. Detail: {exc}")
+            raise EmailException(
+                f"Email authentication failed. Check configured credentials or contact the administrator."
+                f"Detail: {exc}")
+        except Exception as exc:
+            LOG.warning(f"Email notification failed to send for unknown reason. Detail: {exc}")
+            raise exc
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.smtp:
