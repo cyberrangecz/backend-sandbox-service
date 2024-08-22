@@ -34,9 +34,20 @@ def ssh_connect(hostname, port, username, key_file_path):
         ssh = paramiko.SSHClient()
         ssh.load_system_host_keys()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        private_key = paramiko.RSAKey.from_private_key_file(key_file_path)
+        private_key = load_private_key(key_file_path)
+
         ssh.connect(hostname, port=port, username=username, pkey=private_key)
         return ssh
     except Exception as e:
         LOG.warning(f"Failed to connect to {hostname}: {e}")
         raise
+
+
+def load_private_key(key_path):
+    key_classes = [paramiko.RSAKey, paramiko.DSSKey, paramiko.ECDSAKey, paramiko.Ed25519Key]
+    for key_class in key_classes:
+        try:
+            return key_class.from_private_key_file(key_path)
+        except (paramiko.SSHException, IOError):
+            continue
+    raise ValueError("Could not load private key. Unsupported key type or file not found.")
