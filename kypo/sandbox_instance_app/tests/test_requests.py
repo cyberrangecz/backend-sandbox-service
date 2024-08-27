@@ -83,6 +83,11 @@ class TestCleanupRequest:
             assert CleanupRequest.objects.get(pk=allocation_unit.id)
         self.handler.assert_not_called()
 
+    def assert_cleanup_ongoing_force_skipped(self, allocation_unit):
+        requests.create_cleanup_request_force(allocation_unit, False)
+
+        self.handler.assert_not_called()
+
     def assert_multiple_cleanup_requests_success(self, allocation_units):
         for allocation_unit in allocation_units:
             with pytest.raises(ObjectDoesNotExist):
@@ -131,7 +136,7 @@ class TestCleanupRequest:
 
         mocker.patch('kypo.sandbox_instance_app.lib.requests.cancel_cleanup_request',
                      side_effect=mock_is_finished)
-        self.assert_cleanup_request_success(allocation_unit, True)
+        self.assert_cleanup_ongoing_force_skipped(allocation_unit)
 
     def test_create_cleanup_requests(self, sandbox_finished):
         allocation_unit = sandbox_finished.allocation_unit

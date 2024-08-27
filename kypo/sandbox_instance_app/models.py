@@ -197,6 +197,11 @@ class CleanupRequest(SandboxRequest):
         """Whether all stages are finished."""
         return self.stages.filter(finished=False).count() == 0
 
+    @property
+    def is_failed(self):
+        """Whether all stages are finished."""
+        return self.stages.filter(failed=True).count() > 0
+
     def __str__(self):
         return super().__str__() + f', ALLOCATION_UNIT: {self.allocation_unit.id}'
 

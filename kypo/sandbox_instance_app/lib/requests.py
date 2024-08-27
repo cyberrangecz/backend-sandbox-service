@@ -54,6 +54,9 @@ def cancel_allocation_request(alloc_req: AllocationRequest):
 def create_cleanup_request_force(allocation_unit: SandboxAllocationUnit, delete_pool):
     """Create cleanup request and enqueue it. Immediately delete sandbox from database.
     The force parameter forces the deletion."""
+    if hasattr(allocation_unit, 'cleanup_request') and not allocation_unit.cleanup_request.is_finished:
+        return
+
     try:
         sandbox = allocation_unit.sandbox
     except ObjectDoesNotExist:
@@ -70,11 +73,6 @@ def create_cleanup_request_force(allocation_unit: SandboxAllocationUnit, delete_
 
     if not allocation_unit.allocation_request.is_finished:
         cancel_allocation_request(allocation_unit.allocation_request)
-
-    if hasattr(allocation_unit, 'cleanup_request'):
-        cleanup_request = allocation_unit.cleanup_request
-        if not cleanup_request.is_finished:
-            cancel_cleanup_request(cleanup_request)
 
     if sandbox:
         sandboxes.clear_cache(sandbox)
