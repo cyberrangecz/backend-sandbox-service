@@ -80,7 +80,10 @@ def create_pool(data: Dict, created_by: Optional[User]) -> Pool:
         raise
 
     private_key, public_key = utils.generate_ssh_keypair()
-    certificate = utils.create_self_signed_certificate(private_key)
+    if settings.AWS_PROVIDER_CONFIGURED:
+        certificate = ''
+    else:
+        certificate = utils.create_self_signed_certificate(private_key)
 
     pool.private_management_key = private_key
     pool.public_management_key = public_key
@@ -89,7 +92,8 @@ def create_pool(data: Dict, created_by: Optional[User]) -> Pool:
 
     try:
         client.create_keypair(pool.ssh_keypair_name, public_key, 'ssh')
-        client.create_keypair(pool.certificate_keypair_name, certificate, 'x509')
+        if certificate:
+            client.create_keypair(pool.certificate_keypair_name, certificate, 'x509')
     except KypoException:
         try:
             delete_pool(pool)

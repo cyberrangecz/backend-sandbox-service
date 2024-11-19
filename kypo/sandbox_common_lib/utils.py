@@ -24,8 +24,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
 
-from kypo.terraform_driver import KypoTerraformClient, AvailableCloudLibraries,\
-    KypoTerraformBackendType
+from kypo.terraform_driver import KypoTerraformClient
 
 import datetime
 
@@ -137,29 +136,11 @@ def generate_ssh_keypair(bits: int = 2048) -> Tuple[str, str]:
     return private_key, public_key
 
 
-def get_database_settings() -> dict:
-    db_settings = settings.KYPO_CONFIG.database
-    return {
-        'user': db_settings.user,
-        'password': db_settings.password,
-        'host': db_settings.host,
-        'name': db_settings.name,
-    }
-
-
 def get_terraform_client() -> KypoTerraformClient:
-    """Abstracts creation and authentication to KYPO lib client."""
-    return KypoTerraformClient(
-        auth_url=settings.KYPO_CONFIG.os_auth_url,
-        application_credential_id=settings.KYPO_CONFIG.os_application_credential_id,
-        application_credential_secret=settings.KYPO_CONFIG.os_application_credential_secret,
-        trc=settings.KYPO_CONFIG.trc, cloud_client=AvailableCloudLibraries.OPENSTACK,
-        backend_type=KypoTerraformBackendType(
-            settings.KYPO_CONFIG.terraform_configuration.backend_type
-        ),
-        db_configuration=get_database_settings(),
-        kube_namespace=settings.KYPO_CONFIG.ansible_runner_settings.namespace,
-    )
+    """
+    Simplify access for the terraform client.
+    """
+    return settings.TERRAFORM_CLIENT
 
 
 def clear_cache(cache_key: str) -> None:

@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 
 import os
 from kypo.sandbox_common_lib.kypo_service_config import KypoServiceConfig
+from kypo.sandbox_common_lib.cloud_utils import get_aws_client, get_ostack_client
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(
@@ -24,6 +25,13 @@ KYPO_SANDBOX_SERVICE_CONFIG_PATH = os.path.join(BASE_DIR, 'config.yml')
 KYPO_SERVICE_CONFIG = KypoServiceConfig.from_file(KYPO_SANDBOX_SERVICE_CONFIG_PATH)
 KYPO_CONFIG = KYPO_SERVICE_CONFIG.app_config
 os.environ['REQUESTS_CA_BUNDLE'] = KYPO_CONFIG.ssl_ca_certificate_verify
+
+# -----------SIMPLIFY CLOUD PROVIDER CHANGE-----------
+# To reduce setup overhead, create Terraform client during startup of application.
+AWS_PROVIDER_CONFIGURED = bool(KYPO_CONFIG.aws)
+TERRAFORM_CLIENT = get_aws_client(KYPO_CONFIG) if AWS_PROVIDER_CONFIGURED \
+                   else get_ostack_client(KYPO_CONFIG)
+# ----------------------------------------------------
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = KYPO_SERVICE_CONFIG.django_secret_key
