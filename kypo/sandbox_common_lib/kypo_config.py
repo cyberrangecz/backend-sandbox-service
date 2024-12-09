@@ -138,8 +138,7 @@ class SMTPEncryption(Enum):
 
 
 class KypoConfiguration(Object):
-    kypo_head_ip = Attribute(type=str, default=KYPO_HEAD_IP,
-                             validator=kypo_config_validation.validate_kypo_head_ip)
+    kypo_head_host = Attribute(type=str, default=KYPO_HEAD_IP)
 
     os_auth_url = Attribute(type=str)
     os_application_credential_id = Attribute(type=str)

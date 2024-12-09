@@ -39,8 +39,8 @@ authentication:
     roles_acquisition_url: ""
 
 application_configuration:
-    # The IP address of the KYPO head server.
-    #kypo_head_ip: 0.0.0.0
+    # The URL of the KYPO head server.
+    #kypo_head_host: kypo.head
 
     # The URL of OpenStack Identity service API.
     os_auth_url: ""

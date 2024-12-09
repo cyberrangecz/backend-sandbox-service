@@ -236,7 +236,7 @@ class AllocationAnsibleRunner(AnsibleRunner):
             'kypo_global_sandbox_id': sau.sandbox.id,
             'kypo_global_openstack_stack_id': terraformstack.stack_id,
             'kypo_global_pool_id': sau.pool.id,
-            'kypo_global_head_ip': settings.KYPO_CONFIG.kypo_head_ip,
+            'kypo_global_head_ip': settings.KYPO_CONFIG.kypo_head_host,
         }
         return Inventory(sau.pool.get_pool_prefix(), sau.get_stack_name(),
                          top_ins, self.container_mgmt_private_key, mgmt_public_certificate,
