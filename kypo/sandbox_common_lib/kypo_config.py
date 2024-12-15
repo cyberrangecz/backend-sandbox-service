@@ -88,6 +88,7 @@ class Redis(Object):
 class GitType(Enum):
     GITLAB = 1
     INTERNAL = 2  # DEPRECATED
+    GITHUB = 3
 
 
 class OpenStackConsoleType(Enum):

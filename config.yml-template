@@ -101,7 +101,10 @@ application_configuration:
     git_user: git
 
     # A dictionary of git providers where we can access private repositories, with the corresponding git access token.
-    git_providers: {"https://gitlab.com/": "access-token"}
+    git_providers: {
+        "https://gitlab.com/": "access-token",
+        "https://github.com/": "access-token",
+    }
 
     # The URL of Ansible networking Git repository.
     ansible_networking_url: ""

@@ -12,7 +12,7 @@ pytestmark = pytest.mark.django_db
 
 
 class TestCreateDefinition:
-    URL = 'def-url'
+    URL = 'https://gitlab.example.com/my-repo.git'
     REV = 'def-rev'
     NAME = 'def-name'
 

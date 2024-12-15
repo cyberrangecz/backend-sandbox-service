@@ -4,6 +4,10 @@ import gitlab
 import requests
 import structlog
 import giturlparse
+import base64
+
+from github.ContentFile import ContentFile
+from github import Github, Auth, UnknownObjectException, GithubException
 
 from kypo.sandbox_common_lib import exceptions, git_config
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
@@ -14,6 +18,11 @@ KYPO_GIT_PREFIX = 'repos'
 
 class DefinitionProvider(ABC):
     """Abstract base class for definition providers."""
+
+    def __init__(self, url: str, config: KypoConfiguration) -> None:
+        super().__init__()
+        self.git_rest_server = git_config.get_rest_server(url)
+        self.git_access_token = git_config.get_git_token(self.git_rest_server, config)
 
     @abstractmethod
     def get_file(self, path: str, rev: str) -> str:
@@ -49,15 +58,14 @@ class GitlabProvider(DefinitionProvider):
     """Definition provider for Gitlab API."""
 
     def __init__(self, url: str, config: KypoConfiguration):
+        super().__init__(url, config)
         url_parsed = self.validate_https(url)
         self.project_path = self.get_project_path(url_parsed)
-        git_rest_server = git_config.get_rest_server(url)
-        git_access_token = git_config.get_git_token(git_rest_server, config)
 
-        if git_access_token:
-            self.gl = gitlab.Gitlab(git_rest_server, private_token=git_access_token)
+        if self.git_access_token:
+            self.gl = gitlab.Gitlab(self.git_rest_server, private_token=self.git_access_token)
         else:
-            self.gl = gitlab.Gitlab(git_rest_server)
+            self.gl = gitlab.Gitlab(self.git_rest_server)
 
     def get_file(self, path: str, rev: str) -> str:
         """Get file from repo as a string."""
@@ -105,3 +113,49 @@ class GitlabProvider(DefinitionProvider):
         path = project_path[2:] if project_path[0:2] == '//' else project_path
         path_start = path.index('/') + 1
         return path[path_start:]
+
+
+class GitHubProvider(DefinitionProvider):
+    """
+    Sandbox definition provider compatible with GitHub.
+    """
+
+    def __init__(self, url: str, config: KypoConfiguration) -> None:
+        super().__init__(url, config)
+        if self.git_access_token:
+            github_client = Github(auth=Auth.Token(self.git_access_token))
+        else:
+            github_client = Github()
+
+        repo_name = self._get_repo_name(url)
+        try:
+            self.repo = github_client.get_repo(repo_name)
+        except GithubException as exc:
+            raise exceptions.GitError(f"Cannot find the GitHub repository [url: {url}]") from exc
+
+    def _get_repo_name(self, url: str) -> str:
+        return url.removeprefix(self.git_rest_server).removesuffix(".git")
+
+    def get_file(self, path: str, rev: str) -> str:
+        """
+        Get the plain text content of the file.
+        """
+        try:
+            contents: ContentFile = self.repo.get_contents(path, ref=rev)
+        except UnknownObjectException as exc:
+            raise exceptions.GitError(f"Cannot find '{path}' in {self.repo.name} [rev: '{rev}']") from exc
+
+        return base64.b64decode(contents.content).decode()
+
+    def get_refs(self):
+        """
+        Not implemented as it is not needed.
+        """
+        return super().get_refs()
+
+    def get_rev_sha(self, rev: str) -> str:
+        """
+        Return revision specified on the input. This method is created
+        only for the compatibility reasons with GitLab client.
+        """
+        return rev
