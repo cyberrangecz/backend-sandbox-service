@@ -142,7 +142,7 @@ class GitHubProvider(DefinitionProvider):
         """
         try:
             contents: ContentFile = self.repo.get_contents(path, ref=rev)
-        except UnknownObjectException as exc:
+        except (UnknownObjectException, GithubException) as exc:
             raise exceptions.GitError(f"Cannot find '{path}' in {self.repo.name} [rev: '{rev}']") from exc
 
         return base64.b64decode(contents.content).decode()
