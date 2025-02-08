@@ -1,3 +1,4 @@
+from kypo.sandbox_common_lib.exceptions import ValidationError
 from kypo.sandbox_common_lib.kypo_config import KypoConfiguration
 from kypo.terraform_driver import KypoTerraformClient, AvailableCloudLibraries, \
     KypoTerraformBackendType
@@ -15,6 +16,16 @@ def get_database_settings(kypo_config: KypoConfiguration) -> dict:
 
 def get_ostack_client(kypo_config: KypoConfiguration) -> KypoTerraformClient:
     """Abstracts creation and authentication to KYPO lib client."""
+    if None in [
+        kypo_config.os_auth_url,
+        kypo_config.os_application_credential_id,
+        kypo_config.os_application_credential_secret,
+    ]:
+        raise ValidationError(
+            "Missing OpenStack configuration options. "
+            "Either AWS or OpenStack configuration must be set."
+        )
+
     return KypoTerraformClient(
         auth_url=kypo_config.os_auth_url,
         application_credential_id=kypo_config.os_application_credential_id,

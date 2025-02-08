@@ -140,9 +140,9 @@ class SMTPEncryption(Enum):
 class KypoConfiguration(Object):
     kypo_head_host = Attribute(type=str, default=KYPO_HEAD_IP)
 
-    os_auth_url = Attribute(type=str)
-    os_application_credential_id = Attribute(type=str)
-    os_application_credential_secret = Attribute(type=str)
+    os_auth_url = Attribute(type=str, default=None)
+    os_application_credential_id = Attribute(type=str, default=None)
+    os_application_credential_secret = Attribute(type=str, default=None)
     os_console_type = Attribute(
         type=Typed(
             OpenStackConsoleType,
