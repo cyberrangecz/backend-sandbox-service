@@ -5,8 +5,6 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PIPENV_VENV_IN_PROJECT="true"
 
-ARG KYPO_PYPI_DOWNLOAD_URL="https://localhost.lan/repository"
-
 RUN pip3 install pipenv
 RUN apt-get update && apt-get install -y gcc
 

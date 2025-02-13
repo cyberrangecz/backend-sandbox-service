@@ -3,11 +3,6 @@ url = "https://pypi.org/simple"
 name = "pypi"
 verify_ssl = true
 
-[[source]]
-url = "$KYPO_PYPI_DOWNLOAD_URL"
-name = "kypo"
-verify_ssl = true
-
 [requires]
 python_version = "3.12"
 
@@ -21,14 +16,14 @@ pytest-django = "*"
 
 [packages]
 # newer versions of pipenv require all dependencies from custom index to be specified
-kypo-terraform-client = { index = "kypo", version = ">=0.4.1" }
-kypo-python-commons = { index = "kypo", version = "~=0.1.0" }
-kypo-openstack-lib = { index = "kypo", version = "~=0.39.0" }
-kypo-aws-lib = ">=0.3.5"
-kypo-topology-definition = { index = "kypo", version = "~=0.5.0" }
+crczp-terraform-client = "~=0.1.1"
+crczp-python-commons = "~=0.1.1"
+crczp-openstack-lib = "~=0.1.1"
+crczp-aws-lib = "~=0.1.1"
+crczp-topology-definition = "~=0.1.1"
 drf-oidc-auth = "*"
 pyjwkest = "*"
-automated-problem-generation-lib = { index = "kypo", version = ">=0.1.2" }
+crczp-automated-problem-generation-lib = "~=0.1.1"
 # According to official GitHub repo, 0.6.1 is more performant.
 # Markers are used to rewrite the python version required by the package.
 better-profanity = {version = "==0.6.1", markers = "python_version >= '3'"}
