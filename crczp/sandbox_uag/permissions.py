@@ -18,7 +18,7 @@ class EndpointPermissionClass(permissions.BasePermission):
 
     @staticmethod
     def get_role_string(level: AccessLevel):
-        return f'ROLE-SANDBOX-SERVICE_{level.name}'
+        return f'ROLE_SANDBOX-SERVICE_{level.name}'
 
     @staticmethod
     def has_access_level(request, level: AccessLevel):
