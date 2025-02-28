@@ -16,10 +16,10 @@ pytest-django = "*"
 
 [packages]
 # newer versions of pipenv require all dependencies from custom index to be specified
-crczp-terraform-client = "~=0.1.3"
+crczp-terraform-client = "~=0.1.4"
 crczp-python-commons = "~=0.1.4"
 crczp-openstack-lib = "~=0.1.5"
-crczp-aws-lib = "~=0.1.3"
+crczp-aws-lib = "~=0.1.4"
 crczp-topology-definition = "~=0.1.4"
 drf-oidc-auth = "*"
 pyjwkest = "*"
