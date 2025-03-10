@@ -97,8 +97,8 @@ class ProjectImagesView(generics.ListAPIView):
 
         if request.GET.get('onlyCustom') == "true":
             image_set = [image for image in image_set if
-                         image.owner_specified.get('owner_specified.openstack.created_by', 'other')
-                         == 'onlyCustom']
+                         image.owner_specified.get('owner_specified.openstack.custom', 'other')
+                         == 'true']
         if request.GET.get('GUI') == "true":
             image_set = [image for image in image_set if
                          image.owner_specified.get('owner_specified.openstack.gui_access', 'other')
