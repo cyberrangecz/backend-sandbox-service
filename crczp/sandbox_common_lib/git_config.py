@@ -27,10 +27,10 @@ def get_git_type(rest_server) -> GitType:
     Takes git server url.
     Returns corresponding git type.
     """
-    if "gitlab." in rest_server:
-        return GitType.GITLAB
-    elif "github." in rest_server:
+    if "github." in rest_server:
         return GitType.GITHUB
+    else:
+        return GitType.GITLAB
     raise ImproperlyConfigured(f"Trying to use unsupported git type: {rest_server} "
                                f"Supported types: gitlab, github")
 
