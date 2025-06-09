@@ -1,5 +1,6 @@
 Host jump-host-ip
     HostName jump-host-ip
+    Port 22
     User stack-name
     IdentityFile <path_to_sandbox_private_key>
     UserKnownHostsFile /dev/null

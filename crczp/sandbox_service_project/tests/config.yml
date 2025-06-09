@@ -80,6 +80,7 @@ application_configuration:
     # The object that represents SSH Host entry (see man page of ssh_config).
     proxy_jump_to_man:
         Host: jump-host-ip
+        Port: 22
         User: debian
         IdentityFile: /tmp/id_rsa
 

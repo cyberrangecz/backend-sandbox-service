@@ -14,6 +14,7 @@ Host.attrs += (
     ('UserKnownHostsFile', str),
     ('StrictHostKeyChecking', str),
     ('IdentitiesOnly', str),
+    ('Port', int),
 )
 
 
@@ -31,13 +32,15 @@ class CrczpSSHConfig(SSHConfig):
         return str(self)
 
     def add_host(self, host_name: str, user: str, identity_file: str,
-                 proxy_jump: str = None, alias: str = None, **kwargs) -> None:
+                 proxy_jump: str = None, alias: str = None, port: int | None = None, **kwargs) -> None:
         """
         Create and add ssh_config.Host instance to this SSH config file.
         """
         opts = dict(HostName=host_name, User=user, IdentityFile=identity_file,
                     UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no',
                     IdentitiesOnly='yes')
+        if port is not None:
+            opts['Port'] = port
         if proxy_jump:
             opts.update(dict(ProxyJump=proxy_jump))
         opts.update(kwargs)
@@ -84,12 +87,14 @@ class CrczpUserSSHConfig(CrczpSSHConfig):
     Represents SSH config file used by CRCZP trainees.
     """
     def __init__(self, top_ins: TopologyInstance, proxy_host: str, proxy_user: str,
-                 sandbox_private_key_path: str = '<path_to_sandbox_private_key>'):
+                 sandbox_private_key_path: str = '<path_to_sandbox_private_key>', proxy_port: int = 22):
         super().__init__('')
 
         # Create an entry for PROXY JUMP host.
-        self.add_host(proxy_host, proxy_user, sandbox_private_key_path)
-        proxy_jump = f'{proxy_user}@{proxy_host}'
+        self.add_host(proxy_host, proxy_user, sandbox_private_key_path,
+                      port=proxy_port)
+        proxy_jump = (f'{proxy_user}@{proxy_host}:{proxy_port}'
+                      if proxy_port != 22 else f'{proxy_user}@{proxy_host}')
 
         # Create an entry for MAN as a proxy jump host.
         self.add_host(top_ins.ip, SSH_PROXY_USERNAME, sandbox_private_key_path,
@@ -113,14 +118,16 @@ class CrczpMgmtSSHConfig(CrczpSSHConfig):
     """
     Represents SSH config file used by CRCZP designers/organizers.
     """
-    def __init__(self, top_ins: TopologyInstance, proxy_host: str, proxy_user: str,
+    def __init__(self, top_ins: TopologyInstance, proxy_host: str, proxy_user: str, proxy_port: int = 22,
                  pool_private_key_path: str = '<path_to_pool_private_key>',
                  proxy_private_key_path: str = '<path_to_pool_private_key>'):
         super().__init__('')
 
         # Create an entry for PROXY JUMP host.
-        self.add_host(proxy_host, proxy_user, proxy_private_key_path)
-        proxy_jump = f'{proxy_user}@{proxy_host}'
+        self.add_host(proxy_host, proxy_user, proxy_private_key_path,
+                      port=proxy_port)
+        proxy_jump = (f'{proxy_user}@{proxy_host}:{proxy_port}'
+                      if proxy_port != 22 else f'{proxy_user}@{proxy_host}')
 
         # Create an entry for MAN as a proxy jump host.
         self.add_host(top_ins.ip, top_ins.man.base_box.mgmt_user, pool_private_key_path,
@@ -146,10 +153,15 @@ class CrczpAnsibleSSHConfig(CrczpMgmtSSHConfig):
     Represents SSH config file used by CRCZP automated provisioning using Ansible.
     """
     def __init__(self, top_ins: TopologyInstance, pool_private_key_path: str,
-                 proxy_host: str, proxy_user: str, proxy_private_key_path: str):
-        super().__init__(top_ins, proxy_host, proxy_user,
-                         pool_private_key_path=pool_private_key_path,
-                         proxy_private_key_path=proxy_private_key_path)
+                 proxy_host: str, proxy_user: str, proxy_private_key_path: str, proxy_port: int = 22):
+        super().__init__(
+            top_ins=top_ins,
+            proxy_host=proxy_host,
+            proxy_user=proxy_user,
+            proxy_port=proxy_port,
+            pool_private_key_path=pool_private_key_path,
+            proxy_private_key_path=proxy_private_key_path
+        )
 
 
 class CrczpAnsibleCleanupSSHConfig(CrczpSSHConfig):
@@ -157,6 +169,6 @@ class CrczpAnsibleCleanupSSHConfig(CrczpSSHConfig):
     Represents SSH config file used by CRCZP AnsibleCleanupStage.
     """
 
-    def __init__(self, proxy_jump_host: str, proxy_jump_user: str, pool_private_key_path: str):
+    def __init__(self, proxy_jump_host: str, proxy_jump_user: str, pool_private_key_path: str, proxy_port: int = 22):
         super().__init__('')
-        self.add_host(proxy_jump_host, proxy_jump_user, pool_private_key_path)
+        self.add_host(proxy_jump_host, proxy_jump_user, pool_private_key_path, port=proxy_port)
