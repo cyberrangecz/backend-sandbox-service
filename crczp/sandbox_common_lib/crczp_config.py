@@ -44,11 +44,13 @@ REDIS_TIMEOUT = 86400 * 30
 class ProxyJump(Object):
     Host = Attribute(type=str)
     User = Attribute(type=str)
+    Port = Attribute(type=int, default=22)
     IdentityFile = Attribute(type=str)
 
-    def __init__(self, host, user, identity_file):
+    def __init__(self, host, user, identity_file, port: int = 22):
         self.Host = host
         self.User = user
+        self.Port = port
         self.IdentityFile = identity_file
 
 

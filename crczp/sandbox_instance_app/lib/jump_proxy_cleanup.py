@@ -24,7 +24,7 @@ def connect_to_jump():
     hostname = settings.CRCZP_CONFIG.proxy_jump_to_man.Host
     user = settings.CRCZP_CONFIG.proxy_jump_to_man.User
     identity_file = settings.CRCZP_CONFIG.proxy_jump_to_man.IdentityFile
-    port = 22
+    port = settings.CRCZP_CONFIG.proxy_jump_to_man.Port
 
     return ssh_connect(hostname, port, user, identity_file)
 

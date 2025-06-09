@@ -1,5 +1,6 @@
 Host jump-host-ip
     HostName jump-host-ip
+    Port 22
     User debian
     IdentityFile /root/.ssh/id_rsa
     UserKnownHostsFile /dev/null

@@ -111,7 +111,7 @@ def get_user_sshconfig(sandbox: Sandbox,
     # Sandbox jump host name is stack name
     stack_name = sandbox.allocation_unit.get_stack_name()
     proxy_jump = settings.CRCZP_CONFIG.proxy_jump_to_man
-    return CrczpUserSSHConfig(ti, proxy_jump.Host, stack_name, sandbox_private_key_path)
+    return CrczpUserSSHConfig(ti, proxy_jump.Host, stack_name, sandbox_private_key_path, proxy_port=proxy_jump.Port)
 
 
 def get_user_ssh_access(sandbox: Sandbox) -> io.BytesIO:
@@ -140,7 +140,8 @@ def get_management_sshconfig(sandbox: Sandbox,
     ti = get_topology_instance(sandbox)
     proxy_jump_host = settings.CRCZP_CONFIG.proxy_jump_to_man.Host
     proxy_jump_user = sandbox.allocation_unit.pool.get_pool_prefix()
-    return CrczpMgmtSSHConfig(ti, proxy_jump_host, proxy_jump_user,
+    proxy_jump_port = settings.CRCZP_CONFIG.proxy_jump_to_man.Port
+    return CrczpMgmtSSHConfig(ti, proxy_jump_host, proxy_jump_user, proxy_port=proxy_jump_port,
                              pool_private_key_path=pool_private_key_path,
                              proxy_private_key_path=pool_private_key_path)
 
@@ -150,7 +151,7 @@ def get_ansible_sshconfig(sandbox: Sandbox, mng_key: str,
     """Get Ansible SSH config."""
     ti = get_topology_instance(sandbox)
     proxy_jump = settings.CRCZP_CONFIG.proxy_jump_to_man
-    return CrczpAnsibleSSHConfig(ti, mng_key, proxy_jump.Host, proxy_jump.User, proxy_key)
+    return CrczpAnsibleSSHConfig(ti, mng_key, proxy_jump.Host, proxy_jump.User, proxy_key, proxy_port=int(proxy_jump.Port))
 
 
 def get_topology_instance(sandbox: Sandbox) -> TopologyInstance:
