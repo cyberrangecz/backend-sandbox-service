@@ -1,6 +1,8 @@
 from typing import List
 import structlog
-from ssh_config.client import Host, SSHConfig, EmptySSHConfig, WrongSSHConfig
+from ssh_config.client import Host, SSHConfig
+from ssh_config.errors import EmptySSHConfig, WrongSSHConfig
+from ssh_config.keywords import Keyword
 
 from crczp.cloud_commons import TopologyInstance, Link
 
@@ -8,15 +10,6 @@ LOG = structlog.getLogger()
 
 SSH_PROXY_USERNAME = 'user'
 SSH_PROXY_KEY = '<path_to_proxy_jump_private_key>'
-
-# Add missing SSH Options to ssh_config.Host.attrs
-Host.attrs += (
-    ('UserKnownHostsFile', str),
-    ('StrictHostKeyChecking', str),
-    ('IdentitiesOnly', str),
-    ('Port', int),
-)
-
 
 class CrczpSSHConfig(SSHConfig):
     """

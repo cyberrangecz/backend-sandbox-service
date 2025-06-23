@@ -1,4 +1,4 @@
-name: Python commons CI
+name: Sandbox service CI
 
 on:
   push:
@@ -18,35 +18,35 @@ jobs:
   get_current_version:
     uses: cyberrangecz/actions-templates/.github/workflows/get_version.yml@master
     with:
-      file_path: "crczp/sandbox_common_lib/__init__.py"
+      file_path: "pyproject.toml"
 
-  unitTests:
+  codeQuality:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     env:
       LC_ALL: C.UTF-8
       LANG: C.UTF-8
+      TERM: xterm-256color
+      FORCE_COLOR: "1"
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set Python Version
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: '3.12'
+          # Install a specific version of uv.
+          version: "0.7.12"
 
-      - name: install packages
-        run: pip3 install pipenv
-
-      - name: run pipenv
+      - name: install and run tox
         run: |
-          pipenv sync --dev
-          pipenv run tox
+          uv tool install tox --with tox-uv
+          tox
 
   build:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
-    needs: [get_current_version, unitTests]
+    needs: [get_current_version, codeQuality]
     env:
       VERSION: ${{ needs.get_current_version.outputs.version }}
     steps:
