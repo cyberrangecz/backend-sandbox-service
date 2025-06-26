@@ -1,0 +1,122 @@
+[project]
+name = "crczp-sandbox-service"
+version = "1.1.1"
+description = "simplifies manipulation of OpenStack cloud platform for CyberRangeCZ Platform purposes"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "cybersecurityhub.cz" }]
+dependencies = [
+    "crczp-terraform-client ~=1.0.0",
+    "crczp-python-commons ~=1.0.1",
+    "crczp-openstack-lib ~=1.0.0",
+    "crczp-aws-lib ~=1.0.1",
+    "crczp-topology-definition ~=1.0.0",
+    "drf-oidc-auth",
+    "pyjwkest",
+    "crczp-automated-problem-generation-lib ~=1.0.0",
+    # https://github.com/snguyenthanh/better_profanity/issues/19
+    "better-profanity ==0.6.1",
+    "django ~=5.0",
+    "djangorestframework",
+    "coreapi",
+    "structlog",
+    "colorama",
+    "djangorestframework-yaml",
+    "pyyaml",
+    "gitpython",
+    "requests",
+    "django-model-utils",
+    # https://github.com/rq/django-rq/issues/616#event-15494980339
+    "rq ==1.13.0",
+    "django-rq",
+    "redis",
+    "hiredis",
+    "docker",
+    "ssh_config",
+    "python-gitlab",
+    "jinja2",
+    "django-cors-headers",
+    "psycopg2-binary",
+    "packaging",
+    "six",
+    "drf-yasg",
+    "cryptography",
+    "git-url-parse",
+    "pyparsing",
+    "kubernetes",
+    "paramiko",
+    "pygithub",
+    "gunicorn"
+]
+
+[project.optional-dependencies]
+dev = [
+    "tox",
+    "pytest",
+    "pytest-mock",
+    "pytest-django"
+]
+
+[project.urls]
+GitHub = "https://github.com/cyberrangecz/backend-sandbox-service"
+
+[build-system]
+# TODO: Replace this with uv_build when it is it released for GA.
+#   https://github.com/astral-sh/uv/issues/3957
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["crczp"]
+exclude-packages = [
+    "crczp/sandbox_ansible_app/tests crczp/sandbox_common_lib/tests",
+    "crczp/sandbox_definition_app/tests crczp/sandbox_instance_app/tests",
+    "crczp/sandbox_service_project/tests",
+]
+
+[tool.ruff]
+line-length = 127
+preview = true
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+]
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "tab"
+docstring-code-format = true
+
+[tool.mypy]
+check_untyped_defs = true
+ignore_missing_imports = true
+strict = true
+enable_error_code = ["deprecated", "explicit-override"]
+
+[tool.pylint]
+# You can add pylint configs here or in .pylintrc
+
+[tool.bandit]
+skips = ["B101"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
+testpaths = [
+    "crczp/sandbox_ansible_app/tests crczp/sandbox_common_lib/tests",
+    "crczp/sandbox_definition_app/tests crczp/sandbox_instance_app/tests",
+    "crczp/sandbox_service_project/tests",
+]
