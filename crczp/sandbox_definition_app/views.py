@@ -2,15 +2,15 @@ import structlog
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.utils.decorators import method_decorator
-from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiRequest
 
 from generator.var_generator import generate
 
 from crczp.sandbox_common_lib import utils, exceptions
-from crczp.sandbox_common_lib.swagger_typing import SANDBOX_DEFINITION_SCHEMA, DEFINITION_REQUEST_BODY, list_response
+from crczp.sandbox_common_lib.swagger_typing import SandboxDefinitionSerializer, DefinitionRequestSerializer
 from crczp.sandbox_definition_app import serializers
 from crczp.sandbox_definition_app.lib import definitions
 from crczp.sandbox_definition_app.lib.definition_providers import DefinitionProvider
@@ -19,25 +19,24 @@ from crczp.sandbox_definition_app.models import Definition
 from crczp.sandbox_instance_app import serializers as instance_serializers
 from crczp.sandbox_instance_app.lib import sandboxes
 from crczp.sandbox_instance_app.lib.topology import Topology
-import drf_yasg.openapi as openapi
 
 LOG = structlog.get_logger()
 
 COMMON_RESPONSE_PATTERNS = {
-    401: openapi.Response('Unauthorized'),
-    403: openapi.Response('Forbidden'),
-    404: openapi.Response('Not Found'),
-    500: openapi.Response('Internal Server Error')
+    401: OpenApiResponse(description='Unauthorized'),
+    403: OpenApiResponse(description='Forbidden'),
+    404: OpenApiResponse(description='Not Found'),
+    500: OpenApiResponse(description='Internal Server Error')
 }
 
-
-@method_decorator(name='get', decorator=swagger_auto_schema(
+@extend_schema(
+    methods=["GET"],
     responses={
-        200: openapi.Response('List of Sandbox Definitions', SANDBOX_DEFINITION_SCHEMA),
+        200: OpenApiResponse(description='List of Sandbox Definitions', response=SandboxDefinitionSerializer),
         **{k: v for k, v in utils.ERROR_RESPONSES.items()
            if k in [401, 403, 500]}
     }
-))
+)
 class DefinitionListCreateView(generics.ListCreateAPIView):
     """
     get: Retrieve a list of sandbox definitions.
@@ -45,10 +44,10 @@ class DefinitionListCreateView(generics.ListCreateAPIView):
     queryset = Definition.objects.all()
     serializer_class = serializers.DefinitionSerializer
 
-    @swagger_auto_schema(
-        request_body=DEFINITION_REQUEST_BODY,
+    @extend_schema(
+        request=OpenApiRequest(DefinitionRequestSerializer),
         responses={
-            201: SANDBOX_DEFINITION_SCHEMA,
+            201:  OpenApiResponse(response=SandboxDefinitionSerializer),
             **{k: v for k, v in utils.ERROR_RESPONSES.items()
                if k in [400, 401, 403, 500]}
         }
@@ -65,12 +64,14 @@ class DefinitionListCreateView(generics.ListCreateAPIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
-    responses={200: SANDBOX_DEFINITION_SCHEMA, **COMMON_RESPONSE_PATTERNS}
-))
-@method_decorator(name='delete', decorator=swagger_auto_schema(
+@extend_schema(
+    methods=["GET"],
+    responses={200: SandboxDefinitionSerializer, **COMMON_RESPONSE_PATTERNS}
+)
+@extend_schema(
+    methods=["DELETE"],
     responses={**COMMON_RESPONSE_PATTERNS}
-))
+)
 class DefinitionDetailDeleteView(generics.RetrieveDestroyAPIView):
     """
     get: Retrieve the definition.
@@ -82,13 +83,14 @@ class DefinitionDetailDeleteView(generics.RetrieveDestroyAPIView):
     lookup_url_kwarg = "definition_id"
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
+@extend_schema(
+    methods=["GET"],
     responses={
-        200: openapi.Response('List of Definition Refs',
-                              serializers.DefinitionSerializer(many=True)),
+        200: OpenApiResponse(description='List of Definition Refs',
+                              response=serializers.DefinitionSerializer(many=True)),
         **COMMON_RESPONSE_PATTERNS
     }
-))
+)
 class DefinitionRefsListView(generics.ListAPIView):
     """
     get: Retrieve a list of definition refs (branches and tags).
@@ -103,12 +105,13 @@ class DefinitionRefsListView(generics.ListAPIView):
         return provider.get_refs()
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
+@extend_schema(
+    methods=["GET"],
     responses={
         200: instance_serializers.TopologySerializer(many=True),
         **COMMON_RESPONSE_PATTERNS
     }
-))
+)
 class DefinitionTopologyView(generics.RetrieveAPIView):
     """
     get: Retrieve topology visualisation data from TopologyDefinition
@@ -127,12 +130,13 @@ class DefinitionTopologyView(generics.RetrieveAPIView):
         return Topology(client.get_topology_instance(topology_definition, containers))
 
 
-@method_decorator(name='post', decorator=swagger_auto_schema(
+@extend_schema(
+    methods=["POST"],
     responses={
         201: serializers.LocalVariableSerializer(many=True),
         **COMMON_RESPONSE_PATTERNS
     }
-))
+)
 class LocalSandboxVariablesView(generics.CreateAPIView):
     queryset = Definition.objects.all()
     lookup_url_kwarg = "definition_id"
@@ -152,9 +156,10 @@ class LocalSandboxVariablesView(generics.CreateAPIView):
         return Response(serialized_variables.data)
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
-    responses={200: openapi.Response('Variables List'), **COMMON_RESPONSE_PATTERNS}
-))
+@extend_schema(
+    methods=["GET"],
+    responses={200: OpenApiResponse(description='Variables List'), **COMMON_RESPONSE_PATTERNS}
+)
 class DefinitionVariablesView(APIView):
     queryset = Definition.objects.none()
 

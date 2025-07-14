@@ -34,27 +34,21 @@ class UserAnsibleAllocationStageSerializer(serializers.ModelSerializer):
 
 class NetworkingAnsibleCleanupStageSerializer(serializers.ModelSerializer):
     request_id = serializers.PrimaryKeyRelatedField(source='cleanup_request', read_only=True)
-    # TODO Does this belong here?
-    allocation_stage_id = serializers.PrimaryKeyRelatedField(
-        source='allocation_stage', read_only=True)
 
     class Meta:
         model = models.NetworkingAnsibleCleanupStage
         fields = ('id', 'request_id', 'start', 'end', 'failed', 'error_message',
-                  'allocation_stage_id',)
+                  )
         read_only_fields = fields
 
 
 class UserAnsibleCleanupStageSerializer(serializers.ModelSerializer):
     request_id = serializers.PrimaryKeyRelatedField(source='cleanup_request', read_only=True)
-    # TODO Does this belong here?
-    allocation_stage_id = serializers.PrimaryKeyRelatedField(
-        source='allocation_stage', read_only=True)
 
     class Meta:
         model = models.UserAnsibleCleanupStage
         fields = ('id', 'request_id', 'start', 'end', 'failed', 'error_message',
-                  'allocation_stage_id',)
+                  )
         read_only_fields = fields
 
 

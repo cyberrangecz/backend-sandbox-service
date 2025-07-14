@@ -1,5 +1,5 @@
 import datetime
-import drf_yasg.openapi as openapi
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter, OpenApiTypes
 
 import structlog
 from crczp.sandbox_common_lib import utils
@@ -12,8 +12,6 @@ from rest_framework.response import Response
 from crczp.sandbox_common_lib.common_cloud import list_images
 from crczp.sandbox_instance_app.models import Pool
 
-from drf_yasg.utils import swagger_auto_schema
-
 LOG = structlog.get_logger()
 
 
@@ -23,13 +21,16 @@ class ProjectInfoView(generics.RetrieveAPIView):
     serializer_class = serializers.QuotaSetSerializer
 
     # noinspection PyMethodMayBeStatic
-    @swagger_auto_schema(tags=['cloud'],
-                         responses={
-                             200: openapi.Response('Project name and quotas',
-                                                   serializers.QuotaSetSerializer),
-                             **{k: v for k, v in utils.ERROR_RESPONSES.items()
-                                if k in [401, 403, 500]}
-                         })
+    @extend_schema(
+        tags=['cloud'],
+        responses={
+            200: OpenApiResponse(
+                response=serializers.QuotaSetSerializer,
+                description='Project name and quotas'
+            ),
+            **{k: v for k, v in utils.ERROR_RESPONSES.items() if k in [401, 403, 500]}
+        }
+    )
     def get(self, request, *args, **kwargs):
         """
         Get the quota set and name of project.
@@ -55,39 +56,46 @@ class ProjectImagesView(generics.ListAPIView):
         }
         return _paginator
 
-    # noinspection PyMethodMayBeStatic
-    @swagger_auto_schema(tags=['cloud'],
-                         manual_parameters=[
-                            openapi.Parameter('name', openapi.IN_QUERY, type=openapi.TYPE_STRING),
-                            openapi.Parameter('os_distro', openapi.IN_QUERY,
-                                              type=openapi.TYPE_STRING),
-                            openapi.Parameter('os_type', openapi.IN_QUERY,
-                                              type=openapi.TYPE_STRING),
-                            openapi.Parameter('visibility', openapi.IN_QUERY,
-                                              type=openapi.TYPE_STRING),
-                            openapi.Parameter('default_user', openapi.IN_QUERY,
-                                              type=openapi.TYPE_STRING),
-                            openapi.Parameter('onlyCustom', openapi.IN_QUERY,
-                                              description="Returns only images with the attribute "
-                                                          "owner_specified.openstack.created_by "
-                                                          "set to onlyCustom",
-                                              type=openapi.TYPE_BOOLEAN, default=False),
-                            openapi.Parameter('GUI', openapi.IN_QUERY,
-                                              description="Returns only images with the attribute "
-                                                          "owner_specified.openstack.gui_access"
-                                                          "set to true",
-                                              type=openapi.TYPE_BOOLEAN, default=False),
-                            openapi.Parameter('cached', openapi.IN_QUERY,
-                                              description="Performs the faster version of this "
-                                                          "endpoint.",
-                                              type=openapi.TYPE_BOOLEAN, default=False),
-                        ],
-                         responses={
-                             200: openapi.Response('List of images',
-                                                   serializers.ImageSerializer(many=True)),
-                             **{k: v for k, v in utils.ERROR_RESPONSES.items()
-                                if k in [401, 403, 500]}
-                         })
+    @extend_schema(
+        tags=['cloud'],
+        parameters=[
+            OpenApiParameter(name='name', location=OpenApiParameter.QUERY, type=OpenApiTypes.STR),
+            OpenApiParameter(name='os_distro', location=OpenApiParameter.QUERY, type=OpenApiTypes.STR),
+            OpenApiParameter(name='os_type', location=OpenApiParameter.QUERY, type=OpenApiTypes.STR),
+            OpenApiParameter(name='visibility', location=OpenApiParameter.QUERY, type=OpenApiTypes.STR),
+            OpenApiParameter(name='default_user', location=OpenApiParameter.QUERY, type=OpenApiTypes.STR),
+            OpenApiParameter(
+                name='onlyCustom',
+                location=OpenApiParameter.QUERY,
+                type=OpenApiTypes.BOOL,
+                description='Returns only images with the attribute '
+                            'owner_specified.openstack.created_by set to onlyCustom',
+                default=False
+            ),
+            OpenApiParameter(
+                name='GUI',
+                location=OpenApiParameter.QUERY,
+                type=OpenApiTypes.BOOL,
+                description='Returns only images with the attribute '
+                            'owner_specified.openstack.gui_access set to true',
+                default=False
+            ),
+            OpenApiParameter(
+                name='cached',
+                location=OpenApiParameter.QUERY,
+                type=OpenApiTypes.BOOL,
+                description='Performs the faster version of this endpoint.',
+                default=False
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=serializers.ImageSerializer(many=True),
+                description='List of images'
+            ),
+            **{k: v for k, v in utils.ERROR_RESPONSES.items() if k in [401, 403, 500]}
+        }
+    )
     def get(self, request, *args, **kwargs):
         """
         Get list of images.
@@ -123,13 +131,17 @@ class ProjectLimitsView(generics.RetrieveAPIView):
     queryset = Pool.objects.none()
     serializer_class = serializers.ProjectLimitsSerializer
 
-    @swagger_auto_schema(tags=['cloud'],
-                         responses={
-                             200: openapi.Response('Absolute limits of OpenStack project',
-                                                   serializers.ProjectLimitsSerializer),
-                             **{k: v for k, v in utils.ERROR_RESPONSES.items()
-                                if k in [401, 403, 500]}
-                         })
+    @extend_schema(
+        tags=['cloud'],
+        responses={
+            200: OpenApiResponse(
+                response=serializers.ProjectLimitsSerializer,
+                description='Absolute limits of OpenStack project'
+            ),
+            **{k: v for k, v in utils.ERROR_RESPONSES.items() if k in [401, 403, 500]}
+        }
+    )
+
     def get(self, request, *args, **kwargs):
         """
         Get Absolute limits of OpenStack project.

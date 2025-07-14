@@ -8,6 +8,7 @@ Validators validate single fields or entire objects.
 Swagger can utilise type hints to determine type, so use them in your own methods.
 """
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from rest_framework.validators import UniqueTogetherValidator
 
 from crczp.sandbox_common_lib.serializers import UserSerializer
@@ -27,9 +28,9 @@ class DefinitionSerializer(serializers.ModelSerializer):
                 fields=['url', 'rev']
             )
         ]
-
+    @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
-    def get_created_by(obj: models.Definition):
+    def get_created_by(obj: models.Definition) -> bool:
         return UserSerializer(obj.created_by).data
 
 

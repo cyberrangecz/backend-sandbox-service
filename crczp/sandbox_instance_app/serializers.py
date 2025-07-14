@@ -10,6 +10,7 @@ Swagger can utilise type hints to determine type, so use them in your own method
 from typing import Optional
 from rest_framework import serializers
 from django.db import transaction
+from drf_spectacular.utils import extend_schema_field
 
 from crczp.sandbox_common_lib.serializers import UserSerializer
 from crczp.sandbox_definition_app.models import Definition
@@ -69,17 +70,20 @@ class PoolSerializer(serializers.ModelSerializer):
     def get_lock_id(obj: models.Pool) -> Optional[int]:
         return obj.lock.id if hasattr(obj, 'lock') else None
 
+    @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
-    def get_created_by(obj: models.Pool):
+    def get_created_by(obj: models.Pool) -> bool:
         return UserSerializer(obj.created_by).data
 
+    @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
-    def get_hardware_usage(obj: models.Pool):
+    def get_hardware_usage(obj: models.Pool) -> bool:
         hardware_usage = pools.get_hardware_usage_of_sandbox(obj)
         return HardwareUsageSerializer(hardware_usage).data
 
+    @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
-    def get_definition(obj: models.Pool):
+    def get_definition(obj: models.Pool) -> bool:
         return DefinitionSerializer(obj.definition).data
 
 
@@ -100,8 +104,9 @@ class RequestSerializer(serializers.ModelSerializer):
 
 
 class AllocationRequestSerializer(RequestSerializer):
+    @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
-    def get_stages(obj):
+    def get_stages(obj) -> bool:
         return requests.get_allocation_request_stages_state(obj)
 
     class Meta(RequestSerializer.Meta):
@@ -109,13 +114,21 @@ class AllocationRequestSerializer(RequestSerializer):
 
 
 class CleanupRequestSerializer(RequestSerializer):
+    @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
-    def get_stages(obj):
+    def get_stages(obj) -> bool:
         return requests.get_cleanup_request_stages_state(obj)
 
     class Meta(RequestSerializer.Meta):
         model = models.CleanupRequest
 
+class PoolCleanupRequestSerializer(serializers.Serializer):
+    pool_id = serializers.IntegerField()
+    reason = serializers.CharField(required=False)
+
+class PoolCleanupRequestFailedSerializer(serializers.Serializer):
+    pool_id = serializers.IntegerField()
+    error_message = serializers.CharField()
 
 class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
     allocation_request = AllocationRequestSerializer(read_only=True)
@@ -135,14 +148,15 @@ class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+    @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
-    def get_created_by(obj: models.SandboxAllocationUnit):
+    def get_created_by(obj: models.SandboxAllocationUnit) -> bool:
         return UserSerializer(obj.created_by).data
 
+    @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
-    def get_locked(obj: models.SandboxAllocationUnit):
+    def get_locked(obj: models.SandboxAllocationUnit) -> bool:
         return hasattr(obj, 'sandbox') and hasattr(obj.sandbox, 'lock')
-
 
 class SandboxAllocationUnitIdListSerializer(serializers.Serializer):
     unit_ids = serializers.ListField(child=serializers.IntegerField())
@@ -161,13 +175,14 @@ class TerraformAllocationStageSerializer(serializers.ModelSerializer):
 
 class TerraformCleanupStageSerializer(serializers.ModelSerializer):
     request_id = serializers.PrimaryKeyRelatedField(source='cleanup_request', read_only=True)
-    allocation_stage_id = serializers.PrimaryKeyRelatedField(
-        source='allocation_stage', read_only=True)
+    #allocation_stage_id = serializers.PrimaryKeyRelatedField(
+    #    source='allocation_stage', read_only=True)
 
     class Meta:
         model = models.StackCleanupStage
         fields = ('id', 'request_id', 'start', 'end', 'failed', 'error_message',
-                  'allocation_stage_id',)
+                  #'allocation_stage_id',
+                  )
         read_only_fields = fields
 
 

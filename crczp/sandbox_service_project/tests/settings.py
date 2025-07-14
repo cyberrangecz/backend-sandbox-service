@@ -51,7 +51,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'drf_yasg',
     'corsheaders',
     'django_rq',
 
@@ -151,15 +150,6 @@ REST_FRAMEWORK = {
 
     'DEFAULT_PAGINATION_CLASS': 'crczp.sandbox_common_lib.pagination.PageNumberWithPageSizePagination',
     'PAGE_SIZE': 50,
-}
-
-SWAGGER_SETTINGS = {
-    'DEFAULT_PAGINATOR_INSPECTORS': [
-        'crczp.sandbox_common_lib.inspectors.PageNumberWithPageSizePaginationInspector',
-        'drf_yasg.inspectors.DjangoRestResponsePagination',
-        'drf_yasg.inspectors.CoreAPICompatInspector',
-    ],
-    "DEFAULT_GENERATOR_CLASS": "rest_framework.schemas.generators.BaseSchemaGenerator",
 }
 
 CACHES = {

@@ -5,7 +5,7 @@ import json
 import logging
 import uuid
 import jinja2
-import drf_yasg.openapi as openapi
+from drf_spectacular.utils import  OpenApiResponse
 from typing import Tuple, Union, Iterable, Callable
 import structlog
 from django.conf import settings
@@ -13,7 +13,6 @@ from django.core.cache import cache
 from django.http import Http404
 from django.utils.decorators import method_decorator
 from rest_framework import status
-from drf_yasg.utils import swagger_auto_schema
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404 as gen_get_object_or_404
 from rest_framework.response import Response
@@ -164,33 +163,16 @@ class ErrorSerilizer(serializers.Serializer):
 
 ERROR_RESPONSES = {
     status.HTTP_400_BAD_REQUEST:
-        openapi.Response('Client sent invalid data.', ErrorSerilizer()),
+        OpenApiResponse(ErrorSerilizer(), description='Client sent invalid data.'),
     status.HTTP_401_UNAUTHORIZED:
-        openapi.Response('Authentication failed.', ErrorSerilizer()),
+        OpenApiResponse(ErrorSerilizer(), description='Authentication failed.'),
     status.HTTP_403_FORBIDDEN:
-        openapi.Response('You do not have permission to perform this action.', ErrorSerilizer()),
+        OpenApiResponse(ErrorSerilizer(), description='You do not have permission to perform this action.'),
     status.HTTP_404_NOT_FOUND:
-        openapi.Response('Resource not found.', ErrorSerilizer()),
+        OpenApiResponse(ErrorSerilizer(), description='Resource not found.'),
     status.HTTP_500_INTERNAL_SERVER_ERROR:
-        openapi.Response('Server encountered an unexpected error.', ErrorSerilizer()),
+        OpenApiResponse(ErrorSerilizer(), description='Server encountered an unexpected error.'),
 }
-
-
-def add_error_responses_doc(method: str, statuses: Iterable[Union[int, str]]) -> Callable:
-    """Decorator to include error responses into documentation.
-    Can be used only if the method responses are not already decorated with
-    a swagger_auto_schema decorator.
-    Otherwise the error responses must be added to already used swagger_auto_schema
-    decorator.
-    """
-    def decorate(cls):
-        method_decorator(name=method, decorator=swagger_auto_schema(
-            responses={k: v for k, v in ERROR_RESPONSES.items()
-                       if k in statuses}
-        ))(cls)
-        return cls
-    return decorate
-
 
 def get_object_or_404(queryset, *filter_args, **filter_kwargs):
     try:
