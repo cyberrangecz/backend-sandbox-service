@@ -33,6 +33,10 @@ TERRAFORM_CLIENT = get_aws_client(CRCZP_CONFIG) if AWS_PROVIDER_CONFIGURED \
                    else get_ostack_client(CRCZP_CONFIG)
 # ----------------------------------------------------
 
+# API
+VERSION = 'v1'
+URL_PREFIX = f'{CRCZP_SERVICE_CONFIG.microservice_name}/api/{VERSION}/'
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = CRCZP_SERVICE_CONFIG.django_secret_key
 
@@ -54,7 +58,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'drf_yasg',
+    'drf_spectacular',
     'corsheaders',
     'django_rq',
 
@@ -100,13 +104,9 @@ WSGI_APPLICATION = 'crczp.sandbox_service_project.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': CRCZP_CONFIG.database.engine,
-        'HOST': CRCZP_CONFIG.database.host,
-        'NAME': CRCZP_CONFIG.database.name,
-        'PASSWORD': CRCZP_CONFIG.database.password,
-        'PORT': CRCZP_CONFIG.database.port,
-        'USER': CRCZP_CONFIG.database.user
-    },
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': ':memory:',
+    }
 }
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
@@ -154,14 +154,23 @@ REST_FRAMEWORK = {
 
     'DEFAULT_PAGINATION_CLASS': 'crczp.sandbox_common_lib.pagination.PageNumberWithPageSizePagination',
     'PAGE_SIZE': 50,
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
-SWAGGER_SETTINGS = {
-    'DEFAULT_PAGINATOR_INSPECTORS': [
-        'crczp.sandbox_common_lib.inspectors.PageNumberWithPageSizePaginationInspector',
-        'drf_yasg.inspectors.DjangoRestResponsePagination',
-        'drf_yasg.inspectors.CoreAPICompatInspector',
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'CyberRangeCZ Platform OpenStack REST API documentation',
+    'VERSION': VERSION,
+    'CONTACT': {
+        'url': 'https://github.com/cyberrangecz/backend-sandbox-service',
+    },
+    'LICENSE': {
+        'name': 'MIT',
+    },
+    'SERVERS': [
+        {'url': f'http://localhost:8000/{URL_PREFIX}', 'description': 'API'},
     ],
+    # Optional tweaks
+    'SERVE_INCLUDE_SCHEMA': False,  # hides schema from Swagger if needed
 }
 
 SANDBOX_UAG = {

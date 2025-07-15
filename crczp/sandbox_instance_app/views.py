@@ -1,4 +1,3 @@
-import drf_yasg.openapi as openapi
 from wsgiref.util import FileWrapper
 
 import structlog
@@ -6,7 +5,7 @@ from django.conf import settings
 from django.http import HttpResponse, Http404
 from django.contrib.auth.models import AnonymousUser
 from django.utils.decorators import method_decorator
-from drf_yasg.utils import swagger_auto_schema
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiRequest, OpenApiParameter
 from rest_framework import status, generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -22,32 +21,33 @@ from crczp.sandbox_instance_app.lib import pools, sandboxes, nodes,\
 from crczp.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit, \
     AllocationRequest, CleanupRequest, SandboxLock, PoolLock
 from crczp.sandbox_instance_app.lib import stage_handlers
-from crczp.sandbox_common_lib.swagger_typing import POOL_RESPONSE_SCHEMA, SANDBOX_DEFINITION_SCHEMA, \
-    POOL_REQUEST_BODY
+from crczp.sandbox_common_lib.swagger_typing import PoolResponseSerializer, SandboxDefinitionSerializer, \
+    PoolRequestSerializer, PoolRequestSerializer, PoolResponseSerializer
 from crczp.sandbox_uag.permissions import AdminPermission, OrganizerPermission
 
 LOG = structlog.get_logger()
 
 COMMON_RESPONSE_PATTERNS = {
-    401: openapi.Response('Unauthorized'),
-    403: openapi.Response('Forbidden'),
-    404: openapi.Response('Not Found'),
-    500: openapi.Response('Internal Server Error')
+    401: OpenApiResponse(description='Unauthorized'),
+    403: OpenApiResponse(description='Forbidden'),
+    404: OpenApiResponse(description='Not Found'),
+    500: OpenApiResponse(description='Internal Server Error')
 }
 
-POOL_RESPONSES = {**COMMON_RESPONSE_PATTERNS, 400: openapi.Response('Bad Request')}
+POOL_RESPONSES = {**COMMON_RESPONSE_PATTERNS, 400: OpenApiResponse(description='Bad Request')}
 SANDBOX_RESPONSES = {**COMMON_RESPONSE_PATTERNS}
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
+@extend_schema(
+    methods=["GET"],
     responses={
-        200: openapi.Response(
-            'List of Pools',
-            serializers.PoolSerializer(many=True)
+        200: OpenApiResponse(
+            response=serializers.PoolSerializer(many=True),
+            description="List of Pools"
         ),
         **{k: v for k, v in utils.ERROR_RESPONSES.items() if k in [401, 403, 500]}
     }
-))
+)
 class PoolListCreateView(generics.ListCreateAPIView):
     """
     get: Get a list of pools.
@@ -55,10 +55,10 @@ class PoolListCreateView(generics.ListCreateAPIView):
     queryset = Pool.objects.all()
     serializer_class = serializers.PoolSerializer
 
-    @swagger_auto_schema(
-        request_body=POOL_REQUEST_BODY,
+    @extend_schema(
+        request=OpenApiRequest(PoolRequestSerializer),
         responses={
-            201: POOL_RESPONSE_SCHEMA,
+            201: OpenApiResponse(response=PoolResponseSerializer, description="Pool created"),
             **POOL_RESPONSES
         }
     )
@@ -74,9 +74,13 @@ class PoolListCreateView(generics.ListCreateAPIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
-    responses={200: POOL_RESPONSE_SCHEMA, **POOL_RESPONSES}
-))
+@extend_schema(
+    methods=["GET"],
+    responses={
+        200: PoolResponseSerializer,
+        **POOL_RESPONSES
+    }
+)
 class PoolDetailDeleteUpdateView(generics.RetrieveDestroyAPIView):
     """
     get: Retrieve a pool.
@@ -85,13 +89,19 @@ class PoolDetailDeleteUpdateView(generics.RetrieveDestroyAPIView):
     serializer_class = serializers.PoolSerializer
     lookup_url_kwarg = "pool_id"
 
-    @swagger_auto_schema(
-        manual_parameters=[
-            openapi.Parameter('force', openapi.IN_QUERY,
-                              description="Force the deletion of sandboxes",
-                              type=openapi.TYPE_BOOLEAN, default=False),
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="force",
+                type=bool,
+                location=OpenApiParameter.QUERY,
+                description="Force the deletion of sandboxes",
+                required=False,
+                default=False
+            ),
         ],
-        responses={**POOL_RESPONSES})
+        responses={**POOL_RESPONSES}
+    )
     def delete(self, request, *args, **kwargs):
         """
         Delete pool. The pool must be empty.
@@ -108,11 +118,13 @@ class PoolDetailDeleteUpdateView(generics.RetrieveDestroyAPIView):
         pools.delete_pool(pool)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @swagger_auto_schema(request_body=serializers.PoolSerializer,
-                         responses={
-                             200: serializers.PoolSerializer(),
-                             **POOL_RESPONSES}
-                         )
+    @extend_schema(
+        request=serializers.PoolSerializer,
+        responses={
+            200: serializers.PoolSerializer,
+            **POOL_RESPONSES
+        }
+    )
     def patch(self, request, *args, **kwargs):
         pool = self.get_object()
         serializer = self.serializer_class(pool, data=request.data, partial=True)
@@ -123,9 +135,13 @@ class PoolDetailDeleteUpdateView(generics.RetrieveDestroyAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
-    responses={200: SANDBOX_DEFINITION_SCHEMA, **SANDBOX_RESPONSES}
-))
+@extend_schema(
+    methods=["GET"],
+    responses={
+        200: SandboxDefinitionSerializer,
+        **SANDBOX_RESPONSES
+    }
+)
 class PoolDefinitionView(generics.RetrieveAPIView):
     """
     get: Retrieve the definition associated with a pool.
@@ -138,22 +154,24 @@ class PoolDefinitionView(generics.RetrieveAPIView):
         return super().get_object().definition
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
+@extend_schema(
+    methods=["GET"],
     responses={
-        200: openapi.Response(
-            'List of Pool Locks',
-            serializers.PoolLockSerializer(many=True)
+        200: OpenApiResponse(
+            response=serializers.PoolLockSerializer(many=True),
+            description="List of Pool Locks"
         ),
         **SANDBOX_RESPONSES
     }
-))
-@method_decorator(name='post', decorator=swagger_auto_schema(
-    request_body=POOL_REQUEST_BODY,
+)
+@extend_schema(
+    methods=["POST"],
+    request=OpenApiRequest(PoolRequestSerializer),
     responses={
-        201: POOL_RESPONSE_SCHEMA,
+        201: OpenApiResponse(response=PoolResponseSerializer, description="Pool created"),
         **POOL_RESPONSES
     }
-))
+)
 class PoolLockListCreateView(generics.ListCreateAPIView):
     serializer_class = serializers.PoolLockSerializer
     """
@@ -173,12 +191,20 @@ class PoolLockListCreateView(generics.ListCreateAPIView):
         return Response(self.serializer_class(lock).data, status=status.HTTP_201_CREATED)
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
-    responses={200: serializers.PoolLockSerializer(), **SANDBOX_RESPONSES}
-))
-@method_decorator(name='delete', decorator=swagger_auto_schema(
-    responses={204: 'No Content', **SANDBOX_RESPONSES}
-))
+@extend_schema(
+    methods=["GET"],
+    responses={
+        200: OpenApiResponse(response=serializers.PoolLockSerializer),
+        **SANDBOX_RESPONSES
+    }
+)
+@extend_schema(
+    methods=["DELETE"],
+    responses={
+        204: OpenApiResponse(description="No Content"),
+        **SANDBOX_RESPONSES
+    }
+)
 class PoolLockDetailDeleteView(generics.RetrieveDestroyAPIView):
     """
     get: Retrieve details about given lock.
@@ -189,15 +215,16 @@ class PoolLockDetailDeleteView(generics.RetrieveDestroyAPIView):
     serializer_class = serializers.PoolLockSerializer
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
+@extend_schema(
+    methods=["GET"],
     responses={
-        200: openapi.Response(
-            'List of Allocation Requests',
-            serializers.AllocationRequestSerializer(many=True)
+        200: OpenApiResponse(
+            response=serializers.AllocationRequestSerializer(many=True),
+            description="List of Allocation Requests"
         ),
         **SANDBOX_RESPONSES
     }
-))
+)
 class PoolAllocationRequestListView(generics.ListAPIView):
     """
     get: List Allocation Request for this pool.
@@ -210,29 +237,35 @@ class PoolAllocationRequestListView(generics.ListAPIView):
         return AllocationRequest.objects.filter(allocation_unit__in=pool.allocation_units.all())
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
+@extend_schema(
+    methods=["GET"],
     responses={
-        200: openapi.Response(
-            'List of Cleanup Requests',
-            serializers.CleanupRequestSerializer(many=True)
+        200: OpenApiResponse(
+            response=serializers.CleanupRequestSerializer(many=True),
+            description="List of Cleanup Requests"
         ),
         **SANDBOX_RESPONSES
     }
-))
-@method_decorator(name='post', decorator=swagger_auto_schema(
-    manual_parameters=[
-        openapi.Parameter("force", openapi.IN_QUERY,
-                          description="Force the deletion of sandboxes",
-                          type=openapi.TYPE_BOOLEAN, default=False),
+)
+@extend_schema(
+    methods=["POST"],
+    parameters=[
+        OpenApiParameter(
+            name="force",
+            type=bool,
+            location=OpenApiParameter.QUERY,
+            description="Force the deletion of sandboxes",
+            required=False
+        )
     ],
     responses={
-        201: openapi.Response(
-            'Cleanup Request created',
-            serializers.CleanupRequestSerializer()
+        201: OpenApiResponse(
+            response=serializers.CleanupRequestSerializer,
+            description="Cleanup Request created"
         ),
         **POOL_RESPONSES
     }
-))
+)
 class PoolCleanupRequestsListCreateView(generics.ListCreateAPIView):
     """
     get: List Cleanup Requests for this pool.
@@ -254,16 +287,21 @@ class PoolCleanupRequestsListCreateView(generics.ListCreateAPIView):
         sandbox_requests.create_cleanup_requests(pool_units, force)
         return Response(status=status.HTTP_201_CREATED)
 
-
 class PoolCleanupRequestUnlockedCreateView(APIView):
+    serializer_class = serializers.PoolCleanupRequestSerializer
     queryset = CleanupRequest.objects.none()
 
-    @swagger_auto_schema(
-        manual_parameters=[
-            openapi.Parameter('force', openapi.IN_QUERY,
-                              description="Force the deletion of sandboxes",
-                              type=openapi.TYPE_BOOLEAN, default=False),
-        ])
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='force',
+                type=bool,
+                location=OpenApiParameter.QUERY,
+                description="Force the deletion of sandboxes",
+                required=False
+            )
+        ]
+    )
     def post(self, request, *args, **kwargs):
         """Deletes all unlocked sandboxes in a pool. With an optional parameter *force*, it forces
          the deletion."""
@@ -278,16 +316,21 @@ class PoolCleanupRequestUnlockedCreateView(APIView):
 
 
 class PoolCleanupRequestFailedCreateView(APIView):
+    serializer_class = serializers.PoolCleanupRequestFailedSerializer
     queryset = CleanupRequest.objects.none()
 
-    @swagger_auto_schema(
-        manual_parameters=[
-            openapi.Parameter('force', openapi.IN_QUERY,
-                              description="Force the deletion of sandboxes",
-                              type=openapi.TYPE_BOOLEAN, default=False),
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='force',
+                type=bool,
+                location=OpenApiParameter.QUERY,
+                description="Force the deletion of sandboxes",
+                required=False
+            )
         ],
         responses={
-            201: 'Cleanup Request created'
+            201: OpenApiResponse(description="Cleanup Request created")
         }
     )
     def post(self, request, *args, **kwargs):
@@ -302,15 +345,15 @@ class PoolCleanupRequestFailedCreateView(APIView):
         return Response(status=status.HTTP_201_CREATED)
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
+@extend_schema(
     responses={
-        200: openapi.Response(
-            'List of Sandbox Allocation Units',
-            serializers.SandboxAllocationUnitSerializer(many=True)
+        200: OpenApiResponse(
+            response=serializers.SandboxAllocationUnitSerializer(many=True),
+            description='List of Sandbox Allocation Units'
         ),
         **SANDBOX_RESPONSES
     }
-))
+)
 class SandboxAllocationUnitListCreateView(generics.ListCreateAPIView):
     """
     get: Get a list of Sandbox Allocation Units.
@@ -320,14 +363,24 @@ class SandboxAllocationUnitListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         return SandboxAllocationUnit.objects.filter(pool_id=self.kwargs.get('pool_id'))
 
-    @swagger_auto_schema(
-        manual_parameters=[
-            openapi.Parameter('count', openapi.IN_QUERY,
-                              description="Sandbox count parameter", type=openapi.TYPE_INTEGER),
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='count',
+                type=int,
+                location=OpenApiParameter.QUERY,
+                description="Sandbox count parameter",
+                required=False
+            )
         ],
-        responses={status.HTTP_201_CREATED: serializers.SandboxAllocationUnitSerializer(many=True),
-                   **POOL_RESPONSES
-                   })
+        responses={
+            status.HTTP_201_CREATED: OpenApiResponse(
+                response=serializers.SandboxAllocationUnitSerializer(many=True),
+                description="Created Sandbox Allocation Units"
+            ),
+            **POOL_RESPONSES
+        }
+    )
     def post(self, request, *args, **kwargs):
         """Create Sandbox Allocation Unit.
         For each Allocation Unit the Allocation Request is created in given pool.
@@ -353,14 +406,27 @@ class SandboxAllocationUnitListCreateView(generics.ListCreateAPIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
-    responses={200: serializers.SandboxAllocationUnitSerializer(), **SANDBOX_RESPONSES}
-))
-@method_decorator(name='patch', decorator=swagger_auto_schema(
-    request_body=serializers.SandboxAllocationUnitSerializer,
+@extend_schema(
+    methods=["GET"],
     responses={
-        200: serializers.SandboxAllocationUnitSerializer(), **POOL_RESPONSES}
-))
+        200: OpenApiResponse(
+            response=serializers.SandboxAllocationUnitSerializer(),
+            description="Retrieve a Sandbox Allocation Unit"
+        ),
+        **SANDBOX_RESPONSES
+    }
+)
+@extend_schema(
+    methods=["PATCH"],
+    request=serializers.SandboxAllocationUnitSerializer,
+    responses={
+        200: OpenApiResponse(
+            response=serializers.SandboxAllocationUnitSerializer(),
+            description="Updated Sandbox Allocation Unit"
+        ),
+        **POOL_RESPONSES
+    }
+)
 class SandboxAllocationUnitDetailUpdateView(generics.RetrieveAPIView):
     """get: Retrieve a Sandbox Allocation Unit."""
     serializer_class = serializers.SandboxAllocationUnitSerializer
@@ -376,9 +442,16 @@ class SandboxAllocationUnitDetailUpdateView(generics.RetrieveAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
-    responses={200: serializers.AllocationRequestSerializer(), **SANDBOX_RESPONSES}
-))
+@extend_schema(
+    methods=["GET"],
+    responses={
+        200: OpenApiResponse(
+            response=serializers.AllocationRequestSerializer(),
+            description="Retrieve Allocation Request"
+        ),
+        **SANDBOX_RESPONSES
+    }
+)
 class SandboxAllocationRequestView(generics.RetrieveAPIView):
     """
     get: Retrieve a Sandbox Allocation Request for an Allocation Unit.
@@ -397,9 +470,16 @@ class SandboxAllocationRequestView(generics.RetrieveAPIView):
             raise Http404(f"The allocation unit (ID={unit.id}) has no allocation request.")
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
-    responses={200: serializers.AllocationRequestSerializer(), **SANDBOX_RESPONSES}
-))
+@extend_schema(
+    methods=["GET"],
+    responses={
+        200: OpenApiResponse(
+            response=serializers.AllocationRequestSerializer(),
+            description="Retrieve Allocation Request"
+        ),
+        **SANDBOX_RESPONSES
+    }
+)
 class AllocationRequestDetailView(generics.RetrieveAPIView):
     """get: Retrieve a Sandbox Allocation Request."""
     queryset = AllocationRequest.objects.all()
@@ -412,17 +492,28 @@ class AllocationRequestCancelView(generics.GenericAPIView):
     queryset = AllocationRequest.objects.all()
     lookup_url_kwarg = "request_id"
 
-    @swagger_auto_schema(
-        responses={status.HTTP_200_OK: serializers.serializers.Serializer(), **POOL_RESPONSES})
+    @extend_schema(
+        responses={
+            status.HTTP_200_OK: OpenApiResponse(description="Success, no content"),
+            **POOL_RESPONSES
+        }
+    )
     def patch(self, request, *args, **kwargs):
         """Cancel given Allocation Request. Returns no data if OK (200)."""
         sandbox_requests.cancel_allocation_request(self.get_object())
         return Response()
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
-    responses={200: serializers.CleanupRequestSerializer(), **SANDBOX_RESPONSES}
-))
+@extend_schema(
+    methods=["GET"],
+    responses={
+        200: OpenApiResponse(
+            response=serializers.CleanupRequestSerializer(),
+            description="Retrieve Cleanup Request"
+        ),
+        **SANDBOX_RESPONSES
+    }
+)
 class SandboxCleanupRequestView(generics.RetrieveDestroyAPIView,
                                 generics.CreateAPIView):
     queryset = SandboxAllocationUnit.objects.all()
@@ -442,9 +533,9 @@ class SandboxCleanupRequestView(generics.RetrieveDestroyAPIView,
         serializer = self.get_serializer(request)
         return Response(serializer.data)
 
-    @swagger_auto_schema(
+    @extend_schema(
         responses={
-            201: serializers.CleanupRequestSerializer(),
+            201: serializers.CleanupRequestSerializer,
         }
     )
     def post(self, request, *args, **kwargs):
@@ -466,9 +557,12 @@ class SandboxAllocationStagesRestartView(generics.GenericAPIView):
     queryset = SandboxAllocationUnit.objects.all()
     lookup_url_kwarg = "unit_id"
 
-    @swagger_auto_schema(
-        responses={status.HTTP_201_CREATED: serializers.SandboxAllocationUnitSerializer(),
-                   **POOL_RESPONSES})
+    @extend_schema(
+        responses={
+            status.HTTP_201_CREATED: serializers.SandboxAllocationUnitSerializer,
+            **POOL_RESPONSES
+        }
+    )
     def patch(self, request, *args, **kwargs):
         """
         Restart all failed sandbox allocation stages.
@@ -480,9 +574,16 @@ class SandboxAllocationStagesRestartView(generics.GenericAPIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
-    responses={200: serializers.CleanupRequestSerializer(), **SANDBOX_RESPONSES}
-))
+@extend_schema(
+    methods=["GET"],
+    responses={
+        200: OpenApiResponse(
+            response=serializers.CleanupRequestSerializer,
+            description="Retrieve Cleanup Request"
+        ),
+        **SANDBOX_RESPONSES
+    }
+)
 class CleanupRequestDetailView(generics.RetrieveAPIView):
     """get: Retrieve a Sandbox Cleanup Request."""
     serializer_class = serializers.CleanupRequestSerializer
@@ -495,8 +596,11 @@ class CleanupRequestCancelView(generics.GenericAPIView):
     queryset = CleanupRequest.objects.all()
     lookup_url_kwarg = "request_id"
 
-    @swagger_auto_schema(
-        responses={status.HTTP_200_OK: serializers.serializers.Serializer(), **POOL_RESPONSES}
+    @extend_schema(
+        responses={
+            status.HTTP_200_OK: OpenApiResponse(description="Success, no content"),
+            **POOL_RESPONSES
+        }
     )
     def patch(self, request, *args, **kwargs):
         """Cancel given Cleanup Request. Returns no data if OK (200)."""
@@ -504,14 +608,16 @@ class CleanupRequestCancelView(generics.GenericAPIView):
         return Response()
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
+@extend_schema(
+    methods=["GET"],
     responses={
-        200: openapi.Response(
-            'List of Terraform Outputs',
-            serializers.AllocationTerraformOutputSerializer(many=True)
+        200: OpenApiResponse(
+            response=serializers.AllocationTerraformOutputSerializer(many=True),
+            description="List of Terraform Outputs"
         ),
-        **SANDBOX_RESPONSES}
-))
+        **SANDBOX_RESPONSES
+    }
+)
 class TerraformAllocationStageDetailView(generics.RetrieveAPIView):
     """
     get: Retrieve an `openstack` allocation stage.
@@ -527,9 +633,16 @@ class TerraformAllocationStageDetailView(generics.RetrieveAPIView):
         return stage_handlers.AllocationStackStageHandler(request.stackallocationstage).stage
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
-    responses={200: serializers.TerraformCleanupStageSerializer(), **SANDBOX_RESPONSES}
-))
+@extend_schema(
+    methods=["GET"],
+    responses={
+        200: OpenApiResponse(
+            response=serializers.TerraformCleanupStageSerializer,
+            description="Retrieve Terraform Cleanup Stage"
+        ),
+        **SANDBOX_RESPONSES
+    }
+)
 class TerraformCleanupStageDetailView(generics.RetrieveAPIView):
     """get: Retrieve an `openstack` Cleanup stage."""
     serializer_class = serializers.TerraformCleanupStageSerializer
@@ -541,15 +654,16 @@ class TerraformCleanupStageDetailView(generics.RetrieveAPIView):
         return request.stackcleanupstage
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
+@extend_schema(
+    methods=["GET"],
     responses={
-        200: openapi.Response(
-            'List of Terraform Outputs',
-            serializers.AllocationTerraformOutputSerializer(many=True)
+        200: OpenApiResponse(
+            response=serializers.AllocationTerraformOutputSerializer(many=True),
+            description="List of Terraform Outputs"
         ),
         **SANDBOX_RESPONSES
     }
-))
+)
 class TerraformAllocationStageOutputListView(generics.ListAPIView):
     serializer_class = serializers.AllocationTerraformOutputSerializer
 
@@ -563,15 +677,16 @@ class TerraformAllocationStageOutputListView(generics.ListAPIView):
 # POOLS OF SANDBOXES MANIPULATION VIEWS #
 #########################################
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
+@extend_schema(
+    methods=["GET"],
     responses={
-        200: openapi.Response(
-            'List of Sandboxes',
-            serializers.SandboxSerializer(many=True)
+        200: OpenApiResponse(
+            response=serializers.SandboxSerializer(many=True),
+            description="List of Sandboxes"
         ),
         **SANDBOX_RESPONSES
     }
-))
+)
 class PoolSandboxListView(generics.ListAPIView):
     serializer_class = serializers.SandboxSerializer
     permission_classes = [OrganizerPermission | AdminPermission]
@@ -588,11 +703,14 @@ class SandboxGetAndLockView(generics.RetrieveAPIView):
     queryset = Sandbox.objects.filter(ready=True)  # To allow trainee to access training run!
     lookup_url_kwarg = "pool_id"
 
-    @swagger_auto_schema(
-        responses={status.HTTP_409_CONFLICT:
-                   openapi.Response('No free sandboxes; all sandboxes are locked.',
-                                    utils.ErrorSerilizer()),
-                   **SANDBOX_RESPONSES}
+    @extend_schema(
+        responses={
+            status.HTTP_409_CONFLICT: OpenApiResponse(
+                description="No free sandboxes; all sandboxes are locked.",
+                response=utils.ErrorSerilizer
+            ),
+            **SANDBOX_RESPONSES
+        }
     )
     def get(self, request, *args, **kwargs):
         """
@@ -626,9 +744,16 @@ class SandboxGetAndLockView(generics.RetrieveAPIView):
 # SANDBOX MANIPULATION VIEWS #
 #######################################
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
-    responses={200: serializers.SandboxSerializer(), **SANDBOX_RESPONSES}
-))
+@extend_schema(
+    methods=["GET"],
+    responses={
+        200: OpenApiResponse(
+            response=serializers.SandboxSerializer,
+            description="Sandbox details"
+        ),
+        **SANDBOX_RESPONSES
+    }
+)
 class SandboxDetailView(generics.RetrieveAPIView):
     """get: Retrieve a sandbox."""
     serializer_class = serializers.SandboxSerializer
@@ -637,12 +762,20 @@ class SandboxDetailView(generics.RetrieveAPIView):
     permissions_classes = [OrganizerPermission | AdminPermission]
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
-    responses={200: serializers.SandboxLockSerializer(), **SANDBOX_RESPONSES}
-))
-@method_decorator(name='post', decorator=swagger_auto_schema(
-    responses={201: serializers.SandboxLockSerializer(), **SANDBOX_RESPONSES}
-))
+@extend_schema(
+    methods=["GET"],
+    responses={
+        200: OpenApiResponse(response=serializers.SandboxLockSerializer, description="Sandbox Lock details"),
+        **SANDBOX_RESPONSES
+    }
+)
+@extend_schema(
+    methods=["POST"],
+    responses={
+        201: OpenApiResponse(response=serializers.SandboxLockSerializer, description="Sandbox Lock created"),
+        **SANDBOX_RESPONSES
+    }
+)
 class SandboxAllocationUnitLockRetrieveCreateDestroyView(generics.RetrieveDestroyAPIView,
                                                          generics.CreateAPIView):
     """
@@ -683,9 +816,13 @@ class SandboxAllocationUnitLockRetrieveCreateDestroyView(generics.RetrieveDestro
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
-    responses={200: serializers.TopologySerializer(), **SANDBOX_RESPONSES}
-))
+@extend_schema(
+    methods=["GET"],
+    responses={
+        200: OpenApiResponse(response=serializers.TopologySerializer, description="Topology details"),
+        **SANDBOX_RESPONSES
+    }
+)
 class SandboxTopologyView(generics.RetrieveAPIView):
     """
     get: Get topology data for given sandbox.
@@ -699,16 +836,22 @@ class SandboxTopologyView(generics.RetrieveAPIView):
         return sandboxes.get_sandbox_topology(super().get_object())
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
-    responses={200: serializers.NodeSerializer(), **SANDBOX_RESPONSES}
-))
-@method_decorator(name='patch', decorator=swagger_auto_schema(
-    request_body=serializers.NodeActionSerializer(),
+
+@extend_schema(
+    methods=["GET"],
     responses={
-        status.HTTP_200_OK: serializers.serializers.Serializer(),
+        200: OpenApiResponse(response=serializers.NodeSerializer, description="Node details"),
         **SANDBOX_RESPONSES
     }
-))
+)
+@extend_schema(
+    methods=["PATCH"],
+    request=serializers.NodeActionSerializer,
+    responses={
+        status.HTTP_200_OK: OpenApiResponse(description="Success, no content returned"),
+        **SANDBOX_RESPONSES
+    }
+)
 class SandboxVMDetailView(generics.GenericAPIView):
     queryset = Sandbox.objects.filter(ready=True)
     lookup_url_kwarg = "sandbox_uuid"
@@ -745,8 +888,11 @@ class SandboxVMDetailView(generics.GenericAPIView):
 class SandboxVMConsoleView(APIView):
     queryset = Sandbox.objects.none()
 
-    @swagger_auto_schema(
-        responses={200: 'Console URL', **SANDBOX_RESPONSES}
+    @extend_schema(
+        responses={
+            200: OpenApiResponse(description="Console URL"),
+            **SANDBOX_RESPONSES
+        }
     )
     # noinspection PyMethodMayBeStatic
     def get(self, request, *args, **kwargs):
@@ -759,9 +905,12 @@ class SandboxVMConsoleView(APIView):
             Response(status=status.HTTP_202_ACCEPTED)
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
-    responses={200: "SSH Config File", **SANDBOX_RESPONSES}
-))
+@extend_schema(
+    responses={
+        200: OpenApiResponse(description="SSH Config File"),
+        **SANDBOX_RESPONSES
+    }
+)
 class SandboxUserSSHAccessView(APIView):
     queryset = Sandbox.objects.none()
 
@@ -777,9 +926,12 @@ class SandboxUserSSHAccessView(APIView):
         return response
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
-    responses={200: 'Man IP', **SANDBOX_RESPONSES}
-))
+@extend_schema(
+    responses={
+        200: OpenApiResponse(description="Man IP"),
+        **SANDBOX_RESPONSES
+    }
+)
 class SandboxManOutPortIPView(APIView):
     queryset = Sandbox.objects.none()
 
@@ -791,9 +943,12 @@ class SandboxManOutPortIPView(APIView):
         return Response({"ip": man_ip})
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
-    responses={200: 'SSH Config File', **SANDBOX_RESPONSES}
-))
+@extend_schema(
+    responses={
+        200: OpenApiResponse(description="SSH Config File"),
+        **SANDBOX_RESPONSES
+    }
+)
 class PoolManagementSSHAccessView(APIView):
     queryset = Pool.objects.none()
 
@@ -812,8 +967,12 @@ class PoolManagementSSHAccessView(APIView):
 class SandboxConsolesView(APIView):
     queryset = Sandbox.objects.none()
 
-    @swagger_auto_schema(
-        responses={200: 'Console URLs', **SANDBOX_RESPONSES}
+    @extend_schema(
+        responses={
+            200: OpenApiResponse(description='Console URLs'),
+            **SANDBOX_RESPONSES
+        },
+        description='Console URLs'
     )
     # noinspection PyMethodMayBeStatic
     def get(self, request, *args, **kwargs):
@@ -833,9 +992,9 @@ class SandboxConsolesView(APIView):
         return Response(consoles) if is_ready else Response(status=status.HTTP_202_ACCEPTED)
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(
-    responses={200: 'Variables List', **SANDBOX_RESPONSES}
-))
+@extend_schema(
+    responses={200: OpenApiResponse(description='Variables List'), **SANDBOX_RESPONSES}
+)
 class PoolVariablesView(APIView):
     queryset = Pool.objects.none()
 
