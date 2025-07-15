@@ -73,6 +73,48 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}/sandbox-service:${{ env.TAG }}
 
+  generate_docs:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    needs: build
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          # Install a specific version of uv.
+          version: "0.7.12"
+
+      - name: Generate and Push Swagger Docs
+        run: |
+          cp config.yml-template ./config.yml
+          mkdir output
+          uv sync
+          uv run python manage.py spectacular --file output/crczp-sandbox-service-swagger-open-api.yaml
+
+      - name: Upload Docs files as artifact
+        id: deployment
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: output
+
+  upload_docs:
+    needs: generate_docs
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
   # Controls if version consistent with semver and higner than last git tag.
   control_tag:
     if: github.event.pull_request.base.ref == 'master' || github.ref == 'refs/heads/master'
