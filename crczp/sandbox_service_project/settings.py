@@ -104,9 +104,13 @@ WSGI_APPLICATION = 'crczp.sandbox_service_project.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': ':memory:',
-    }
+        'ENGINE': CRCZP_CONFIG.database.engine,
+        'HOST': CRCZP_CONFIG.database.host,
+        'NAME': CRCZP_CONFIG.database.name,
+        'PASSWORD': CRCZP_CONFIG.database.password,
+        'PORT': CRCZP_CONFIG.database.port,
+        'USER': CRCZP_CONFIG.database.user
+    },
 }
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
