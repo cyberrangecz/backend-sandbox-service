@@ -70,8 +70,10 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["crczp"]
 exclude-packages = [
-    "crczp/sandbox_ansible_app/tests crczp/sandbox_common_lib/tests",
-    "crczp/sandbox_definition_app/tests crczp/sandbox_instance_app/tests",
+    "crczp/sandbox_ansible_app/tests",
+    "crczp/sandbox_common_lib/tests",
+    "crczp/sandbox_definition_app/tests",
+    "crczp/sandbox_instance_app/tests",
     "crczp/sandbox_service_project/tests",
 ]
 
@@ -116,7 +118,9 @@ skips = ["B101"]
 minversion = "6.0"
 addopts = "-ra -q"
 testpaths = [
-    "crczp/sandbox_ansible_app/tests crczp/sandbox_common_lib/tests",
-    "crczp/sandbox_definition_app/tests crczp/sandbox_instance_app/tests",
+    "crczp/sandbox_ansible_app/tests",
+    "crczp/sandbox_common_lib/tests",
+    "crczp/sandbox_definition_app/tests",
+    "crczp/sandbox_instance_app/tests",
     "crczp/sandbox_service_project/tests",
 ]
