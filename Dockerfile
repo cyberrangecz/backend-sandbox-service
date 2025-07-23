@@ -1,10 +1,10 @@
 FROM python:3.12-slim AS builder
 WORKDIR /app
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-RUN apt-get update && apt-get install -y gcc && \
+RUN apt-get update && apt-get install -y --no-instal-recommends gcc && \
     pip install --no-cache-dir uv && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -17,15 +17,14 @@ RUN uv sync
 FROM python:3.12-slim AS app
 WORKDIR /app
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/app/.venv/bin:$PATH"
 
-RUN apt-get update && apt-get install -y git gnupg software-properties-common curl unzip && \
+RUN apt-get update && apt-get install -y --no-instal-recommends gnupg software-properties-common curl unzip && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ## Install OpenTofu from script
-
 RUN curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh -o install-opentofu.sh && \
 chmod +x install-opentofu.sh && \
 ./install-opentofu.sh --install-method standalone && \
