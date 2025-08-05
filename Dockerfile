@@ -4,7 +4,7 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-RUN apt-get update && apt-get install -y --no-instal-recommends gcc && \
+RUN apt-get update && apt-get install -y --no-install-recommends gcc && \
     pip install --no-cache-dir uv && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
