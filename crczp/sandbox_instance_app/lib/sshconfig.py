@@ -1,8 +1,7 @@
-from typing import List
+from typing import List, Optional, Dict, Any
 import structlog
-from ssh_config.client import Host, SSHConfig
-from ssh_config.errors import EmptySSHConfig, WrongSSHConfig
-from ssh_config.keywords import Keyword
+from ssh_config.client import Host, parse_config  # Don't import SSHConfig unless reading from file
+from ssh_config.keywords import Keywords
 
 from crczp.cloud_commons import TopologyInstance, Link
 
@@ -11,12 +10,17 @@ LOG = structlog.getLogger()
 SSH_PROXY_USERNAME = 'user'
 SSH_PROXY_KEY = '<path_to_proxy_jump_private_key>'
 
-class CrczpSSHConfig(SSHConfig):
+class CrczpSSHConfig:
     """
     Represents SSH config file for CRCZP purposes.
+    This class works in-memory and does not require a backing file.
     """
+    def __init__(self):
+        self.hosts: List[Host] = []
+        self.raw: Optional[str] = None
+
     def __str__(self):
-        return '\n'.join([str(host) for host in self.hosts()]) + '\n'
+        return '\n'.join([str(host) for host in self.hosts]) + '\n'
 
     def serialize(self) -> str:
         """
@@ -25,9 +29,9 @@ class CrczpSSHConfig(SSHConfig):
         return str(self)
 
     def add_host(self, host_name: str, user: str, identity_file: str,
-                 proxy_jump: str = None, alias: str = None, port: int | None = None, **kwargs) -> None:
+                 proxy_jump: Optional[str] = None, alias: Optional[str] = None, port: Optional[int] = None, **kwargs) -> None:
         """
-        Create and add ssh_config.Host instance to this SSH config file.
+        Create and add Host instance to this SSH config file.
         """
         opts = dict(HostName=host_name, User=user, IdentityFile=identity_file,
                     UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no',
@@ -35,44 +39,51 @@ class CrczpSSHConfig(SSHConfig):
         if port is not None:
             opts['Port'] = port
         if proxy_jump:
-            opts.update(dict(ProxyJump=proxy_jump))
+            opts['ProxyJump'] = proxy_jump
         opts.update(kwargs)
-        host = Host([alias, host_name] if alias else host_name, opts)
-        self.append(host)
+        # Use alias as first name if given, otherwise host_name
+        names = [alias, host_name] if alias else host_name
+        host = Host(names, opts)
+        self.hosts.append(host)
 
     def add_docker_host(self, host_name: str, user: str, identity_file: str, port: int,
-                 proxy_jump: str = None, alias: str = None, **kwargs) -> None:
-        """
-        Create and add ssh_config  instance to this SSH config file.
-        """
+                        proxy_jump: Optional[str] = None, alias: Optional[str] = None, **kwargs) -> None:
         opts = dict(HostName=host_name, User=user, IdentityFile=identity_file, Port=port,
                     UserKnownHostsFile='/dev/null', StrictHostKeyChecking='no',
                     IdentitiesOnly='yes')
         if proxy_jump:
-            opts.update(dict(ProxyJump=proxy_jump))
+            opts['ProxyJump'] = proxy_jump
         opts.update(kwargs)
-        host = Host(alias, opts)
-        self.append(host)
+        # For containers, alias is always present
+        host = Host([alias, host_name] if alias else host_name, opts)
+        self.hosts.append(host)
 
     @classmethod
-    def from_str(cls, ssh_config):
+    def from_str(cls, ssh_config: str):
         """
         Load SSH config file from string.
         """
-        self = cls('')
+        instance = cls()
+        instance.raw = ssh_config
+        if not ssh_config or not ssh_config.strip():
+            raise Exception("Empty SSHConfig string")
+        hosts, global_options = parse_config(ssh_config)
+        for host_dict in hosts:
+            name = host_dict["host"]
+            attrs = host_dict["attrs"]
+            instance.hosts.append(Host(name, attrs))
+        return instance
 
-        self.raw = ssh_config
-        if len(self.raw) <= 0:
-            raise EmptySSHConfig(ssh_config)
-        parsed = self.parse()
-        if parsed is None:
-            raise WrongSSHConfig(ssh_config)
-        for name, config in sorted(parsed.asDict().items()):
-            attrs = dict()
-            for attr in config:
-                attrs.update(attr)
-            self.append(Host(name, attrs))
-        return self
+    def asdict(self) -> List[Dict[str, Any]]:
+        """
+        Return a list of dicts for all hosts.
+        """
+        hosts_data = []
+        for host in self.hosts:
+            host_dict = {"Host": host.name}
+            host_dict.update(host.attributes())
+            hosts_data.append(host_dict)
+        return hosts_data
 
 
 class CrczpUserSSHConfig(CrczpSSHConfig):
@@ -81,14 +92,10 @@ class CrczpUserSSHConfig(CrczpSSHConfig):
     """
     def __init__(self, top_ins: TopologyInstance, proxy_host: str, proxy_user: str,
                  sandbox_private_key_path: str = '<path_to_sandbox_private_key>', proxy_port: int = 22):
-        super().__init__('')
-
+        super().__init__()
         # Create an entry for PROXY JUMP host.
-        self.add_host(proxy_host, proxy_user, sandbox_private_key_path,
-                      port=proxy_port)
-        proxy_jump = (f'{proxy_user}@{proxy_host}:{proxy_port}'
-                      if proxy_port != 22 else f'{proxy_user}@{proxy_host}')
-
+        self.add_host(proxy_host, proxy_user, sandbox_private_key_path, port=proxy_port)
+        proxy_jump = f'{proxy_user}@{proxy_host}:{proxy_port}' if proxy_port != 22 else f'{proxy_user}@{proxy_host}'
         # Create an entry for MAN as a proxy jump host.
         self.add_host(top_ins.ip, SSH_PROXY_USERNAME, sandbox_private_key_path,
                       proxy_jump=proxy_jump, alias=top_ins.man.name)
@@ -100,11 +107,11 @@ class CrczpUserSSHConfig(CrczpSSHConfig):
                           proxy_jump=man_proxy_jump, alias=link.node.name)
 
         # Create entries for docker containers
-        if top_ins.containers:
+        if hasattr(top_ins, "containers") and top_ins.containers:
             for container_mapping in top_ins.containers.container_mappings:
                 self.add_docker_host('127.0.0.1', 'root', sandbox_private_key_path,
                                      port=container_mapping.port, proxy_jump=container_mapping.host,
-                                     alias=container_mapping.host+'-'+container_mapping.container)
+                                     alias=f'{container_mapping.host}-{container_mapping.container}')
 
 
 class CrczpMgmtSSHConfig(CrczpSSHConfig):
@@ -114,14 +121,10 @@ class CrczpMgmtSSHConfig(CrczpSSHConfig):
     def __init__(self, top_ins: TopologyInstance, proxy_host: str, proxy_user: str, proxy_port: int = 22,
                  pool_private_key_path: str = '<path_to_pool_private_key>',
                  proxy_private_key_path: str = '<path_to_pool_private_key>'):
-        super().__init__('')
-
+        super().__init__()
         # Create an entry for PROXY JUMP host.
-        self.add_host(proxy_host, proxy_user, proxy_private_key_path,
-                      port=proxy_port)
-        proxy_jump = (f'{proxy_user}@{proxy_host}:{proxy_port}'
-                      if proxy_port != 22 else f'{proxy_user}@{proxy_host}')
-
+        self.add_host(proxy_host, proxy_user, proxy_private_key_path, port=proxy_port)
+        proxy_jump = f'{proxy_user}@{proxy_host}:{proxy_port}' if proxy_port != 22 else f'{proxy_user}@{proxy_host}'
         # Create an entry for MAN as a proxy jump host.
         self.add_host(top_ins.ip, top_ins.man.base_box.mgmt_user, pool_private_key_path,
                       proxy_jump=proxy_jump, alias=top_ins.man.name)
@@ -161,7 +164,6 @@ class CrczpAnsibleCleanupSSHConfig(CrczpSSHConfig):
     """
     Represents SSH config file used by CRCZP AnsibleCleanupStage.
     """
-
     def __init__(self, proxy_jump_host: str, proxy_jump_user: str, pool_private_key_path: str, proxy_port: int = 22):
-        super().__init__('')
+        super().__init__()
         self.add_host(proxy_jump_host, proxy_jump_user, pool_private_key_path, port=proxy_port)
