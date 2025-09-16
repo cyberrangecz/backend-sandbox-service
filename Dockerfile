@@ -21,7 +21,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:$PATH"
 
-RUN apt-get update && apt-get install -y --no-install-recommends gnupg software-properties-common curl unzip && \
+RUN apt-get update && apt-get install -y --no-install-recommends gnupg ca-certificates curl unzip && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ## Install OpenTofu from script
