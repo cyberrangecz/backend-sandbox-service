@@ -238,8 +238,18 @@ class NodeActionSerializer(serializers.Serializer):
 ##########################################
 # CRCZP OpenStack lib classes serializers #
 ##########################################
-class LibSpecialNodeSerializer(serializers.Serializer):
+
+class HostSerializer(serializers.Serializer):
+    """CRCZP OS lib Host and Router topology serializer"""
     name = serializers.CharField()
+    os_type = serializers.CharField()
+    gui_access = serializers.BooleanField()
+    ip = serializers.CharField()
+
+class SubnetSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    cidr = serializers.CharField()
+    hosts = HostSerializer(many=True)
 
 
 class RouterSerializer(serializers.Serializer):
@@ -247,17 +257,7 @@ class RouterSerializer(serializers.Serializer):
     name = serializers.CharField()
     os_type = serializers.CharField()
     gui_access = serializers.BooleanField()
-
-
-class HostSerializer(serializers.Serializer):
-    """CRCZP OS lib Host and Router topology serializer"""
-    name = serializers.CharField()
-    os_type = serializers.CharField()
-    gui_access = serializers.BooleanField()
-    containers = serializers.ListField(
-        child=serializers.CharField(),
-        allow_empty=True
-    )
+    subnets = SubnetSerializer(many=True)
 
 
 class LibNetworkSerializer(serializers.Serializer):
@@ -265,49 +265,9 @@ class LibNetworkSerializer(serializers.Serializer):
     name = serializers.CharField()
     cidr = serializers.CharField()
 
-
-class LinkSerializer(serializers.Serializer):
-    port_a = serializers.SerializerMethodField()
-    port_b = serializers.SerializerMethodField()
-
-    @staticmethod
-    def get_port_a(obj) -> str:
-        return obj.real_port.name
-
-    @staticmethod
-    def get_port_b(obj) -> str:
-        return obj.dummy_port.name
-
-
-class PortSerializer(serializers.Serializer):
-    ip = serializers.CharField()
-    mac = serializers.CharField()
-    parent = serializers.CharField()
-    name = serializers.CharField()
-
-
-"""
-class ContainerSerializer(serializers.Serializer):
-    name = serializers.CharField()
-    image = serializers.CharField()
-    dockerfile = serializers.CharField()
-"""
-
-
-class ContainerSerializer(serializers.Serializer):
-    container = serializers.CharField()
-    host = serializers.CharField()
-    # port = serializers.IntegerField()
-
-
 class TopologySerializer(serializers.Serializer):
     """Serializer for topology"""
-    special_nodes = LibSpecialNodeSerializer(many=True)
-    hosts = HostSerializer(many=True)
     routers = RouterSerializer(many=True)
-    switches = LibNetworkSerializer(many=True)
-    links = LinkSerializer(many=True)
-    ports = PortSerializer(many=True)
 
 
 class NodeSerializer(serializers.Serializer):
