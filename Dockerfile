@@ -1,4 +1,4 @@
-FROM python:3.12-slim as builder
+FROM python:3.12-slim-bookworm as builder
 WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -14,7 +14,7 @@ COPY manage.py Pipfile Pipfile.lock ./
 RUN pipenv sync
 RUN pipenv run pip3 install gunicorn setuptools
 
-FROM python:3.12-slim as app
+FROM python:3.12-slim-bookworm as app
 WORKDIR /app
 
 ARG DJNG_ADMIN_USER="admin"
@@ -36,6 +36,15 @@ RUN curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opent
 RUN chmod +x install-opentofu.sh
 RUN ./install-opentofu.sh --install-method standalone
 RUN rm install-opentofu.sh
+
+# Setup provider mirror
+WORKDIR /opt/tofu
+COPY tofu/openstack.tf .
+COPY tofu/tofu.rc /opt/tofu/config/tofu.rc
+RUN tofu init && tofu providers mirror /opt/tofu/provider_mirror
+ENV TF_CLI_CONFIG_FILE=/opt/tofu/config/tofu.rc
+
+WORKDIR /app
 
 COPY bin bin
 COPY crczp crczp
