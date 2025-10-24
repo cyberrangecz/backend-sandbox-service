@@ -180,6 +180,8 @@ class CrczpConfiguration(Object):
         default=GitType.GITLAB
     )
 
+    git_skip_ssl_verification = Attribute(type=bool, default=False)
+
     ansible_networking_url = Attribute(type=str)
     ansible_networking_rev = Attribute(type=str, default=ANSIBLE_NETWORKING_REV)
 

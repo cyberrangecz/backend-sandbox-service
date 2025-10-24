@@ -91,6 +91,9 @@ application_configuration:
         "https://github.com/": "access-token",
     }
 
+    # Environment variable for Git SSL verification
+    git_skip_ssl_verification: false
+
     # The URL of Ansible networking Git repository.
     ansible_networking_url: ""
 
