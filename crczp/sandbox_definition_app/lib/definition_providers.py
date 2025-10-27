@@ -63,9 +63,9 @@ class GitlabProvider(DefinitionProvider):
         self.project_path = self.get_project_path(url_parsed)
 
         if self.git_access_token:
-            self.gl = gitlab.Gitlab(self.git_rest_server, private_token=self.git_access_token)
+            self.gl = gitlab.Gitlab(self.git_rest_server, private_token=self.git_access_token, ssl_verify=not config.git_skip_ssl_verification)
         else:
-            self.gl = gitlab.Gitlab(self.git_rest_server)
+            self.gl = gitlab.Gitlab(self.git_rest_server, ssl_verify=not config.git_skip_ssl_verification)
 
     def get_file(self, path: str, rev: str) -> str:
         """Get file from repo as a string."""
