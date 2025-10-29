@@ -200,6 +200,15 @@ class KubernetesContainer(BaseContainer):
                   '-a', settings.CRCZP_CONFIG.answers_storage_api]
         )
         kuber_container.args += ['-c'] if self.cleanup else []
+
+        # Add environment variable for Git SSL verification
+        kuber_container.env = [
+            client.V1EnvVar(
+                name="GIT_SSL_NO_VERIFY",
+                value="true" if getattr(settings.CRCZP_CONFIG, 'git_skip_ssl_verification', False) else "false"
+            )
+        ]
+
         kuber_container.volume_mounts = [
             client.V1VolumeMount(
                 name=ANSIBLE_FILE_VOLUME_NAME,
