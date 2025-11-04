@@ -160,6 +160,8 @@ class CrczpConfiguration(Object):
     log_file = Attribute(type=str, default=LOG_FILE)
     log_level = Attribute(type=str, default=LOG_LEVEL)
 
+    man_port = Attribute(type=int, default=4822)
+
     # Sandbox creation configuration
     git_user = Attribute(type=str, default=GIT_USER)
     git_providers = Attribute(type=GitProviders, default=GitProviders())

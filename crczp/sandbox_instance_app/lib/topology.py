@@ -4,6 +4,7 @@ import structlog
 from crczp.cloud_commons import TopologyInstance
 
 from crczp.sandbox_common_lib.common_cloud import list_images
+from crczp.sandbox_instance_app.lib.nodes import find_image_for_node, get_node_image_has_gui_access
 
 LOG = structlog.getLogger()
 
@@ -12,7 +13,7 @@ class Topology(object):
     """Represents a topology of a sandbox."""
 
     class HostNode(object):
-        def __init__(self, name, os_type, gui_access, ip):
+        def __init__(self, name, os_type, gui_access, is_accessible, ip):
             """
             Initialize a HostNode instance.
 
@@ -24,10 +25,11 @@ class Topology(object):
             self.name = name
             self.os_type = os_type
             self.gui_access = gui_access
+            self.is_accessible = is_accessible
             self.ip = ip
 
-    class RouterNode(object):
-        def __init__(self, name, os_type, gui_access, subnets):
+    class RouterNode(HostNode):
+        def __init__(self, name, os_type, gui_access, subnets, is_accessible, ip):
             """
             Initialize a RouterNode instance.
 
@@ -36,10 +38,9 @@ class Topology(object):
             :param bool gui_access: Whether GUI access is available
             :param subnets: List of subnets connected to this router
             :type subnets: List[Topology.Subnet]
+            :param str ip: The IP address of the router
             """
-            self.name = name
-            self.os_type = os_type
-            self.gui_access = gui_access
+            super().__init__(name, os_type, gui_access,is_accessible, ip)
             self.subnets = subnets
 
     class Subnet(object):
@@ -112,16 +113,22 @@ class Topology(object):
         :type subnets_dict: dict[str, Topology.Subnet]
         """
         for router_node in top_inst.get_visible_routers():
-            router_image = self._find_image_for_node(router_node, images)
+            router_image = find_image_for_node(router_node, images)
             if router_image is None:
                 continue
 
             router_subnets = self._get_subnets_for_router(router_node, top_inst, subnets_dict)
+
+            wan_link = top_inst.get_link_between_node_and_network(router_node, top_inst.wan)
+            wan_ip = wan_link.ip if wan_link else None
+
             router = self.RouterNode(
                 name=router_node.name,
                 os_type=router_image.os_type,
-                gui_access=self._get_gui_access(router_image),
-                subnets=router_subnets
+                gui_access=get_node_image_has_gui_access(router_image),
+                subnets=router_subnets,
+                is_accessible=True,
+                ip=wan_ip
             )
             self.routers.append(router)
 
@@ -150,7 +157,7 @@ class Topology(object):
 
         for link in top_inst.get_network_links(network, top_inst.get_visible_hosts()):
             host_node = link.node
-            host_image = self._find_image_for_node(host_node, images)
+            host_image = find_image_for_node(host_node, images)
 
             if host_image is None:
                 continue
@@ -158,7 +165,8 @@ class Topology(object):
             host = self.HostNode(
                 name=host_node.name,
                 os_type=host_image.os_type,
-                gui_access=self._get_gui_access(host_image),
+                gui_access=get_node_image_has_gui_access(host_image),
+                is_accessible=network.accessible_by_user,
                 ip=link.ip
             )
             hosts_in_network.append(host)
@@ -186,32 +194,6 @@ class Topology(object):
                 router_subnets.append(subnets_dict[link.network.name])
 
         return router_subnets
-
-    def _find_image_for_node(self, node, images):
-        """
-        Find the image for a given node.
-
-        :param node: The node object
-        :param images: List of available images
-        :type images: list
-        :return: The matching image object or None if not found
-        """
-        for image in images:
-            if image.name == node.base_box.image:
-                return image
-
-        LOG.warning("No image found for node {}".format(node.name))
-        return None
-
-    def _get_gui_access(self, image):
-        """
-        Extract GUI access information from image.
-
-        :param image: The image object
-        :return: True if GUI access is available, False otherwise
-        :rtype: bool
-        """
-        return image.owner_specified.get('owner_specified.openstack.gui_access') == 'true'
 
     def get_hosts(self):
         """

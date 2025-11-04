@@ -15,7 +15,7 @@ from django.core.cache import cache
 from django.db import transaction
 from django.contrib.auth.models import User
 from crczp.cloud_commons import TopologyInstance
-from crczp.topology_definition.models import TopologyDefinition, DockerContainers
+from crczp.topology_definition.models import TopologyDefinition, DockerContainers, Router, Host
 from rest_framework.generics import get_object_or_404
 
 from crczp.sandbox_common_lib import exceptions, utils
@@ -167,6 +167,15 @@ def get_topology_instance(sandbox: Sandbox) -> TopologyInstance:
     )
     return ti
 
+def get_topology_host(sandbox: Sandbox, host_name: str) -> Host | Router:
+    """Get specific host from topology instance."""
+    ti = get_topology_instance(sandbox)
+    node = ti.get_node(host_name)
+
+    if isinstance(node, (Host, Router)):
+        return node
+
+    raise ValueError(f'No host named {host_name} found in topology instance')
 
 def clear_cache(sandbox: Sandbox) -> None:
     """Delete cached entries for this sandbox."""

@@ -73,6 +73,9 @@ urlpatterns = [
     path('sandboxes/<str:sandbox_uuid>', views.SandboxDetailView.as_view(), name='sandbox-detail'),
     path('sandboxes/<str:sandbox_uuid>/topology',
          views.SandboxTopologyView.as_view(), name='sandbox-topology'),
+    path('sandboxes/<str:sandbox_uuid>/topology/<str:node_name>',
+         views.TopologyNodeConnectionData.as_view(),
+         name='topology-node-connection-data'),
 
     path('sandboxes/<str:sandbox_uuid>/vms/<str:vm_name>',
          views.SandboxVMDetailView.as_view(),  name='sandbox-vm-detail'),

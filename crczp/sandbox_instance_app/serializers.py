@@ -244,6 +244,7 @@ class HostSerializer(serializers.Serializer):
     name = serializers.CharField()
     os_type = serializers.CharField()
     gui_access = serializers.BooleanField()
+    is_accessible = serializers.BooleanField()
     ip = serializers.CharField()
 
 class SubnetSerializer(serializers.Serializer):
@@ -257,6 +258,8 @@ class RouterSerializer(serializers.Serializer):
     name = serializers.CharField()
     os_type = serializers.CharField()
     gui_access = serializers.BooleanField()
+    is_accessible = serializers.BooleanField()
+    ip = serializers.CharField()
     subnets = SubnetSerializer(many=True)
 
 
@@ -303,3 +306,13 @@ class HardwareUsageSerializer(serializers.Serializer):
     network = serializers.DecimalField(decimal_places=3, max_digits=7)
     subnet = serializers.DecimalField(decimal_places=3, max_digits=7)
     port = serializers.DecimalField(decimal_places=3, max_digits=7)
+
+class ProtocolSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    port = serializers.IntegerField(max_value=65535)
+
+class NodeAccessDataSerializer(serializers.Serializer):
+    man_ip = serializers.CharField()
+    man_port = serializers.IntegerField(max_value=65535)
+    host_ip = serializers.CharField()
+    protocols = ProtocolSerializer(many=True)
