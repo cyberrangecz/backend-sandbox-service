@@ -4,7 +4,6 @@ VM Service module for VM management.
 import itertools
 
 import django_rq
-import structlog
 from crczp.cloud_commons import TopologyInstance, Image
 from crczp.cloud_commons.topology_elements import Node
 from crczp.terraform_driver import TerraformInstance
