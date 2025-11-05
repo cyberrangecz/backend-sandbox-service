@@ -1,14 +1,14 @@
-import structlog
 from functools import partial
+
+import structlog
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.db import models, transaction
 from django.utils import timezone
-from django.contrib.auth.models import User
 
 from crczp.sandbox_common_lib import utils
 from crczp.sandbox_definition_app.models import Definition
 from crczp.sandbox_instance_app.lib.email_notifications import send_email, validate_emails_enabled
-
 
 DEFAULT_SANDBOX_UUID = '1'
 LOG = structlog.get_logger()

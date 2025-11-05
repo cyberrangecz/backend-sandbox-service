@@ -16,7 +16,7 @@ from crczp.sandbox_definition_app.lib import definitions
 from crczp.sandbox_definition_app.serializers import DefinitionSerializer
 
 from crczp.sandbox_instance_app import serializers
-from crczp.sandbox_instance_app.lib import pools, sandboxes, nodes,\
+from crczp.sandbox_instance_app.lib import pools, sandboxes, nodes, \
     requests as sandbox_requests
 from crczp.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit, \
     AllocationRequest, CleanupRequest, SandboxLock, PoolLock
@@ -1012,3 +1012,26 @@ class PoolVariablesView(APIView):
         except exceptions.GitError:
             pass
         return Response({"variables": variable_names})
+
+
+@extend_schema(
+    responses={200: OpenApiResponse(
+        response=serializers.NodeAccessDataSerializer,
+        description='Information necessary to access the node via Guacamole or other alternative.'), **SANDBOX_RESPONSES}
+)
+class TopologyNodeConnectionData(APIView):
+    queryset = Sandbox.objects.none()
+    serializer_class = serializers.NodeAccessDataSerializer
+
+    # noinspection PyMethodMayBeStatic
+    def get(self, request, *args, **kwargs):
+        """Retrieves data needed to establish connection to a node in the topology."""
+        sandbox = sandboxes.get_sandbox(kwargs.get('sandbox_uuid'))
+        if sandbox is None:
+            raise Http404(f"Sandbox with UUID {kwargs.get('sandbox_uuid')} does not exist.")
+        node_name = kwargs.get('node_name')
+        topology_instance = sandboxes.get_topology_instance(sandbox)
+        node = topology_instance.get_node(node_name)
+        if node is None:
+            raise Http404(f"Node with name {node_name} does not exist in the topology of sandbox {sandbox.id}.")
+        return Response(serializers.NodeAccessDataSerializer(nodes.get_node_access_data(topology_instance, node)).data)
