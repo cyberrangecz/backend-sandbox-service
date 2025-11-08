@@ -1,11 +1,12 @@
 import structlog
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
 from rest_framework import generics
-from drf_spectacular.utils import extend_schema, OpenApiResponse
+from rest_framework.views import APIView
 
-from crczp.sandbox_common_lib import utils
-from crczp.sandbox_instance_app.models import AllocationRequest, CleanupRequest
 from crczp.sandbox_ansible_app import serializers
+from crczp.sandbox_common_lib import log_output_mixin
+from crczp.sandbox_instance_app.models import AllocationRequest, CleanupRequest
 
 LOG = structlog.get_logger()
 
@@ -90,33 +91,73 @@ class UserAnsibleCleanupStageDetailView(generics.RetrieveAPIView):
 
 @extend_schema(
     methods=["GET"],
-    responses={200: serializers.AllocationAnsibleOutputSerializer(many=True),
-               **COMMON_RESPONSE_PATTERNS}
+    parameters=[
+        OpenApiParameter(
+            name='from_row',
+            type=int,
+            location=OpenApiParameter.QUERY,
+            description='Row index (DB relative), used for incremental fetch',
+            required=False
+        )
+    ],
+    responses={
+        200: OpenApiResponse(
+            description="Networking Ansible Outputs with trimmed content and row count"
+        ),
+        **COMMON_RESPONSE_PATTERNS
+    }
 )
-class NetworkingAnsibleOutputListView(generics.ListAPIView):
+class NetworkingAnsibleOutputListView(log_output_mixin.CompressedOutputMixin, APIView):
     """
-    get: Retrieve a list of Ansible Outputs.
+    get: Retrieve Ansible Outputs with trimmed content.
     """
-    serializer_class = serializers.AllocationAnsibleOutputSerializer
+    queryset = AllocationRequest.objects.all()
 
-    def get_queryset(self):
-        request_id = self.kwargs.get('request_id')
-        request = get_object_or_404(AllocationRequest, pk=request_id)
-        return request.networkingansibleallocationstage.outputs.all()
+    def get(self, request, request_id):
+        from_row = request.query_params.get('from_row', 0)
+        try:
+            from_row = int(from_row)
+        except (ValueError, TypeError):
+            from_row = 0
+
+        allocation_request = get_object_or_404(AllocationRequest, pk=request_id)
+        outputs_queryset = allocation_request.networkingansibleallocationstage.outputs
+
+        return self.create_outputs_response(outputs_queryset, from_row)
 
 
 @extend_schema(
     methods=["GET"],
-    responses={200: serializers.AllocationAnsibleOutputSerializer(many=True),
-               **COMMON_RESPONSE_PATTERNS}
+    parameters=[
+        OpenApiParameter(
+            name='from_row',
+            type=int,
+            location=OpenApiParameter.QUERY,
+            description='Row index (DB relative), used for incremental fetch',
+            required=False
+        )
+    ],
+    responses={
+        200: OpenApiResponse(
+            description="User Ansible Outputs with trimmed content and row count"
+        ),
+        **COMMON_RESPONSE_PATTERNS
+    }
 )
-class UserAnsibleOutputListView(generics.ListAPIView):
+class UserAnsibleOutputListView(log_output_mixin.CompressedOutputMixin, APIView):
     """
-    get: Retrieve a list of Ansible Outputs.
+    get: Retrieve Ansible Outputs with trimmed content.
     """
-    serializer_class = serializers.AllocationAnsibleOutputSerializer
+    queryset = AllocationRequest.objects.all()
 
-    def get_queryset(self):
-        request_id = self.kwargs.get('request_id')
-        request = get_object_or_404(AllocationRequest, pk=request_id)
-        return request.useransibleallocationstage.outputs.all()
+    def get(self, request, request_id):
+        from_row = request.query_params.get('from_row', 0)
+        try:
+            from_row = int(from_row)
+        except (ValueError, TypeError):
+            from_row = 0
+
+        allocation_request = get_object_or_404(AllocationRequest, pk=request_id)
+        outputs_queryset = allocation_request.useransibleallocationstage.outputs
+
+        return self.create_outputs_response(outputs_queryset, from_row)

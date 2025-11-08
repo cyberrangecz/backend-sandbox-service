@@ -2,27 +2,25 @@ from wsgiref.util import FileWrapper
 
 import structlog
 from django.conf import settings
-from django.http import HttpResponse, Http404
 from django.contrib.auth.models import AnonymousUser
-from django.utils.decorators import method_decorator
+from django.http import HttpResponse, Http404
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiRequest, OpenApiParameter
 from rest_framework import status, generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from crczp.sandbox_common_lib import exceptions, utils
+from crczp.sandbox_common_lib import exceptions, utils, log_output_mixin
+from crczp.sandbox_common_lib.swagger_typing import SandboxDefinitionSerializer, \
+    PoolRequestSerializer, PoolResponseSerializer
 from crczp.sandbox_common_lib.utils import get_object_or_404
 from crczp.sandbox_definition_app.lib import definitions
 from crczp.sandbox_definition_app.serializers import DefinitionSerializer
-
 from crczp.sandbox_instance_app import serializers
 from crczp.sandbox_instance_app.lib import pools, sandboxes, nodes, \
     requests as sandbox_requests
+from crczp.sandbox_instance_app.lib import stage_handlers
 from crczp.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit, \
     AllocationRequest, CleanupRequest, SandboxLock, PoolLock
-from crczp.sandbox_instance_app.lib import stage_handlers
-from crczp.sandbox_common_lib.swagger_typing import PoolResponseSerializer, SandboxDefinitionSerializer, \
-    PoolRequestSerializer, PoolRequestSerializer, PoolResponseSerializer
 from crczp.sandbox_uag.permissions import AdminPermission, OrganizerPermission
 
 LOG = structlog.get_logger()
@@ -664,13 +662,20 @@ class TerraformCleanupStageDetailView(generics.RetrieveAPIView):
         **SANDBOX_RESPONSES
     }
 )
-class TerraformAllocationStageOutputListView(generics.ListAPIView):
-    serializer_class = serializers.AllocationTerraformOutputSerializer
+class TerraformAllocationStageOutputListView(log_output_mixin.CompressedOutputMixin, APIView):
+    queryset = AllocationRequest.objects.all()
 
-    def get_queryset(self):
-        request_id = self.kwargs.get('request_id')
-        request = get_object_or_404(AllocationRequest, pk=request_id)
-        return request.stackallocationstage.terraform_outputs.all()
+    def get(self, request, request_id):
+        from_row = request.query_params.get('from_row', 0)
+        try:
+            from_row = int(from_row)
+        except (ValueError, TypeError):
+            from_row = 0
+
+        allocation_request = get_object_or_404(AllocationRequest, pk=request_id)
+        outputs_queryset = allocation_request.stackallocationstage.terraform_outputs
+
+        return self.create_outputs_response(outputs_queryset, from_row)
 
 
 #########################################
