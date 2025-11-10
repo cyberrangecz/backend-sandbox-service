@@ -1,31 +1,28 @@
 """
 Simple utils module.
 """
+import datetime
+import gzip
 import json
 import logging
 import uuid
-import jinja2
-from drf_spectacular.utils import  OpenApiResponse
-from typing import Tuple, Union, Iterable, Callable
+from typing import Tuple
+
 import structlog
+from crczp.terraform_driver import CrczpTerraformClient
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.x509.oid import NameOID, ExtendedKeyUsageOID
 from django.conf import settings
 from django.core.cache import cache
 from django.http import Http404
-from django.utils.decorators import method_decorator
-from rest_framework import status
+from drf_spectacular.utils import OpenApiResponse
 from rest_framework import serializers
+from rest_framework import status
 from rest_framework.generics import get_object_or_404 as gen_get_object_or_404
 from rest_framework.response import Response
-
-from cryptography import x509
-from cryptography.x509.oid import NameOID, ExtendedKeyUsageOID
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.backends import default_backend
-
-from crczp.terraform_driver import CrczpTerraformClient
-
-import datetime
 
 # Create logger
 LOG = structlog.get_logger()
@@ -179,3 +176,26 @@ def get_object_or_404(queryset, *filter_args, **filter_kwargs):
         return gen_get_object_or_404(queryset, *filter_args, **filter_kwargs)
     except Http404:
         raise Http404(f'The instance of {queryset.__name__} with {filter_kwargs} not found.')
+
+
+def create_compressed_response(data: dict) -> Response:
+    """
+    Create a Response with gzip compression if the JSON size exceeds ~5KB.
+    Uses Content-Encoding header so Angular will automatically decode it.
+
+    :param data: Dictionary to be serialized to JSON
+    :return: Response object with or without compression
+    """
+    json_data = json.dumps(data)
+    json_bytes = json_data.encode('utf-8')
+
+    if len(json_bytes) > 5000:
+        compressed_data = gzip.compress(json_bytes)
+        response = Response()
+        response.content = compressed_data
+        response['Content-Type'] = 'application/json'
+        response['Content-Encoding'] = 'gzip'
+        response['Content-Length'] = len(compressed_data)
+        return response
+
+    return Response(data)
