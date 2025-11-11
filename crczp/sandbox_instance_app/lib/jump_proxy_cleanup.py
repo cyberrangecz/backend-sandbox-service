@@ -44,7 +44,7 @@ def ssh_connect(hostname, port, username, key_file_path):
 
 
 def load_private_key(key_path):
-    key_classes = [paramiko.RSAKey, paramiko.DSSKey, paramiko.ECDSAKey, paramiko.Ed25519Key]
+    key_classes = [paramiko.RSAKey, paramiko.ECDSAKey, paramiko.Ed25519Key]
     for key_class in key_classes:
         try:
             return key_class.from_private_key_file(key_path)
