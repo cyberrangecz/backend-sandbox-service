@@ -121,7 +121,7 @@ def get_node_access_data(topology_instance: TopologyInstance, node: Node) -> Nod
     )
 
 
-def find_image_for_node(node: Node, images=list_images()) -> Image:
+def find_image_for_node(node: Node, images=None) -> Image:
     """
     Find the image for a given node.
 
@@ -130,6 +130,8 @@ def find_image_for_node(node: Node, images=list_images()) -> Image:
     :type images: list
     :return: The matching image object or None if not found
     """
+    if images is None:
+        images = list_images()
     for image in images:
         if image.name == node.base_box.image:
             return image
