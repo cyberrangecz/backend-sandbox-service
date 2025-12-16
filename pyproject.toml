@@ -1,6 +1,6 @@
 [project]
 name = "crczp-sandbox-service"
-version = "1.3.3"
+version = "1.4.0"
 description = "simplifies manipulation of OpenStack cloud platform for CyberRangeCZ Platform purposes"
 readme = "README.md"
 license = "MIT"
