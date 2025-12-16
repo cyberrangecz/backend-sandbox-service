@@ -9,6 +9,7 @@ import abc
 from django.conf import settings
 from crczp.cloud_commons import TopologyInstance, Link
 from crczp.topology_definition.models import Protocol, Router, Network
+from crczp.sandbox_common_lib.common_cloud import list_images
 
 PROXY_JUMP_NAME = 'proxy-jump'
 
@@ -28,6 +29,7 @@ class DefaultAnsibleHostsGroups(Enum):
     HIDDEN_HOSTS = 'hidden_hosts'
     DOCKER_HOSTS = 'docker_hosts'
     MONITORED_HOSTS = 'monitored_hosts'
+    WINDOWS_HOSTS = 'windows_hosts'
 
 
 class Base(abc.ABC):
@@ -330,7 +332,7 @@ class Inventory(BaseInventory):
         Create CRCZP default Ansible group entries.
 
         Default groups: 'hosts', 'management', 'routers', 'winrm_nodes', 'ssh_nodes',
-         'user_accessible_nodes', 'hidden_hosts' and 'docker_hosts'.
+         'user_accessible_nodes', 'hidden_hosts', 'docker_hosts' and 'windows_hosts'.
         """
         man = self.topology_instance.man
 
@@ -376,6 +378,37 @@ class Inventory(BaseInventory):
             group = Group(DefaultAnsibleHostsGroups.MONITORED_HOSTS.value,
                           hosts, hosts_variables)
             self.add_group(group)
+
+        # Add Windows hosts group
+        windows_hosts = self._get_windows_hosts()
+        if windows_hosts:
+            self.add_group(Group(DefaultAnsibleHostsGroups.WINDOWS_HOSTS.value, windows_hosts))
+
+    def _get_windows_hosts(self) -> List[Host]:
+        """
+        Get all hosts that use Windows images based on os_type parameter.
+
+        :return: List of Host objects that use Windows images
+        """
+        try:
+            images = list_images()
+            # Create a mapping of image name to os_type
+            image_os_type_map = {image.name: image.os_type for image in images}
+
+            windows_hosts = []
+            for node in self.topology_instance.get_nodes():
+                image_name = node.base_box.image
+                os_type = image_os_type_map.get(image_name)
+
+                if os_type and os_type.lower() == 'windows':
+                    host = self.hosts.get(node.name)
+                    if host:
+                        windows_hosts.append(host)
+
+            return windows_hosts
+        except Exception as e:
+            LOG.warning(f'Failed to create windows_hosts group: {e}')
+            return []
 
     def get_user_accessible_nodes(self) -> List[Host]:
         """

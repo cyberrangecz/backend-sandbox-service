@@ -5,7 +5,7 @@ import os
 import yaml
 from django.core.management import call_command
 
-from crczp.cloud_commons import TopologyInstance, TransformationConfiguration
+from crczp.cloud_commons import TopologyInstance, TransformationConfiguration, Image
 from ruamel.yaml import YAML
 
 from crczp.sandbox_ansible_app.lib.container import DockerContainer
@@ -41,6 +41,48 @@ def django_db_setup(django_db_setup, django_db_blocker):
 @pytest.fixture(autouse=True)
 def docker_sys_mock(mocker):
     mocker.patch.object(DockerContainer, 'CLIENT')
+
+
+@pytest.fixture(autouse=True)
+def mock_list_images(mocker):
+    """Mock list_images to return test image data matching the test definitions."""
+    mock_images = [
+        Image(
+            os_distro='debian',
+            os_type='linux',
+            disk_format='qcow2',
+            container_format='bare',
+            visibility='public',
+            size=1000000,
+            status='active',
+            min_ram=512,
+            min_disk=10,
+            created_at='2024-01-01',
+            updated_at='2024-01-01',
+            tags=[],
+            default_user='debian',
+            name='debian-12-x86_64',
+            owner_specified={},
+        ),
+        Image(
+            os_distro='windows',
+            os_type='windows',
+            disk_format='qcow2',
+            container_format='bare',
+            visibility='public',
+            size=2000000,
+            status='active',
+            min_ram=2048,
+            min_disk=40,
+            created_at='2024-01-01',
+            updated_at='2024-01-01',
+            tags=[],
+            default_user='Administrator',
+            name='windows-10',
+            owner_specified={},
+        ),
+    ]
+    return mocker.patch('crczp.sandbox_ansible_app.lib.inventory.list_images', return_value=mock_images)
 
 
 @pytest.fixture(scope='session')
