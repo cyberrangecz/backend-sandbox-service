@@ -74,6 +74,9 @@ all:
       hosts:
         home: null
         home-router: null
+    windows_hosts:
+      hosts:
+        home: null
     winrm_nodes:
       hosts:
         home: null

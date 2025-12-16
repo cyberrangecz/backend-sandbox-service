@@ -62,3 +62,56 @@ class TestContainersInInventory:
                            ssh_public_mgmt_key, ssh_public_user_key, extra_vars)
 
         assert sorted(result.to_dict()) == sorted(inventory_containers)
+
+class TestWindowsHostsGroup:
+    def test_windows_hosts_group_created(self, top_ins):
+        """Test that windows_hosts group is created with correct hosts."""
+        ssh_public_mgmt_key = '/root/.ssh/pool_mng_key.pub'
+        ssh_public_user_key = '/root/.ssh/user_key.pub'
+
+        result = Inventory(
+            'pool-prefix',
+            'stack-name',
+            top_ins,
+            '/root/.ssh/pool_mng_key',
+            '/root/.ssh/pool_mng_cert',
+            ssh_public_mgmt_key,
+            ssh_public_user_key,
+        )
+
+        # Check that windows_hosts group exists
+        assert 'windows_hosts' in result.to_dict()['all']['children']
+
+        # Check that 'home' is in windows_hosts (it uses windows-10 image)
+        windows_hosts = result.to_dict()['all']['children']['windows_hosts']['hosts']
+        assert 'home' in windows_hosts
+
+        # Check that debian hosts are NOT in windows_hosts
+        assert 'server' not in windows_hosts
+        assert 'server-router' not in windows_hosts
+        assert 'home-router' not in windows_hosts
+
+    def test_windows_hosts_group_empty_when_no_windows(self, top_ins, mocker):
+        """Test that windows_hosts group is not created when there are no Windows hosts."""
+        # Mock list_images to return only Linux images
+        mock_images = [
+            mocker.MagicMock(name='debian-12-x86_64', os_type='linux'),
+            mocker.MagicMock(name='windows-10', os_type='linux'),  # Pretend windows-10 is Linux
+        ]
+        mocker.patch('crczp.sandbox_ansible_app.lib.inventory.list_images', return_value=mock_images)
+
+        ssh_public_mgmt_key = '/root/.ssh/pool_mng_key.pub'
+        ssh_public_user_key = '/root/.ssh/user_key.pub'
+
+        result = Inventory(
+            'pool-prefix',
+            'stack-name',
+            top_ins,
+            '/root/.ssh/pool_mng_key',
+            '/root/.ssh/pool_mng_cert',
+            ssh_public_mgmt_key,
+            ssh_public_user_key,
+        )
+
+        # Check that windows_hosts group does not exist
+        assert 'windows_hosts' not in result.to_dict()['all']['children']
