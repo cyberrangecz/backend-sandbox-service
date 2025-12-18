@@ -30,6 +30,15 @@ chmod +x install-opentofu.sh && \
 ./install-opentofu.sh --install-method standalone && \
 rm -rf install-opentofu.sh /tmp/*
 
+# Setup provider mirror
+WORKDIR /opt/tofu
+COPY tofu/openstack.tf .
+COPY tofu/tofu.rc /opt/tofu/config/tofu.rc
+RUN tofu init && tofu providers mirror /opt/tofu/provider_mirror
+ENV TF_CLI_CONFIG_FILE=/opt/tofu/config/tofu.rc
+
+WORKDIR /app
+
 COPY bin bin
 COPY crczp crczp
 COPY config.yml-template ./config.yml
