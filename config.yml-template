@@ -42,6 +42,9 @@ application_configuration:
     # The URL of the head server.
     #head_host: head
 
+    # The destination port for syslog messages.
+    #syslog_destination_port: 515
+
     # The URL of OpenStack Identity service API.
     os_auth_url: ""
 

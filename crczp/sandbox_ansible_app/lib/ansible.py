@@ -237,6 +237,7 @@ class AllocationAnsibleRunner(AnsibleRunner):
             'global_openstack_stack_id': terraformstack.stack_id,
             'global_pool_id': sau.pool.id,
             'global_head_ip': settings.CRCZP_CONFIG.head_host,
+            'global_syslog_destination_port': settings.CRCZP_CONFIG.syslog_destination_port,
         }
         return Inventory(sau.pool.get_pool_prefix(), sau.get_stack_name(),
                          top_ins, self.container_mgmt_private_key, mgmt_public_certificate,
