@@ -141,6 +141,7 @@ class SMTPEncryption(Enum):
 
 class CrczpConfiguration(Object):
     head_host = Attribute(type=str, default=HEAD_IP)
+    syslog_destination_port = Attribute(type=int, default=515)
 
     os_auth_url = Attribute(type=str, default=None)
     os_application_credential_id = Attribute(type=str, default=None)

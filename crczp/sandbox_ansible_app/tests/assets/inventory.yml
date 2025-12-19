@@ -97,3 +97,4 @@ all:
     global_sandbox_name: stack-name
     global_ssh_public_mgmt_key: /root/.ssh/pool_mng_key.pub
     global_ssh_public_user_key: /root/.ssh/user_key.pub
+    global_syslog_destination_port: 515
