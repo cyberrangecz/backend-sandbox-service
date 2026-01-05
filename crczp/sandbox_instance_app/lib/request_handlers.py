@@ -19,7 +19,7 @@ from crczp.sandbox_instance_app.models import Sandbox, SandboxAllocationUnit, \
 from crczp.sandbox_instance_app.lib.stage_handlers import StageHandler, StackStageHandler, \
     AllocationStackStageHandler, CleanupStackStageHandler, AnsibleStageHandler, \
     AllocationAnsibleStageHandler, CleanupAnsibleStageHandler
-from crczp.sandbox_instance_app.lib import requests, sandboxes
+from crczp.sandbox_instance_app.lib import requests, sandboxes, pools
 
 LOG = structlog.get_logger()
 
@@ -345,7 +345,7 @@ class CleanupRequestHandler(RequestHandler):
         requests.delete_cleanup_request(request)
         LOG.info('Cleanup request deleted from DB', cleanup_request=request)
         if pool.size == 0 and self.delete_pool:
-            pool.delete()
+            pools.delete_pool(pool)
             LOG.info('Pool deleted from DB by final cleanup finishing', cleanup_request=request, pool=pool)
 
 
