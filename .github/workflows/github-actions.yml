@@ -28,6 +28,19 @@ jobs:
       LANG: C.UTF-8
       TERM: xterm-256color
       FORCE_COLOR: "1"
+
+    strategy:
+      fail-fast: false
+      matrix:
+        env:
+          - pre-commit
+          - pylint
+          - bandit
+          - audit
+          - pytest
+
+    name: (${{ matrix.env }})
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -38,10 +51,13 @@ jobs:
           # Install a specific version of uv.
           version: "0.7.12"
 
-      - name: install and run tox
+      - name: Install tox
         run: |
           uv tool install tox --with tox-uv
-          tox
+
+      - name: Run tox (${{ matrix.env }})
+        run: |
+          tox -q -e ${{ matrix.env }}
 
   build:
     if: github.event_name != 'pull_request'

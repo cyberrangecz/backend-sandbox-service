@@ -106,7 +106,10 @@ docstring-code-format = true
 check_untyped_defs = true
 ignore_missing_imports = true
 strict = true
+pretty = true
+show_error_codes = true
 enable_error_code = ["deprecated", "explicit-override"]
+explicit_package_bases = true
 
 [tool.pylint]
 # You can add pylint configs here or in .pylintrc
