@@ -37,7 +37,20 @@ def custom_exception_handler(exc, context):
     exc_info = settings.DEBUG or not isinstance(exc, (Http404,
                                                       PermissionDenied,
                                                       ValidationError,))
-    LOG.error(repr(exc), data=response.data if response else None, exc_info=exc_info)
+
+    # 404 is often expected (e.g. allocation unit already deleted after cleanup).
+    # For high-chatter endpoints like sandbox-allocation-units detail, log at INFO with path,
+    # and keep WARNING only for other 404s that may signal a real issue.
+    if isinstance(exc, Http404):
+        request = context.get('request')
+        path = getattr(request, 'path', '') if request is not None else ''
+        # Expected: training-service / cleanup / polling for allocation units that were already removed.
+        if path.startswith('/sandbox-service/api/v1/sandbox-allocation-units/'):
+            LOG.info('Http404', path=path, data=response.data if response else None)
+        else:
+            LOG.warning(repr(exc), data=response.data if response else None)
+    else:
+        LOG.error(repr(exc), data=response.data if response else None, exc_info=exc_info)
     return response
 
 

@@ -88,6 +88,16 @@ class SandboxAllocationUnit(models.Model):
     )
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, null=True,
                                    help_text='The user that created this sandbox allocation unit.')
+    created_by_sub = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text='OIDC sub of the creator when created via service-to-service (e.g. training backend).'
+    )
+    created_at = models.DateTimeField(
+        default=timezone.now,
+        help_text='When this allocation unit was created.'
+    )
     comment = models.CharField(
         default='',
         blank=True,

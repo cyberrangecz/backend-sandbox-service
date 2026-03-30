@@ -47,7 +47,8 @@ dependencies = [
     "kubernetes",
     "paramiko",
     "pygithub",
-    "gunicorn"
+    "gunicorn",
+    "ansible-core"
 ]
 
 [project.optional-dependencies]
@@ -55,7 +56,8 @@ dev = [
     "tox",
     "pytest",
     "pytest-mock",
-    "pytest-django"
+    "pytest-django",
+    "ruamel.yaml<0.19"
 ]
 
 [project.urls]

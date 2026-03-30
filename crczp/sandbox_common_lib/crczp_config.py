@@ -28,6 +28,8 @@ PERSISTENT_VOLUME_CLAIM_NAME = 'sandbox-service'
 ANSIBLE_DOCKER_IMAGE = 'ghcr.io/cyberrangecz/crczp-ansible-runner:1.4.1'
 ANSIBLE_DOCKER_NETWORK = 'bridge'
 ANSWERS_STORAGE_API = 'http://answers-storage:8087/answers-storage/api/v1'
+# Default internal training API URL for single-sandbox cleanup (host:port/path/api/v1; host may be training or training-service per deployment).
+TRAINING_SERVICE_API = 'http://training-service:8083/training/api/v1'
 SSL_CA_CERTIFICATE_VERIFY = '/etc/ssl/certs'
 DATABASE_ENGINE = "django.db.backends.postgresql"
 DATABASE_HOST = "localhost"
@@ -206,6 +208,7 @@ class CrczpConfiguration(Object):
     ansible_runner_settings = Attribute(type=AnsibleRunnerSettings, default=AnsibleRunnerSettings())
 
     answers_storage_api = Attribute(type=str, default=ANSWERS_STORAGE_API)
+    training_service_api = Attribute(type=str, default=TRAINING_SERVICE_API)
 
     ssl_ca_certificate_verify = Attribute(type=str, default=SSL_CA_CERTIFICATE_VERIFY)
 

@@ -53,8 +53,20 @@ class PageNumberWithPageSizePagination(PageNumberPagination):
         sort_by_param = request.GET.get('sort_by', self.sort_by_default_param)
         order_param = request.GET.get('order', self.order_default_param)
 
+        # Map API/serializer field names to model field names (e.g. allocation_unit_id -> id)
+        sort_field_mapping = getattr(self, 'sort_field_mapping', None)
+        if isinstance(queryset, QuerySet) and sort_field_mapping:
+            prefix = ''
+            if sort_by_param.startswith('-'):
+                prefix = '-'
+                sort_by_param = sort_by_param[1:]
+            if sort_by_param in sort_field_mapping:
+                sort_by_param = prefix + sort_field_mapping[sort_by_param]
+
         if isinstance(queryset, QuerySet):
-            sort_by_param = '-'+sort_by_param if order_param == "desc" else sort_by_param
+            # Apply order_param only if sort_by doesn't already specify direction (no leading '-')
+            if not sort_by_param.startswith('-'):
+                sort_by_param = '-'+sort_by_param if order_param == "desc" else sort_by_param
             queryset = queryset.order_by(sort_by_param)
         else:
             queryset = sorted(queryset, key=lambda item: self._ensure_comparable(
