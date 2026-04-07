@@ -77,6 +77,8 @@ all:
     windows_hosts:
       hosts:
         home: null
+      vars:
+        ansible_shell_type: powershell
     winrm_nodes:
       hosts:
         home: null
