@@ -382,7 +382,9 @@ class Inventory(BaseInventory):
         # Add Windows hosts group
         windows_hosts = self._get_windows_hosts()
         if windows_hosts:
-            self.add_group(Group(DefaultAnsibleHostsGroups.WINDOWS_HOSTS.value, windows_hosts))
+            windows_group = Group(DefaultAnsibleHostsGroups.WINDOWS_HOSTS.value, windows_hosts)
+            windows_group.add_variables(ansible_shell_type='powershell')
+            self.add_group(windows_group)
 
     def _get_windows_hosts(self) -> List[Host]:
         """
