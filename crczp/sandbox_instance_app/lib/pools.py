@@ -6,7 +6,7 @@ import zipfile
 from typing import List, Dict, Optional
 import structlog
 from django.db import transaction
-from django.db.models import QuerySet, ProtectedError
+from django.db.models import QuerySet, ProtectedError, Subquery
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -160,13 +160,19 @@ def validate_hardware_usage_of_sandboxes(pool, count) -> None:
         raise exceptions.StackError(f'Cannot build {count} sandboxes: {exc}')
 
 
-def create_sandboxes_in_pool(pool: Pool, created_by: Optional[User], count: int = None) -> List[SandboxAllocationUnit]:
+def create_sandboxes_in_pool(
+    pool: Pool,
+    created_by: Optional[User],
+    count: int = None,
+    created_by_sub: Optional[str] = None,
+) -> List[SandboxAllocationUnit]:
     """
     Creates count sandboxes in given pool.
 
     :param pool: Pool where to build sandbox
-    :param created_by: User initiating the build.
+    :param created_by: User initiating the build (Django user; may be None when created_by_sub is set).
     :param count: Count of sandboxes, None to build maximum
+    :param created_by_sub: OIDC sub of the creator (for service-to-service calls, e.g. training backend).
     :return: sandbox instance
     """
     with transaction.atomic():
@@ -183,37 +189,55 @@ def create_sandboxes_in_pool(pool: Pool, created_by: Optional[User], count: int 
                 )
 
         validate_hardware_usage_of_sandboxes(pool, count)
-        units = requests.create_allocations_requests(pool, count, created_by)
+        units = requests.create_allocations_requests(pool, count, created_by, created_by_sub)
         pool.size += count
         pool.save()
         return units
 
 
 def get_unlocked_sandbox(pool: Pool, created_by: Optional[User]) -> Optional[Sandbox]:
-    """Return unlocked sandbox."""
-    # TODO: Create Locks immediately on Sandbox creation
-    with transaction.atomic():
-        sb_queryset = Sandbox.objects\
-            .select_for_update()\
-            .order_by('id')\
-            .filter(allocation_unit__pool=pool, ready=True)
-        # Lock filtering needs to be done in Python.
-        # FOR UPDATE cannot be applied to the nullable side of a relation.
-        if _has_locked_sandbox(sb_queryset, created_by):
-            raise CrczpException("You already have a sandbox assigned. Use that one or ask your tutor for help.")
-        sandbox = next((sb for sb in sb_queryset if not hasattr(sb, 'lock')), None)
+    """Return one unlocked sandbox in the pool, or None if all are locked.
+    Uses random order and select_for_update(skip_locked=True) for fair distribution
+    and to avoid contention under concurrent access (e.g. managed instance stress test).
+    Only considers sandboxes that are ready, have all allocation stages finished,
+    and are not in cleanup (no cleanup request or cleanup fully finished).
 
+    Uses a subquery for "eligible allocation unit ids" so we do not need DISTINCT
+    on the main query; PostgreSQL does not allow SELECT FOR UPDATE with DISTINCT.
+    """
+    with transaction.atomic():
+        if _has_locked_sandbox_in_pool(pool, created_by):
+            raise CrczpException("You already have a sandbox assigned. Use that one or ask your tutor for help.")
+        # Subquery: allocation unit IDs in this pool that are fully ready and not in cleanup.
+        # exclude(stages__finished=False) removes units with any unfinished stage.
+        ready_unit_ids = SandboxAllocationUnit.objects.filter(pool=pool).exclude(
+            allocation_request__stages__finished=False
+        ).exclude(
+            cleanup_request__stages__finished=False
+        ).values_list("id", flat=True)
+        sandbox = (
+            Sandbox.objects.filter(
+                allocation_unit_id__in=Subquery(ready_unit_ids),
+                ready=True,
+                lock__isnull=True,
+            )
+            .order_by("?")
+            .select_for_update(skip_locked=True, of=("self",))
+            .first()
+        )
         if not sandbox:
             return None
         SandboxLock.objects.create(sandbox=sandbox, created_by=created_by)
         return sandbox
 
 
-def _has_locked_sandbox(sb_queryset, created_by: Optional[User]):
-    """Check if User locked a sandbox in queryset"""
+def _has_locked_sandbox_in_pool(pool: Pool, created_by: Optional[User]) -> bool:
+    """True if this user already has a locked sandbox in this pool."""
     if created_by is None:
         return False
-    return len(sb_queryset.filter(lock__created_by=created_by)) != 0
+    return Sandbox.objects.filter(
+        allocation_unit__pool=pool, lock__created_by=created_by
+    ).exists()
 
 
 def lock_pool(pool: Pool,  training_access_token: str = None) -> PoolLock:

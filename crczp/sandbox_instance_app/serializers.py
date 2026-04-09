@@ -132,31 +132,52 @@ class PoolCleanupRequestFailedSerializer(serializers.Serializer):
 
 class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
     allocation_request = AllocationRequestSerializer(read_only=True)
-    cleanup_request = CleanupRequestSerializer()
+    cleanup_request = CleanupRequestSerializer(read_only=True, allow_null=True)
     pool_id = serializers.PrimaryKeyRelatedField(source='pool', read_only=True)
     created_by = serializers.SerializerMethodField()
+    created_by_sub = serializers.CharField(read_only=True, allow_null=True)
+    created_at = serializers.DateTimeField(read_only=True)
     locked = serializers.SerializerMethodField()
+    sandbox_id = serializers.SerializerMethodField()
 
     class Meta:
         model = models.SandboxAllocationUnit
-        fields = ('id', 'pool_id', 'allocation_request', 'cleanup_request', 'created_by', 'locked', 'comment')
-        read_only_fields = ('id', 'pool_id', 'allocation_request', 'cleanup_request', 'created_by',
-                            'locked')
+        fields = (
+            'id', 'pool_id', 'allocation_request', 'cleanup_request',
+            'created_by', 'created_by_sub', 'created_at', 'locked', 'sandbox_id', 'comment'
+        )
+        read_only_fields = (
+            'id', 'pool_id', 'allocation_request', 'cleanup_request',
+            'created_by', 'created_by_sub', 'created_at', 'locked', 'sandbox_id'
+        )
 
     def update(self, instance: Meta.model, validated_data):
         instance.comment = validated_data.get('comment', instance.comment)
         instance.save()
         return instance
 
-    @extend_schema_field(field=serializers.BooleanField())
+    @extend_schema_field(field=serializers.DictField(allow_null=True))
     @staticmethod
-    def get_created_by(obj: models.SandboxAllocationUnit) -> bool:
+    def get_created_by(obj: models.SandboxAllocationUnit):
+        if obj.created_by is None:
+            return None
         return UserSerializer(obj.created_by).data
 
     @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
     def get_locked(obj: models.SandboxAllocationUnit) -> bool:
         return hasattr(obj, 'sandbox') and hasattr(obj.sandbox, 'lock')
+
+    @extend_schema_field(field=serializers.CharField(allow_null=True))
+    @staticmethod
+    def get_sandbox_id(obj: models.SandboxAllocationUnit):
+        """Sandbox UUID when the allocation unit has an associated sandbox (for trainee delete)."""
+        try:
+            if hasattr(obj, 'sandbox'):
+                return obj.sandbox.id
+        except AttributeError:
+            pass
+        return None
 
 class SandboxAllocationUnitIdListSerializer(serializers.Serializer):
     unit_ids = serializers.ListField(child=serializers.IntegerField())

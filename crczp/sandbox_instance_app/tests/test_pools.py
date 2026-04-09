@@ -90,14 +90,16 @@ class TestCreateSandboxesInPool:
     def test_create_sandboxes_in_pool_success_one(self, created_by):
         pool = pools.get_pool(POOL_ID)
         pools.create_sandboxes_in_pool(pool, created_by, 1)
-        self.fake_create_allocation_requests.assert_called_once_with(pool, 1, created_by)
+        self.fake_create_allocation_requests.assert_called_once_with(pool, 1, created_by, None)
 
     def test_create_sandboxes_in_pool_success_all(self, created_by):
         pool = pools.get_pool(POOL_ID)
         size_before = pool.size
 
         pools.create_sandboxes_in_pool(pool, created_by)
-        self.fake_create_allocation_requests.assert_called_once_with(pool, pool.max_size - size_before, created_by)
+        self.fake_create_allocation_requests.assert_called_once_with(
+            pool, pool.max_size - size_before, created_by, None
+        )
 
     def test_create_sandboxes_in_pool_full(self, created_by):
         pool = pools.get_pool(FULL_POOL_ID)

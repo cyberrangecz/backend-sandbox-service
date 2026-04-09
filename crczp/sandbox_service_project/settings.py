@@ -278,11 +278,30 @@ LOGGING = {
             "formatter": "rq_console",
             "exclude": ["%(asctime)s"],
         },
+        # Standard console handler for Django loggers (including django.request).
+        "console": {
+            "level": CRCZP_CONFIG.log_level,
+            "class": "logging.StreamHandler",
+        },
     },
-    'loggers': {
+    "filters": {
+        # Suppress noisy 404 logs for sandbox-allocation-units detail endpoint only.
+        "suppress_allocation_unit_404": {
+            "()": "crczp.sandbox_common_lib.logfilters.SuppressAllocationUnit404",
+        },
+    },
+    "loggers": {
         "rq.worker": {
             "handlers": ["rq_console"],
             "level": CRCZP_CONFIG.log_level,
         },
-    }
+        # Keep django.request logs, but drop the high-frequency 404s on
+        # /sandbox-service/api/v1/sandbox-allocation-units/{id}.
+        "django.request": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+            "filters": ["suppress_allocation_unit_404"],
+        },
+    },
 }

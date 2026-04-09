@@ -4,7 +4,8 @@ from django.db.models import ObjectDoesNotExist
 from django.utils import timezone
 from functools import partial
 
-from crczp.sandbox_instance_app.models import Sandbox, CleanupRequest, SandboxAllocationUnit
+from crczp.sandbox_instance_app.models import Sandbox, CleanupRequest, SandboxAllocationUnit, \
+    AllocationRequest, StackAllocationStage
 from crczp.sandbox_instance_app.lib import requests
 
 from crczp.sandbox_common_lib import exceptions as api_exceptions
@@ -30,6 +31,14 @@ class TestAllocationRequest:
         assert expected_partial.func == actual_partial.func
         assert expected_partial.args == actual_partial.args
         assert expected_partial.keywords == actual_partial.keywords
+
+    def test_create_allocation_requests_with_created_by_sub_persists_metadata(self, pool, mocker):
+        """Single-sandbox-per-user: created_by_sub and created_at are set when provided."""
+        mocker.patch('django.db.transaction.on_commit')
+        requests.create_allocations_requests(pool, 1, created_by=None, created_by_sub='user-123')
+        unit = SandboxAllocationUnit.objects.get(pool=pool)
+        assert unit.created_by_sub == 'user-123'
+        assert unit.created_at is not None
 
     def test_cancel_allocation_request_success(self, allocation_request_started):
         requests.cancel_allocation_request(allocation_request_started)
@@ -172,6 +181,70 @@ class TestCleanupRequest:
 
         requests.create_cleanup_requests([allocation_unit for allocation_unit in allocation_units], True)
         self.assert_multiple_cleanup_requests_success(allocation_units)
+
+    def test_create_cleanup_requests_force_skips_first_stage_running(self, mocker, sandbox_finished,
+                                                                     pool, created_by):
+        """Delete All / Delete Unlocked: when force=True, skip units with first stage running and clean the rest."""
+        mocker.patch('crczp.sandbox_instance_app.lib.requests.request_handlers.'
+                     'AllocationRequestHandler')
+        cleanup_handler = mocker.patch('crczp.sandbox_instance_app.lib.requests.request_handlers.'
+                                       'CleanupRequestHandler')
+        # Unit that can be cleaned (all stages finished)
+        unit_finished = sandbox_finished.allocation_unit
+        # Second unit with first stage running (start set, not finished/failed)
+        unit_running = SandboxAllocationUnit.objects.create(pool=pool, created_by=created_by)
+        alloc_req = AllocationRequest.objects.create(allocation_unit=unit_running)
+        StackAllocationStage.objects.create(
+            allocation_request=alloc_req,
+            allocation_request_fk_many=alloc_req,
+            start=timezone.now(),
+            finished=False,
+            failed=False,
+        )
+        Sandbox.objects.create(
+            id=unit_running.id,
+            allocation_unit=unit_running,
+            private_user_key='key',
+            public_user_key='pub',
+            ready=False,
+        )
+        allocation_units = [unit_finished, unit_running]
+        requests.create_cleanup_requests(allocation_units, force=True)
+        # Finished unit cleaned, running unit skipped
+        with pytest.raises(ObjectDoesNotExist):
+            Sandbox.objects.get(pk=unit_finished.sandbox.id)
+        assert Sandbox.objects.get(pk=unit_running.sandbox.id) is not None
+        cleanup_handler.return_value.enqueue_request.assert_called_once_with(unit_finished)
+
+    def test_force_cancel_allocation_units_in_pool_removes_stuck_units(self, mocker, pool,
+                                                                       created_by):
+        """Force Cancel Allocation removes units with first stage running from the DB."""
+        mocker.patch('crczp.sandbox_instance_app.lib.requests.request_handlers.'
+                     'AllocationRequestHandler')
+        unit = SandboxAllocationUnit.objects.create(pool=pool, created_by=created_by)
+        alloc_req = AllocationRequest.objects.create(allocation_unit=unit)
+        StackAllocationStage.objects.create(
+            allocation_request=alloc_req,
+            allocation_request_fk_many=alloc_req,
+            start=timezone.now(),
+            finished=False,
+            failed=False,
+        )
+        Sandbox.objects.create(
+            id=unit.id,
+            allocation_unit=unit,
+            private_user_key='key',
+            public_user_key='pub',
+            ready=False,
+        )
+        pool.size = 1
+        pool.save()
+        assert SandboxAllocationUnit.objects.filter(pool=pool).count() == 1
+        cancelled = requests.force_cancel_allocation_units_in_pool(pool.id)
+        assert cancelled == 1
+        assert SandboxAllocationUnit.objects.filter(pool=pool).count() == 0
+        pool.refresh_from_db()
+        assert pool.size == 0
 
     def test_cancel_cleanup_request_success(self, cleanup_request_started):
         requests.cancel_cleanup_request(cleanup_request_started)
