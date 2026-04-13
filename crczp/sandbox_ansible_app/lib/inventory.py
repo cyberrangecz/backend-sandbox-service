@@ -1,4 +1,4 @@
-from ipaddress import ip_network
+from ipaddress import ip_network, ip_address
 from typing import Dict, List, Optional
 from itertools import chain
 from enum import Enum
@@ -16,6 +16,28 @@ PROXY_JUMP_NAME = 'proxy-jump'
 LOG = structlog.get_logger()
 
 
+def _normalize_address(address: Optional[str]) -> Optional[str]:
+    """
+    Normalize an address value for use in monitoring targets.
+
+    - None  → None (pass-through)
+    - already CIDR notation (e.g. 10.0.0.0/24) → returned as-is
+    - bare IP address (e.g. 10.0.0.1) → converted to /32 CIDR
+    - FQDN / interface name → returned as-is
+    """
+    if address is None:
+        return None
+    try:
+        ip_network(address, strict=False)
+        # It parsed as a network — return as-is (already has prefix length)
+        if '/' in address:
+            return address
+        # A bare IP also parses as a /32 network; normalize it explicitly
+        return f'{address}/32'
+    except ValueError:
+        return address
+
+
 class DefaultAnsibleHostsGroups(Enum):
     """
     Enumerator for default ansible hosts groups.
@@ -28,7 +50,9 @@ class DefaultAnsibleHostsGroups(Enum):
     USER_ACCESSIBLE_NODES = 'user_accessible_nodes'
     HIDDEN_HOSTS = 'hidden_hosts'
     DOCKER_HOSTS = 'docker_hosts'
-    MONITORED_HOSTS = 'monitored_hosts'
+    MONITORED_HOSTS_TCP = 'monitored_hosts_tcp'
+    MONITORED_HOSTS_ICMP = 'monitored_hosts_icmp'
+    MONITORED_HOSTS_HTTP = 'monitored_hosts_http'
     WINDOWS_HOSTS = 'windows_hosts'
 
 
@@ -366,18 +390,53 @@ class Inventory(BaseInventory):
             self.docker_hosts = list(set(self.docker_hosts))
             self.add_group(Group(DefaultAnsibleHostsGroups.DOCKER_HOSTS.value, self.docker_hosts))
 
-        if self.topology_instance.topology_definition.monitoring_targets:
+        _mt = self.topology_instance.topology_definition.monitoring_targets
+        if _mt and _mt.tcp:
             hosts_variables = {}
             hosts = []
-            for monitored_node in self.topology_instance.get_monitored_hosts():
+            for monitored_node in self.topology_instance.get_monitored_hosts_tcp():
                 # inventory.hosts includes routers and switches
                 host = self.hosts[monitored_node.node]
                 hosts.append(host)
-                hosts_variables[host.name] = {'targets': [{'port': target.port, 'interface': target.interface}
-                                              for target in monitored_node.targets]}
-            group = Group(DefaultAnsibleHostsGroups.MONITORED_HOSTS.value,
-                          hosts, hosts_variables)
-            self.add_group(group)
+                hosts_variables[host.name] = {
+                    'targets': [
+                        {k: v for k, v in {
+                            'port': target.port,
+                            'interface': target.interface,
+                            'address': _normalize_address(target.address),
+                        }.items() if v is not None}
+                        for target in monitored_node.targets
+                    ]
+                }
+            self.add_group(Group(DefaultAnsibleHostsGroups.MONITORED_HOSTS_TCP.value,
+                                 hosts, hosts_variables))
+
+        if _mt and _mt.icmp:
+            hosts_variables = {}
+            hosts = []
+            for monitored_node in self.topology_instance.get_monitored_hosts_icmp():
+                host = self.hosts[monitored_node.node]
+                hosts.append(host)
+                hosts_variables[host.name] = {
+                    'targets': [
+                        {k: v for k, v in {
+                            'interface': target.interface,
+                            'address': _normalize_address(target.address),
+                        }.items() if v is not None}
+                        for target in monitored_node.targets
+                    ]
+                }
+            self.add_group(Group(DefaultAnsibleHostsGroups.MONITORED_HOSTS_ICMP.value,
+                                 hosts, hosts_variables))
+
+        if _mt and _mt.http:
+            self.add_variables(monitoring_http_targets=[
+                {k: v for k, v in {
+                    'url': target.url,
+                    'check_string': target.check_string,
+                }.items() if v is not None}
+                for target in self.topology_instance.get_monitored_hosts_http().targets
+            ])
 
         # Add Windows hosts group
         windows_hosts = self._get_windows_hosts()

@@ -28,7 +28,11 @@ class TestCreateInventory:
         all_vars = dict(global_sandbox_name=top_ins_monitoring.name,
                         global_sandbox_ip=top_ins_monitoring.ip,
                         global_ssh_public_mgmt_key=ssh_public_mgmt_key,
-                        global_ssh_public_user_key=ssh_public_user_key)
+                        global_ssh_public_user_key=ssh_public_user_key,
+                        monitoring_http_targets=[
+                            {'url': 'https://example.com', 'check_string': 'Hello'},
+                            {'url': 'http://10.10.20.5:8080/status'},
+                        ])
         extra_vars = {'a': 1, 'b': 'b'}
         all_vars.update(extra_vars)
         inventory_monitoring['all']['vars'] = all_vars

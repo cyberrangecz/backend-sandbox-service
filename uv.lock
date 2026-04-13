@@ -417,7 +417,7 @@ wheels = [
 
 [[package]]
 name = "crczp-aws-lib"
-version = "1.0.2"
+version = "1.0.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "boto3" },
@@ -426,12 +426,12 @@ dependencies = [
     { name = "pyyaml" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/07/85/8106a02b0d048be81660849d1965a22da1b869d5ca0db66d34300502600c/crczp_aws_lib-1.0.2-py3-none-any.whl", hash = "sha256:92895db73b1a23bd61bed0c20c6a828dbbb7dab4c4f31de5e783eae15adaac81", size = 9298, upload-time = "2025-06-20T10:40:14.166Z" },
+    { url = "https://files.pythonhosted.org/packages/a9/3a/6a0cd5f6d5ca885c2913c5722a3fa876e36a4c38425a07e2a3147f92675b/crczp_aws_lib-1.0.3-py3-none-any.whl", hash = "sha256:503c41931985a3cf90cabec5faaa49c7b5da1c6ec89b4bc6e07fe4186afc94d6", size = 9299, upload-time = "2026-04-20T11:28:32.767Z" },
 ]
 
 [[package]]
 name = "crczp-openstack-lib"
-version = "1.0.1"
+version = "1.0.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "crczp-python-commons" },
@@ -448,23 +448,23 @@ dependencies = [
     { name = "yamlize" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/93/d4/d82fa680013aef1a63e9265e0027bba074599a03f3e5a0682a1c01b25a12/crczp_openstack_lib-1.0.1-py3-none-any.whl", hash = "sha256:837885022bb9960780c4d4c9181741fa492e31bc88bf12c1dc249e405d675ecf", size = 12572, upload-time = "2025-06-20T10:13:03.357Z" },
+    { url = "https://files.pythonhosted.org/packages/9c/14/81f6ccc60373b12c370201b5f833904ea65cc428131a7d96e92d62efa85d/crczp_openstack_lib-1.0.3-py3-none-any.whl", hash = "sha256:70b08d93f6d1145ea8bdef2cf5b3ac216a07bbb8522547f970dcf4003447330e", size = 12657, upload-time = "2026-04-20T11:27:50.344Z" },
 ]
 
 [[package]]
 name = "crczp-python-commons"
-version = "1.0.2"
+version = "2.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "crczp-topology-definition" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/00/f5/c7ed72bdef57deff9d941ec0258bb80af98eb7db44cc1e1951c01c8a8a19/crczp_python_commons-1.0.2-py3-none-any.whl", hash = "sha256:1175a0e7c32ea72582f07c217c7712fe0a1d8d24dad79b36f74bec99f32fbf0a", size = 11696, upload-time = "2025-06-13T12:39:54.962Z" },
+    { url = "https://files.pythonhosted.org/packages/31/88/c0e3976d86292ab4cecea62615ecebf1056c840daee16ff1c425b4d1c920/crczp_python_commons-2.0.1-py3-none-any.whl", hash = "sha256:9465024005115afc3c231b09e1a0d4cbe692559bd045df0947d521ffa144cdb2", size = 12603, upload-time = "2026-04-21T06:20:35.448Z" },
 ]
 
 [[package]]
 name = "crczp-sandbox-service"
-version = "1.3.0"
+version = "2.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "better-profanity" },
@@ -522,11 +522,11 @@ requires-dist = [
     { name = "colorama" },
     { name = "coreapi" },
     { name = "crczp-automated-problem-generation-lib", specifier = "~=1.0.0" },
-    { name = "crczp-aws-lib", specifier = "~=1.0.1" },
-    { name = "crczp-openstack-lib", specifier = "~=1.0.0" },
-    { name = "crczp-python-commons", specifier = "~=1.0.1" },
-    { name = "crczp-terraform-client", specifier = "~=1.0.0" },
-    { name = "crczp-topology-definition", specifier = "~=1.0.0" },
+    { name = "crczp-aws-lib", specifier = "~=1.0.3" },
+    { name = "crczp-openstack-lib", specifier = "~=1.0.3" },
+    { name = "crczp-python-commons", specifier = "~=2.0.1" },
+    { name = "crczp-terraform-client", specifier = "~=1.0.3" },
+    { name = "crczp-topology-definition", specifier = "~=2.0.0" },
     { name = "cryptography" },
     { name = "django", specifier = "~=5.0" },
     { name = "django-cors-headers" },
@@ -566,7 +566,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "crczp-terraform-client"
-version = "1.0.2"
+version = "1.0.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "crczp-aws-lib" },
@@ -575,12 +575,12 @@ dependencies = [
     { name = "jinja2" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8b/c8/ba9337952994dcc03aef05b32fd0eb81ab6606a74e5346735dde900e0dc1/crczp_terraform_client-1.0.2-py3-none-any.whl", hash = "sha256:9ec85505a30f17f85928aa012380a09a89e97c0541cee3da1fa0d3fb62904899", size = 12155, upload-time = "2025-06-20T14:28:09.33Z" },
+    { url = "https://files.pythonhosted.org/packages/fa/86/e61ee0db665a7dbb419d602622be2f9fd1b7cadf78b7d93194ebca3e850d/crczp_terraform_client-1.0.3-py3-none-any.whl", hash = "sha256:fa32b5e6b89570229e58bc286266533afa6b8ba5c7d262bc19163a8840718521", size = 12159, upload-time = "2026-04-20T14:26:10.763Z" },
 ]
 
 [[package]]
 name = "crczp-topology-definition"
-version = "1.0.2"
+version = "2.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "netaddr" },
@@ -588,7 +588,7 @@ dependencies = [
     { name = "yamlize" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cf/d5/423099c79c89f9ad428be95b5926b596a78c7b36915733eea2772d731b8a/crczp_topology_definition-1.0.2-py3-none-any.whl", hash = "sha256:1c497f36fac5ec53b5c773a3623c1e7a8176efee20d9b236b18957b68a62a24d", size = 7085, upload-time = "2025-08-04T16:04:12.679Z" },
+    { url = "https://files.pythonhosted.org/packages/4e/66/0f572c00ed7f12c9bc1c0bb5bcb99b4b0d283298505d83fa0891f4de57c2/crczp_topology_definition-2.0.0-py3-none-any.whl", hash = "sha256:7224f056635f66592ad069ce22e440a11ae919a9b6380ed16362881d8bec5e1b", size = 9015, upload-time = "2026-04-17T18:15:29.565Z" },
 ]
 
 [[package]]

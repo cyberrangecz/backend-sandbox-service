@@ -51,17 +51,33 @@ groups:
       - server-router
 
 monitoring_targets:
-  - node: server
+  tcp:
+    - node: server
+      targets:
+        - port: 45
+          interface: eth0
+        - port: 45
+          address: 10.10.20.5
+        - port: 200
+          address: 10.10.20.5
+    - node: home
+      targets:
+        - port: 55
+          address: 10.10.30.5
+    - node: home-router
+      targets:
+        - port: 555
+          interface: eth0
+  icmp:
+    - node: server
+      targets:
+        - interface: eth0
+        - address: 10.10.20.5
+    - node: home-router
+      targets:
+        - address: 10.10.30.1
+  http:
     targets:
-      - port: 45
-        interface: eth0
-      - port: 200
-        interface: eth1
-  - node: home
-    targets:
-      - port: 55
-        interface: eth0
-  - node: home-router
-    targets:
-      - port: 555
-        interface: eth0
+      - url: https://example.com
+        check_string: "Hello"
+      - url: http://10.10.20.5:8080/status

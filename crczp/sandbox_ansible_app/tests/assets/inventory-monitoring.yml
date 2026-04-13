@@ -84,22 +84,38 @@ all:
         ansible_psrp_certificate_key_pem: /root/.ssh/pool_mng_key
         ansible_psrp_certificate_pem: /root/.ssh/pool_mng_cert
         ansible_psrp_proxy: socks5://localhost:12345
-    monitored_hosts:
+    windows_hosts:
+      hosts:
+        home: null
+      vars:
+        ansible_shell_type: powershell
+    monitored_hosts_tcp:
       hosts:
         server:
           targets:
             - port: 45
               interface: eth0
+            - port: 45
+              address: 10.10.20.5/32
             - port: 200
-              interface: eth1
+              address: 10.10.20.5/32
         home:
           targets:
             - port: 55
-              interface: eth0
+              address: 10.10.30.5/32
         home-router:
           targets:
             - port: 555
               interface: eth0
+    monitored_hosts_icmp:
+      hosts:
+        server:
+          targets:
+            - interface: eth0
+            - address: 10.10.20.5/32
+        home-router:
+          targets:
+            - address: 10.10.30.1/32
 
   vars:
     global_head_ip: 0.0.0.0
@@ -112,3 +128,7 @@ all:
     global_ssh_public_mgmt_key: /root/.ssh/pool_mng_key.pub
     global_ssh_public_user_key: /root/.ssh/user_key.pub
     global_syslog_destination_port: 515
+    monitoring_http_targets:
+      - url: https://example.com
+        check_string: Hello
+      - url: http://10.10.20.5:8080/status
