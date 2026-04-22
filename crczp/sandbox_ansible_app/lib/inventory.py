@@ -9,8 +9,7 @@ import re
 
 from django.conf import settings
 from crczp.cloud_commons import TopologyInstance, Link
-from crczp.topology_definition.models import Protocol, Router, Network
-from crczp.sandbox_common_lib.common_cloud import list_images
+from crczp.topology_definition.models import Router, Network
 
 PROXY_JUMP_NAME = 'proxy-jump'
 
@@ -363,118 +362,11 @@ class Inventory(BaseInventory):
         Default groups: 'hosts', 'management', 'routers', 'winrm_nodes', 'ssh_nodes',
          'user_accessible_nodes', 'hidden_hosts', 'docker_hosts' and 'windows_hosts'.
         """
-        man = self.topology_instance.man
-
-        hosts = [self.hosts[node.name] for node in self.topology_instance.get_hosts()]
-        self.add_group(Group(DefaultAnsibleHostsGroups.HOSTS.value, hosts))
-
-        self.add_group(Group(DefaultAnsibleHostsGroups.MANAGEMENT.value, [man]))
-
-        routers = [self.hosts[node.name] for node in self.topology_instance.get_routers()]
-        self.add_group(Group(DefaultAnsibleHostsGroups.ROUTERS.value, routers))
-
-        winrm_nodes = [self.hosts[node.name] for node in self.topology_instance.get_nodes()
-                       if node.base_box.mgmt_protocol == Protocol.WINRM and node != man]
-        self.add_group(Group(DefaultAnsibleHostsGroups.WINRM_NODES.value, winrm_nodes))
-
-        ssh_nodes = [self.hosts[node.name] for node in self.topology_instance.get_nodes()
-                     if node.base_box.mgmt_protocol == Protocol.SSH and node != man]
-        self.add_group(Group(DefaultAnsibleHostsGroups.SSH_NODES.value, ssh_nodes))
-
-        self.add_group(Group(DefaultAnsibleHostsGroups.USER_ACCESSIBLE_NODES.value,
-                             self.get_user_accessible_nodes()))
-
-        hidden_hosts = [self.hosts[node.name] for node in self.topology_instance.get_hosts()
-                        if node.hidden]
-        self.add_group(Group(DefaultAnsibleHostsGroups.HIDDEN_HOSTS.value, hidden_hosts))
-
-        self.docker_hosts = None
-        if self.topology_instance.containers:
-            self.docker_hosts = [self.hosts[container_mapping.host] for container_mapping
-                                 in self.topology_instance.containers.container_mappings]
-            self.docker_hosts = list(set(self.docker_hosts))
-            self.add_group(Group(DefaultAnsibleHostsGroups.DOCKER_HOSTS.value, self.docker_hosts))
-
-        _mt = self.topology_instance.topology_definition.monitoring_targets
-        if _mt and _mt.tcp:
-            hosts_variables = {}
-            hosts = []
-            for monitored_node in self.topology_instance.get_monitored_hosts_tcp():
-                # inventory.hosts includes routers and switches
-                host = self.hosts[monitored_node.node]
-                hosts.append(host)
-                hosts_variables[host.name] = {
-                    'targets': [
-                        {k: v for k, v in {
-                            'port': target.port,
-                            'interface': target.interface,
-                            'address': _normalize_address(target.address),
-                        }.items() if v is not None}
-                        for target in monitored_node.targets
-                    ]
-                }
-            self.add_group(Group(DefaultAnsibleHostsGroups.MONITORED_HOSTS_TCP.value,
-                                 hosts, hosts_variables))
-
-        if _mt and _mt.icmp:
-            hosts_variables = {}
-            hosts = []
-            for monitored_node in self.topology_instance.get_monitored_hosts_icmp():
-                host = self.hosts[monitored_node.node]
-                hosts.append(host)
-                hosts_variables[host.name] = {
-                    'targets': [
-                        {k: v for k, v in {
-                            'interface': target.interface,
-                            'address': _normalize_address(target.address),
-                        }.items() if v is not None}
-                        for target in monitored_node.targets
-                    ]
-                }
-            self.add_group(Group(DefaultAnsibleHostsGroups.MONITORED_HOSTS_ICMP.value,
-                                 hosts, hosts_variables))
-
-        if _mt and _mt.http:
-            self.add_variables(monitoring_http_targets=[
-                {k: v for k, v in {
-                    'url': target.url,
-                    'check_string': target.check_string,
-                }.items() if v is not None}
-                for target in self.topology_instance.get_monitored_hosts_http().targets
-            ])
-
-        # Add Windows hosts group
-        windows_hosts = self._get_windows_hosts()
-        if windows_hosts:
-            windows_group = Group(DefaultAnsibleHostsGroups.WINDOWS_HOSTS.value, windows_hosts)
-            windows_group.add_variables(ansible_shell_type='powershell')
-            self.add_group(windows_group)
-
-    def _get_windows_hosts(self) -> List[Host]:
-        """
-        Get all hosts that use Windows images based on os_type parameter.
-
-        :return: List of Host objects that use Windows images
-        """
-        try:
-            images = list_images()
-            # Create a mapping of image name to os_type
-            image_os_type_map = {image.name: image.os_type for image in images}
-
-            windows_hosts = []
-            for node in self.topology_instance.get_nodes():
-                image_name = node.base_box.image
-                os_type = image_os_type_map.get(image_name)
-
-                if os_type and os_type.lower() == 'windows':
-                    host = self.hosts.get(node.name)
-                    if host:
-                        windows_hosts.append(host)
-
-            return windows_hosts
-        except Exception as e:
-            LOG.warning(f'Failed to create windows_hosts group: {e}')
-            return []
+        # Imported lazily to avoid a circular import: group_builders.py itself
+        # imports Group / DefaultAnsibleHostsGroups from this module.
+        from crczp.sandbox_ansible_app.lib.group_builders import GROUP_BUILDERS  # noqa: PLC0415
+        for builder in GROUP_BUILDERS:
+            builder(self, self.topology_instance)
 
     def get_user_accessible_nodes(self) -> List[Host]:
         """
