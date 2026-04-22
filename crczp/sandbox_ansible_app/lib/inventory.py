@@ -25,7 +25,7 @@ def _normalize_address(address: Optional[str]) -> Optional[str]:
     Normalize an address value for use in monitoring targets.
 
     - None  → None (pass-through)
-    - already CIDR notation (e.g. 10.0.0.0/24) → returned as-is
+    - already CIDR notation (e.g. 10.0.0.1/24) → returned as normalized CIDR e.g. 10.0.0.0/24
     - bare IP address (e.g. 10.0.0.1) → converted to /32 CIDR
     - FQDN
     """
