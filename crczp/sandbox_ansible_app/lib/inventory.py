@@ -52,7 +52,6 @@ class DefaultAnsibleHostsGroups(Enum):
     DOCKER_HOSTS = 'docker_hosts'
     MONITORED_HOSTS_TCP = 'monitored_hosts_tcp'
     MONITORED_HOSTS_ICMP = 'monitored_hosts_icmp'
-    MONITORED_HOSTS_HTTP = 'monitored_hosts_http'
     WINDOWS_HOSTS = 'windows_hosts'
 
 
