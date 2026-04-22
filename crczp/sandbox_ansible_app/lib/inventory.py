@@ -1,4 +1,4 @@
-from ipaddress import ip_network, ip_address
+from ipaddress import ip_network
 from typing import Dict, List, Optional
 from itertools import chain
 from enum import Enum
