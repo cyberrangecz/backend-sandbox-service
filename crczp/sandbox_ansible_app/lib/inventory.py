@@ -5,6 +5,7 @@ from enum import Enum
 import structlog
 import yaml
 import abc
+import re
 
 from django.conf import settings
 from crczp.cloud_commons import TopologyInstance, Link
@@ -15,6 +16,9 @@ PROXY_JUMP_NAME = 'proxy-jump'
 
 LOG = structlog.get_logger()
 
+# Allows alphanumeric characters, dots, hyphens, and underscores.
+VALID_FQDN_REGEX = re.compile(r"^[a-zA-Z0-9.\-_]+$")
+
 
 def _normalize_address(address: Optional[str]) -> Optional[str]:
     """
@@ -23,19 +27,21 @@ def _normalize_address(address: Optional[str]) -> Optional[str]:
     - None  → None (pass-through)
     - already CIDR notation (e.g. 10.0.0.0/24) → returned as-is
     - bare IP address (e.g. 10.0.0.1) → converted to /32 CIDR
-    - FQDN / interface name → returned as-is
+    - FQDN
     """
     if address is None:
         return None
+
+    address = address.strip()
+    if not address:
+        raise ValueError("Address cannot be empty")
+
     try:
-        ip_network(address, strict=False)
-        # It parsed as a network — return as-is (already has prefix length)
-        if '/' in address:
-            return address
-        # A bare IP also parses as a /32 network; normalize it explicitly
-        return f'{address}/32'
+        return ip_network(address, strict=False).with_prefixlen
     except ValueError:
-        return address
+        if VALID_FQDN_REGEX.match(address):
+            return address
+        raise ValueError(f"Address '{address}' is neither a valid IP/CIDR nor a valid FQDN.")
 
 
 class DefaultAnsibleHostsGroups(Enum):
