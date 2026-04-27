@@ -71,7 +71,7 @@ monitoring_targets:
   icmp:
     - node: server
       targets:
-        - interface: eth0
+        - interface: eth1
         - address: 10.10.20.5
     - node: home-router
       targets:

@@ -111,7 +111,7 @@ all:
       hosts:
         server:
           targets:
-            - interface: eth0
+            - interface: eth1
             - address: 10.10.20.5/32
         home-router:
           targets:
