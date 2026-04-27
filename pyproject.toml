@@ -18,11 +18,12 @@ dependencies = [
     # https://github.com/snguyenthanh/better_profanity/issues/19
     "better-profanity ==0.6.1",
     "django ~=5.0",
-    "djangorestframework",
+    "djangorestframework <3.15.0",
     "coreapi",
     "structlog",
     "colorama",
     "djangorestframework-yaml",
+    "ruamel.yaml <0.18.0",
     "pyyaml",
     "gitpython",
     "requests",
@@ -126,4 +127,8 @@ testpaths = [
     "crczp/sandbox_definition_app/tests",
     "crczp/sandbox_instance_app/tests",
     "crczp/sandbox_service_project/tests",
+]
+
+markers = [
+    "integration: marks tests as integration tests",
 ]

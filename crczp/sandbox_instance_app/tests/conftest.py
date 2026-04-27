@@ -188,22 +188,25 @@ def containers() -> str:
         return stream.getvalue()
 
 
+def _load_ssh_config_helper(path):
+	"""Helper function for loading SSH config from file using from_str."""
+	with open(path, 'r', encoding='utf-8') as f:
+		return CrczpSSHConfig.from_str(f.read())
+
 @pytest.fixture
 def user_ssh_config():
-    """Creates example User ssh config for a sandbox."""
-    return CrczpSSHConfig.load(data_path_join(TESTING_SSH_CONFIG_USER))
-
+	"""Creates example User ssh config for a sandbox."""
+	return _load_ssh_config_helper(data_path_join(TESTING_SSH_CONFIG_USER))
 
 @pytest.fixture
 def management_ssh_config():
-    """Creates example Management ssh config for a sandbox."""
-    return CrczpSSHConfig.load(data_path_join(TESTING_SSH_CONFIG_MANAGEMENT))
-
+	"""Creates example Management ssh config for a sandbox."""
+	return _load_ssh_config_helper(data_path_join(TESTING_SSH_CONFIG_MANAGEMENT))
 
 @pytest.fixture
 def ansible_ssh_config():
-    """Creates example Management ssh config for a sandbox."""
-    return CrczpSSHConfig.load(data_path_join(TESTING_SSH_CONFIG_ANSIBLE))
+	"""Creates example Management ssh config for a sandbox."""
+	return _load_ssh_config_helper(data_path_join(TESTING_SSH_CONFIG_ANSIBLE))
 
 
 @pytest.fixture

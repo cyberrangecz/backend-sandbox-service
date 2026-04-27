@@ -82,7 +82,7 @@ def mock_list_images(mocker):
             owner_specified={},
         ),
     ]
-    return mocker.patch('crczp.sandbox_ansible_app.lib.inventory.list_images', return_value=mock_images)
+    return mocker.patch('crczp.terraform_driver.CrczpTerraformClient.list_images', return_value=mock_images)
 
 
 @pytest.fixture(scope='session')

@@ -102,7 +102,7 @@ class TestWindowsHostsGroup:
             mocker.MagicMock(name='debian-12-x86_64', os_type='linux'),
             mocker.MagicMock(name='windows-10', os_type='linux'),  # Pretend windows-10 is Linux
         ]
-        mocker.patch('crczp.sandbox_ansible_app.lib.inventory.list_images', return_value=mock_images)
+        mocker.patch('crczp.terraform_driver.CrczpTerraformClient.list_images', return_value=mock_images)
 
         ssh_public_mgmt_key = '/root/.ssh/pool_mng_key.pub'
         ssh_public_user_key = '/root/.ssh/user_key.pub'
