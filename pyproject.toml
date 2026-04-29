@@ -50,14 +50,6 @@ dependencies = [
     "gunicorn"
 ]
 
-[project.optional-dependencies]
-dev = [
-    "tox",
-    "pytest",
-    "pytest-mock",
-    "pytest-django"
-]
-
 [project.urls]
 GitHub = "https://github.com/cyberrangecz/backend-sandbox-service"
 
@@ -78,7 +70,7 @@ exclude-packages = [
 ]
 
 [tool.ruff]
-line-length = 127
+line-length = 100
 preview = true
 
 [tool.ruff.lint]
@@ -99,7 +91,7 @@ select = [
 
 [tool.ruff.format]
 quote-style = "single"
-indent-style = "tab"
+indent-style = "space"
 docstring-code-format = true
 
 [tool.mypy]
