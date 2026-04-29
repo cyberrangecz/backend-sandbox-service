@@ -1,25 +1,25 @@
-from ipaddress import ip_network
-from typing import Dict, List, Optional
-from itertools import chain
-from enum import Enum
-import structlog
-import yaml
 import abc
 import re
+from enum import Enum
+from ipaddress import ip_network
+from itertools import chain
+from typing import Optional
 
+import structlog
+import yaml
+from crczp.cloud_commons import Link, TopologyInstance
+from crczp.topology_definition.models import Network, Router
 from django.conf import settings
-from crczp.cloud_commons import TopologyInstance, Link
-from crczp.topology_definition.models import Router, Network
 
 PROXY_JUMP_NAME = 'proxy-jump'
 
 LOG = structlog.get_logger()
 
 # Allows alphanumeric characters, dots, hyphens, and underscores.
-VALID_FQDN_REGEX = re.compile(r"^[a-zA-Z0-9.\-_]+$")
+VALID_FQDN_REGEX = re.compile(r'^[a-zA-Z0-9.\-_]+$')
 
 
-def _normalize_address(address: Optional[str]) -> Optional[str]:
+def _normalize_address(address: str | None) -> str | None:
     """
     Normalize an address value for use in monitoring targets.
 
@@ -33,20 +33,23 @@ def _normalize_address(address: Optional[str]) -> Optional[str]:
 
     address = address.strip()
     if not address:
-        raise ValueError("Address cannot be empty")
+        raise ValueError('Address cannot be empty')
 
     try:
         return ip_network(address, strict=False).with_prefixlen
     except ValueError:
         if VALID_FQDN_REGEX.match(address):
             return address
-        raise ValueError(f"Address '{address}' is neither a valid IP/CIDR nor a valid FQDN.")
+        raise ValueError(
+            f"Address '{address}' is neither a valid IP/CIDR nor a valid FQDN."
+        ) from None
 
 
 class DefaultAnsibleHostsGroups(Enum):
     """
     Enumerator for default ansible hosts groups.
     """
+
     HOSTS = 'hosts'
     MANAGEMENT = 'management'
     ROUTERS = 'routers'
@@ -76,6 +79,7 @@ class Host(Base):
     """
     Represents Ansible inventory host entry.
     """
+
     def __init__(self, name: str, host: str, user: str):
         super().__init__()
         self.name = name
@@ -93,7 +97,8 @@ class Group(Base):
     """
     Represents Ansible inventory group entry.
     """
-    def __init__(self, name: str, hosts: List[Host] = None, hosts_vars=None):
+
+    def __init__(self, name: str, hosts: list[Host] = None, hosts_vars=None):
         super().__init__()
         self.name = name
         self.hosts = {host.name: host for host in hosts} if hosts else {}
@@ -108,7 +113,7 @@ class Group(Base):
         if self.hosts:
             dictionary['hosts'] = {host.name: None for host in self.hosts.values()}
             if self.hosts_vars:
-                for host in self.hosts_vars.keys():
+                for host in self.hosts_vars:
                     dictionary['hosts'][host] = self.hosts_vars[host]
 
         children = {group.name: group.to_dict() for group in self.groups.values()}
@@ -124,7 +129,7 @@ class Group(Base):
         """
         self.hosts[host.name] = host
 
-    def get_host(self, name: str) -> Optional[Host]:
+    def get_host(self, name: str) -> Host | None:
         """
         Return Ansible host if exist.
         """
@@ -147,6 +152,7 @@ class Route:
     """
     Represents route information to be set on an interface.
     """
+
     def __init__(self, network_cidr: str, gateway_ip: str):
         self.network_ip = network_cidr.split('/')[0]
         self.network_mask = str(ip_network(network_cidr).netmask)
@@ -167,6 +173,7 @@ class Interface:
     """
     Represents a network interface.
     """
+
     def __init__(self, mac: str, ip: str, default_gateway_ip: str = None):
         self.mac = mac
         self.ip = ip
@@ -194,14 +201,16 @@ class Routing:
     """
     Represents sandbox routing information.
     """
+
     def __init__(self, topology_instance: TopologyInstance):
         self.topology_instance = topology_instance
         self.network_to_router_mappings = self._get_network_to_router_mapping(topology_instance)
-        self.interfaces: Dict[str, Dict[str, Interface]] =\
-            {node.name: {} for node in topology_instance.get_nodes()}
+        self.interfaces: dict[str, dict[str, Interface]] = {
+            node.name: {} for node in topology_instance.get_nodes()
+        }
         self._set_sandbox_routing()
 
-    def get_node_interfaces(self, node_name: str) -> List[Interface]:
+    def get_node_interfaces(self, node_name: str) -> list[Interface]:
         """
         Return a list of Interface settings for a particular node.
         """
@@ -216,38 +225,43 @@ class Routing:
         )
         man_to_routers_interface = self._create_interface_for_link(man_to_routers_link)
         for router_link in self.topology_instance.get_links_from_wan_to_routers():
-            router_to_man_interface = self._create_interface_for_link(router_link,
-                                                                      man_to_routers_link.ip)
+            router_to_man_interface = self._create_interface_for_link(
+                router_link, man_to_routers_link.ip
+            )
             for network in self._get_host_networks_for_routing(router_link.node):
                 man_to_routers_interface.add_route(Route(network.cidr, router_to_man_interface.ip))
 
-    def _get_host_networks_for_routing(self, router: Router) -> List[Network]:
+    def _get_host_networks_for_routing(self, router: Router) -> list[Network]:
         """
         Return a list of user-defined Networks connected to The Router needed to be routed to.
         """
         return [
-            router_to_network_link.network for router_to_network_link
-            in self.topology_instance.get_node_links(router,
-                                                     self.topology_instance.get_hosts_networks())
-            if router_to_network_link.node.name ==
-            self.network_to_router_mappings[router_to_network_link.network.name]
+            router_to_network_link.network
+            for router_to_network_link in self.topology_instance.get_node_links(
+                router, self.topology_instance.get_hosts_networks()
+            )
+            if router_to_network_link.node.name
+            == self.network_to_router_mappings[router_to_network_link.network.name]
         ]
 
-    def _create_interface_for_link(self, link: Link, default_gateway_ip: str = "") -> Interface:
+    def _create_interface_for_link(self, link: Link, default_gateway_ip: str = '') -> Interface:
         interface = Interface(link.mac, link.ip, default_gateway_ip)
         self.interfaces[link.node.name][link.mac] = interface
         return interface
 
     @staticmethod
-    def _get_network_to_router_mapping(topology_instance: TopologyInstance) -> Dict[str, str]:
+    def _get_network_to_router_mapping(topology_instance: TopologyInstance) -> dict[str, str]:
         """
         Return Dict[network_name, router_name].
 
         Prefers router which is first in alphabetical order.
         """
         net_to_router = {}
-        router_mappings = sorted(topology_instance.topology_definition.router_mappings,
-                                 key=lambda x: x.router, reverse=True)
+        router_mappings = sorted(
+            topology_instance.topology_definition.router_mappings,
+            key=lambda x: x.router,
+            reverse=True,
+        )
         for router_mapping in router_mappings:
             net_to_router[router_mapping.network] = router_mapping.router
         return net_to_router
@@ -257,8 +271,10 @@ class BaseInventory(Group):
     """
     Represents Ansible inventory just for Proxy Jump.
     """
-    def __init__(self, proxy_jump_user_access_mgmt_name: str,
-                 proxy_jump_user_access_user_name: str):
+
+    def __init__(
+        self, proxy_jump_user_access_mgmt_name: str, proxy_jump_user_access_user_name: str
+    ):
         super().__init__('all')
         self.add_proxy_jump(proxy_jump_user_access_mgmt_name, proxy_jump_user_access_user_name)
 
@@ -268,9 +284,11 @@ class BaseInventory(Group):
         """
         proxy_jump_config = settings.CRCZP_CONFIG.proxy_jump_to_man
         host = Host(PROXY_JUMP_NAME, proxy_jump_config.Host, proxy_jump_config.User)
-        host.add_variables(user_access_mgmt_name=user_access_mgmt_name,
-                           user_access_user_name=user_access_user_name,
-                           user_access_present=False)
+        host.add_variables(
+            user_access_mgmt_name=user_access_mgmt_name,
+            user_access_user_name=user_access_user_name,
+            user_access_present=False,
+        )
         self.add_host(host)
 
     def to_dict(self) -> dict:
@@ -298,10 +316,18 @@ class Inventory(BaseInventory):
     If you need any extra data in the vars section, pass them as the
     `extra_vars` dictionary to constructor.
     """
-    def __init__(self, proxy_jump_user_access_mgmt_name: str, proxy_jump_user_access_user_name: str,
-                 topology_instance: TopologyInstance, mgmt_private_key: str,
-                 mgmt_public_certificate: str, mgmt_public_key: str, user_public_key: str,
-                 extra_vars: dict = None):
+
+    def __init__(
+        self,
+        proxy_jump_user_access_mgmt_name: str,
+        proxy_jump_user_access_user_name: str,
+        topology_instance: TopologyInstance,
+        mgmt_private_key: str,
+        mgmt_public_certificate: str,
+        mgmt_public_key: str,
+        user_public_key: str,
+        extra_vars: dict = None,
+    ):
         super().__init__(proxy_jump_user_access_mgmt_name, proxy_jump_user_access_user_name)
         self.topology_instance = topology_instance
         self.routing = Routing(topology_instance)
@@ -313,13 +339,15 @@ class Inventory(BaseInventory):
         self._add_user_network_ip_to_user_defined_nodes()
 
         self.get_host(PROXY_JUMP_NAME).add_variables(user_access_present=True)
-        self.get_group('winrm_nodes')\
-            .add_variables(**self._get_winrm_connection_variables(mgmt_private_key,
-                                                                  mgmt_public_certificate))
-        self.add_variables(global_sandbox_name=self.topology_instance.name,
-                           global_sandbox_ip=self.topology_instance.ip,
-                           global_ssh_public_user_key=user_public_key,
-                           global_ssh_public_mgmt_key=mgmt_public_key)
+        self.get_group('winrm_nodes').add_variables(
+            **self._get_winrm_connection_variables(mgmt_private_key, mgmt_public_certificate)
+        )
+        self.add_variables(
+            global_sandbox_name=self.topology_instance.name,
+            global_sandbox_ip=self.topology_instance.ip,
+            global_ssh_public_user_key=user_public_key,
+            global_ssh_public_mgmt_key=mgmt_public_key,
+        )
         if extra_vars:
             self.add_variables(**extra_vars)
         if topology_instance.containers:
@@ -329,8 +357,10 @@ class Inventory(BaseInventory):
         """
         Create Ansible host entry for every host in TopologyInstance.
         """
-        mgmt_links = {link.node.name: link.ip for link in
-                      self.topology_instance.get_network_links(self.topology_instance.man_network)}
+        mgmt_links = {
+            link.node.name: link.ip
+            for link in self.topology_instance.get_network_links(self.topology_instance.man_network)
+        }
         mgmt_links[self.topology_instance.man.name] = self.topology_instance.ip
         for node in self.topology_instance.get_nodes():
             self._add_host(Host(node.name, mgmt_links[node.name], node.base_box.mgmt_user))
@@ -348,8 +378,7 @@ class Inventory(BaseInventory):
         """
         Set IP forward variable to Routers, Border-Router and MAN.
         """
-        ip_forward_nodes = list(self.topology_instance.get_routers()) +\
-            [self.topology_instance.man]
+        ip_forward_nodes = list(self.topology_instance.get_routers()) + [self.topology_instance.man]
         for node in ip_forward_nodes:
             host = self.hosts.get(node.name)
             if host:
@@ -365,15 +394,18 @@ class Inventory(BaseInventory):
         # Imported lazily to avoid a circular import: group_builders.py itself
         # imports Group / DefaultAnsibleHostsGroups from this module.
         from crczp.sandbox_ansible_app.lib.group_builders import GROUP_BUILDERS  # noqa: PLC0415
+
         for builder in GROUP_BUILDERS:
             builder(self, self.topology_instance)
 
-    def get_user_accessible_nodes(self) -> List[Host]:
+    def get_user_accessible_nodes(self) -> list[Host]:
         """
         Create and return user accessible nodes from user accessible networks.
         """
-        return [self.hosts[link.node.name] for link in
-                self.topology_instance.get_links_to_user_accessible_nodes()]
+        return [
+            self.hosts[link.node.name]
+            for link in self.topology_instance.get_links_to_user_accessible_nodes()
+        ]
 
     def _create_user_defined_groups(self) -> None:
         """
@@ -387,8 +419,9 @@ class Inventory(BaseInventory):
         Add IP of user network as variable for every user defined nodes.
         """
         user_defined_networks = self.topology_instance.get_hosts_networks()
-        networks_links = [self.topology_instance.get_network_links(network)
-                          for network in user_defined_networks]
+        networks_links = [
+            self.topology_instance.get_network_links(network) for network in user_defined_networks
+        ]
         networks_links = chain(*networks_links)
 
         for link in networks_links:
@@ -397,17 +430,20 @@ class Inventory(BaseInventory):
             self.hosts[link.node.name].add_variables(user_network_ip=link.ip)
 
     def _update_docker_hosts(self) -> None:
-        print("Updating docker hosts")
+        print('Updating docker hosts')
         docker_host_names = [host.name for host in self.docker_hosts]
         for hostname in self.hosts:
             if hostname in docker_host_names:
-                print(f"Found docker host: {hostname}")
-                print(f"Docker containers host path: /root/containers/{hostname}/")
-                self.get_host(hostname).add_variables(containers_path=f"/root/containers/{hostname}/")
+                print(f'Found docker host: {hostname}')
+                print(f'Docker containers host path: /root/containers/{hostname}/')
+                self.get_host(hostname).add_variables(
+                    containers_path=f'/root/containers/{hostname}/'
+                )
 
     @staticmethod
-    def _get_winrm_connection_variables(mgmt_private_key: str,
-                                        mgmt_public_certificate: str) -> dict:
+    def _get_winrm_connection_variables(
+        mgmt_private_key: str, mgmt_public_certificate: str
+    ) -> dict:
         """
         Return Ansible variables needed for connection with nodes over WinRM protocol.
         """

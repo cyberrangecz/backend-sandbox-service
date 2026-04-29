@@ -1,8 +1,8 @@
 import pytest
 
 from crczp.sandbox_ansible_app.lib.ansible import AllocationAnsibleRunner
-from crczp.sandbox_instance_app.models import Sandbox
 from crczp.sandbox_instance_app.lib import sandboxes
+from crczp.sandbox_instance_app.models import Sandbox
 
 pytestmark = pytest.mark.django_db
 
@@ -13,7 +13,8 @@ class TestPrepareInventoryFile:
         self.client = mocker.patch('crczp.sandbox_common_lib.utils.get_terraform_client')
         self.client.get_sandbox.return_value = top_ins
         self.save_file = mocker.patch(
-            'crczp.sandbox_ansible_app.lib.ansible.AnsibleRunner.save_file')
+            'crczp.sandbox_ansible_app.lib.ansible.AnsibleRunner.save_file'
+        )
         yield
 
     def test_prepare_inventory_file_success(self, mocker, top_ins):

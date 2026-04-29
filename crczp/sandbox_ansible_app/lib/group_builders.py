@@ -6,16 +6,20 @@ Ansible groups (or variables), and adds them to the inventory as a side-effect.
 
 GROUP_BUILDERS is the ordered list of all builders applied by Inventory._create_groups.
 """
-from typing import TYPE_CHECKING, Callable, List
+
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import structlog
-
 from crczp.cloud_commons import TopologyInstance
 from crczp.topology_definition.models import Protocol
-from crczp.sandbox_common_lib.common_cloud import list_images
+
 from crczp.sandbox_ansible_app.lib.inventory import (
-    Group, DefaultAnsibleHostsGroups, _normalize_address,
+    DefaultAnsibleHostsGroups,
+    Group,
+    _normalize_address,
 )
+from crczp.sandbox_common_lib.common_cloud import list_images
 
 if TYPE_CHECKING:
     from crczp.sandbox_ansible_app.lib.inventory import Inventory
@@ -28,6 +32,7 @@ _Builder = Callable[['Inventory', TopologyInstance], None]
 # ---------------------------------------------------------------------------
 # Individual builder functions
 # ---------------------------------------------------------------------------
+
 
 def _add_hosts_group(inventory: 'Inventory', topology: TopologyInstance) -> None:
     hosts = [inventory.hosts[node.name] for node in topology.get_hosts()]
@@ -46,7 +51,8 @@ def _add_routers_group(inventory: 'Inventory', topology: TopologyInstance) -> No
 def _add_winrm_nodes_group(inventory: 'Inventory', topology: TopologyInstance) -> None:
     man = topology.man
     winrm_nodes = [
-        inventory.hosts[node.name] for node in topology.get_nodes()
+        inventory.hosts[node.name]
+        for node in topology.get_nodes()
         if node.base_box.mgmt_protocol == Protocol.WINRM and node != man
     ]
     inventory.add_group(Group(DefaultAnsibleHostsGroups.WINRM_NODES.value, winrm_nodes))
@@ -55,21 +61,24 @@ def _add_winrm_nodes_group(inventory: 'Inventory', topology: TopologyInstance) -
 def _add_ssh_nodes_group(inventory: 'Inventory', topology: TopologyInstance) -> None:
     man = topology.man
     ssh_nodes = [
-        inventory.hosts[node.name] for node in topology.get_nodes()
+        inventory.hosts[node.name]
+        for node in topology.get_nodes()
         if node.base_box.mgmt_protocol == Protocol.SSH and node != man
     ]
     inventory.add_group(Group(DefaultAnsibleHostsGroups.SSH_NODES.value, ssh_nodes))
 
 
-def _add_user_accessible_nodes_group(inventory: 'Inventory',
-                                     topology: TopologyInstance) -> None:
-    inventory.add_group(Group(DefaultAnsibleHostsGroups.USER_ACCESSIBLE_NODES.value,
-                              inventory.get_user_accessible_nodes()))
+def _add_user_accessible_nodes_group(inventory: 'Inventory', topology: TopologyInstance) -> None:
+    inventory.add_group(
+        Group(
+            DefaultAnsibleHostsGroups.USER_ACCESSIBLE_NODES.value,
+            inventory.get_user_accessible_nodes(),
+        )
+    )
 
 
 def _add_hidden_hosts_group(inventory: 'Inventory', topology: TopologyInstance) -> None:
-    hidden_hosts = [inventory.hosts[node.name] for node in topology.get_hosts()
-                    if node.hidden]
+    hidden_hosts = [inventory.hosts[node.name] for node in topology.get_hosts() if node.hidden]
     inventory.add_group(Group(DefaultAnsibleHostsGroups.HIDDEN_HOSTS.value, hidden_hosts))
 
 
@@ -81,12 +90,12 @@ def _add_docker_hosts_group(inventory: 'Inventory', topology: TopologyInstance) 
             for container_mapping in topology.containers.container_mappings
         ]
         inventory.docker_hosts = list(set(docker_hosts))
-        inventory.add_group(Group(DefaultAnsibleHostsGroups.DOCKER_HOSTS.value,
-                                  inventory.docker_hosts))
+        inventory.add_group(
+            Group(DefaultAnsibleHostsGroups.DOCKER_HOSTS.value, inventory.docker_hosts)
+        )
 
 
-def _add_monitored_hosts_tcp_group(inventory: 'Inventory',
-                                   topology: TopologyInstance) -> None:
+def _add_monitored_hosts_tcp_group(inventory: 'Inventory', topology: TopologyInstance) -> None:
     _mt = topology.topology_definition.monitoring_targets
     if not (_mt and _mt.tcp):
         return
@@ -98,20 +107,24 @@ def _add_monitored_hosts_tcp_group(inventory: 'Inventory',
         hosts.append(host)
         hosts_variables[host.name] = {
             'tcp_targets': [
-                {k: v for k, v in {
-                    'port': target.port,
-                    'interface': target.interface,
-                    'address': _normalize_address(target.address),
-                }.items() if v is not None}
+                {
+                    k: v
+                    for k, v in {
+                        'port': target.port,
+                        'interface': target.interface,
+                        'address': _normalize_address(target.address),
+                    }.items()
+                    if v is not None
+                }
                 for target in monitored_node.targets
             ]
         }
-    inventory.add_group(Group(DefaultAnsibleHostsGroups.MONITORED_HOSTS_TCP.value,
-                              hosts, hosts_variables))
+    inventory.add_group(
+        Group(DefaultAnsibleHostsGroups.MONITORED_HOSTS_TCP.value, hosts, hosts_variables)
+    )
 
 
-def _add_monitored_hosts_icmp_group(inventory: 'Inventory',
-                                    topology: TopologyInstance) -> None:
+def _add_monitored_hosts_icmp_group(inventory: 'Inventory', topology: TopologyInstance) -> None:
     _mt = topology.topology_definition.monitoring_targets
     if not (_mt and _mt.icmp):
         return
@@ -122,29 +135,39 @@ def _add_monitored_hosts_icmp_group(inventory: 'Inventory',
         hosts.append(host)
         hosts_variables[host.name] = {
             'icmp_targets': [
-                {k: v for k, v in {
-                    'interface': target.interface,
-                    'address': _normalize_address(target.address),
-                }.items() if v is not None}
+                {
+                    k: v
+                    for k, v in {
+                        'interface': target.interface,
+                        'address': _normalize_address(target.address),
+                    }.items()
+                    if v is not None
+                }
                 for target in monitored_node.targets
             ]
         }
-    inventory.add_group(Group(DefaultAnsibleHostsGroups.MONITORED_HOSTS_ICMP.value,
-                              hosts, hosts_variables))
+    inventory.add_group(
+        Group(DefaultAnsibleHostsGroups.MONITORED_HOSTS_ICMP.value, hosts, hosts_variables)
+    )
 
 
-def _add_monitored_hosts_http_vars(inventory: 'Inventory',
-                                   topology: TopologyInstance) -> None:
+def _add_monitored_hosts_http_vars(inventory: 'Inventory', topology: TopologyInstance) -> None:
     _mt = topology.topology_definition.monitoring_targets
     if not (_mt and _mt.http):
         return
-    inventory.add_variables(monitoring_http_targets=[
-        {k: v for k, v in {
-            'url': target.url,
-            'check_string': target.check_string,
-        }.items() if v is not None}
-        for target in topology.get_monitored_hosts_http().targets
-    ])
+    inventory.add_variables(
+        monitoring_http_targets=[
+            {
+                k: v
+                for k, v in {
+                    'url': target.url,
+                    'check_string': target.check_string,
+                }.items()
+                if v is not None
+            }
+            for target in topology.get_monitored_hosts_http().targets
+        ]
+    )
 
 
 def _add_windows_hosts_group(inventory: 'Inventory', topology: TopologyInstance) -> None:
@@ -155,7 +178,7 @@ def _add_windows_hosts_group(inventory: 'Inventory', topology: TopologyInstance)
         inventory.add_group(windows_group)
 
 
-def _get_windows_hosts(inventory: 'Inventory', topology: TopologyInstance) -> List:
+def _get_windows_hosts(inventory: 'Inventory', topology: TopologyInstance) -> list:
     """
     Return hosts that use Windows images based on the os_type parameter.
     """
@@ -182,7 +205,7 @@ def _get_windows_hosts(inventory: 'Inventory', topology: TopologyInstance) -> Li
 # _update_docker_hosts is called later in Inventory.__init__).
 # ---------------------------------------------------------------------------
 
-GROUP_BUILDERS: List[_Builder] = [
+GROUP_BUILDERS: list[_Builder] = [
     _add_hosts_group,
     _add_management_group,
     _add_routers_group,

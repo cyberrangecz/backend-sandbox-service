@@ -1,10 +1,9 @@
 """
 Serializers for ostack_proxy_elements classes.
 """
-from typing import Optional
 
-from rest_framework import serializers
 from crczp.cloud_commons import Image
+from rest_framework import serializers
 
 OPENSTACK_OWNER_SPECIFIED_PREFIX = 'owner_specified.openstack.'
 
@@ -41,16 +40,21 @@ class ImageSerializer(serializers.Serializer):
     owner_specified = serializers.SerializerMethodField()
 
     @staticmethod
-    def get_size(obj: Image) -> Optional[int]:
+    def get_size(obj: Image) -> int | None:
         if obj.size is None:
             return None
-        return obj.size/1024**3
+        return obj.size / 1024**3
 
     @staticmethod
     def get_owner_specified(obj: Image) -> dict:
-        return {(key[len(OPENSTACK_OWNER_SPECIFIED_PREFIX):] if
-                 key.startswith(OPENSTACK_OWNER_SPECIFIED_PREFIX) else key): value
-                for (key, value) in obj.owner_specified.items()}
+        return {
+            (
+                key[len(OPENSTACK_OWNER_SPECIFIED_PREFIX) :]
+                if key.startswith(OPENSTACK_OWNER_SPECIFIED_PREFIX)
+                else key
+            ): value
+            for (key, value) in obj.owner_specified.items()
+        }
 
 
 class ProjectLimitsSerializer(serializers.Serializer):

@@ -1,7 +1,8 @@
 from enum import Enum
-from rest_framework import permissions
 
 from django.conf import settings
+from rest_framework import permissions
+
 from crczp.sandbox_uag.auth import get_user_roles
 from crczp.sandbox_uag.oidc_jwt import JWTAccessTokenAuthentication
 

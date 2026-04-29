@@ -1,11 +1,12 @@
 """
 Django Apps configuration file
 """
+
 import os
 from enum import Enum
 
 from crczp.cloud_commons import TransformationConfiguration
-from yamlize import Attribute, Object, YamlizingError, Typed, Map
+from yamlize import Attribute, Map, Object, Typed, YamlizingError
 
 from crczp.sandbox_common_lib import crczp_config_validation
 from crczp.sandbox_common_lib.exceptions import ImproperlyConfigured
@@ -29,13 +30,13 @@ ANSIBLE_DOCKER_IMAGE = 'ghcr.io/cyberrangecz/crczp-ansible-runner:1.4.1'
 ANSIBLE_DOCKER_NETWORK = 'bridge'
 ANSWERS_STORAGE_API = 'http://answers-storage:8087/answers-storage/api/v1'
 SSL_CA_CERTIFICATE_VERIFY = '/etc/ssl/certs'
-DATABASE_ENGINE = "django.db.backends.postgresql"
-DATABASE_HOST = "localhost"
-DATABASE_NAME = "postgres"
-DATABASE_PASSWORD = "postgres"
-DATABASE_PORT = "5432"
-DATABASE_USER = "postgres"
-REDIS_HOST = "localhost"
+DATABASE_ENGINE = 'django.db.backends.postgresql'
+DATABASE_HOST = 'localhost'
+DATABASE_NAME = 'postgres'
+DATABASE_PASSWORD = 'postgres'
+DATABASE_PORT = '5432'
+DATABASE_USER = 'postgres'
+REDIS_HOST = 'localhost'
 REDIS_PORT = 6379
 REDIS_DB = 0
 REDIS_TIMEOUT = 86400 * 30
@@ -106,7 +107,7 @@ class OpenStackConsoleType(Enum):
         try:
             return cls[value.upper().replace('-', '_')]
         except KeyError:
-            raise ValueError(f'Invalid value for OpenStackConsoleType: {value}')
+            raise ValueError(f'Invalid value for OpenStackConsoleType: {value}') from None
 
 
 class AwsConfiguration(Object):
@@ -149,8 +150,9 @@ class CrczpConfiguration(Object):
     os_console_type = Attribute(
         type=Typed(
             OpenStackConsoleType,
-            from_yaml=(lambda loader, node, _:
-                       OpenStackConsoleType.create(loader.construct_object(node))),
+            from_yaml=(
+                lambda loader, node, _: OpenStackConsoleType.create(loader.construct_object(node))
+            ),
             to_yaml=(lambda dumper, data, rtd: dumper.represent_data(data.name)),
         ),
         default=OpenStackConsoleType.SPICE_HTML5,
@@ -171,16 +173,17 @@ class CrczpConfiguration(Object):
     git_access_token = Attribute(type=str, default=GIT_TOKEN)
     git_server = Attribute(type=str, default=GIT_SERVER)
     git_ssh_port = Attribute(type=int, default=GIT_SSH_PORT)
-    git_rest_server = Attribute(type=str, default=GIT_REST_SERVER,
-                                validator=crczp_config_validation.validate_git_rest_url)
+    git_rest_server = Attribute(
+        type=str, default=GIT_REST_SERVER, validator=crczp_config_validation.validate_git_rest_url
+    )
     git_private_key = Attribute(type=str, default=GIT_PRIVATE_KEY)
     git_type = Attribute(
         type=Typed(
             GitType,
             from_yaml=(lambda loader, node, rtd: GitType[loader.construct_object(node)]),
-            to_yaml=(lambda dumper, data, rtd: dumper.represent_data(data.name))
+            to_yaml=(lambda dumper, data, rtd: dumper.represent_data(data.name)),
         ),
-        default=GitType.GITLAB
+        default=GitType.GITLAB,
     )
 
     git_skip_ssl_verification = Attribute(type=bool, default=False)
@@ -219,12 +222,12 @@ class CrczpConfiguration(Object):
         type=Typed(
             SMTPEncryption,
             from_yaml=(lambda loader, node, rtd: SMTPEncryption[loader.construct_object(node)]),
-            to_yaml=(lambda dumper, data, rtd: dumper.represent_data(data.name))
+            to_yaml=(lambda dumper, data, rtd: dumper.represent_data(data.name)),
         ),
-        default=SMTPEncryption.INSECURE
+        default=SMTPEncryption.INSECURE,
     )
 
-    sender_email = Attribute(type=str, default="sandbox.service@cyberrange.cz")
+    sender_email = Attribute(type=str, default='sandbox.service@cyberrange.cz')
     sender_email_password = Attribute(type=str, default=None)
 
     def __init__(self, **kwargs):
@@ -239,12 +242,13 @@ class CrczpConfiguration(Object):
         try:
             obj = super().load(*args, **kwargs)
         except YamlizingError as ex:
-            raise ImproperlyConfigured(ex)
+            raise ImproperlyConfigured(ex) from ex
 
         # TODO deal with absolute paths in ProxyJump object validation
         # Key-paths need to be absolute
         obj.proxy_jump_to_man.IdentityFile = os.path.abspath(
-            os.path.expanduser(obj.proxy_jump_to_man.IdentityFile))
+            os.path.expanduser(obj.proxy_jump_to_man.IdentityFile)
+        )
 
         # TODO move this somewhere
         os.environ['REQUESTS_CA_BUNDLE'] = obj.ssl_ca_certificate_verify

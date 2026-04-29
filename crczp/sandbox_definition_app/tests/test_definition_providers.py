@@ -1,15 +1,13 @@
 import pytest
 import requests
-
 from gitlab import GitlabError
 
-from crczp.sandbox_common_lib.exceptions import GitError
 from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration
+from crczp.sandbox_common_lib.exceptions import GitError
 from crczp.sandbox_definition_app.lib.definition_providers import GitlabProvider
 
-
 EXPECTED_RESULT_ARRAY = ['t', 'e', 's', 't']
-EXPECTED_RESULT_STR = "test"
+EXPECTED_RESULT_STR = 'test'
 
 
 class TestGitlabProvider:
@@ -21,7 +19,7 @@ class TestGitlabProvider:
     @staticmethod
     def get_expected_url(url):
         no_prefix = url.replace('https://', '')
-        return no_prefix[no_prefix.find('/') + 1:-4]
+        return no_prefix[no_prefix.find('/') + 1 : -4]
 
     @pytest.mark.parametrize('url', [URL1, URL2, URL3])
     def test_get_project_path(self, url):
@@ -47,14 +45,14 @@ class TestGitlabProvider:
         assert gitlab_provider.get_file('path', 'rev') == EXPECTED_RESULT_STR
 
     def test_get_file_project_not_found(self, gitlab_provider):
-        gitlab_provider.gl.projects.get.side_effect \
-            = GitlabError('project request error')
+        gitlab_provider.gl.projects.get.side_effect = GitlabError('project request error')
         with pytest.raises(GitError):
             gitlab_provider.get_file('path', 'rev')
 
     def test_get_file_file_not_found(self, gitlab_provider, gitlab_project):
-        gitlab_project.files.get.side_effect \
-            = requests.exceptions.RequestException('file request error')
+        gitlab_project.files.get.side_effect = requests.exceptions.RequestException(
+            'file request error'
+        )
         with pytest.raises(GitError):
             gitlab_provider.get_file('path', 'rev')
 
@@ -68,8 +66,9 @@ class TestGitlabProvider:
             gitlab_provider.get_branches()
 
     def test_get_branches_branches_not_found(self, gitlab_provider, gitlab_project):
-        gitlab_project.branches.list.side_effect \
-            = requests.exceptions.RequestException('branch request mock error')
+        gitlab_project.branches.list.side_effect = requests.exceptions.RequestException(
+            'branch request mock error'
+        )
         with pytest.raises(GitError):
             gitlab_provider.get_branches()
 
@@ -83,8 +82,9 @@ class TestGitlabProvider:
             gitlab_provider.get_tags()
 
     def test_get_tags_tags_not_found(self, gitlab_provider, gitlab_project):
-        gitlab_project.tags.list.side_effect \
-            = requests.exceptions.RequestException('tags request mock error')
+        gitlab_project.tags.list.side_effect = requests.exceptions.RequestException(
+            'tags request mock error'
+        )
         with pytest.raises(GitError):
             gitlab_provider.get_tags()
 
@@ -97,11 +97,11 @@ class TestGitlabProvider:
 
     def test_get_rev_sha_from_refs(self, mocker, gitlab_provider):
         revision1 = mocker.MagicMock()
-        revision1.name = "other"
-        revision1.id = "1"
+        revision1.name = 'other'
+        revision1.id = '1'
 
-        rev_name = "test"
-        expected_rev_sha = "2"
+        rev_name = 'test'
+        expected_rev_sha = '2'
         revision2 = mocker.MagicMock()
         revision2.name = rev_name
         revision2.id = expected_rev_sha
@@ -112,26 +112,26 @@ class TestGitlabProvider:
         assert gitlab_provider.get_rev_sha(rev_name) == expected_rev_sha
 
     def test_get_rev_sha_from_commits(self, mocker, gitlab_provider, gitlab_project):
-        expected_id = "1"
+        expected_id = '1'
         commit = mocker.MagicMock()
         commit.id = expected_id
         gitlab_project.commits.get.return_value = commit
 
         gitlab_provider.get_refs = mocker.MagicMock()
         gitlab_provider.get_refs.return_value = []
-        assert gitlab_provider.get_rev_sha("rev") == expected_id
+        assert gitlab_provider.get_rev_sha('rev') == expected_id
 
     def test_get_rev_sha_project_not_found(self, gitlab_provider):
-        gitlab_provider.gl.projects.get.side_effect \
-            = GitlabError('project request mock error')
+        gitlab_provider.gl.projects.get.side_effect = GitlabError('project request mock error')
         with pytest.raises(GitError):
-            gitlab_provider.get_rev_sha("rev")
+            gitlab_provider.get_rev_sha('rev')
 
     def test_get_rev_sha_commit_not_found(self, gitlab_provider, gitlab_project):
-        gitlab_project.commits.get.side_effect \
-            = requests.exceptions.RequestException('commit request mock error')
+        gitlab_project.commits.get.side_effect = requests.exceptions.RequestException(
+            'commit request mock error'
+        )
         with pytest.raises(GitError):
-            gitlab_provider.get_rev_sha("rev")
+            gitlab_provider.get_rev_sha('rev')
 
 
 @pytest.mark.integration

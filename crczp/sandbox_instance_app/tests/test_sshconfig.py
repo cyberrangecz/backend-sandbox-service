@@ -1,5 +1,6 @@
-from crczp.sandbox_instance_app.lib import sshconfig
 from django.conf import settings
+
+from crczp.sandbox_instance_app.lib import sshconfig
 
 
 class TestGetSshConfig:
@@ -16,6 +17,10 @@ class TestGetSshConfig:
     def test_create_ansible_config_success(self, top_ins, ansible_ssh_config):
         proxy_jump = settings.CRCZP_CONFIG.proxy_jump_to_man
         result = sshconfig.CrczpAnsibleSSHConfig(
-            top_ins, '/root/.ssh/pool_mng_key',
-            proxy_jump.Host, proxy_jump.User, '/root/.ssh/id_rsa')
+            top_ins,
+            '/root/.ssh/pool_mng_key',
+            proxy_jump.Host,
+            proxy_jump.User,
+            '/root/.ssh/id_rsa',
+        )
         assert result.asdict() == ansible_ssh_config.asdict()

@@ -26,7 +26,4 @@ class CompressedOutputMixin:
 
         rows = outputs.last().id if outputs.exists() else from_row
 
-        return utils.create_compressed_response({
-            'content': content,
-            'rows': rows
-        })
+        return utils.create_compressed_response({'content': content, 'rows': rows})

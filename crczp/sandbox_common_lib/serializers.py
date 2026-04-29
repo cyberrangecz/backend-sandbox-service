@@ -7,8 +7,9 @@ Validators validate single fields or entire objects.
 
 Swagger can utilise type hints to determine type, so use them in your own methods.
 """
-from rest_framework import serializers
+
 from django.contrib.auth.models import User
+from rest_framework import serializers
 
 
 class UserSerializer(serializers.ModelSerializer):

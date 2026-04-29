@@ -1,8 +1,13 @@
 from django.db import models
 
-from crczp.sandbox_instance_app.models import ExternalDependency, AllocationStage, \
-    CleanupStage, AllocationRequest, CleanupRequest, SandboxAllocationUnit,\
-    ExternalDependencyCleanup
+from crczp.sandbox_instance_app.models import (
+    AllocationRequest,
+    AllocationStage,
+    CleanupRequest,
+    CleanupStage,
+    ExternalDependency,
+    ExternalDependencyCleanup,
+)
 
 
 class AnsibleAllocationStage(AllocationStage):
@@ -13,8 +18,7 @@ class AnsibleAllocationStage(AllocationStage):
         abstract = True
 
     def __str__(self):
-        return super().__str__() + \
-               f', REPO_URL: {self.repo_url}, REV: {self.rev}'
+        return super().__str__() + f', REPO_URL: {self.repo_url}, REV: {self.rev}'
 
 
 class NetworkingAnsibleAllocationStage(AnsibleAllocationStage):
@@ -38,7 +42,6 @@ class UserAnsibleAllocationStage(AnsibleAllocationStage):
 
 
 class AnsibleCleanupStage(CleanupStage):
-
     class Meta:
         abstract = True
 
@@ -77,9 +80,7 @@ class AnsibleOutput(models.Model):
 # TODO not the best relationship
 class AllocationAnsibleOutput(AnsibleOutput):
     allocation_stage = models.ForeignKey(
-        AllocationStage,
-        on_delete=models.CASCADE,
-        related_name='outputs'
+        AllocationStage, on_delete=models.CASCADE, related_name='outputs'
     )
 
     def __str__(self):
@@ -88,9 +89,7 @@ class AllocationAnsibleOutput(AnsibleOutput):
 
 class CleanupAnsibleOutput(AnsibleOutput):
     cleanup_stage = models.ForeignKey(
-        CleanupStage,
-        on_delete=models.CASCADE,
-        related_name='outputs'
+        CleanupStage, on_delete=models.CASCADE, related_name='outputs'
     )
 
     def __str__(self):

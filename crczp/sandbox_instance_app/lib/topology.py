@@ -1,7 +1,4 @@
-from typing import List
-
 import structlog
-from crczp.cloud_commons import TopologyInstance
 
 from crczp.sandbox_common_lib.common_cloud import list_images
 from crczp.sandbox_instance_app.lib.nodes import find_image_for_node, get_node_image_has_gui_access
@@ -9,10 +6,10 @@ from crczp.sandbox_instance_app.lib.nodes import find_image_for_node, get_node_i
 LOG = structlog.getLogger()
 
 
-class Topology(object):
+class Topology:
     """Represents a topology of a sandbox."""
 
-    class HostNode(object):
+    class HostNode:
         def __init__(self, name, os_type, gui_access, is_accessible, ip):
             """
             Initialize a HostNode instance.
@@ -40,10 +37,10 @@ class Topology(object):
             :type subnets: List[Topology.Subnet]
             :param str ip: The IP address of the router
             """
-            super().__init__(name, os_type, gui_access,is_accessible, ip)
+            super().__init__(name, os_type, gui_access, is_accessible, ip)
             self.subnets = subnets
 
-    class Subnet(object):
+    class Subnet:
         def __init__(self, name, cidr, hosts):
             """
             Initialize a Subnet instance.
@@ -93,11 +90,7 @@ class Topology(object):
                 continue
 
             hosts_in_network = self._get_hosts_for_network(network, top_inst, images)
-            subnet = self.Subnet(
-                name=network.name,
-                cidr=network.cidr,
-                hosts=hosts_in_network
-            )
+            subnet = self.Subnet(name=network.name, cidr=network.cidr, hosts=hosts_in_network)
             subnets_dict[network.name] = subnet
 
         return subnets_dict
@@ -128,7 +121,7 @@ class Topology(object):
                 gui_access=get_node_image_has_gui_access(router_image),
                 subnets=router_subnets,
                 is_accessible=True,
-                ip=wan_ip
+                ip=wan_ip,
             )
             self.routers.append(router)
 
@@ -167,7 +160,7 @@ class Topology(object):
                 os_type=host_image.os_type,
                 gui_access=get_node_image_has_gui_access(host_image),
                 is_accessible=network.accessible_by_user,
-                ip=link.ip
+                ip=link.ip,
             )
             hosts_in_network.append(host)
 

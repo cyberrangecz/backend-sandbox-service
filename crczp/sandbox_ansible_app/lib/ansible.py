@@ -1,31 +1,33 @@
 import os
 import shutil
-import docker  # used by unit tests
+from dataclasses import dataclass
 
-from jinja2 import Environment, FileSystemLoader
 import structlog
-
-from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration
-from django.conf import settings
 from crczp.cloud_commons import TopologyInstance
+from django.conf import settings
+from jinja2 import Environment, FileSystemLoader
 
-from crczp.sandbox_ansible_app.lib.container import KubernetesContainer, DockerContainer, \
-    BaseContainer
-from crczp.sandbox_ansible_app.lib.inventory import Inventory, BaseInventory
+from crczp.sandbox_ansible_app.lib.container import (
+    BaseContainer,
+    DockerContainer,
+    KubernetesContainer,
+)
+from crczp.sandbox_ansible_app.lib.inventory import BaseInventory, Inventory
 from crczp.sandbox_common_lib import exceptions
+from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration
+from crczp.sandbox_common_lib.git_config import get_git_server
 from crczp.sandbox_definition_app.lib import definitions
 from crczp.sandbox_instance_app.lib import sandboxes, sshconfig
-from crczp.sandbox_instance_app.models import Sandbox, Pool, SandboxAllocationUnit
-from crczp.sandbox_common_lib.git_config import get_git_server
+from crczp.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit
 
 LOG = structlog.get_logger()
 
 
+@dataclass
 class DockerVolume:
-    def __init__(self, name: str, bind: str, mode: str):
-        self.name = name
-        self.bind = bind
-        self.mode = mode
+    name: str
+    bind: str
+    mode: str
 
 
 ANSIBLE_INVENTORY_FILENAME = 'inventory.yml'
@@ -44,26 +46,17 @@ class AnsibleRunner:
     """
     Represents Docker container environment for executing Ansible.
     """
+
     DOCKER_NETWORK = settings.CRCZP_CONFIG.ansible_docker_network
-    ANSIBLE_DOCKER_SSH_DIR = DockerVolume(
-        name='ansible-ssh-dir',
-        bind='/root/.ssh',
-        mode='rw'
-    )
+    ANSIBLE_DOCKER_SSH_DIR = DockerVolume(name='ansible-ssh-dir', bind='/root/.ssh', mode='rw')
     ANSIBLE_DOCKER_INVENTORY_PATH = DockerVolume(
-        name='ansible-inventory-path',
-        bind='/app/inventory.yml',
-        mode='ro'
+        name='ansible-inventory-path', bind='/app/inventory.yml', mode='ro'
     )
     ANSIBLE_DOCKER_CONTAINER_PATH = DockerVolume(
-        name='docker-containers-path',
-        bind='/root/containers',
-        mode='rw'
+        name='docker-containers-path', bind='/root/containers', mode='rw'
     )
     GIT_CREDENTIALS_PATH = DockerVolume(
-        name='git-credentials-path',
-        bind='/app/.git-credentials',
-        mode='ro'
+        name='git-credentials-path', bind='/app/.git-credentials', mode='ro'
     )
 
     def __init__(self, directory_path: str):
@@ -74,21 +67,31 @@ class AnsibleRunner:
         self.git_credentials = os.path.join(self.directory_path, GIT_CREDENTIALS_FILENAME)
 
         self.container_mgmt_private_key = self.container_ssh_path(MGMT_PRIVATE_KEY_FILENAME)
-        self.container_proxy_private_key =\
-            self.container_ssh_path(settings.CRCZP_CONFIG.proxy_jump_to_man.IdentityFile)
+        self.container_proxy_private_key = self.container_ssh_path(
+            settings.CRCZP_CONFIG.proxy_jump_to_man.IdentityFile
+        )
 
-        self.container_manager = KubernetesContainer\
-            if settings.CRCZP_CONFIG.ansible_runner_settings.backend == 'kubernetes'\
+        self.container_manager = (
+            KubernetesContainer
+            if settings.CRCZP_CONFIG.ansible_runner_settings.backend == 'kubernetes'
             else DockerContainer
+        )
         self.template_environment = Environment(loader=(FileSystemLoader(TEMPLATES_DIR_PATH)))
 
     def run_ansible_playbook(self, url, rev, stage, cleanup=False) -> BaseContainer:
         """
         Run Ansible playbook in container.
         """
-        return self.container_manager(url, rev, stage, self.ssh_directory,
-                                      self.inventory_path, self.containers_path,
-                                      self.git_credentials, cleanup)
+        return self.container_manager(
+            url,
+            rev,
+            stage,
+            self.ssh_directory,
+            self.inventory_path,
+            self.containers_path,
+            self.git_credentials,
+            cleanup,
+        )
 
     def delete_container(self, container_name: str) -> None:
         """
@@ -135,7 +138,7 @@ class AnsibleRunner:
 
     def prepare_git_credentials(self, config: CrczpConfiguration):
         username = config.git_user
-        credentials = ""
+        credentials = ''
         for host, token in config.git_providers.items():
             credentials += f'https://{username}:{token}@{get_git_server(host)}\n'
         return self.save_file(self.git_credentials, credentials)
@@ -145,6 +148,7 @@ class AllocationAnsibleRunner(AnsibleRunner):
     """
     Represents Docker container environment for executing Ansible during allocation stage.
     """
+
     # TODO review this and refactor so that the private keys are not copied around
     def prepare_ssh_dir(self, pool: Pool, sandbox: Sandbox):
         """
@@ -156,8 +160,9 @@ class AllocationAnsibleRunner(AnsibleRunner):
         self.save_file(self.host_ssh_path(MGMT_PRIVATE_KEY_FILENAME), pool.private_management_key)
         self.save_file(self.host_ssh_path(MGMT_CERTIFICATE_FILENAME), pool.management_certificate)
 
-        ans_ssh_config = sandboxes.get_ansible_sshconfig(sandbox, self.container_mgmt_private_key,
-                                                         self.container_proxy_private_key)
+        ans_ssh_config = sandboxes.get_ansible_sshconfig(
+            sandbox, self.container_mgmt_private_key, self.container_proxy_private_key
+        )
         self.save_file(self.host_ssh_path('config'), str(ans_ssh_config))
 
     def prepare_inventory_file(self, sandbox: Sandbox):
@@ -173,18 +178,23 @@ class AllocationAnsibleRunner(AnsibleRunner):
             if container_mapping.host not in parsed_docker_hosts:
                 containers_host_path = os.path.join(self.containers_path, container_mapping.host)
                 self.make_dir(containers_host_path)
-                current_container_mappings = [mapping for mapping
-                                              in top_ins.containers.container_mappings
-                                              if mapping.host == container_mapping.host]
+                current_container_mappings = [
+                    mapping
+                    for mapping in top_ins.containers.container_mappings
+                    if mapping.host == container_mapping.host
+                ]
                 try:
                     template = self.template_environment.get_template(DOCKER_COMPOSE_TEMPLATE)
-                    docker_compose = template.render(container_mappings=current_container_mappings,
-                                                     containers=top_ins.containers.containers)
+                    docker_compose = template.render(
+                        container_mappings=current_container_mappings,
+                        containers=top_ins.containers.containers,
+                    )
                     docker_compose_path = os.path.join(containers_host_path, 'docker-compose.yml')
                     self.save_file(docker_compose_path, docker_compose)
                 except Exception as e:
-                    raise exceptions.ApiException("Error while generating docker-compose "
-                                                  "template: ", e)
+                    raise exceptions.ApiException(
+                        'Error while generating docker-compose template: ', e
+                    ) from e
                 parsed_docker_hosts.append(container_mapping.host)
 
     def _generate_dockerfiles(self, sandbox: Sandbox):
@@ -193,22 +203,27 @@ class AllocationAnsibleRunner(AnsibleRunner):
             host_path = os.path.join(self.containers_path, container_mapping.host)
             host_container_path = os.path.join(host_path, container_mapping.container)
             self.make_dir(host_container_path)
-            container_definition = [cont for cont in top_ins.containers.containers
-                                    if cont.name == container_mapping.container][0]
+            container_definition = [
+                cont
+                for cont in top_ins.containers.containers
+                if cont.name == container_mapping.container
+            ][0]
             if container_definition.image:
                 try:
                     template = self.template_environment.get_template(DOCKERFILE_TEMPLATE)
                     dockerfile = template.render(container_definition=container_definition)
                 except Exception as e:
                     raise exceptions.ApiException(
-                        "Error while generating dockerfile from template: ", e)
+                        'Error while generating dockerfile from template: ', e
+                    ) from e
             else:
                 dockerfile_path = container_definition.dockerfile
                 url = sandbox.allocation_unit.pool.definition.url
                 rev = sandbox.allocation_unit.pool.definition.rev
-                dockerfile = definitions.get_dockerfile(url, rev, settings.CRCZP_CONFIG,
-                                                        dockerfile_path)
-            self.save_file(os.path.join(host_container_path, "Dockerfile"), dockerfile)
+                dockerfile = definitions.get_dockerfile(
+                    url, rev, settings.CRCZP_CONFIG, dockerfile_path
+                )
+            self.save_file(os.path.join(host_container_path, 'Dockerfile'), dockerfile)
 
     def prepare_containers_directory(self, sandbox: Sandbox):
         top_ins = sandboxes.get_topology_instance(sandbox)
@@ -228,8 +243,9 @@ class AllocationAnsibleRunner(AnsibleRunner):
         sau = sandbox.allocation_unit
         sas = sau.allocation_request.stackallocationstage
         if not hasattr(sas, 'terraformstack'):
-            raise exceptions.ApiException(f'The SandboxAllocationUnit ID={sas.id} '
-                                          'does not have any TerraformStack instance.')
+            raise exceptions.ApiException(
+                f'The SandboxAllocationUnit ID={sas.id} does not have any TerraformStack instance.'
+            )
         terraformstack = sas.terraformstack
         extra_vars = {
             'global_sandbox_allocation_unit_id': sau.id,
@@ -239,24 +255,33 @@ class AllocationAnsibleRunner(AnsibleRunner):
             'global_head_ip': settings.CRCZP_CONFIG.head_host,
             'global_syslog_destination_port': settings.CRCZP_CONFIG.syslog_destination_port,
         }
-        return Inventory(sau.pool.get_pool_prefix(), sau.get_stack_name(),
-                         top_ins, self.container_mgmt_private_key, mgmt_public_certificate,
-                         mgmt_public_key, user_public_key, extra_vars)
+        return Inventory(
+            sau.pool.get_pool_prefix(),
+            sau.get_stack_name(),
+            top_ins,
+            self.container_mgmt_private_key,
+            mgmt_public_certificate,
+            mgmt_public_key,
+            user_public_key,
+            extra_vars,
+        )
 
 
 class CleanupAnsibleRunner(AnsibleRunner):
     """
     Represents Docker container environment for executing Ansible during allocation stage.
     """
+
     def prepare_inventory_file(self, allocation_unit: SandboxAllocationUnit):
         """
         Prepare and save Ansible inventory file that will be bind to Docker container.
         """
-        inventory_object = BaseInventory(allocation_unit.pool.get_pool_prefix(),
-                                         allocation_unit.get_stack_name())
+        inventory_object = BaseInventory(
+            allocation_unit.pool.get_pool_prefix(), allocation_unit.get_stack_name()
+        )
         inventory_object.add_variables(
             global_sandbox_allocation_unit_id=allocation_unit.id,
-            global_pool_id=allocation_unit.pool.id
+            global_pool_id=allocation_unit.pool.id,
         )
 
         self.save_file(self.inventory_path, inventory_object.serialize())
@@ -269,7 +294,7 @@ class CleanupAnsibleRunner(AnsibleRunner):
         self.save_file(self.host_ssh_path(MGMT_PRIVATE_KEY_FILENAME), pool.private_management_key)
 
         proxy_jump = settings.CRCZP_CONFIG.proxy_jump_to_man
-        ans_ssh_config = \
-            sshconfig.CrczpAnsibleCleanupSSHConfig(proxy_jump.Host, proxy_jump.User,
-                                                  self.container_proxy_private_key)
+        ans_ssh_config = sshconfig.CrczpAnsibleCleanupSSHConfig(
+            proxy_jump.Host, proxy_jump.User, self.container_proxy_private_key
+        )
         self.save_file(self.host_ssh_path('config'), str(ans_ssh_config))

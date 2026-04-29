@@ -1,12 +1,12 @@
 """
 Simple utils module.
 """
+
 import datetime
 import gzip
 import json
 import logging
 import uuid
-from typing import Tuple
 
 import structlog
 from crczp.terraform_driver import CrczpTerraformClient
@@ -14,13 +14,12 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.x509.oid import NameOID, ExtendedKeyUsageOID
+from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 from django.conf import settings
 from django.core.cache import cache
 from django.http import Http404
 from drf_spectacular.utils import OpenApiResponse
-from rest_framework import serializers
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.generics import get_object_or_404 as gen_get_object_or_404
 from rest_framework.response import Response
 
@@ -37,16 +36,17 @@ OID_LOGIN = '\x0c\x11' + WIN_USERNAME + '@localhost'
 def configure_logging() -> None:
     """Configure logging and structlog"""
     # noinspection PyArgumentList
-    logging.basicConfig(level=settings.CRCZP_CONFIG.log_level,
-                        handlers=[logging.StreamHandler(),
-                                  logging.FileHandler(settings.CRCZP_CONFIG.log_file)],
-                        format="%(message)s")
+    logging.basicConfig(
+        level=settings.CRCZP_CONFIG.log_level,
+        handlers=[logging.StreamHandler(), logging.FileHandler(settings.CRCZP_CONFIG.log_file)],
+        format='%(message)s',
+    )
     structlog.configure(
         processors=[
             structlog.stdlib.add_logger_name,
             structlog.stdlib.add_log_level,
             structlog.stdlib.PositionalArgumentsFormatter(),
-            structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=False),
+            structlog.processors.TimeStamper(fmt='%Y-%m-%d %H:%M:%S', utc=False),
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
             structlog.processors.UnicodeDecoder(),
@@ -57,7 +57,7 @@ def configure_logging() -> None:
         wrapper_class=structlog.stdlib.BoundLogger,
         cache_logger_on_first_use=True,
     )
-    LOG.debug("Logging is set and ready to use.")
+    LOG.debug('Logging is set and ready to use.')
 
 
 def create_self_signed_certificate(private_key: str) -> str:
@@ -67,46 +67,43 @@ def create_self_signed_certificate(private_key: str) -> str:
     :param private_key: Private key used to sign certificate
     :return: Certificate string
     """
-    private_key = serialization.load_pem_private_key(bytes(private_key, encoding='UTF-8'), password=None,
-                                                     backend=default_backend())
+    private_key = serialization.load_pem_private_key(
+        bytes(private_key, encoding='UTF-8'), password=None, backend=default_backend()
+    )
 
-    subject = issuer = x509.Name([
-        x509.NameAttribute(NameOID.COMMON_NAME, WIN_USERNAME)
-    ])
+    subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, WIN_USERNAME)])
 
-    cert = x509.CertificateBuilder().subject_name(
-        subject
-    ).issuer_name(
-        issuer
-    ).public_key(
-        private_key.public_key()
-    ).serial_number(
-        x509.random_serial_number()
-    ).not_valid_before(
-        datetime.datetime.utcnow() - datetime.timedelta(hours=48)
-    ).not_valid_after(
-        datetime.datetime.max
-    ).add_extension(
-        x509.ExtendedKeyUsage(
-            [ExtendedKeyUsageOID.CLIENT_AUTH],
-        ),
-        critical=False,
-    ).add_extension(
-        x509.SubjectAlternativeName(
-            [
+    cert = (
+        x509
+        .CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(private_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.datetime.utcnow() - datetime.timedelta(hours=48))
+        .not_valid_after(datetime.datetime.max)
+        .add_extension(
+            x509.ExtendedKeyUsage(
+                [ExtendedKeyUsageOID.CLIENT_AUTH],
+            ),
+            critical=False,
+        )
+        .add_extension(
+            x509.SubjectAlternativeName([
                 x509.OtherName(
                     x509.oid.ObjectIdentifier(OID),
                     OID_LOGIN.encode('utf-8'),
                 ),
-            ]
-        ),
-        critical=False,
-    ).sign(private_key, hashes.SHA256(), backend=default_backend())
+            ]),
+            critical=False,
+        )
+        .sign(private_key, hashes.SHA256(), backend=default_backend())
+    )
 
     return cert.public_bytes(encoding=serialization.Encoding.PEM).decode()
 
 
-def generate_ssh_keypair(bits: int = 2048) -> Tuple[str, str]:
+def generate_ssh_keypair(bits: int = 2048) -> tuple[str, str]:
     """Generate SSH-RSA key pair.
 
     :param bits: Length of key in bits
@@ -124,10 +121,15 @@ def generate_ssh_keypair(bits: int = 2048) -> Tuple[str, str]:
         encryption_algorithm=serialization.NoEncryption(),
     ).decode()
 
-    public_key = key.public_key().public_bytes(
-        encoding=serialization.Encoding.OpenSSH,
-        format=serialization.PublicFormat.OpenSSH,
-    ).decode()
+    public_key = (
+        key
+        .public_key()
+        .public_bytes(
+            encoding=serialization.Encoding.OpenSSH,
+            format=serialization.PublicFormat.OpenSSH,
+        )
+        .decode()
+    )
 
     return private_key, public_key
 
@@ -155,27 +157,34 @@ def get_simple_uuid() -> str:
 
 class ErrorSerilizer(serializers.Serializer):
     """Serializer for error responses."""
+
     detail = serializers.CharField(help_text='String message describing the error.')
 
 
 ERROR_RESPONSES = {
-    status.HTTP_400_BAD_REQUEST:
-        OpenApiResponse(ErrorSerilizer(), description='Client sent invalid data.'),
-    status.HTTP_401_UNAUTHORIZED:
-        OpenApiResponse(ErrorSerilizer(), description='Authentication failed.'),
-    status.HTTP_403_FORBIDDEN:
-        OpenApiResponse(ErrorSerilizer(), description='You do not have permission to perform this action.'),
-    status.HTTP_404_NOT_FOUND:
-        OpenApiResponse(ErrorSerilizer(), description='Resource not found.'),
-    status.HTTP_500_INTERNAL_SERVER_ERROR:
-        OpenApiResponse(ErrorSerilizer(), description='Server encountered an unexpected error.'),
+    status.HTTP_400_BAD_REQUEST: OpenApiResponse(
+        ErrorSerilizer(), description='Client sent invalid data.'
+    ),
+    status.HTTP_401_UNAUTHORIZED: OpenApiResponse(
+        ErrorSerilizer(), description='Authentication failed.'
+    ),
+    status.HTTP_403_FORBIDDEN: OpenApiResponse(
+        ErrorSerilizer(), description='You do not have permission to perform this action.'
+    ),
+    status.HTTP_404_NOT_FOUND: OpenApiResponse(ErrorSerilizer(), description='Resource not found.'),
+    status.HTTP_500_INTERNAL_SERVER_ERROR: OpenApiResponse(
+        ErrorSerilizer(), description='Server encountered an unexpected error.'
+    ),
 }
+
 
 def get_object_or_404(queryset, *filter_args, **filter_kwargs):
     try:
         return gen_get_object_or_404(queryset, *filter_args, **filter_kwargs)
     except Http404:
-        raise Http404(f'The instance of {queryset.__name__} with {filter_kwargs} not found.')
+        raise Http404(
+            f'The instance of {queryset.__name__} with {filter_kwargs} not found.'
+        ) from None
 
 
 def create_compressed_response(data: dict) -> Response:

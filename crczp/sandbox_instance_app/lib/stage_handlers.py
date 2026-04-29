@@ -1,26 +1,42 @@
 import abc
+import contextlib
 import os
 import signal
-from typing import Type, Optional
 
 import docker.errors
 import structlog
+from crczp.cloud_commons import CrczpException, StackCreationFailed
 from django.conf import settings
 from django.utils import timezone
-from crczp.cloud_commons import CrczpException, StackCreationFailed
 from redis import Redis
 from rq.exceptions import NoSuchJobError
 from rq.job import Job
 
 from crczp.sandbox_ansible_app.lib.ansible import AllocationAnsibleRunner, AnsibleRunner
-from crczp.sandbox_ansible_app.models import AnsibleAllocationStage, AnsibleCleanupStage, \
-    Container, UserAnsibleCleanupStage, CleanupStage, UserAnsibleAllocationStage
-from crczp.sandbox_common_lib import utils, exceptions
+from crczp.sandbox_ansible_app.models import (
+    AnsibleAllocationStage,
+    AnsibleCleanupStage,
+    CleanupStage,
+    Container,
+    UserAnsibleAllocationStage,
+    UserAnsibleCleanupStage,
+)
+from crczp.sandbox_common_lib import exceptions, utils
 from crczp.sandbox_definition_app.lib import definitions
 from crczp.sandbox_instance_app.lib.jump_proxy_cleanup import delete_jump_ssh_key
-from crczp.sandbox_instance_app.models import Sandbox, TerraformStack, \
-    SandboxAllocationUnit, StackAllocationStage, StackCleanupStage, \
-    RQJob, AllocationRQJob, CleanupRQJob, AllocationTerraformOutput, CleanupTerraformOutput, SandboxRequestGroup
+from crczp.sandbox_instance_app.models import (
+    AllocationRQJob,
+    AllocationTerraformOutput,
+    CleanupRQJob,
+    CleanupTerraformOutput,
+    RQJob,
+    Sandbox,
+    SandboxAllocationUnit,
+    SandboxRequestGroup,
+    StackAllocationStage,
+    StackCleanupStage,
+    TerraformStack,
+)
 
 LOG = structlog.get_logger()
 ALLOCATION_JOB_NAME = 'ansible-allocation-{}'
@@ -34,9 +50,10 @@ class StageHandler(abc.ABC):
     WARNING: Always set _job_class attribute with type inherited from RQJob
       in all non-abstract descendants.
     """
-    _job_class: Type[RQJob]
 
-    def __init__(self, stage, name: str = None, request_group: Optional[SandboxRequestGroup] = None):
+    _job_class: type[RQJob]
+
+    def __init__(self, stage, name: str = None, request_group: SandboxRequestGroup | None = None):
         self.stage = stage
         self.name = name if name is not None else self.stage.__class__.__name__
         self.request_group = request_group
@@ -77,7 +94,7 @@ class StageHandler(abc.ABC):
         elif hasattr(self._job_class, 'cleanup_stage'):
             self._job_class.objects.create(cleanup_stage=self.stage, job_id=job_id)
         else:
-            LOG.warning(f'Unknown Job class \'{self._job_class}\'. Job ID \'{job_id}\' was not set')
+            LOG.warning(f"Unknown Job class '{self._job_class}'. Job ID '{job_id}' was not set")
 
     @abc.abstractmethod
     def _execute(self) -> None:
@@ -115,12 +132,11 @@ class StageHandler(abc.ABC):
         Remove and delete enqueued Job of the stage execution from a queue.
         """
         if hasattr(self.stage, 'rq_job'):
-            try:
-                Job.fetch(self.stage.rq_job.job_id,
-                          connection=Redis(host=settings.CRCZP_CONFIG.redis.host))\
-                    .delete(delete_dependents=True)
-            except NoSuchJobError:  # Job already deleted
-                pass
+            with contextlib.suppress(NoSuchJobError):  # Job already deleted
+                Job.fetch(
+                    self.stage.rq_job.job_id,
+                    connection=Redis(host=settings.CRCZP_CONFIG.redis.host),
+                ).delete(delete_dependents=True)
         else:
             LOG.warning(f'Stage {self.name} does not have an RQ job')
 
@@ -136,6 +152,7 @@ class StackStageHandler(StageHandler):
     """
     Generalizes common tasks of stages manipulating with OpenStack stacks.
     """
+
     _client = utils.get_terraform_client()
 
     @abc.abstractmethod
@@ -153,8 +170,13 @@ class StackStageHandler(StageHandler):
             LOG.debug(line)
             terraform_output.objects.create(**kwargs, content=line)
 
-    def _wait_for_process(self, process, terraform_output,
-                          timeout=settings.CRCZP_CONFIG.sandbox_build_timeout, **kwargs):
+    def _wait_for_process(
+        self,
+        process,
+        terraform_output,
+        timeout=settings.CRCZP_CONFIG.sandbox_build_timeout,
+        **kwargs,
+    ):
         """
         Wait for process to finish.
         """
@@ -162,40 +184,49 @@ class StackStageHandler(StageHandler):
         if return_code:
             LOG.error('Terraform execution failed', stderr=stderr, **kwargs)
             terraform_output.objects.create(**kwargs, content=stderr)
-            raise CrczpException(f'Terraform execution failed. See logs for details.')
+            raise CrczpException('Terraform execution failed. See logs for details.')
 
-    def _delete_stack(self, allocation_unit: SandboxAllocationUnit, log_output: bool = True)\
-            -> None:
+    def _delete_stack(
+        self, allocation_unit: SandboxAllocationUnit, log_output: bool = True
+    ) -> None:
         """
         Delete stack associated with the given allocation unit.
         """
         stack_name = allocation_unit.get_stack_name()
 
-        LOG.debug('Starting Stack delete in OpenStack', stack_name=stack_name,
-                  allocation_unit=allocation_unit)
+        LOG.debug(
+            'Starting Stack delete in OpenStack',
+            stack_name=stack_name,
+            allocation_unit=allocation_unit,
+        )
 
         try:
             process = self._client.delete_stack(stack_name)
             if process:
                 if log_output:
-                    self._log_process_output(process, CleanupTerraformOutput,
-                                             cleanup_stage=self.stage)
+                    self._log_process_output(
+                        process, CleanupTerraformOutput, cleanup_stage=self.stage
+                    )
                 self._wait_for_process(process, CleanupTerraformOutput, cleanup_stage=self.stage)
             else:
                 # process is None when delete_stack is not able to initialize stack directory,
                 # but it is not a problem because creation failed to initialize as well
-                LOG.warning('The deletion of the stack failed.'
-                            ' Terraform could not initialize directory')
+                LOG.warning(
+                    'The deletion of the stack failed. Terraform could not initialize directory'
+                )
         except CrczpException as exc:
-            raise exceptions.StackError(f'Sandbox deletion failed :{exc}')
+            raise exceptions.StackError(f'Sandbox deletion failed :{exc}') from exc
 
         try:
             self._client.delete_terraform_workspace(stack_name)
         except CrczpException as exc:
             LOG.warning(f'Terraform workspace deletion failed :{exc}')
 
-        LOG.debug('Deleting local terraform stack directory', stack_name=stack_name,
-                  allocation_unit=allocation_unit)
+        LOG.debug(
+            'Deleting local terraform stack directory',
+            stack_name=stack_name,
+            allocation_unit=allocation_unit,
+        )
         self._client.delete_stack_directory(stack_name)
 
 
@@ -203,10 +234,11 @@ class AllocationStackStageHandler(StackStageHandler):
     """
     Specifies tasks needed for OpenStack stack allocation and its cancellation.
     """
-    stage: StackAllocationStage
-    _job_class: Type[AllocationRQJob] = AllocationRQJob
 
-    def __init__(self, stage, request_group: Optional[SandboxRequestGroup] = None):
+    stage: StackAllocationStage
+    _job_class: type[AllocationRQJob] = AllocationRQJob
+
+    def __init__(self, stage, request_group: SandboxRequestGroup | None = None):
         self.process = None
         super().__init__(stage, request_group=request_group)
 
@@ -221,20 +253,23 @@ class AllocationStackStageHandler(StackStageHandler):
         top_def = definitions.get_definition(definition.url, pool.rev_sha, settings.CRCZP_CONFIG)
         try:
             self.process = self._client.create_stack(
-                top_def, stack_name=stack_name,
+                top_def,
+                stack_name=stack_name,
                 key_pair_name_ssh=allocation_unit.pool.ssh_keypair_name,
                 key_pair_name_cert=allocation_unit.pool.certificate_keypair_name,
             )
             TerraformStack.objects.create(allocation_stage=self.stage, stack_id=self.process.pid)
-            self._log_process_output(self.process, AllocationTerraformOutput,
-                                     allocation_stage=self.stage)
-            self._wait_for_process(self.process, AllocationTerraformOutput,
-                                   allocation_stage=self.stage)
+            self._log_process_output(
+                self.process, AllocationTerraformOutput, allocation_stage=self.stage
+            )
+            self._wait_for_process(
+                self.process, AllocationTerraformOutput, allocation_stage=self.stage
+            )
         except CrczpException as exc:
             if self.process:
                 self.process.terminate()
             super()._delete_stack(allocation_unit, log_output=False)
-            raise StackCreationFailed(f'Sandbox build failed: {exc}')
+            raise StackCreationFailed(f'Sandbox build failed: {exc}') from exc
 
     def _cancel(self) -> None:
         """
@@ -252,8 +287,9 @@ class CleanupStackStageHandler(StackStageHandler):
     """
     Specifies tasks needed for OpenStack stack deletion and its cancellation.
     """
+
     stage: StackCleanupStage
-    _job_class: Type[CleanupRQJob] = CleanupRQJob
+    _job_class: type[CleanupRQJob] = CleanupRQJob
 
     def _execute(self) -> None:
         """
@@ -275,9 +311,13 @@ class AnsibleStageHandler(StageHandler):
     Generalizes common tasks of stages executing Ansible tasks on the remote infrastructure.
     """
 
-    def __init__(self, stage: [AnsibleCleanupStage, AnsibleAllocationStage], name: str = None,
-                 request_group: Optional[SandboxRequestGroup] = None):
-        super().__init__(stage, name,  request_group=request_group)
+    def __init__(
+        self,
+        stage: [AnsibleCleanupStage, AnsibleAllocationStage],
+        name: str = None,
+        request_group: SandboxRequestGroup | None = None,
+    ):
+        super().__init__(stage, name, request_group=request_group)
         self.stage = stage
 
     @abc.abstractmethod
@@ -292,9 +332,11 @@ class AnsibleStageHandler(StageHandler):
         """
         Compose absolute path to directory for Docker container volumes.
         """
-        return os.path.join(settings.CRCZP_CONFIG.ansible_runner_settings.volumes_path,
-                            allocation_unit.get_stack_name(),
-                            f'{self.stage.id}-{utils.get_simple_uuid()}')
+        return os.path.join(
+            settings.CRCZP_CONFIG.ansible_runner_settings.volumes_path,
+            allocation_unit.get_stack_name(),
+            f'{self.stage.id}-{utils.get_simple_uuid()}',
+        )
 
     def check_status(self, status: dict):
         """
@@ -303,19 +345,26 @@ class AnsibleStageHandler(StageHandler):
         """
         status_code = status['StatusCode']
         if status_code != 0:
-            raise exceptions.AnsibleError('Ansible ID={} failed with status code \'{}\''
-                                          .format(self.stage.id, status_code))
+            raise exceptions.AnsibleError(
+                f"Ansible ID={self.stage.id} failed with status code '{status_code}'"
+            )
 
 
 class AllocationAnsibleStageHandler(AnsibleStageHandler):
     """
     Specifies tasks needed for Ansible execution on the remote infrastructure and its cancellation.
     """
-    stage: AnsibleAllocationStage
-    _job_class: Type[AllocationRQJob] = AllocationRQJob
 
-    def __init__(self, stage: AnsibleAllocationStage, sandbox: Sandbox = None, name: str = None,
-                 request_group: Optional[SandboxRequestGroup] = None):
+    stage: AnsibleAllocationStage
+    _job_class: type[AllocationRQJob] = AllocationRQJob
+
+    def __init__(
+        self,
+        stage: AnsibleAllocationStage,
+        sandbox: Sandbox = None,
+        name: str = None,
+        request_group: SandboxRequestGroup | None = None,
+    ):
         super().__init__(stage, name, request_group=request_group)
 
         self.allocation_unit = stage.allocation_request_fk_many.allocation_unit
@@ -327,7 +376,7 @@ class AllocationAnsibleStageHandler(AnsibleStageHandler):
         Prepare and execute the Ansible playbooks on the remote infrastructure.
         """
         if self.sandbox is None:
-            raise exceptions.AnsibleError(f'Sandbox was not provided')
+            raise exceptions.AnsibleError('Sandbox was not provided')
 
         runner = AllocationAnsibleRunner(self.directory_path)
         runner.prepare_ssh_dir(self.allocation_unit.pool, self.sandbox)
@@ -337,13 +386,17 @@ class AllocationAnsibleStageHandler(AnsibleStageHandler):
 
         container = runner.run_ansible_playbook(self.stage.repo_url, self.stage.rev, self.stage)
         try:
-            Container.objects.create(allocation_stage=self.stage,
-                                     container_name=container.get_container_name())
+            Container.objects.create(
+                allocation_stage=self.stage, container_name=container.get_container_name()
+            )
 
             container.get_container_outputs()
             container.check_container_status()
             if isinstance(self.stage, UserAnsibleAllocationStage) and self.request_group:
-                LOG.debug(f"Allocation {self.allocation_unit.id} finished, incrementing finished allocation count.")
+                LOG.debug(
+                    f'Allocation {self.allocation_unit.id} finished,'
+                    ' incrementing finished allocation count.'
+                )
                 self.request_group.on_allocation_end()
         finally:
             container.delete()
@@ -365,8 +418,9 @@ class CleanupAnsibleStageHandler(AnsibleStageHandler):
     """
     Specifies tasks needed for resources cleanup created during the Ansible execution.
     """
+
     stage: CleanupStage
-    _job_class: Type[CleanupRQJob] = CleanupRQJob
+    _job_class: type[CleanupRQJob] = CleanupRQJob
 
     def __init__(self, stage: CleanupStage):
         super().__init__(stage)

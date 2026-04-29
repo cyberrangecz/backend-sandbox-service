@@ -1,5 +1,5 @@
-from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
+from django.core.management.base import BaseCommand, CommandError
 
 
 class Command(BaseCommand):
@@ -14,8 +14,10 @@ class Command(BaseCommand):
         # all required settings. Otherwise, it dies with an ambiguous error.
         if not settings.CRCZP_SERVICE_CONFIG.authentication.authenticated_rest_api:
             raise CommandError(
-                'The `authenticated_rest_api` must be turned on (set to True) to register the roles.'
+                'The `authenticated_rest_api` must be turned on (set to True)'
+                ' to register the roles.'
             )
         # The module can be imported only if the required settings are set. It fails otherwise.
         from crczp.sandbox_uag import auth
+
         auth.post_user_roles()

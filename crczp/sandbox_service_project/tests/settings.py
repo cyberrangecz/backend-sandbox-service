@@ -11,8 +11,9 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
 import os
-from crczp.sandbox_common_lib.crczp_service_config import CrczpServiceConfig
+
 from crczp.sandbox_common_lib.cloud_utils import get_aws_client, get_ostack_client
+from crczp.sandbox_common_lib.crczp_service_config import CrczpServiceConfig
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -27,8 +28,9 @@ CRCZP_CONFIG = CRCZP_SERVICE_CONFIG.app_config
 # -----------SIMPLIFY CLOUD PROVIDER CHANGE-----------
 # To reduce setup overhead, create Terraform client during startup of application.
 AWS_PROVIDER_CONFIGURED = bool(CRCZP_CONFIG.aws)
-TERRAFORM_CLIENT = get_aws_client(CRCZP_CONFIG) if AWS_PROVIDER_CONFIGURED \
-                   else get_ostack_client(CRCZP_CONFIG)
+TERRAFORM_CLIENT = (
+    get_aws_client(CRCZP_CONFIG) if AWS_PROVIDER_CONFIGURED else get_ostack_client(CRCZP_CONFIG)
+)
 # ----------------------------------------------------
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = CRCZP_SERVICE_CONFIG.django_secret_key
@@ -53,7 +55,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'django_rq',
-
     'crczp.sandbox_ansible_app.apps.CrczpSandboxAnsibleAppConfig',
     'crczp.sandbox_definition_app.apps.CrczpSandboxDefinitionAppConfig',
     'crczp.sandbox_instance_app.apps.CrczpSandboxInstanceAppConfig',
@@ -101,7 +102,7 @@ DATABASES = {
         'NAME': CRCZP_CONFIG.database.name,
         'PASSWORD': CRCZP_CONFIG.database.password,
         'PORT': CRCZP_CONFIG.database.port,
-        'USER': CRCZP_CONFIG.database.user
+        'USER': CRCZP_CONFIG.database.user,
     },
 }
 
@@ -146,9 +147,10 @@ STATIC_URL = f'/{CRCZP_SERVICE_CONFIG.microservice_name}/static/'
 
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'crczp.sandbox_common_lib.exc_handler.custom_exception_handler',
-    'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.AllowAny', ),
-
-    'DEFAULT_PAGINATION_CLASS': 'crczp.sandbox_common_lib.pagination.PageNumberWithPageSizePagination',
+    'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.AllowAny',),
+    'DEFAULT_PAGINATION_CLASS': (
+        'crczp.sandbox_common_lib.pagination.PageNumberWithPageSizePagination'
+    ),
     'PAGE_SIZE': 50,
 }
 
@@ -159,14 +161,12 @@ CACHES = {
         'TIMEOUT': None,  # Expire never
         'OPTIONS': {
             'MAX_ENTRIES': 300  # Django default value is 300 (2 kB per item = 0.6 MB)
-        }
+        },
     },
     'uag_auth_groups_cache': {
         'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
         'LOCATION': 'uag_auth_groups_cache',
-        'OPTIONS': {
-            'MAX_ENTRIES': 500
-        }
+        'OPTIONS': {'MAX_ENTRIES': 500},
     },
     'topology_cache': {
         'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
@@ -174,8 +174,8 @@ CACHES = {
         'TIMEOUT': None,
         'OPTIONS': {
             'CULL_FREQUENCY': 0,  # culls the entire cache, makes culling more efficient
-            'MAX_ENTRIES': 300
-        }
+            'MAX_ENTRIES': 300,
+        },
     },
 }
 
@@ -185,17 +185,15 @@ SANDBOX_UAG = {
     # which supports multiple OIDC providers (parsing them from the token).
     # Only those listed here will be allowed.
     'ALLOWED_OIDC_PROVIDERS': tuple(CRCZP_SERVICE_CONFIG.authentication.allowed_oidc_providers),
-
     # User and Group roles registration endpoint URL
     'ROLES_REGISTRATION_URL': None,
     # User and Group roles acquisition endpoint URL
     'ROLES_ACQUISITION_URL': None,
     # Path to roles definition file
     'ROLES_DEFINITION_PATH': None,
-
     # User and Group information configuration
     'MICROSERVICE_NAME': CRCZP_SERVICE_CONFIG.microservice_name,
-    'ROLE_PREFIX': "ROLE",
+    'ROLE_PREFIX': 'ROLE',
     'ENDPOINT': __package__,
 }
 
@@ -214,32 +212,32 @@ RQ_QUEUES = {
         'HOST': 'localhost',
         'PORT': 6379,
         'DB': 0,
-    }
+    },
 }
 
 RQ_SHOW_ADMIN_LINK = True
 
 LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "rq_console": {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'rq_console': {
             'format': '%(asctime)s %(levelname)s %(message)s',
-            "datefmt": "%H:%M:%S",
+            'datefmt': '%H:%M:%S',
         },
     },
-    "handlers": {
-        "rq_console": {
-            "level": CRCZP_CONFIG.log_level,
-            "class": "rq.utils.ColorizingStreamHandler",
-            "formatter": "rq_console",
-            "exclude": ["%(asctime)s"],
+    'handlers': {
+        'rq_console': {
+            'level': CRCZP_CONFIG.log_level,
+            'class': 'rq.utils.ColorizingStreamHandler',
+            'formatter': 'rq_console',
+            'exclude': ['%(asctime)s'],
         },
     },
     'loggers': {
-        "rq.worker": {
-            "handlers": ["rq_console"],
-            "level": CRCZP_CONFIG.log_level,
+        'rq.worker': {
+            'handlers': ['rq_console'],
+            'level': CRCZP_CONFIG.log_level,
         },
-    }
+    },
 }

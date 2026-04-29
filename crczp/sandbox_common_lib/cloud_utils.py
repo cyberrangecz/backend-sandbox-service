@@ -1,7 +1,11 @@
-from crczp.sandbox_common_lib.exceptions import ValidationError
+from crczp.terraform_driver import (
+    AvailableCloudLibraries,
+    CrczpTerraformBackendType,
+    CrczpTerraformClient,
+)
+
 from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration
-from crczp.terraform_driver import CrczpTerraformClient, AvailableCloudLibraries, \
-    CrczpTerraformBackendType
+from crczp.sandbox_common_lib.exceptions import ValidationError
 
 
 def get_database_settings(crczp_config: CrczpConfiguration) -> dict:
@@ -22,18 +26,17 @@ def get_ostack_client(crczp_config: CrczpConfiguration) -> CrczpTerraformClient:
         crczp_config.os_application_credential_secret,
     ]:
         raise ValidationError(
-            "Missing OpenStack configuration options. "
-            "Either AWS or OpenStack configuration must be set."
+            'Missing OpenStack configuration options. '
+            'Either AWS or OpenStack configuration must be set.'
         )
 
     return CrczpTerraformClient(
         auth_url=crczp_config.os_auth_url,
         application_credential_id=crczp_config.os_application_credential_id,
         application_credential_secret=crczp_config.os_application_credential_secret,
-        trc=crczp_config.trc, cloud_client=AvailableCloudLibraries.OPENSTACK,
-        backend_type=CrczpTerraformBackendType(
-            crczp_config.terraform_configuration.backend_type
-        ),
+        trc=crczp_config.trc,
+        cloud_client=AvailableCloudLibraries.OPENSTACK,
+        backend_type=CrczpTerraformBackendType(crczp_config.terraform_configuration.backend_type),
         db_configuration=get_database_settings(crczp_config),
         kube_namespace=crczp_config.ansible_runner_settings.namespace,
     )
@@ -50,10 +53,9 @@ def get_aws_client(crczp_config: CrczpConfiguration) -> CrczpTerraformClient:
         availability_zone=crczp_config.aws.availability_zone,
         base_vpc_name=crczp_config.aws.base_vpc,
         base_subnet_name=crczp_config.aws.base_subnet,
-        trc=crczp_config.trc, cloud_client=AvailableCloudLibraries.AWS,
-        backend_type=CrczpTerraformBackendType(
-            crczp_config.terraform_configuration.backend_type
-        ),
+        trc=crczp_config.trc,
+        cloud_client=AvailableCloudLibraries.AWS,
+        backend_type=CrczpTerraformBackendType(crczp_config.terraform_configuration.backend_type),
         db_configuration=get_database_settings(crczp_config),
         kube_namespace=crczp_config.ansible_runner_settings.namespace,
     )

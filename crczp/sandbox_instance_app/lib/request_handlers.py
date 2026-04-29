@@ -1,42 +1,67 @@
 import abc
-import structlog
+from collections.abc import Callable
 from functools import partial
-from typing import List, Type, Callable, Union, Optional
 
+import django_rq
+import structlog
+from django.conf import settings
 from django.contrib.auth.models import User
+from django.db import transaction
 from rq import Queue
 from rq.job import Job
-import django_rq
-from django.db import transaction
-from django.conf import settings
+
+from crczp.sandbox_ansible_app.models import (
+    AnsibleAllocationStage,
+    NetworkingAnsibleAllocationStage,
+    NetworkingAnsibleCleanupStage,
+    UserAnsibleAllocationStage,
+    UserAnsibleCleanupStage,
+)
 from crczp.sandbox_common_lib import exceptions, utils
-from crczp.sandbox_ansible_app.models import AnsibleAllocationStage,\
-    NetworkingAnsibleAllocationStage, NetworkingAnsibleCleanupStage,\
-    UserAnsibleAllocationStage, UserAnsibleCleanupStage
-from crczp.sandbox_instance_app.models import Sandbox, SandboxAllocationUnit, \
-    SandboxRequest, AllocationRequest, CleanupRequest, \
-    StackAllocationStage, CleanupStage, StackCleanupStage, AllocationRQJob, CleanupRQJob, Pool, SandboxRequestGroup
-from crczp.sandbox_instance_app.lib.stage_handlers import StageHandler, StackStageHandler, \
-    AllocationStackStageHandler, CleanupStackStageHandler, AnsibleStageHandler, \
-    AllocationAnsibleStageHandler, CleanupAnsibleStageHandler
-from crczp.sandbox_instance_app.lib import requests, sandboxes, pools
+from crczp.sandbox_instance_app.lib import pools, requests, sandboxes
+from crczp.sandbox_instance_app.lib.stage_handlers import (
+    AllocationAnsibleStageHandler,
+    AllocationStackStageHandler,
+    AnsibleStageHandler,
+    CleanupAnsibleStageHandler,
+    CleanupStackStageHandler,
+    StackStageHandler,
+    StageHandler,
+)
+from crczp.sandbox_instance_app.models import (
+    AllocationRequest,
+    AllocationRQJob,
+    CleanupRequest,
+    CleanupRQJob,
+    CleanupStage,
+    Pool,
+    Sandbox,
+    SandboxAllocationUnit,
+    SandboxRequest,
+    SandboxRequestGroup,
+    StackAllocationStage,
+    StackCleanupStage,
+)
 
 LOG = structlog.get_logger()
 
 OPENSTACK_QUEUE = 'openstack'
 ANSIBLE_QUEUE = 'ansible'
-AllocationStage = Union[StackAllocationStage, AnsibleAllocationStage]
+AllocationStage = StackAllocationStage | AnsibleAllocationStage
 
 
 class RequestHandler(abc.ABC):
     """
     Handles DB SandboxRequest object and generalizes its common tasks.
     """
+
     queue_default: Queue = django_rq.get_queue()
-    queue_stack: Queue = django_rq\
-        .get_queue(OPENSTACK_QUEUE, default_timeout=settings.CRCZP_CONFIG.sandbox_build_timeout)
-    queue_ansible: Queue = django_rq\
-        .get_queue(ANSIBLE_QUEUE, default_timeout=settings.CRCZP_CONFIG.sandbox_ansible_timeout)
+    queue_stack: Queue = django_rq.get_queue(
+        OPENSTACK_QUEUE, default_timeout=settings.CRCZP_CONFIG.sandbox_build_timeout
+    )
+    queue_ansible: Queue = django_rq.get_queue(
+        ANSIBLE_QUEUE, default_timeout=settings.CRCZP_CONFIG.sandbox_ansible_timeout
+    )
     request: SandboxRequest = None
 
     @abc.abstractmethod
@@ -52,28 +77,31 @@ class RequestHandler(abc.ABC):
         """
         self.request = request
         if hasattr(self.request, 'is_finished') and self.request.is_finished:
-            msg = f'Request {self.request.__class__.__name__} with ID {self.request.id}' \
-                  f' is finished and does not need cancelling.'
+            msg = (
+                f'Request {self.request.__class__.__name__} with ID {self.request.id}'
+                f' is finished and does not need cancelling.'
+            )
             raise exceptions.ValidationError(msg)
         for stage_handler in self._get_stage_handlers():
             stage_handler.cancel()
 
     @abc.abstractmethod
-    def _create_stage_handlers(self, *args, **kwargs) -> List[StageHandler]:
+    def _create_stage_handlers(self, *args, **kwargs) -> list[StageHandler]:
         """
         Create a new DB stages for this request and return their handlers.
         """
         pass
 
     @abc.abstractmethod
-    def _get_stage_handlers(self) -> List[StageHandler]:
+    def _get_stage_handlers(self) -> list[StageHandler]:
         """
         Get handlers of existing DB stages for this request.
         """
         pass
 
-    def _enqueue_request(self, stage_handlers: List[StageHandler],
-                         finalizing_stage: Callable[[], None]) -> None:
+    def _enqueue_request(
+        self, stage_handlers: list[StageHandler], finalizing_stage: Callable[[], None]
+    ) -> None:
         """
         Enqueue methods of the given stage handlers.
 
@@ -108,9 +136,11 @@ class RequestHandler(abc.ABC):
         return finalizing_stage_function
 
     @staticmethod
-    def create_request_group(units: List[SandboxAllocationUnit]):
+    def create_request_group(units: list[SandboxAllocationUnit]):
         email = units[0].created_by.email
-        group = SandboxRequestGroup.objects.create(pool=units[0].pool, unit_count=len(units), email=email)
+        group = SandboxRequestGroup.objects.create(
+            pool=units[0].pool, unit_count=len(units), email=email
+        )
         group.save()
         return group
 
@@ -119,6 +149,7 @@ class AllocationRequestHandler(RequestHandler):
     """
     Specifies allocation request stages and tasks for their manipulation.
     """
+
     request: AllocationRequest
 
     @transaction.atomic
@@ -126,15 +157,14 @@ class AllocationRequestHandler(RequestHandler):
         """
         Handles request stages creation (or restart) and their enqueuing.
         """
-        finalizing_stage_function = \
-            self._get_finalizing_stage_function(self._mark_sandbox_as_ready, sandbox)
-        on_commit_method = \
-            partial(self._enqueue_request, stage_handlers, finalizing_stage_function)
+        finalizing_stage_function = self._get_finalizing_stage_function(
+            self._mark_sandbox_as_ready, sandbox
+        )
+        on_commit_method = partial(self._enqueue_request, stage_handlers, finalizing_stage_function)
 
         transaction.on_commit(on_commit_method)
 
-    def _create_allocation_jobs(self, units: List[SandboxAllocationUnit],
-                                created_by: Optional[User]):
+    def _create_allocation_jobs(self, units: list[SandboxAllocationUnit], created_by: User | None):
         if units[0].pool.send_emails and created_by.email:
             allocation_group = self.create_request_group(units)
         else:
@@ -144,13 +174,17 @@ class AllocationRequestHandler(RequestHandler):
             LOG.info('Creating sandbox for allocation unit: %s', unit.id)
             self.request = AllocationRequest.objects.create(allocation_unit=unit)
             pri_key, pub_key = utils.generate_ssh_keypair()
-            sandbox = Sandbox(id=sandboxes.generate_new_sandbox_uuid(), allocation_unit=unit,
-                              private_user_key=pri_key, public_user_key=pub_key)
+            sandbox = Sandbox(
+                id=sandboxes.generate_new_sandbox_uuid(),
+                allocation_unit=unit,
+                private_user_key=pri_key,
+                public_user_key=pub_key,
+            )
             sandbox.save()
             stage_handlers = self._create_stage_handlers(sandbox, allocation_group)
             self._enqueue_stages(sandbox, stage_handlers)
 
-    def enqueue_request(self, units, created_by: Optional[User]) -> None:
+    def enqueue_request(self, units, created_by: User | None) -> None:
         self.queue_default.enqueue(self._create_allocation_jobs, units, created_by)
 
     def _create_restart_jobs(self, unit: SandboxAllocationUnit):
@@ -158,8 +192,12 @@ class AllocationRequestHandler(RequestHandler):
         self.request = unit.allocation_request
         Sandbox.objects.get(allocation_unit=unit).delete()
         pri_key, pub_key = utils.generate_ssh_keypair()
-        sandbox = Sandbox(id=sandboxes.generate_new_sandbox_uuid(), allocation_unit=unit,
-                          private_user_key=pri_key, public_user_key=pub_key)
+        sandbox = Sandbox(
+            id=sandboxes.generate_new_sandbox_uuid(),
+            allocation_unit=unit,
+            private_user_key=pri_key,
+            public_user_key=pub_key,
+        )
         sandbox.save()
         stage_handlers = self._restart_stage_handlers(sandbox)
         self._enqueue_stages(sandbox, stage_handlers)
@@ -167,45 +205,57 @@ class AllocationRequestHandler(RequestHandler):
     def restart_request(self, unit: SandboxAllocationUnit) -> None:
         self.queue_default.enqueue(self._create_restart_jobs, unit)
 
-    def _create_db_stage(self, stage_class: Type[AllocationStage],
-                         *args, **kwargs) -> AllocationStage:
+    def _create_db_stage(
+        self, stage_class: type[AllocationStage], *args, **kwargs
+    ) -> AllocationStage:
         """
         Simplifies stage creation in database.
         """
-        return stage_class.objects.create(allocation_request=self.request,
-                                          allocation_request_fk_many=self.request, *args, **kwargs)
+        return stage_class.objects.create(
+            *args,
+            allocation_request=self.request,
+            allocation_request_fk_many=self.request,
+            **kwargs,
+        )
 
-    def _create_stage_handlers(self, sandbox: Sandbox, group: Optional[SandboxRequestGroup]) -> List[StageHandler]:
+    def _create_stage_handlers(
+        self, sandbox: Sandbox, group: SandboxRequestGroup | None
+    ) -> list[StageHandler]:
         """
         Create a new DB stages for this request and return their handlers.
         """
         stack_stage = self._create_db_stage(StackAllocationStage)
         stack_stage_handler = AllocationStackStageHandler(stack_stage, request_group=group)
 
-        networking_stage = \
-            self._create_db_stage(NetworkingAnsibleAllocationStage,
-                                  repo_url=settings.CRCZP_CONFIG.ansible_networking_url,
-                                  rev=settings.CRCZP_CONFIG.ansible_networking_rev)
-        networking_stage_handler = AllocationAnsibleStageHandler(networking_stage, sandbox, request_group=group)
+        networking_stage = self._create_db_stage(
+            NetworkingAnsibleAllocationStage,
+            repo_url=settings.CRCZP_CONFIG.ansible_networking_url,
+            rev=settings.CRCZP_CONFIG.ansible_networking_rev,
+        )
+        networking_stage_handler = AllocationAnsibleStageHandler(
+            networking_stage, sandbox, request_group=group
+        )
 
-        user_stage = \
-            self._create_db_stage(UserAnsibleAllocationStage,
-                                  repo_url=self.request.allocation_unit.pool.definition.url,
-                                  rev=self.request.allocation_unit.pool.rev_sha)
+        user_stage = self._create_db_stage(
+            UserAnsibleAllocationStage,
+            repo_url=self.request.allocation_unit.pool.definition.url,
+            rev=self.request.allocation_unit.pool.rev_sha,
+        )
         user_stage_handler = AllocationAnsibleStageHandler(user_stage, sandbox, request_group=group)
 
         return [stack_stage_handler, networking_stage_handler, user_stage_handler]
 
-    def _restart_stage_handlers(self, sandbox: Sandbox) -> List[StageHandler]:
+    def _restart_stage_handlers(self, sandbox: Sandbox) -> list[StageHandler]:
         """
         Restart failed DB stages for this request and return their handlers.
         """
 
         if not self.request.is_finished:
-            raise exceptions.ValidationError("Allocation of the sandbox is still in progress.")
+            raise exceptions.ValidationError('Allocation of the sandbox is still in progress.')
         if not self.request.useransibleallocationstage.failed:
-            raise exceptions.ValidationError("All stages finished without failing. Only failed"
-                                             " stages can be restarted.")
+            raise exceptions.ValidationError(
+                'All stages finished without failing. Only failed stages can be restarted.'
+            )
 
         stage_handlers = []
         if self.request.stackallocationstage.failed:
@@ -213,34 +263,37 @@ class AllocationRequestHandler(RequestHandler):
             stack_stage = self._create_db_stage(StackAllocationStage)
             stage_handlers.append(AllocationStackStageHandler(stack_stage))
 
-        if self.request.stackallocationstage.failed or \
-                self.request.networkingansibleallocationstage.failed:
+        if (
+            self.request.stackallocationstage.failed
+            or self.request.networkingansibleallocationstage.failed
+        ):
             self.request.networkingansibleallocationstage.delete()
-            networking_stage = \
-                self._create_db_stage(NetworkingAnsibleAllocationStage,
-                                      repo_url=settings.CRCZP_CONFIG.ansible_networking_url,
-                                      rev=settings.CRCZP_CONFIG.ansible_networking_rev)
+            networking_stage = self._create_db_stage(
+                NetworkingAnsibleAllocationStage,
+                repo_url=settings.CRCZP_CONFIG.ansible_networking_url,
+                rev=settings.CRCZP_CONFIG.ansible_networking_rev,
+            )
             stage_handlers.append(AllocationAnsibleStageHandler(networking_stage, sandbox))
 
         self.request.useransibleallocationstage.delete()
-        user_stage = \
-            self._create_db_stage(UserAnsibleAllocationStage,
-                                  repo_url=self.request.allocation_unit.pool.definition.url,
-                                  rev=self.request.allocation_unit.pool.rev_sha)
+        user_stage = self._create_db_stage(
+            UserAnsibleAllocationStage,
+            repo_url=self.request.allocation_unit.pool.definition.url,
+            rev=self.request.allocation_unit.pool.rev_sha,
+        )
         stage_handlers.append(AllocationAnsibleStageHandler(user_stage, sandbox))
 
         return stage_handlers
 
-    def _get_stage_handlers(self) -> List[StageHandler]:
+    def _get_stage_handlers(self) -> list[StageHandler]:
         """
         Get handlers of existing DB stages for this request.
         """
-        user_handler =\
-            AllocationAnsibleStageHandler(self.request.useransibleallocationstage)
-        networking_handler =\
-            AllocationAnsibleStageHandler(self.request.networkingansibleallocationstage)
-        stack_handler =\
-            AllocationStackStageHandler(self.request.stackallocationstage)
+        user_handler = AllocationAnsibleStageHandler(self.request.useransibleallocationstage)
+        networking_handler = AllocationAnsibleStageHandler(
+            self.request.networkingansibleallocationstage
+        )
+        stack_handler = AllocationStackStageHandler(self.request.stackallocationstage)
 
         return [user_handler, networking_handler, stack_handler]
 
@@ -259,6 +312,7 @@ class CleanupRequestHandler(RequestHandler):
     """
     Specifies cleanup request stages and tasks for their manipulation.
     """
+
     request: CleanupRequest
     delete_pool: bool
 
@@ -271,35 +325,35 @@ class CleanupRequestHandler(RequestHandler):
         Handles request stages creation and their enqueuing.
         """
         stage_handlers = self._create_stage_handlers()
-        finalizing_stage_function = \
-            self._get_finalizing_stage_function(self._delete_allocation_unit,
-                                                self.request.allocation_unit, self.request)
-        on_commit_method = \
-            partial(self._enqueue_request, stage_handlers, finalizing_stage_function)
+        finalizing_stage_function = self._get_finalizing_stage_function(
+            self._delete_allocation_unit, self.request.allocation_unit, self.request
+        )
+        on_commit_method = partial(self._enqueue_request, stage_handlers, finalizing_stage_function)
 
         transaction.on_commit(on_commit_method)
 
     def _create_cleanup_jobs(self, unit: SandboxAllocationUnit):
         if hasattr(unit, 'cleanup_request'):
             self.request = unit.cleanup_request
-            LOG.info("Reusing cleanup request %s for allocation unit %s", self.request.id, unit.id)
+            LOG.info('Reusing cleanup request %s for allocation unit %s', self.request.id, unit.id)
         else:
             self.request = CleanupRequest.objects.create(allocation_unit=unit)
-            LOG.info("Created cleanup request %s for allocation unit %s", self.request.id, unit.id)
+            LOG.info('Created cleanup request %s for allocation unit %s', self.request.id, unit.id)
 
         self._enqueue_stages()
 
     def enqueue_request(self, unit: SandboxAllocationUnit) -> None:
         self.queue_default.enqueue(self._create_cleanup_jobs, unit)
 
-    def _create_db_stage(self, stage_class: Type[CleanupStage], *args, **kwargs) -> CleanupStage:
+    def _create_db_stage(self, stage_class: type[CleanupStage], *args, **kwargs) -> CleanupStage:
         """
         Simplifies stage creation in database.
         """
-        return stage_class.objects.create(cleanup_request=self.request,
-                                          cleanup_request_fk_many=self.request, *args, **kwargs)
+        return stage_class.objects.create(
+            *args, cleanup_request=self.request, cleanup_request_fk_many=self.request, **kwargs
+        )
 
-    def _create_stage_handlers(self) -> List[StageHandler]:
+    def _create_stage_handlers(self) -> list[StageHandler]:
         """
         Create a new DB stages for this request and return their handlers.
         """
@@ -321,7 +375,7 @@ class CleanupRequestHandler(RequestHandler):
 
         return [user_stage_handler, networking_stage_handler, stack_stage_handler]
 
-    def _get_stage_handlers(self) -> List[StageHandler]:
+    def _get_stage_handlers(self) -> list[StageHandler]:
         """
         Get handlers of existing DB stages for this request.
         """
@@ -330,8 +384,9 @@ class CleanupRequestHandler(RequestHandler):
         user_handler = CleanupAnsibleStageHandler(self.request.useransiblecleanupstage)
         return [stack_handler, networking_handler, user_handler]
 
-    def _delete_allocation_unit(self, allocation_unit: SandboxAllocationUnit, request: CleanupRequest)\
-            -> None:
+    def _delete_allocation_unit(
+        self, allocation_unit: SandboxAllocationUnit, request: CleanupRequest
+    ) -> None:
         """
         Named method used as finalizing stage function.
         """
@@ -346,7 +401,11 @@ class CleanupRequestHandler(RequestHandler):
         LOG.info('Cleanup request deleted from DB', cleanup_request=request)
         if pool.size == 0 and self.delete_pool:
             pools.delete_pool(pool)
-            LOG.info('Pool deleted from DB by final cleanup finishing', cleanup_request=request, pool=pool)
+            LOG.info(
+                'Pool deleted from DB by final cleanup finishing',
+                cleanup_request=request,
+                pool=pool,
+            )
 
 
 def request_exception_handler(job: Job, exc_type, exc_value, traceback) -> None:
@@ -361,13 +420,13 @@ def request_exception_handler(job: Job, exc_type, exc_value, traceback) -> None:
     request_handler = None
     request = None
     try:
-        request = AllocationRQJob.objects.get(job_id=job.id)\
-            .allocation_stage.allocation_request_fk_many
+        request = AllocationRQJob.objects.get(
+            job_id=job.id
+        ).allocation_stage.allocation_request_fk_many
         request_handler = AllocationRequestHandler()
     except AllocationRQJob.DoesNotExist:
         try:
-            request = CleanupRQJob.objects.get(job_id=job.id)\
-                .cleanup_stage.cleanup_request_fk_many
+            request = CleanupRQJob.objects.get(job_id=job.id).cleanup_stage.cleanup_request_fk_many
             request_handler = CleanupRequestHandler()
         except CleanupRQJob.DoesNotExist:
             pass

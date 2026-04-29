@@ -1,13 +1,12 @@
+import base64
 from abc import ABC, abstractmethod
 
 import gitlab
+import giturlparse
 import requests
 import structlog
-import giturlparse
-import base64
-
+from github import Auth, Github, GithubException, UnknownObjectException
 from github.ContentFile import ContentFile
-from github import Github, Auth, UnknownObjectException, GithubException
 
 from crczp.sandbox_common_lib import exceptions, git_config
 from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration
@@ -44,12 +43,13 @@ class DefinitionProvider(ABC):
         try:
             url_parsed = giturlparse.parse(url)
         except giturlparse.parser.ParserError:
-            raise exceptions.GitError(f"Could not parse GIT URL: url={url}")
+            raise exceptions.GitError(f'Could not parse GIT URL: url={url}') from None
 
-        if not url.startswith("https://") or not url.endswith(".git"):
+        if not url.startswith('https://') or not url.endswith('.git'):
             raise exceptions.GitError(
-                f"Invalid URL. Has to be a GIT URL cloned with HTTPS: expected="
-                f"https://example.gitlab.com/[url path].git, actual={url}")
+                f'Invalid URL. Has to be a GIT URL cloned with HTTPS: expected='
+                f'https://example.gitlab.com/[url path].git, actual={url}'
+            )
 
         return url_parsed
 
@@ -63,9 +63,15 @@ class GitlabProvider(DefinitionProvider):
         self.project_path = self.get_project_path(url_parsed)
 
         if self.git_access_token:
-            self.gl = gitlab.Gitlab(self.git_rest_server, private_token=self.git_access_token, ssl_verify=not config.git_skip_ssl_verification)
+            self.gl = gitlab.Gitlab(
+                self.git_rest_server,
+                private_token=self.git_access_token,
+                ssl_verify=not config.git_skip_ssl_verification,
+            )
         else:
-            self.gl = gitlab.Gitlab(self.git_rest_server, ssl_verify=not config.git_skip_ssl_verification)
+            self.gl = gitlab.Gitlab(
+                self.git_rest_server, ssl_verify=not config.git_skip_ssl_verification
+            )
 
     def get_file(self, path: str, rev: str) -> str:
         """Get file from repo as a string."""
@@ -74,7 +80,7 @@ class GitlabProvider(DefinitionProvider):
             file = project.files.get(file_path=path, ref=rev)
             return file.decode().decode()  # One decode to get content, one from bytes to str
         except (requests.exceptions.RequestException, gitlab.exceptions.GitlabError) as ex:
-            raise exceptions.GitError(ex)
+            raise exceptions.GitError(ex) from ex
 
     def get_branches(self):
         try:
@@ -82,14 +88,14 @@ class GitlabProvider(DefinitionProvider):
 
             return project.branches.list()
         except (requests.exceptions.RequestException, gitlab.exceptions.GitlabError) as ex:
-            raise exceptions.GitError(ex)
+            raise exceptions.GitError(ex) from ex
 
     def get_tags(self):
         try:
             project = self.gl.projects.get(self.project_path)
             return project.tags.list()
         except (requests.exceptions.RequestException, gitlab.exceptions.GitlabError) as ex:
-            raise exceptions.GitError(ex)
+            raise exceptions.GitError(ex) from ex
 
     def get_refs(self):
         return self.get_branches() + self.get_tags()
@@ -103,12 +109,13 @@ class GitlabProvider(DefinitionProvider):
             commit = project.commits.get(rev)
             return commit.id
         except (requests.exceptions.RequestException, gitlab.exceptions.GitlabError) as ex:
-            raise exceptions.GitError('Failed to get sha of the GIT rev.', ex)
+            raise exceptions.GitError('Failed to get sha of the GIT rev.', ex) from ex
 
     @staticmethod
     def get_project_path(url_parsed) -> str:
-        project_path = url_parsed.pathname[:-4] if url_parsed.pathname[-4:] == '.git'\
-            else url_parsed.pathname
+        project_path = (
+            url_parsed.pathname[:-4] if url_parsed.pathname[-4:] == '.git' else url_parsed.pathname
+        )
         # https leaves two // at the start
         path = project_path[2:] if project_path[0:2] == '//' else project_path
         path_start = path.index('/') + 1
@@ -131,10 +138,10 @@ class GitHubProvider(DefinitionProvider):
         try:
             self.repo = github_client.get_repo(repo_name)
         except GithubException as exc:
-            raise exceptions.GitError(f"Cannot find the GitHub repository [url: {url}]") from exc
+            raise exceptions.GitError(f'Cannot find the GitHub repository [url: {url}]') from exc
 
     def _get_repo_name(self, url: str) -> str:
-        return url.removeprefix(self.git_rest_server).removesuffix(".git")
+        return url.removeprefix(self.git_rest_server).removesuffix('.git')
 
     def get_file(self, path: str, rev: str) -> str:
         """
@@ -143,7 +150,9 @@ class GitHubProvider(DefinitionProvider):
         try:
             contents: ContentFile = self.repo.get_contents(path, ref=rev)
         except (UnknownObjectException, GithubException) as exc:
-            raise exceptions.GitError(f"Cannot find '{path}' in {self.repo.name} [rev: '{rev}']") from exc
+            raise exceptions.GitError(
+                f"Cannot find '{path}' in {self.repo.name} [rev: '{rev}']"
+            ) from exc
 
         return base64.b64decode(contents.content).decode()
 

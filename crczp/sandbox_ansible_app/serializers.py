@@ -7,6 +7,7 @@ Validators validate single fields or entire objects.
 
 Swagger can utilise type hints to determine type, so use them in your own methods.
 """
+
 from rest_framework import serializers
 
 from crczp.sandbox_ansible_app import models
@@ -17,8 +18,7 @@ class NetworkingAnsibleAllocationStageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.NetworkingAnsibleAllocationStage
-        fields = ('id', 'request_id', 'start', 'end', 'failed', 'error_message',
-                  'repo_url', 'rev')
+        fields = ('id', 'request_id', 'start', 'end', 'failed', 'error_message', 'repo_url', 'rev')
         read_only_fields = fields
 
 
@@ -27,8 +27,7 @@ class UserAnsibleAllocationStageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.UserAnsibleAllocationStage
-        fields = ('id', 'request_id', 'start', 'end', 'failed', 'error_message',
-                  'repo_url', 'rev')
+        fields = ('id', 'request_id', 'start', 'end', 'failed', 'error_message', 'repo_url', 'rev')
         read_only_fields = fields
 
 
@@ -37,8 +36,14 @@ class NetworkingAnsibleCleanupStageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.NetworkingAnsibleCleanupStage
-        fields = ('id', 'request_id', 'start', 'end', 'failed', 'error_message',
-                  )
+        fields = (
+            'id',
+            'request_id',
+            'start',
+            'end',
+            'failed',
+            'error_message',
+        )
         read_only_fields = fields
 
 
@@ -47,8 +52,14 @@ class UserAnsibleCleanupStageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.UserAnsibleCleanupStage
-        fields = ('id', 'request_id', 'start', 'end', 'failed', 'error_message',
-                  )
+        fields = (
+            'id',
+            'request_id',
+            'start',
+            'end',
+            'failed',
+            'error_message',
+        )
         read_only_fields = fields
 
 

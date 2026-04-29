@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('sandbox_instance_app', '0007_auto_20230426_1348'),
     ]
@@ -13,6 +12,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='pool',
             name='size',
-            field=models.PositiveIntegerField(default=0, help_text='Current amount of Allocation Units associated with this pool.'),
+            field=models.PositiveIntegerField(
+                default=0, help_text='Current amount of Allocation Units associated with this pool.'
+            ),
         ),
     ]

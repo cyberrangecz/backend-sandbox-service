@@ -1,43 +1,49 @@
 import enum
-from typing import List, Optional
+from functools import partial
 
 import structlog
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
-from functools import partial
 
 from crczp.sandbox_common_lib import exceptions
 from crczp.sandbox_instance_app.lib import request_handlers, sandboxes
-from crczp.sandbox_instance_app.models import Pool, SandboxAllocationUnit, \
-    AllocationRequest, CleanupRequest
+from crczp.sandbox_instance_app.models import (
+    AllocationRequest,
+    CleanupRequest,
+    Pool,
+    SandboxAllocationUnit,
+)
 
 LOG = structlog.get_logger()
 
 
 class StageState(enum.Enum):
-    IN_QUEUE = "IN_QUEUE"
-    RUNNING = "RUNNING"
-    FINISHED = "FINISHED"
-    FAILED = "FAILED"
+    IN_QUEUE = 'IN_QUEUE'
+    RUNNING = 'RUNNING'
+    FINISHED = 'FINISHED'
+    FAILED = 'FAILED'
 
 
 def restart_allocation_stages(unit: SandboxAllocationUnit) -> SandboxAllocationUnit:
     """Restarts failed allocation stages and recreates the existing sandbox and request in the
-     database.
+    database.
     """
 
     request_handlers.AllocationRequestHandler().restart_request(unit)
     return unit
 
 
-def create_allocations_requests(pool: Pool, count: int, created_by: Optional[User]) \
-        -> List[SandboxAllocationUnit]:
+def create_allocations_requests(
+    pool: Pool, count: int, created_by: User | None
+) -> list[SandboxAllocationUnit]:
     """Batch version of create_allocation_request. Create count Sandbox Requests."""
 
     with transaction.atomic():
-        units = [SandboxAllocationUnit.objects.create(pool=pool, created_by=created_by)
-                 for _ in range(count)]
+        units = [
+            SandboxAllocationUnit.objects.create(pool=pool, created_by=created_by)
+            for _ in range(count)
+        ]
 
         transaction.on_commit(
             partial(request_handlers.AllocationRequestHandler().enqueue_request, units, created_by)
@@ -54,7 +60,10 @@ def cancel_allocation_request(alloc_req: AllocationRequest):
 def create_cleanup_request_force(allocation_unit: SandboxAllocationUnit, delete_pool):
     """Create cleanup request and enqueue it. Immediately delete sandbox from database.
     The force parameter forces the deletion."""
-    if hasattr(allocation_unit, 'cleanup_request') and not allocation_unit.cleanup_request.is_finished:
+    if (
+        hasattr(allocation_unit, 'cleanup_request')
+        and not allocation_unit.cleanup_request.is_finished
+    ):
         return
 
     try:
@@ -65,11 +74,17 @@ def create_cleanup_request_force(allocation_unit: SandboxAllocationUnit, delete_
         if hasattr(sandbox, 'lock'):
             sandbox.lock.delete()
 
-    if not (allocation_unit.allocation_request.stackallocationstage.finished or
-            allocation_unit.allocation_request.stackallocationstage.failed) and \
-            allocation_unit.allocation_request.stackallocationstage.start is not None:
-        raise exceptions.ValidationError('Cleanup while the first stage is running is not allowed. '
-                                         'Retry once the first stage is finished or fails.')
+    if (
+        not (
+            allocation_unit.allocation_request.stackallocationstage.finished
+            or allocation_unit.allocation_request.stackallocationstage.failed
+        )
+        and allocation_unit.allocation_request.stackallocationstage.start is not None
+    ):
+        raise exceptions.ValidationError(
+            'Cleanup while the first stage is running is not allowed. '
+            'Retry once the first stage is finished or fails.'
+        )
 
     if not allocation_unit.allocation_request.is_finished:
         cancel_allocation_request(allocation_unit.allocation_request)
@@ -89,14 +104,19 @@ def create_cleanup_request(allocation_unit: SandboxAllocationUnit):
         sandbox = None
     else:
         if hasattr(sandbox, 'lock'):
-            raise exceptions.ValidationError('Sandbox ID={} is locked. Unlock it first.'
-                                             .format(sandbox.id))
+            raise exceptions.ValidationError(f'Sandbox ID={sandbox.id} is locked. Unlock it first.')
 
-    if not (allocation_unit.allocation_request.stackallocationstage.finished or
-            allocation_unit.allocation_request.stackallocationstage.failed) and \
-            allocation_unit.allocation_request.stackallocationstage.start is not None:
-        raise exceptions.ValidationError('Cleanup while the first stage is running is not allowed. '
-                                         'Retry once the first stage is finished or fails.')
+    if (
+        not (
+            allocation_unit.allocation_request.stackallocationstage.finished
+            or allocation_unit.allocation_request.stackallocationstage.failed
+        )
+        and allocation_unit.allocation_request.stackallocationstage.start is not None
+    ):
+        raise exceptions.ValidationError(
+            'Cleanup while the first stage is running is not allowed. '
+            'Retry once the first stage is finished or fails.'
+        )
 
     if not allocation_unit.allocation_request.is_finished:
         raise exceptions.ValidationError(
@@ -107,7 +127,8 @@ def create_cleanup_request(allocation_unit: SandboxAllocationUnit):
     if hasattr(allocation_unit, 'cleanup_request'):
         raise exceptions.ValidationError(
             f'Allocation unit ID={allocation_unit.id} already has a cleanup request '
-            f'ID={allocation_unit.cleanup_request.id}. Delete it first.')
+            f'ID={allocation_unit.cleanup_request.id}. Delete it first.'
+        )
 
     if sandbox:
         sandboxes.clear_cache(sandbox)
@@ -116,8 +137,9 @@ def create_cleanup_request(allocation_unit: SandboxAllocationUnit):
     request_handlers.CleanupRequestHandler().enqueue_request(allocation_unit)
 
 
-def create_cleanup_requests(allocation_units: List[SandboxAllocationUnit], force: bool = False,
-                            delete_pool: bool = False):
+def create_cleanup_requests(
+    allocation_units: list[SandboxAllocationUnit], force: bool = False, delete_pool: bool = False
+):
     """Batch version of create_cleanup_request."""
     for unit in allocation_units:
         if force:
@@ -134,34 +156,41 @@ def cancel_cleanup_request(cleanup_req: CleanupRequest) -> None:
 def delete_cleanup_request(request: CleanupRequest) -> None:
     """Delete given cleanup request."""
     if not request.is_finished:
-        raise exceptions.ValidationError('The cleanup request is not finished. '
-                                         'You need to cancel it first.')
+        raise exceptions.ValidationError(
+            'The cleanup request is not finished. You need to cancel it first.'
+        )
     request.delete()
 
 
-def get_allocation_request_stages_state(request: AllocationRequest) -> List[str]:
+def get_allocation_request_stages_state(request: AllocationRequest) -> list[str]:
     """Get AllocationRequests stages state."""
     try:
-        stages = [request.stackallocationstage, request.networkingansibleallocationstage,
-                  request.useransibleallocationstage]
+        stages = [
+            request.stackallocationstage,
+            request.networkingansibleallocationstage,
+            request.useransibleallocationstage,
+        ]
     except ObjectDoesNotExist:
         return [StageState.IN_QUEUE.value, StageState.IN_QUEUE.value, StageState.IN_QUEUE.value]
 
     return _get_request_stages_state(stages)
 
 
-def get_cleanup_request_stages_state(request: CleanupRequest) -> List[str]:
+def get_cleanup_request_stages_state(request: CleanupRequest) -> list[str]:
     """Get CleanupRequests stages state."""
     try:
-        stages = [request.stackcleanupstage, request.networkingansiblecleanupstage,
-                  request.useransiblecleanupstage]
+        stages = [
+            request.stackcleanupstage,
+            request.networkingansiblecleanupstage,
+            request.useransiblecleanupstage,
+        ]
     except ObjectDoesNotExist:
         return [StageState.IN_QUEUE.value, StageState.IN_QUEUE.value, StageState.IN_QUEUE.value]
 
     return _get_request_stages_state(stages)
 
 
-def _get_request_stages_state(stages) -> List[str]:
+def _get_request_stages_state(stages) -> list[str]:
     """Get SandboxRequests stages state."""
     stages_state = []
 

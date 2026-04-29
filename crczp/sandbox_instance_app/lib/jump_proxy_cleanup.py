@@ -1,9 +1,8 @@
-import structlog
 import paramiko
-
-from crczp.sandbox_instance_app.models import SandboxAllocationUnit
+import structlog
 from django.conf import settings
 
+from crczp.sandbox_instance_app.models import SandboxAllocationUnit
 
 LOG = structlog.get_logger()
 
@@ -11,13 +10,13 @@ LOG = structlog.get_logger()
 def delete_jump_ssh_key(allocation_unit: SandboxAllocationUnit):
     name = allocation_unit.get_stack_name()
     ssh = connect_to_jump()
-    stdin, stdout, stderr = ssh.exec_command(f"sudo rm -rf /home/{name}")
+    stdin, stdout, stderr = ssh.exec_command(f'sudo rm -rf /home/{name}')
 
     # Wait for the command to finish
     stdout.channel.recv_exit_status()
     error = stderr.read().decode()
     if error:
-        LOG.warning(f"Failed to delete key for {name} from proxy jump: {error}")
+        LOG.warning(f'Failed to delete key for {name} from proxy jump: {error}')
 
 
 def connect_to_jump():
@@ -39,7 +38,7 @@ def ssh_connect(hostname, port, username, key_file_path):
         ssh.connect(hostname, port=port, username=username, pkey=private_key)
         return ssh
     except Exception as e:
-        LOG.warning(f"Failed to connect to {hostname}: {e}")
+        LOG.warning(f'Failed to connect to {hostname}: {e}')
         raise
 
 
@@ -48,6 +47,6 @@ def load_private_key(key_path):
     for key_class in key_classes:
         try:
             return key_class.from_private_key_file(key_path)
-        except (paramiko.SSHException, IOError):
+        except (OSError, paramiko.SSHException):
             continue
-    raise ValueError("Could not load private key. Unsupported key type or file not found.")
+    raise ValueError('Could not load private key. Unsupported key type or file not found.')

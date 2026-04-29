@@ -1,30 +1,41 @@
 import io
-
-import yaml
-import pytest
 import os
-from django.core.management import call_command
-from django.contrib.auth.models import User
+from unittest import mock
 
+import pytest
+import yaml
+from crczp.cloud_commons import Image, TopologyInstance, TransformationConfiguration
 from crczp.topology_definition.models import TopologyDefinition
-from crczp.cloud_commons import TopologyInstance, TransformationConfiguration, Image
+from django.contrib.auth.models import User
+from django.core.management import call_command
+from django.utils import timezone
+from ruamel.yaml import YAML
 
+from crczp.sandbox_ansible_app.lib.container import DockerContainer
+from crczp.sandbox_ansible_app.models import (
+    Container,
+    NetworkingAnsibleAllocationStage,
+    NetworkingAnsibleCleanupStage,
+    UserAnsibleAllocationStage,
+    UserAnsibleCleanupStage,
+)
 from crczp.sandbox_definition_app.lib.definitions import load_docker_containers
 from crczp.sandbox_definition_app.models import Definition
 from crczp.sandbox_instance_app.lib import pools
-from crczp.sandbox_instance_app.models import StackAllocationStage, SandboxAllocationUnit, \
-    AllocationRequest, TerraformStack, AllocationRQJob, Sandbox, CleanupRequest, StackCleanupStage, \
-    Pool, SandboxLock
 from crczp.sandbox_instance_app.lib.sshconfig import CrczpSSHConfig
-from crczp.sandbox_ansible_app.models import NetworkingAnsibleAllocationStage, \
-    UserAnsibleAllocationStage, NetworkingAnsibleCleanupStage, UserAnsibleCleanupStage, \
-    Container
-from crczp.sandbox_ansible_app.lib.container import DockerContainer
-from django.utils import timezone
-from unittest import mock
 from crczp.sandbox_instance_app.lib.topology import Topology
-
-from ruamel.yaml import YAML
+from crczp.sandbox_instance_app.models import (
+    AllocationRequest,
+    AllocationRQJob,
+    CleanupRequest,
+    Pool,
+    Sandbox,
+    SandboxAllocationUnit,
+    SandboxLock,
+    StackAllocationStage,
+    StackCleanupStage,
+    TerraformStack,
+)
 
 TESTING_DATA_DIR = 'assets'
 
@@ -46,10 +57,11 @@ TESTING_TOPOLOGY_CONTAINERS = 'topology_containers.yml'
 TESTING_TOPOLOGY_CUSTOM_FLAVORS = 'definition_flavor_mapping.yml'
 
 
-
 def mock_topology_cache(top_ins):
-    with mock.patch('django.core.cache.cache.get') as mock_cache_get, \
-            mock.patch('django.core.cache.cache.set') as mock_cache_set:
+    with (
+        mock.patch('django.core.cache.cache.get') as mock_cache_get,
+        mock.patch('django.core.cache.cache.set'),
+    ):
         # Simulate cache miss
         mock_cache_get.return_value = None
         topo = Topology(top_ins)
@@ -133,11 +145,18 @@ def top_ins_hidden(top_def_hidden, trc_config):
 
 @pytest.fixture
 def flavor_dict():
-    return {"standard.small": "", "standard.tiny1x4": "", "standard.medium": "",
-            "standard.large": "", "standard.medium4x8": "", "standard.medium4x16": "",
-            "standard.large8x16": "", "standard.large8x32": "", "standard.jumbo16x32": "",
-            "standard.jumbo16x64": ""
-            }
+    return {
+        'standard.small': '',
+        'standard.tiny1x4': '',
+        'standard.medium': '',
+        'standard.large': '',
+        'standard.medium4x8': '',
+        'standard.medium4x16': '',
+        'standard.large8x16': '',
+        'standard.large8x32': '',
+        'standard.jumbo16x32': '',
+        'standard.jumbo16x64': '',
+    }
 
 
 @pytest.fixture
@@ -159,7 +178,7 @@ def top_ins_with_containers(top_def, trc_config, links, containers):
 @pytest.fixture
 def top_ins_with_containers_with_server(top_def, trc_config, links, containers):
     """Creates example topology instance."""
-    containers = containers.replace("home", "server", 1)
+    containers = containers.replace('home', 'server', 1)
     loaded_containers = load_docker_containers(io.StringIO(containers))
     loaded_containers.hide_all = False
     topology_instance = TopologyInstance(top_def, trc_config, containers=loaded_containers)
@@ -234,13 +253,23 @@ def definition_custom_flavors():
 
 @pytest.fixture
 def image():
-    return Image(os_distro=None, os_type="debian",
-                 disk_format=None, container_format=None,
-                 visibility=None, size=None, status=None,
-                 min_ram=None, min_disk=None,
-                 created_at=None, updated_at=None, tags=[],
-                 default_user=None, name="debian-12-x86_64",
-                 owner_specified={"": ""})
+    return Image(
+        os_distro=None,
+        os_type='debian',
+        disk_format=None,
+        container_format=None,
+        visibility=None,
+        size=None,
+        status=None,
+        min_ram=None,
+        min_disk=None,
+        created_at=None,
+        updated_at=None,
+        tags=[],
+        default_user=None,
+        name='debian-12-x86_64',
+        owner_specified={'': ''},
+    )
 
 
 def set_stage_started(stage):
@@ -272,11 +301,7 @@ def set_stage_failed(stage):
 
 @pytest.fixture
 def stack():
-    return {
-        'stack': {
-            'id': 'stack-id'
-        }
-    }
+    return {'stack': {'id': 'stack-id'}}
 
 
 @pytest.fixture
@@ -288,22 +313,31 @@ def process(mocker):
 
 @pytest.fixture
 def created_by():
-    return User.objects.create(username='test-user', first_name='test-first-name',
-                               last_name='test-last-name', email='test@email.com')
+    return User.objects.create(
+        username='test-user',
+        first_name='test-first-name',
+        last_name='test-last-name',
+        email='test@email.com',
+    )
 
 
 @pytest.fixture
 def definition(created_by):
-    return Definition.objects.create(name='test-def-name', url='test-def-url', rev='test-def-rev',
-                                     created_by=created_by)
+    return Definition.objects.create(
+        name='test-def-name', url='test-def-url', rev='test-def-rev', created_by=created_by
+    )
 
 
 @pytest.fixture
 def pool(definition, created_by):
-    return Pool.objects.create(definition=definition, max_size=3,
-                               private_management_key='-----RSA PRIVATE KEY-----',
-                               public_management_key='ssh-rsa', uuid='0fb3160d',
-                               created_by=created_by)
+    return Pool.objects.create(
+        definition=definition,
+        max_size=3,
+        private_management_key='-----RSA PRIVATE KEY-----',
+        public_management_key='ssh-rsa',
+        uuid='0fb3160d',
+        created_by=created_by,
+    )
 
 
 @pytest.fixture
@@ -319,8 +353,7 @@ def allocation_request(allocation_unit):
 @pytest.fixture
 def allocation_stage_stack(allocation_request):
     return StackAllocationStage.objects.create(
-        allocation_request=allocation_request,
-        allocation_request_fk_many=allocation_request
+        allocation_request=allocation_request, allocation_request_fk_many=allocation_request
     )
 
 
@@ -328,8 +361,7 @@ def allocation_stage_stack(allocation_request):
 def allocation_stage_stack_started(allocation_stage_stack, stack):
     set_stage_started(allocation_stage_stack)
     TerraformStack.objects.create(
-        allocation_stage=allocation_stage_stack,
-        stack_id=stack['stack']['id']
+        allocation_stage=allocation_stage_stack, stack_id=stack['stack']['id']
     )
     AllocationRQJob.objects.create(
         job_id='stack-allocation-rq-job-id',
@@ -344,18 +376,18 @@ def allocation_stage_networking(allocation_request):
         allocation_request=allocation_request,
         allocation_request_fk_many=allocation_request,
         repo_url='stage-one-repo-url',
-        rev='stage-one-repo-rev'
+        rev='stage-one-repo-rev',
     )
 
 
 @pytest.fixture
-def allocation_stage_networking_started(allocation_stage_networking,
-                                        allocation_stage_stack_started):
+def allocation_stage_networking_started(
+    allocation_stage_networking, allocation_stage_stack_started
+):
     set_stage_finished(allocation_stage_stack_started)
     set_stage_started(allocation_stage_networking)
     Container.objects.create(
-        allocation_stage=allocation_stage_networking,
-        container_name='docker-container-id'
+        allocation_stage=allocation_stage_networking, container_name='docker-container-id'
     )
     AllocationRQJob.objects.create(
         job_id='networking-allocation-rq-job-id',
@@ -370,7 +402,7 @@ def allocation_stage_user(allocation_request):
         allocation_request=allocation_request,
         allocation_request_fk_many=allocation_request,
         repo_url=allocation_request.allocation_unit.pool.definition.url,
-        rev=allocation_request.allocation_unit.pool.rev_sha
+        rev=allocation_request.allocation_unit.pool.rev_sha,
     )
 
 
@@ -379,8 +411,7 @@ def allocation_stage_user_started(allocation_stage_user, allocation_stage_networ
     set_stage_finished(allocation_stage_networking_started)
     set_stage_started(allocation_stage_user)
     Container.objects.create(
-        allocation_stage=allocation_stage_user,
-        container_name='docker-container-id'
+        allocation_stage=allocation_stage_user, container_name='docker-container-id'
     )
     AllocationRQJob.objects.create(
         job_id='user-allocation-rq-job-id',
@@ -406,7 +437,7 @@ def sandbox(allocation_unit):
         allocation_unit=allocation_unit,
         private_user_key='private-key',
         public_user_key='public-key',
-        ready=True
+        ready=True,
     )
 
 
@@ -417,7 +448,9 @@ def sandbox_finished(allocation_stage_user_started, sandbox):
 
 
 @pytest.fixture
-def sandbox_failed_stack_stage(allocation_stage_stack, allocation_stage_networking, allocation_stage_user, sandbox):
+def sandbox_failed_stack_stage(
+    allocation_stage_stack, allocation_stage_networking, allocation_stage_user, sandbox
+):
     set_stage_failed(allocation_stage_stack)
     set_stage_failed(allocation_stage_networking)
     set_stage_failed(allocation_stage_user)
@@ -425,7 +458,9 @@ def sandbox_failed_stack_stage(allocation_stage_stack, allocation_stage_networki
 
 
 @pytest.fixture
-def sandbox_failed_user_stage(allocation_stage_stack, allocation_stage_networking, allocation_stage_user, sandbox):
+def sandbox_failed_user_stage(
+    allocation_stage_stack, allocation_stage_networking, allocation_stage_user, sandbox
+):
     set_stage_finished(allocation_stage_stack)
     set_stage_finished(allocation_stage_networking)
     set_stage_failed(allocation_stage_user)
@@ -444,7 +479,7 @@ def pool_lock(pool, training_access_token):
 
 @pytest.fixture
 def training_access_token():
-    return "token-1234"
+    return 'token-1234'
 
 
 @pytest.fixture

@@ -1,5 +1,4 @@
 import os
-import string
 
 import pytest
 import structlog
@@ -111,7 +110,7 @@ class TestIntegration:
 
     @staticmethod
     def create_definition(client, url, rev):
-        LOG.info("Creating definition")
+        LOG.info('Creating definition')
         data = {'url': url, 'rev': rev}
         response = client.post(reverse(DEFINITION_LIST), data, 'application/json')
         assert response.status_code == status.HTTP_201_CREATED
@@ -121,7 +120,7 @@ class TestIntegration:
 
     @staticmethod
     def create_pool(client, def_id):
-        LOG.info("Creating Pool")
+        LOG.info('Creating Pool')
         max_size = 10
         data = {'definition_id': def_id, 'max_size': max_size}
         response = client.post(reverse(POOL_LIST), data, 'application/json')
@@ -133,7 +132,7 @@ class TestIntegration:
 
     @classmethod
     def create_alloc_unit(cls, client, pool_id):
-        LOG.info("Creating Allocation Unit")
+        LOG.info('Creating Allocation Unit')
         base_url = reverse(ALLOCATION_UNIT_LIST, kwargs={'pool_id': pool_id})
         response = client.post(base_url + '?count=1')
 
@@ -150,11 +149,13 @@ class TestIntegration:
 
     @staticmethod
     def get_allocation_stages(client, request_id):
-        LOG.info("Retrieving Allocation stages.")
+        LOG.info('Retrieving Allocation stages.')
 
-        for stage_url in (ALLOCATION_STAGE_OPENSTACK,
-                          ALLOCATION_STAGE_NETWORKING_ANSIBLE,
-                          ALLOCATION_STAGE_USER_ANSIBLE):
+        for stage_url in (
+            ALLOCATION_STAGE_OPENSTACK,
+            ALLOCATION_STAGE_NETWORKING_ANSIBLE,
+            ALLOCATION_STAGE_USER_ANSIBLE,
+        ):
             base_url = reverse(stage_url, kwargs={'request_id': request_id})
             response = client.get(base_url)
             assert response.status_code == status.HTTP_200_OK
@@ -162,11 +163,13 @@ class TestIntegration:
 
     @staticmethod
     def get_cleanup_stages(client, request_id):
-        LOG.info("Retrieving Cleanup stages.")
+        LOG.info('Retrieving Cleanup stages.')
 
-        for stage_url in (CLEANUP_STAGE_OPENSTACK,
-                          CLEANUP_STAGE_NETWORKING_ANSIBLE,
-                          CLEANUP_STAGE_USER_ANSIBLE):
+        for stage_url in (
+            CLEANUP_STAGE_OPENSTACK,
+            CLEANUP_STAGE_NETWORKING_ANSIBLE,
+            CLEANUP_STAGE_USER_ANSIBLE,
+        ):
             base_url = reverse(stage_url, kwargs={'request_id': request_id})
             response = client.get(base_url)
             assert response.status_code == status.HTTP_200_OK
@@ -174,15 +177,16 @@ class TestIntegration:
 
     @staticmethod
     def cancel_allocation_request(client, allocation_req_id):
-        LOG.info("Canceling Allocation Request")
+        LOG.info('Canceling Allocation Request')
 
-        response = client.patch(reverse(SANDBOX_ALLOCATION_REQUEST_CANCEL,
-                                        kwargs={'request_id': allocation_req_id}))
+        response = client.patch(
+            reverse(SANDBOX_ALLOCATION_REQUEST_CANCEL, kwargs={'request_id': allocation_req_id})
+        )
         assert response.status_code == status.HTTP_200_OK
 
     @staticmethod
     def create_cancel_delete_cleanup_request(client, unit_id):
-        LOG.info("Test Create, Cancel and Delete of Cleanup request")
+        LOG.info('Test Create, Cancel and Delete of Cleanup request')
 
         # Create success
         response = client.post(reverse(SANDBOX_CLEANUP_REQUEST, kwargs={'unit_id': unit_id}))
@@ -198,8 +202,9 @@ class TestIntegration:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
         # Cancel
-        response = client.patch(reverse(SANDBOX_CLEANUP_REQUEST_CANCEL,
-                                        kwargs={'request_id': cleanup_req_id}))
+        response = client.patch(
+            reverse(SANDBOX_CLEANUP_REQUEST_CANCEL, kwargs={'request_id': cleanup_req_id})
+        )
         assert response.status_code == status.HTTP_200_OK
 
         # Delete success
@@ -208,9 +213,8 @@ class TestIntegration:
 
     @classmethod
     def create_cleanup_req(cls, client, unit_id):
-        LOG.info("Creating Cleanup request")
-        response = client.post(reverse(SANDBOX_CLEANUP_REQUEST,
-                                       kwargs={'unit_id': unit_id}))
+        LOG.info('Creating Cleanup request')
+        response = client.post(reverse(SANDBOX_CLEANUP_REQUEST, kwargs={'unit_id': unit_id}))
 
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data['allocation_unit_id'] == unit_id
@@ -221,9 +225,8 @@ class TestIntegration:
 
     @staticmethod
     def get_and_lock(client, pool_id):
-        LOG.info("Get and lock sandbox")
-        response = client.get(reverse(SANDBOX_GET_AND_LOCK,
-                                      kwargs={'pool_id': pool_id}))
+        LOG.info('Get and lock sandbox')
+        response = client.get(reverse(SANDBOX_GET_AND_LOCK, kwargs={'pool_id': pool_id}))
         assert response.status_code == status.HTTP_200_OK
         assert response.data['lock_id'] is not None
         sb_id = response.data['id']
@@ -232,22 +235,20 @@ class TestIntegration:
 
     @staticmethod
     def unlock_sandbox(client, sb_id, lock_id):
-        LOG.info("Unlocking sandbox")
-        response = client.delete(reverse(SANDBOX_LOCK_DETAIL,
-                                         kwargs={'sandbox_id': sb_id,
-                                                 'lock_id': lock_id}))
+        LOG.info('Unlocking sandbox')
+        response = client.delete(
+            reverse(SANDBOX_LOCK_DETAIL, kwargs={'sandbox_id': sb_id, 'lock_id': lock_id})
+        )
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
     @staticmethod
     def delete_definition(client, def_id):
-        LOG.info("Deleting definition")
-        response = client.delete(reverse(DEFINITION_DETAIL,
-                                         kwargs={'definition_id': def_id}))
+        LOG.info('Deleting definition')
+        response = client.delete(reverse(DEFINITION_DETAIL, kwargs={'definition_id': def_id}))
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
     @staticmethod
     def delete_pool(client, pool_id):
-        LOG.info("Deleting Pool")
-        response = client.delete(reverse(POOL_DETAIL,
-                                         kwargs={'pool_id': pool_id}))
+        LOG.info('Deleting Pool')
+        response = client.delete(reverse(POOL_DETAIL, kwargs={'pool_id': pool_id}))
         assert response.status_code == status.HTTP_204_NO_CONTENT

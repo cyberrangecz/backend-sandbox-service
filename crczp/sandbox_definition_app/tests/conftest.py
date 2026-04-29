@@ -1,11 +1,10 @@
-import pytest
-import os
 import io
+import os
 
+import pytest
 from crczp.cloud_commons import Image
-from ruamel.yaml import YAML
-
 from django.contrib.auth.models import User
+from ruamel.yaml import YAML
 
 TESTING_DATA_DIR = 'assets'
 
@@ -19,8 +18,12 @@ def data_path_join(file: str, data_dir: str = TESTING_DATA_DIR) -> str:
 
 @pytest.fixture
 def created_by():
-    return User.objects.create(username='test-user', first_name='test-first-name',
-                               last_name='test-last-name', email='test@email.com')
+    return User.objects.create(
+        username='test-user',
+        first_name='test-first-name',
+        last_name='test-last-name',
+        email='test@email.com',
+    )
 
 
 @pytest.fixture
@@ -32,19 +35,33 @@ def topology_definition_stream():
 
 @pytest.fixture
 def image():
-    return Image(os_distro=None, os_type="debian",
-                 disk_format=None, container_format=None,
-                 visibility=None, size=None, status=None,
-                 min_ram=None, min_disk=None,
-                 created_at=None, updated_at=None, tags=[],
-                 default_user=None, name="debian-12-x86_64",
-                 owner_specified={"": ""})
+    return Image(
+        os_distro=None,
+        os_type='debian',
+        disk_format=None,
+        container_format=None,
+        visibility=None,
+        size=None,
+        status=None,
+        min_ram=None,
+        min_disk=None,
+        created_at=None,
+        updated_at=None,
+        tags=[],
+        default_user=None,
+        name='debian-12-x86_64',
+        owner_specified={'': ''},
+    )
 
 
 @pytest.fixture
 def get_terraform_client(mocker, image):
     mock_client = mocker.MagicMock()
-    mock_client.get_flavors_dict.return_value = {"standard.large": "", "standard.small": "", "standard.medium": ""}
+    mock_client.get_flavors_dict.return_value = {
+        'standard.large': '',
+        'standard.small': '',
+        'standard.medium': '',
+    }
     mock_client.list_images.return_value = [image]
 
     mocker.patch('crczp.sandbox_common_lib.utils.get_terraform_client', return_value=mock_client)

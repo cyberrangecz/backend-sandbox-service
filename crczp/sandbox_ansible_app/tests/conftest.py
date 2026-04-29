@@ -1,18 +1,14 @@
 import io
+import os
 
 import pytest
-import os
 import yaml
+from crczp.cloud_commons import Image, TopologyInstance, TransformationConfiguration
+from crczp.topology_definition.models import TopologyDefinition
 from django.core.management import call_command
-
-from crczp.cloud_commons import TopologyInstance, TransformationConfiguration, Image
 from ruamel.yaml import YAML
 
 from crczp.sandbox_ansible_app.lib.container import DockerContainer
-
-from crczp.topology_definition.models import TopologyDefinition
-
-from crczp.sandbox_ansible_app.lib.inventory import Inventory
 from crczp.sandbox_definition_app.lib.definitions import load_docker_containers
 
 TESTING_DATA_DIR = 'assets'
@@ -27,6 +23,7 @@ TESTING_DEFINITION_MONITOR = 'definition-monitoring.yml'
 TESTING_DATABASE = 'database.yaml'
 TESTING_CONTAINERS = 'containers.yml'
 TESTING_INVENTORY_CONTAINERS = 'inventory_containers.yml'
+
 
 def data_path_join(file: str, data_dir: str = TESTING_DATA_DIR) -> str:
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), data_dir, file)
@@ -82,7 +79,9 @@ def mock_list_images(mocker):
             owner_specified={},
         ),
     ]
-    return mocker.patch('crczp.sandbox_ansible_app.lib.inventory.list_images', return_value=mock_images)
+    return mocker.patch(
+        'crczp.sandbox_ansible_app.lib.inventory.list_images', return_value=mock_images
+    )
 
 
 @pytest.fixture(scope='session')

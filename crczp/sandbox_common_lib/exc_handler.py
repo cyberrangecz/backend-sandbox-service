@@ -1,7 +1,7 @@
 import structlog
+from crczp.cloud_commons import CrczpException
 from django.conf import settings
 from django.http import Http404
-from crczp.cloud_commons import CrczpException
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
@@ -30,22 +30,33 @@ def custom_exception_handler(exc, context):
         response = exception_handler(exc, context)
 
         if response is None:
-            response = Response({
-                'detail': str(exc),
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            response = Response(
+                {
+                    'detail': str(exc),
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
-    exc_info = settings.DEBUG or not isinstance(exc, (Http404,
-                                                      PermissionDenied,
-                                                      ValidationError,))
+    exc_info = settings.DEBUG or not isinstance(
+        exc,
+        (
+            Http404,
+            PermissionDenied,
+            ValidationError,
+        ),
+    )
     LOG.error(repr(exc), data=response.data if response else None, exc_info=exc_info)
     return response
 
 
 def handle_crczp_exception(exc, context):
     """Handle OpenStack lib and this project exceptions."""
-    return Response({
-        'detail': str(exc),
-    }, status=status.HTTP_400_BAD_REQUEST)
+    return Response(
+        {
+            'detail': str(exc),
+        },
+        status=status.HTTP_400_BAD_REQUEST,
+    )
 
 
 def handle_permission_denied(exc, context):
@@ -55,20 +66,26 @@ def handle_permission_denied(exc, context):
         user_groups = [g.name for g in user.groups.all()] if user else user
     except KeyError:
         user_groups = None
-    return Response({
-        'detail': f'{str(exc)} User roles: {str(user_groups)}'
-    }, status=status.HTTP_403_FORBIDDEN)
+    return Response(
+        {'detail': f'{str(exc)} User roles: {str(user_groups)}'}, status=status.HTTP_403_FORBIDDEN
+    )
 
 
 def handle_model_validation_error(exc, context):
     """Fix error message in model validation error."""
-    return Response({
-        'detail': str(exc.detail),
-    }, status=status.HTTP_400_BAD_REQUEST)
+    return Response(
+        {
+            'detail': str(exc.detail),
+        },
+        status=status.HTTP_400_BAD_REQUEST,
+    )
 
 
 def handle_not_found(exc, context):
     """Fix error message in 404 not found."""
-    return Response({
-        'detail': str(exc),
-    }, status=status.HTTP_404_NOT_FOUND)
+    return Response(
+        {
+            'detail': str(exc),
+        },
+        status=status.HTTP_404_NOT_FOUND,
+    )

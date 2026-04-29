@@ -1,18 +1,21 @@
-import structlog
 import smtplib
 import ssl
 from email.message import EmailMessage
 
+import structlog
 from django.conf import settings
-from crczp.sandbox_common_lib.exceptions import EmailException, ValidationError
+
 from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration, SMTPEncryption
+from crczp.sandbox_common_lib.exceptions import EmailException, ValidationError
 
 LOG = structlog.get_logger()
 
 
 def send_email(receiver_email, subject, body, crczp_config: CrczpConfiguration):
     if not crczp_config.smtp_server:
-        LOG.warning("ERROR: SMTP server is not configured, email notifications disabled. No email sent.")
+        LOG.warning(
+            'ERROR: SMTP server is not configured, email notifications disabled. No email sent.'
+        )
         return
 
     sender_email = crczp_config.sender_email
@@ -28,8 +31,9 @@ def send_email(receiver_email, subject, body, crczp_config: CrczpConfiguration):
 
 def validate_emails_enabled(value: bool):
     if value and not settings.CRCZP_CONFIG.smtp_server:
-        raise ValidationError("Email SMTP server is not configured, "
-                              "email notifications are disabled.")
+        raise ValidationError(
+            'Email SMTP server is not configured, email notifications are disabled.'
+        )
 
 
 class EmailManager:
@@ -40,8 +44,7 @@ class EmailManager:
     def __enter__(self):
         encryption = self.config.smtp_encryption
 
-        if encryption == SMTPEncryption.INSECURE or \
-                encryption == SMTPEncryption.TSL:
+        if encryption == SMTPEncryption.INSECURE or encryption == SMTPEncryption.TSL:
             self.smtp = smtplib.SMTP(
                 self.config.smtp_server,
                 self.config.smtp_port,
@@ -68,18 +71,20 @@ class EmailManager:
     def send_email(self, sender_email, receiver_email, message: EmailMessage):
         try:
             self.smtp.sendmail(sender_email, receiver_email, message.as_string())
-            LOG.debug("Email sent successfully!")
+            LOG.debug('Email sent successfully!')
         except smtplib.SMTPAuthenticationError as exc:
-            LOG.warning(f"Email {sender_email} login failed. "
-                        f"Please check the sender_email/password in config.yml. Detail: {exc}")
+            LOG.warning(
+                f'Email {sender_email} login failed. '
+                f'Please check the sender_email/password in config.yml. Detail: {exc}'
+            )
             raise EmailException(
-                f"Email authentication failed. Check configured credentials or contact the administrator."
-                f"Detail: {exc}")
+                'Email authentication failed. Check configured credentials or contact the'
+                f' administrator. Detail: {exc}'
+            ) from exc
         except Exception as exc:
-            LOG.warning(f"Email notification failed to send for unknown reason. Detail: {exc}")
+            LOG.warning(f'Email notification failed to send for unknown reason. Detail: {exc}')
             raise exc
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.smtp:
             self.smtp.quit()
-

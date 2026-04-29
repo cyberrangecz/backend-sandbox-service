@@ -20,47 +20,42 @@ class Pool(models.Model):
         on_delete=models.PROTECT,
     )
     max_size = models.IntegerField(
-        help_text='Maximum amount of Allocation Units associated with this pool.')
+        help_text='Maximum amount of Allocation Units associated with this pool.'
+    )
     size = models.PositiveIntegerField(
         default=0,
         help_text='Current amount of Allocation Units associated with this pool.',
     )
-    private_management_key = models.TextField(
-        help_text='Private key for management access.'
-    )
-    public_management_key = models.TextField(
-        help_text='Public key for management access.'
-    )
+    private_management_key = models.TextField(help_text='Private key for management access.')
+    public_management_key = models.TextField(help_text='Public key for management access.')
     management_certificate = models.TextField(
         help_text='Certificate for windows management access.'
     )
     uuid = models.TextField(default=utils.get_simple_uuid)
-    rev = models.TextField(
-        help_text='Definition revision used for sandboxes.'
+    rev = models.TextField(help_text='Definition revision used for sandboxes.')
+    rev_sha = models.TextField(help_text='SHA of the Definition revision.')
+    created_by = models.ForeignKey(
+        User, on_delete=models.PROTECT, null=True, help_text='The user that created this pool.'
     )
-    rev_sha = models.TextField(
-        help_text='SHA of the Definition revision.'
-    )
-    created_by = models.ForeignKey(User, on_delete=models.PROTECT, null=True,
-                                   help_text='The user that created this pool.')
     send_emails = models.BooleanField(default=False, validators=[validate_emails_enabled])
     comment = models.CharField(
-        default='',
-        blank=True,
-        max_length=256,
-        help_text='Comment about specifics of this pool'
+        default='', blank=True, max_length=256, help_text='Comment about specifics of this pool'
     )
     visible = models.BooleanField(
         default=True,
-        help_text='Visibility to other instructors. If False, pool is only visible to owner and admins.'
+        help_text=(
+            'Visibility to other instructors. If False, pool is only visible to owner and admins.'
+        ),
     )
 
     class Meta:
         ordering = ['id']
 
     def __str__(self):
-        return f'ID: {self.id}, DEFINITION: {self.definition.id}, MAX_SIZE: {self.max_size}, ' \
-               f'REV: {self.rev}'
+        return (
+            f'ID: {self.id}, DEFINITION: {self.definition.id}, MAX_SIZE: {self.max_size}, '
+            f'REV: {self.rev}'
+        )
 
     def get_pool_prefix(self) -> str:
         """Returns a prefix of this pool."""
@@ -86,13 +81,14 @@ class SandboxAllocationUnit(models.Model):
         on_delete=models.PROTECT,
         related_name='allocation_units',
     )
-    created_by = models.ForeignKey(User, on_delete=models.PROTECT, null=True,
-                                   help_text='The user that created this sandbox allocation unit.')
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        null=True,
+        help_text='The user that created this sandbox allocation unit.',
+    )
     comment = models.CharField(
-        default='',
-        blank=True,
-        max_length=256,
-        help_text='Comment about specifics of this sandbox'
+        default='', blank=True, max_length=256, help_text='Comment about specifics of this sandbox'
     )
 
     def get_stack_name(self) -> str:
@@ -101,30 +97,32 @@ class SandboxAllocationUnit(models.Model):
 
 
 class Sandbox(models.Model):
-    id = models.CharField(primary_key=True, auto_created=False, max_length=36,
-                          default=DEFAULT_SANDBOX_UUID, editable=False)
+    id = models.CharField(
+        primary_key=True,
+        auto_created=False,
+        max_length=36,
+        default=DEFAULT_SANDBOX_UUID,
+        editable=False,
+    )
     allocation_unit = models.OneToOneField(
         SandboxAllocationUnit,
         on_delete=models.PROTECT,
         related_name='sandbox',
     )
-    private_user_key = models.TextField(
-        help_text='Private key for user access.'
-    )
-    public_user_key = models.TextField(
-        help_text='Public key for management access.'
-    )
+    private_user_key = models.TextField(help_text='Private key for user access.')
+    public_user_key = models.TextField(help_text='Public key for management access.')
     ready = models.BooleanField(
-        default=False,
-        help_text='Is the sandbox ready to use for trainings.'
+        default=False, help_text='Is the sandbox ready to use for trainings.'
     )
 
     class Meta:
         ordering = ['id']
 
     def __str__(self):
-        return f'ID: {self.id}, ALLOCATION_UNIT: {self.allocation_unit.id}, ' \
-               f'LOCK: {self.lock.id if hasattr(self, "lock") else None}'
+        return (
+            f'ID: {self.id}, ALLOCATION_UNIT: {self.allocation_unit.id}, '
+            f'LOCK: {self.lock.id if hasattr(self, "lock") else None}'
+        )
 
 
 class SandboxLock(models.Model):
@@ -133,8 +131,9 @@ class SandboxLock(models.Model):
         on_delete=models.PROTECT,
         related_name='lock',
     )
-    created_by = models.ForeignKey(User, on_delete=models.PROTECT, null=True,
-                                   help_text='The user that created this lock.')
+    created_by = models.ForeignKey(
+        User, on_delete=models.PROTECT, null=True, help_text='The user that created this lock.'
+    )
 
     def __str__(self):
         return f'ID: {self.id}, Sandbox: {self.sandbox.id}'
@@ -147,11 +146,7 @@ class PoolLock(models.Model):
         related_name='lock',
     )
 
-    training_access_token = models.CharField(
-        max_length=256,
-        default=None,
-        null=True
-    )
+    training_access_token = models.CharField(max_length=256, default=None, null=True)
 
     def __str__(self):
         return f'ID: {self.id}, Pool: {self.pool.id}'
@@ -159,6 +154,7 @@ class PoolLock(models.Model):
 
 class SandboxRequest(models.Model):
     """Abstract base class for Sandbox Requests."""
+
     created = models.DateTimeField(default=timezone.now)
 
     class Meta:
@@ -208,39 +204,43 @@ class CleanupRequest(SandboxRequest):
 
 class Stage(models.Model):
     """Abstract base class for stages."""
-    start = models.DateTimeField(null=True, default=None,
-                                 help_text='Timestamp indicating when the stage execution started.')
-    end = models.DateTimeField(null=True, default=None,
-                               help_text='Timestamp indicating when the stage execution ended.')
-    failed = models.BooleanField(default=False,
-                                 help_text='Indicates whether the stage execution failed.')
-    error_message = models.TextField(null=True, default=None,
-                                     help_text='Error message describing the potential error.')
-    finished = models.BooleanField(default=False,
-                                   help_text='Indicates whether the stage execution has finished.')
+
+    start = models.DateTimeField(
+        null=True, default=None, help_text='Timestamp indicating when the stage execution started.'
+    )
+    end = models.DateTimeField(
+        null=True, default=None, help_text='Timestamp indicating when the stage execution ended.'
+    )
+    failed = models.BooleanField(
+        default=False, help_text='Indicates whether the stage execution failed.'
+    )
+    error_message = models.TextField(
+        null=True, default=None, help_text='Error message describing the potential error.'
+    )
+    finished = models.BooleanField(
+        default=False, help_text='Indicates whether the stage execution has finished.'
+    )
 
     class Meta:
         abstract = True
         ordering = ['id']
 
     def __str__(self):
-        return f'ID: {self.id}, START: {self.start}, END: {self.end}, FAILED: {self.failed}, ' \
-               f'ERROR: {self.error_message}'
+        return (
+            f'ID: {self.id}, START: {self.start}, END: {self.end}, FAILED: {self.failed}, '
+            f'ERROR: {self.error_message}'
+        )
 
 
 class AllocationStage(Stage):
     allocation_request_fk_many = models.ForeignKey(
-        AllocationRequest,
-        on_delete=models.CASCADE,
-        related_name='stages'
+        AllocationRequest, on_delete=models.CASCADE, related_name='stages'
     )
 
 
 class CleanupStage(Stage):
     cleanup_request_fk_many = models.ForeignKey(
-        CleanupRequest,
-        on_delete=models.CASCADE,
-        related_name='stages'
+        CleanupRequest, on_delete=models.CASCADE, related_name='stages'
     )
 
 
@@ -253,8 +253,10 @@ class StackAllocationStage(AllocationStage):
     status_reason = models.TextField(null=True, help_text='Stack status reason')
 
     def __str__(self):
-        return super().__str__() + f', REQUEST: {self.allocation_request}, STATUS: {self.status},' \
-                                   f' STATUS_REASON: {self.status_reason}'
+        return (
+            super().__str__() + f', REQUEST: {self.allocation_request}, STATUS: {self.status},'
+            f' STATUS_REASON: {self.status_reason}'
+        )
 
 
 class StackCleanupStage(CleanupStage):
@@ -299,20 +301,14 @@ class CleanupRQJob(RQJob):
 
 
 class ExternalDependency(models.Model):
-    allocation_stage = models.OneToOneField(
-        AllocationStage,
-        on_delete=models.CASCADE
-    )
+    allocation_stage = models.OneToOneField(AllocationStage, on_delete=models.CASCADE)
 
     class Meta:
         abstract = True
 
 
 class ExternalDependencyCleanup(models.Model):
-    cleanup_stage = models.OneToOneField(
-        CleanupStage,
-        on_delete=models.CASCADE
-    )
+    cleanup_stage = models.OneToOneField(CleanupStage, on_delete=models.CASCADE)
 
     class Meta:
         abstract = True
@@ -331,9 +327,7 @@ class TerraformOutput(models.Model):
 
 class AllocationTerraformOutput(TerraformOutput):
     allocation_stage = models.ForeignKey(
-        AllocationStage,
-        on_delete=models.CASCADE,
-        related_name='terraform_outputs'
+        AllocationStage, on_delete=models.CASCADE, related_name='terraform_outputs'
     )
 
     def __str__(self):
@@ -342,9 +336,7 @@ class AllocationTerraformOutput(TerraformOutput):
 
 class CleanupTerraformOutput(TerraformOutput):
     cleanup_stage = models.ForeignKey(
-        CleanupStage,
-        on_delete=models.CASCADE,
-        related_name='terraform_outputs'
+        CleanupStage, on_delete=models.CASCADE, related_name='terraform_outputs'
     )
 
     def __str__(self):
@@ -371,6 +363,7 @@ class SandboxRequestGroup(models.Model):
 
     Keeps track of the request progress and sends email notifications.
     """
+
     pool = models.ForeignKey(Pool, on_delete=models.CASCADE)
     unit_count = models.IntegerField()
     email = models.EmailField()
@@ -382,13 +375,13 @@ class SandboxRequestGroup(models.Model):
             self.refresh_from_db()
             if self.failed_count == 0:
                 transaction.on_commit(partial(self._send_fail_notification, exc=exc))
-                LOG.debug("Sandbox allocation Failure email notification sent.")
+                LOG.debug('Sandbox allocation Failure email notification sent.')
             self.failed_count += 1
             self.finished_count += 1
             self.save()
             if self.finished_count == self.unit_count:
                 transaction.on_commit(self._send_summary_notification)
-                LOG.debug("Sandbox allocation End email notification sent.")
+                LOG.debug('Sandbox allocation End email notification sent.')
 
     def on_allocation_end(self):
         with transaction.atomic():
@@ -397,7 +390,7 @@ class SandboxRequestGroup(models.Model):
             self.save()
             if self.finished_count == self.unit_count:
                 transaction.on_commit(self._send_summary_notification)
-                LOG.debug("Sandbox allocation End email notification sent.")
+                LOG.debug('Sandbox allocation End email notification sent.')
 
     def _send_fail_notification(self, exc):
         body = f"""
@@ -405,8 +398,12 @@ class SandboxRequestGroup(models.Model):
 
         Error detail: {str(exc)}
         """
-        send_email(self.email, f"CRCZP Pool {self.pool.id} - FAILED sandbox allocation",
-                   body, settings.CRCZP_CONFIG)
+        send_email(
+            self.email,
+            f'CRCZP Pool {self.pool.id} - FAILED sandbox allocation',
+            body,
+            settings.CRCZP_CONFIG,
+        )
 
     def _send_summary_notification(self):
         try:
@@ -416,7 +413,11 @@ class SandboxRequestGroup(models.Model):
             Successful - {self.finished_count - self.failed_count}
             Failed - {self.failed_count}
             """
-            send_email(self.email, f"CRCZP Pool {self.pool.id} - FINAL sandbox allocations report",
-                       body, settings.CRCZP_CONFIG)
+            send_email(
+                self.email,
+                f'CRCZP Pool {self.pool.id} - FINAL sandbox allocations report',
+                body,
+                settings.CRCZP_CONFIG,
+            )
         finally:
             self.delete()

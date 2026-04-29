@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+
 class UserSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     sub = serializers.CharField()
@@ -35,22 +36,12 @@ class PoolResponseSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     definition_id = serializers.IntegerField(help_text='Sandbox definition ID')
     size = serializers.IntegerField(
-        read_only=True,
-        default=0,
-        help_text='Current number of SandboxAllocationUnits'
+        read_only=True, default=0, help_text='Current number of SandboxAllocationUnits'
     )
-    max_size = serializers.IntegerField(
-        help_text='Maximum number of SandboxAllocationUnits'
-    )
+    max_size = serializers.IntegerField(help_text='Maximum number of SandboxAllocationUnits')
     lock_id = serializers.IntegerField(read_only=True)
-    rev = serializers.CharField(
-        read_only=True,
-        help_text='Name of used git branch'
-    )
-    rev_sha = serializers.CharField(
-        read_only=True,
-        help_text='SHA of used git branch'
-    )
+    rev = serializers.CharField(read_only=True, help_text='Name of used git branch')
+    rev_sha = serializers.CharField(read_only=True, help_text='SHA of used git branch')
     created_by = UserSerializer()
     hardware_usage = HardwareUsageSerializer()
     definition = SandboxDefinitionSerializer()
@@ -60,8 +51,7 @@ class PoolRequestSerializer(serializers.Serializer):
     definition_id = serializers.IntegerField(help_text='Sandbox definition ID')
     max_size = serializers.IntegerField(help_text='Maximum number of SandboxAllocationUnits')
     send_emails = serializers.BooleanField(
-        help_text='Send email notifications of allocation progress.',
-        required=False
+        help_text='Send email notifications of allocation progress.', required=False
     )
 
 

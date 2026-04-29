@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('sandbox_instance_app', '0008_pool_size'),
     ]
@@ -13,16 +12,32 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='pool',
             name='comment',
-            field=models.CharField(blank=True, default='', help_text='Comment about specifics of this pool', max_length=256),
+            field=models.CharField(
+                blank=True,
+                default='',
+                help_text='Comment about specifics of this pool',
+                max_length=256,
+            ),
         ),
         migrations.AddField(
             model_name='pool',
             name='visible',
-            field=models.BooleanField(default=True, help_text='Visibility to other instructors. If False, pool is only visible to owner and admins.'),
+            field=models.BooleanField(
+                default=True,
+                help_text=(
+                    'Visibility to other instructors. If False, pool is only visible'
+                    ' to owner and admins.'
+                ),
+            ),
         ),
         migrations.AddField(
             model_name='sandboxallocationunit',
             name='comment',
-            field=models.CharField(blank=True, default='', help_text='Comment about specifics of this sandbox', max_length=256),
+            field=models.CharField(
+                blank=True,
+                default='',
+                help_text='Comment about specifics of this sandbox',
+                max_length=256,
+            ),
         ),
     ]

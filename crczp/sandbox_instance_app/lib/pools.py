@@ -1,33 +1,42 @@
 """
 Pool Service module for Pool management.
 """
+
+import contextlib
 import io
 import zipfile
-from typing import List, Dict, Optional
+
 import structlog
-from django.db import transaction
-from django.db.models import QuerySet, ProtectedError
-from django.shortcuts import get_object_or_404
+from crczp.cloud_commons import (
+    CrczpException,
+    HardwareUsage,
+    InvalidTopologyDefinition,
+    StackCreationFailed,
+)
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
+from django.db import transaction
+from django.db.models import ProtectedError, QuerySet
+from django.shortcuts import get_object_or_404
 
-from crczp.sandbox_common_lib import utils, exceptions
+from crczp.sandbox_common_lib import exceptions, utils
 from crczp.sandbox_definition_app.lib import definitions
 from crczp.sandbox_definition_app.models import Definition
-
-from crczp.sandbox_instance_app.lib import requests, sandboxes
 from crczp.sandbox_instance_app import serializers
-from crczp.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit, CleanupRequest, \
-    SandboxLock, PoolLock
-
-from crczp.cloud_commons import CrczpException, InvalidTopologyDefinition,\
-    StackCreationFailed, HardwareUsage
+from crczp.sandbox_instance_app.lib import requests, sandboxes
+from crczp.sandbox_instance_app.models import (
+    Pool,
+    PoolLock,
+    Sandbox,
+    SandboxAllocationUnit,
+    SandboxLock,
+)
 
 LOG = structlog.get_logger()
 POOL_CACHE_TIMEOUT = None
 PROJECT_LIMITS_CACHE_IDENTIFIER = 'project-limits'
-POOL_CACHE_PREFIX = "hardware-usage-pool-{}"
+POOL_CACHE_PREFIX = 'hardware-usage-pool-{}'
 
 
 def get_pool(pool_pk: int) -> Pool:
@@ -42,7 +51,7 @@ def get_pool(pool_pk: int) -> Pool:
     return get_object_or_404(Pool, pk=pool_pk)
 
 
-def create_pool(data: Dict, created_by: Optional[User]) -> Pool:
+def create_pool(data: dict, created_by: User | None) -> Pool:
     """
     Creates new Pool instance.
     Also creates management key-pairs in OpenStack
@@ -72,8 +81,9 @@ def create_pool(data: Dict, created_by: Optional[User]) -> Pool:
         # Validate containers
         containers = definitions.get_containers(definition.url, pool.rev_sha, settings.CRCZP_CONFIG)
         if containers:
-            definitions.validate_docker_containers(definition.url, pool.rev_sha,
-                                                   settings.CRCZP_CONFIG)
+            definitions.validate_docker_containers(
+                definition.url, pool.rev_sha, settings.CRCZP_CONFIG
+            )
         client.validate_topology_definition(top_def)
     except (exceptions.GitError, exceptions.ValidationError, InvalidTopologyDefinition):
         pool.delete()
@@ -95,10 +105,8 @@ def create_pool(data: Dict, created_by: Optional[User]) -> Pool:
         if certificate:
             client.create_keypair(pool.certificate_keypair_name, certificate, 'x509')
     except CrczpException:
-        try:
+        with contextlib.suppress(CrczpException):
             delete_pool(pool)
-        except CrczpException:
-            pass
 
         raise
 
@@ -117,11 +125,13 @@ def delete_pool(pool: Pool) -> None:
     except ProtectedError as e:
         error_message = str(e)
         if 'PoolLock' in error_message:
-            raise exceptions.ValidationError(f'Cannot delete locked pool (ID="{pool.id}").')
+            raise exceptions.ValidationError(f'Cannot delete locked pool (ID="{pool.id}").') from e
         if 'AllocationUnit' in error_message:
-            raise exceptions.ValidationError(f'Cannot delete non-empty pool (ID="{pool.id}"). '
-                                             'Delete all allocation units before deleting the pool.')
-        raise exceptions.ValidationError('Unknown error: ' + error_message)
+            raise exceptions.ValidationError(
+                f'Cannot delete non-empty pool (ID="{pool.id}"). '
+                'Delete all allocation units before deleting the pool.'
+            ) from e
+        raise exceptions.ValidationError('Unknown error: ' + error_message) from e
 
     client = utils.get_terraform_client()
     try:
@@ -151,16 +161,19 @@ def validate_hardware_usage_of_sandboxes(pool, count) -> None:
     :raise: StackError if limits are exceeded.
     """
     try:
-        top_def = definitions.get_definition(pool.definition.url, pool.rev_sha,
-                                             settings.CRCZP_CONFIG)
+        top_def = definitions.get_definition(
+            pool.definition.url, pool.rev_sha, settings.CRCZP_CONFIG
+        )
         client = utils.get_terraform_client()
         topology_instance = client.get_topology_instance(top_def)
         client.validate_hardware_usage_of_stacks(topology_instance, count)
     except StackCreationFailed as exc:
-        raise exceptions.StackError(f'Cannot build {count} sandboxes: {exc}')
+        raise exceptions.StackError(f'Cannot build {count} sandboxes: {exc}') from exc
 
 
-def create_sandboxes_in_pool(pool: Pool, created_by: Optional[User], count: int = None) -> List[SandboxAllocationUnit]:
+def create_sandboxes_in_pool(
+    pool: Pool, created_by: User | None, count: int = None
+) -> list[SandboxAllocationUnit]:
     """
     Creates count sandboxes in given pool.
 
@@ -178,9 +191,9 @@ def create_sandboxes_in_pool(pool: Pool, created_by: Optional[User], count: int 
 
         if current_size + count > pool.max_size:
             raise exceptions.ValidationError(
-                "Current pool size is {curr}/{max}, cannot build {count} more sandboxes".format(
-                    curr=current_size, max=pool.max_size, count=count)
-                )
+                f'Current pool size is {current_size}/{pool.max_size},'
+                f' cannot build {count} more sandboxes'
+            )
 
         validate_hardware_usage_of_sandboxes(pool, count)
         units = requests.create_allocations_requests(pool, count, created_by)
@@ -189,18 +202,22 @@ def create_sandboxes_in_pool(pool: Pool, created_by: Optional[User], count: int 
         return units
 
 
-def get_unlocked_sandbox(pool: Pool, created_by: Optional[User]) -> Optional[Sandbox]:
+def get_unlocked_sandbox(pool: Pool, created_by: User | None) -> Sandbox | None:
     """Return unlocked sandbox."""
     # TODO: Create Locks immediately on Sandbox creation
     with transaction.atomic():
-        sb_queryset = Sandbox.objects\
-            .select_for_update()\
-            .order_by('id')\
+        sb_queryset = (
+            Sandbox.objects
+            .select_for_update()
+            .order_by('id')
             .filter(allocation_unit__pool=pool, ready=True)
+        )
         # Lock filtering needs to be done in Python.
         # FOR UPDATE cannot be applied to the nullable side of a relation.
         if _has_locked_sandbox(sb_queryset, created_by):
-            raise CrczpException("You already have a sandbox assigned. Use that one or ask your tutor for help.")
+            raise CrczpException(
+                'You already have a sandbox assigned. Use that one or ask your tutor for help.'
+            )
         sandbox = next((sb for sb in sb_queryset if not hasattr(sb, 'lock')), None)
 
         if not sandbox:
@@ -209,19 +226,19 @@ def get_unlocked_sandbox(pool: Pool, created_by: Optional[User]) -> Optional[San
         return sandbox
 
 
-def _has_locked_sandbox(sb_queryset, created_by: Optional[User]):
+def _has_locked_sandbox(sb_queryset, created_by: User | None):
     """Check if User locked a sandbox in queryset"""
     if created_by is None:
         return False
     return len(sb_queryset.filter(lock__created_by=created_by)) != 0
 
 
-def lock_pool(pool: Pool,  training_access_token: str = None) -> PoolLock:
+def lock_pool(pool: Pool, training_access_token: str = None) -> PoolLock:
     """Lock given Pool. Raise ValidationError if already locked."""
     with transaction.atomic():
         pool = Pool.objects.select_for_update().get(pk=pool.id)
         if hasattr(pool, 'lock'):
-            raise exceptions.ValidationError("Pool already locked.")
+            raise exceptions.ValidationError('Pool already locked.')
         return PoolLock.objects.create(pool=pool, training_access_token=training_access_token)
 
 
@@ -248,7 +265,7 @@ def get_management_ssh_access(pool: Pool) -> io.BytesIO:
     return in_memory_zip_file
 
 
-def _get_hardware_usage(url: str, rev: str) -> Optional[HardwareUsage]:
+def _get_hardware_usage(url: str, rev: str) -> HardwareUsage | None:
     """
     Get Heat Stack hardware usage calculated from topology definition.
 
@@ -261,14 +278,18 @@ def _get_hardware_usage(url: str, rev: str) -> Optional[HardwareUsage]:
         client = utils.get_terraform_client()
         client.validate_topology_definition(top_def)
         top_instance = client.get_topology_instance(top_def)
-    except (exceptions.GitError, exceptions.ImproperlyConfigured, exceptions.ValidationError,
-            CrczpException):
+    except (
+        exceptions.GitError,
+        exceptions.ImproperlyConfigured,
+        exceptions.ValidationError,
+        CrczpException,
+    ):
         return None
 
     return client.get_hardware_usage(top_instance)
 
 
-def get_hardware_usage_of_sandbox(pool: Pool) -> Optional[HardwareUsage]:
+def get_hardware_usage_of_sandbox(pool: Pool) -> HardwareUsage | None:
     """
     Get Heat Stack hardware usage of a single sandbox in a pool, whether it is allocated or not.
 
@@ -307,4 +328,3 @@ def get_cache_key(pool: Pool) -> str:
     :return: Cache key as string
     """
     return POOL_CACHE_PREFIX.format(pool.id)
-

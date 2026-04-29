@@ -11,7 +11,9 @@ def validate_git_rest_url(obj, git_rest_server) -> bool:
         validate(git_rest_server)
     except ValidationError:
         _msg = 'Cannot set {}.git_providers server to "{}". Invalid URL. Allowed schemes are: {}.'
-        raise ValueError(_msg.format(obj.__class__.__name__, git_rest_server, ALLOWED_SCHEMES))
+        raise ValueError(
+            _msg.format(obj.__class__.__name__, git_rest_server, ALLOWED_SCHEMES)
+        ) from None
 
     return True
 
@@ -21,6 +23,6 @@ def validate_head_ip(obj, head_ip):
         validate_ipv4_address(head_ip)
     except ValidationError:
         _msg = 'Cannot set {}.head_ip to "{}". Invalid IP address.'
-        raise ValueError(_msg.format(obj.__class__.__name__, head_ip))
+        raise ValueError(_msg.format(obj.__class__.__name__, head_ip)) from None
 
     return True

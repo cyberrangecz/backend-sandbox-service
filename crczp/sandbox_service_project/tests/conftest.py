@@ -1,4 +1,3 @@
-import pytest
 import os
 
 TESTING_DATA_DIR = 'assets'

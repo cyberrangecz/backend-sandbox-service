@@ -1,14 +1,22 @@
-import pytest
-from django_rq import get_worker, get_queue
 from unittest.mock import MagicMock, call
 
-from crczp.sandbox_common_lib import exceptions as api_exceptions
-from crczp.sandbox_ansible_app.models import NetworkingAnsibleAllocationStage,\
-    UserAnsibleAllocationStage, NetworkingAnsibleCleanupStage, UserAnsibleCleanupStage
-from crczp.sandbox_instance_app.models import StackAllocationStage, StackCleanupStage, SandboxAllocationUnit, \
-    SandboxRequestGroup
+import pytest
+from django_rq import get_queue, get_worker
 
+from crczp.sandbox_ansible_app.models import (
+    NetworkingAnsibleAllocationStage,
+    NetworkingAnsibleCleanupStage,
+    UserAnsibleAllocationStage,
+    UserAnsibleCleanupStage,
+)
+from crczp.sandbox_common_lib import exceptions as api_exceptions
 from crczp.sandbox_instance_app.lib import request_handlers
+from crczp.sandbox_instance_app.models import (
+    SandboxAllocationUnit,
+    SandboxRequestGroup,
+    StackAllocationStage,
+    StackCleanupStage,
+)
 
 pytestmark = [pytest.mark.django_db]
 
@@ -60,17 +68,20 @@ def assert_jobs_dependencies(jobs, default_queue):
 
 
 class TestAllocationRequestHandlerUnit:
-
     @pytest.fixture(autouse=True)
     def set_up(self, mocker):
+        mocker.patch('crczp.sandbox_instance_app.lib.request_handlers.LOG')
         mocker.patch(
-            'crczp.sandbox_instance_app.lib.request_handlers.LOG'
+            'crczp.sandbox_instance_app.lib.request_handlers.sandboxes.generate_new_sandbox_uuid',
+            return_value='123',
+        )
+        fake_crczp_config = MagicMock(
+            ansible_networking_url='fake_repo_url', ansible_networking_rev='fake_rev'
         )
         mocker.patch(
-            'crczp.sandbox_instance_app.lib.request_handlers.sandboxes.generate_new_sandbox_uuid', return_value='123'
+            'crczp.sandbox_instance_app.lib.request_handlers.settings.CRCZP_CONFIG',
+            new=fake_crczp_config,
         )
-        fake_crczp_config = MagicMock(ansible_networking_url='fake_repo_url', ansible_networking_rev='fake_rev')
-        mocker.patch('crczp.sandbox_instance_app.lib.request_handlers.settings.CRCZP_CONFIG', new=fake_crczp_config)
         self.handler = request_handlers.AllocationRequestHandler()
         self.fake_gen_ssh = mocker.patch(
             'crczp.sandbox_instance_app.lib.request_handlers.utils.generate_ssh_keypair'
@@ -94,14 +105,16 @@ class TestAllocationRequestHandlerUnit:
         fake_transaction = mocker.patch(
             'crczp.sandbox_instance_app.lib.request_handlers.transaction'
         )
-        fake_partial = mocker.patch(
-            'crczp.sandbox_instance_app.lib.request_handlers.partial'
-        )
+        fake_partial = mocker.patch('crczp.sandbox_instance_app.lib.request_handlers.partial')
         fake_partial.return_value = 'fake_partial'
 
         self.handler._enqueue_stages(sandbox, 'stage_handlers')
-        fake_partial.assert_called_once_with(self.handler._enqueue_request, 'stage_handlers', 'fake_finalization_fn')
-        fake_transaction.on_commit.assert_called_once_with('fake_partial')  # partial messes with assert_called_once_with
+        fake_partial.assert_called_once_with(
+            self.handler._enqueue_request, 'stage_handlers', 'fake_finalization_fn'
+        )
+        fake_transaction.on_commit.assert_called_once_with(
+            'fake_partial'
+        )  # partial messes with assert_called_once_with
 
     def test_create_allocation_jobs(self, pool, mocker):
         self.handler._enqueue_stages = MagicMock()
@@ -118,8 +131,17 @@ class TestAllocationRequestHandlerUnit:
         for unit in units:
             assert hasattr(unit, 'allocation_request')
             assert not hasattr(unit, 'sandbox')
-            fake_sandbox_class.assert_has_calls([call(id='123', allocation_unit=unit, private_user_key='fake_private_key', public_user_key='fake_public_key')])
-            self.handler._enqueue_stages.assert_has_calls([call(fake_sandbox, self.handler._create_stage_handlers.return_value)])
+            fake_sandbox_class.assert_has_calls([
+                call(
+                    id='123',
+                    allocation_unit=unit,
+                    private_user_key='fake_private_key',
+                    public_user_key='fake_public_key',
+                )
+            ])
+            self.handler._enqueue_stages.assert_has_calls([
+                call(fake_sandbox, self.handler._create_stage_handlers.return_value)
+            ])
 
     def test_enqueue_request(self, allocation_unit, created_by):
         self.handler.queue_default.enqueue = MagicMock()
@@ -140,10 +162,15 @@ class TestAllocationRequestHandlerUnit:
 
         assert self.handler.request == allocation_request
         fake_sandbox_class.assert_called_once_with(
-            id='123', allocation_unit=allocation_unit, private_user_key='fake_private_key', public_user_key='fake_public_key'
+            id='123',
+            allocation_unit=allocation_unit,
+            private_user_key='fake_private_key',
+            public_user_key='fake_public_key',
         )
         self.handler._restart_stage_handlers.assert_called_once_with(fake_sandbox)
-        self.handler._enqueue_stages.assert_called_once_with(fake_sandbox, self.handler._restart_stage_handlers.return_value)
+        self.handler._enqueue_stages.assert_called_once_with(
+            fake_sandbox, self.handler._restart_stage_handlers.return_value
+        )
 
     def test_restart_request(self, allocation_request):
         self.handler.queue_default.enqueue = MagicMock()
@@ -154,7 +181,9 @@ class TestAllocationRequestHandlerUnit:
 
     def test_create_db_stage(self, allocation_request):
         self.handler.request = allocation_request
-        self.handler._create_db_stage(NetworkingAnsibleAllocationStage, repo_url='fake_repo_url', rev='fake_rev')
+        self.handler._create_db_stage(
+            NetworkingAnsibleAllocationStage, repo_url='fake_repo_url', rev='fake_rev'
+        )
 
         assert allocation_request.stages.count() == 1
         stage = NetworkingAnsibleAllocationStage.objects.get(allocation_request=allocation_request)
@@ -168,15 +197,22 @@ class TestAllocationRequestHandlerUnit:
         fake_network_stage = MagicMock()
         fake_user_stage = MagicMock()
         self.handler._create_db_stage = MagicMock()
-        self.handler._create_db_stage.side_effect = [fake_stack_stage, fake_network_stage, fake_user_stage]
+        self.handler._create_db_stage.side_effect = [
+            fake_stack_stage,
+            fake_network_stage,
+            fake_user_stage,
+        ]
 
         handlers = self.handler._create_stage_handlers(sandbox, SandboxRequestGroup())
 
         self.handler._create_db_stage.assert_has_calls([
             call(StackAllocationStage),
             call(NetworkingAnsibleAllocationStage, repo_url='fake_repo_url', rev='fake_rev'),
-            call(UserAnsibleAllocationStage, repo_url=allocation_request.allocation_unit.pool.definition.url,
-                 rev=allocation_request.allocation_unit.pool.rev_sha)
+            call(
+                UserAnsibleAllocationStage,
+                repo_url=allocation_request.allocation_unit.pool.definition.url,
+                rev=allocation_request.allocation_unit.pool.rev_sha,
+            ),
         ])
         self.assert_handlers(handlers, [fake_stack_stage, fake_network_stage, fake_user_stage])
 
@@ -192,7 +228,10 @@ class TestAllocationRequestHandlerUnit:
         with pytest.raises(api_exceptions.ValidationError) as cm:
             self.handler._restart_stage_handlers(sandbox_finished)
 
-        assert str(cm.value) == 'All stages finished without failing. Only failed stages can be restarted.'
+        assert (
+            str(cm.value)
+            == 'All stages finished without failing. Only failed stages can be restarted.'
+        )
 
     def test_restart_stage_handlers(self, sandbox_failed_stack_stage):
         self.handler.request = sandbox_failed_stack_stage.allocation_unit.allocation_request
@@ -201,15 +240,22 @@ class TestAllocationRequestHandlerUnit:
         fake_network_stage = MagicMock()
         fake_user_stage = MagicMock()
         self.handler._create_db_stage = MagicMock()
-        self.handler._create_db_stage.side_effect = [fake_stack_stage, fake_network_stage, fake_user_stage]
+        self.handler._create_db_stage.side_effect = [
+            fake_stack_stage,
+            fake_network_stage,
+            fake_user_stage,
+        ]
 
         handlers = self.handler._restart_stage_handlers(sandbox_failed_stack_stage)
 
         self.handler._create_db_stage.assert_has_calls([
             call(StackAllocationStage),
             call(NetworkingAnsibleAllocationStage, repo_url='fake_repo_url', rev='fake_rev'),
-            call(UserAnsibleAllocationStage, repo_url=sandbox_failed_stack_stage.allocation_unit.pool.definition.url,
-                 rev=sandbox_failed_stack_stage.allocation_unit.pool.rev_sha)
+            call(
+                UserAnsibleAllocationStage,
+                repo_url=sandbox_failed_stack_stage.allocation_unit.pool.definition.url,
+                rev=sandbox_failed_stack_stage.allocation_unit.pool.rev_sha,
+            ),
         ])
         self.assert_handlers(handlers, [fake_stack_stage, fake_network_stage, fake_user_stage])
 
@@ -222,8 +268,9 @@ class TestAllocationRequestHandlerUnit:
         handlers = self.handler._restart_stage_handlers(sandbox_failed_user_stage)
 
         self.handler._create_db_stage.assert_called_once_with(
-            UserAnsibleAllocationStage, repo_url=sandbox_failed_user_stage.allocation_unit.pool.definition.url,
-            rev=sandbox_failed_user_stage.allocation_unit.pool.rev_sha
+            UserAnsibleAllocationStage,
+            repo_url=sandbox_failed_user_stage.allocation_unit.pool.definition.url,
+            rev=sandbox_failed_user_stage.allocation_unit.pool.rev_sha,
         )
         user_stage = handlers[0]
         assert user_stage.stage == fake_user_stage
@@ -233,41 +280,50 @@ class TestAllocationRequestHandlerUnit:
 
         handlers = self.handler._get_stage_handlers()
 
-        self.assert_handlers(handlers, [
-            allocation_request_started.useransibleallocationstage,
-            allocation_request_started.networkingansibleallocationstage,
-            allocation_request_started.stackallocationstage
-        ])
+        self.assert_handlers(
+            handlers,
+            [
+                allocation_request_started.useransibleallocationstage,
+                allocation_request_started.networkingansibleallocationstage,
+                allocation_request_started.stackallocationstage,
+            ],
+        )
 
 
 class TestCleanupRequestHandlerUnit:
-
     @pytest.fixture(autouse=True)
     def set_up(self, mocker):
-        mocker.patch(
-            'crczp.sandbox_instance_app.lib.request_handlers.LOG'
-        )
+        mocker.patch('crczp.sandbox_instance_app.lib.request_handlers.LOG')
         self.handler = request_handlers.CleanupRequestHandler()
 
     @staticmethod
     def assert_handlers(handlers, stages):
         assert len(handlers) == len(stages)
-        for handler, stage in zip(handlers, stages):
+        for handler, stage in zip(handlers, stages, strict=False):
             assert handler.stage == stage
 
     def test_enqueue_stages(self, mocker, allocation_request):
         self.handler.request = allocation_request
         self.handler._create_stage_handlers = MagicMock(return_value='fake_handlers')
-        self.handler._get_finalizing_stage_function = MagicMock(return_value='fake_finalizing_function')
+        self.handler._get_finalizing_stage_function = MagicMock(
+            return_value='fake_finalizing_function'
+        )
         fake_partial = mocker.patch('crczp.sandbox_instance_app.lib.request_handlers.partial')
-        fake_transaction = mocker.patch('crczp.sandbox_instance_app.lib.request_handlers.transaction')
+        fake_transaction = mocker.patch(
+            'crczp.sandbox_instance_app.lib.request_handlers.transaction'
+        )
 
         self.handler._enqueue_stages()
 
         self.handler._create_stage_handlers.assert_called_once()
-        self.handler._get_finalizing_stage_function.assert_called_once_with(self.handler._delete_allocation_unit,
-                                                                            allocation_request.allocation_unit, allocation_request)
-        fake_partial.assert_called_once_with(self.handler._enqueue_request, 'fake_handlers', 'fake_finalizing_function')
+        self.handler._get_finalizing_stage_function.assert_called_once_with(
+            self.handler._delete_allocation_unit,
+            allocation_request.allocation_unit,
+            allocation_request,
+        )
+        fake_partial.assert_called_once_with(
+            self.handler._enqueue_request, 'fake_handlers', 'fake_finalizing_function'
+        )
         fake_transaction.on_commit.assert_called_once_with(fake_partial.return_value)
 
     def test_create_cleanup_jobs(self, cleanup_request):
@@ -298,12 +354,16 @@ class TestCleanupRequestHandlerUnit:
         fake_user_stage = MagicMock()
         fake_network_stage = MagicMock()
         fake_stack_stage = MagicMock()
-        self.handler._create_db_stage = MagicMock(side_effect=[fake_user_stage, fake_network_stage, fake_stack_stage])
+        self.handler._create_db_stage = MagicMock(
+            side_effect=[fake_user_stage, fake_network_stage, fake_stack_stage]
+        )
 
         handlers = self.handler._create_stage_handlers()
 
         self.handler._create_db_stage.assert_has_calls([
-            call(UserAnsibleCleanupStage), call(NetworkingAnsibleCleanupStage), call(StackCleanupStage)
+            call(UserAnsibleCleanupStage),
+            call(NetworkingAnsibleCleanupStage),
+            call(StackCleanupStage),
         ])
         self.assert_handlers(handlers, [fake_user_stage, fake_network_stage, fake_stack_stage])
 
@@ -311,12 +371,16 @@ class TestCleanupRequestHandlerUnit:
         self.handler.request = cleanup_stage_networking_started.cleanup_request
         StackCleanupStage.delete = MagicMock()
         UserAnsibleCleanupStage.delete = MagicMock()
-        self.handler._create_db_stage = MagicMock(side_effect=[MagicMock(), MagicMock(), MagicMock()])
+        self.handler._create_db_stage = MagicMock(
+            side_effect=[MagicMock(), MagicMock(), MagicMock()]
+        )
 
         self.handler._create_stage_handlers()
 
         self.handler._create_db_stage.assert_has_calls([
-            call(UserAnsibleCleanupStage), call(NetworkingAnsibleCleanupStage), call(StackCleanupStage)
+            call(UserAnsibleCleanupStage),
+            call(NetworkingAnsibleCleanupStage),
+            call(StackCleanupStage),
         ])
         UserAnsibleCleanupStage.delete.assert_called_once()
         StackCleanupStage.delete.assert_not_called()
@@ -326,11 +390,14 @@ class TestCleanupRequestHandlerUnit:
 
         handlers = self.handler._get_stage_handlers()
 
-        self.assert_handlers(handlers, [
-            cleanup_request_finished.stackcleanupstage,
-            cleanup_request_finished.networkingansiblecleanupstage,
-            cleanup_request_finished.useransiblecleanupstage
-        ])
+        self.assert_handlers(
+            handlers,
+            [
+                cleanup_request_finished.stackcleanupstage,
+                cleanup_request_finished.networkingansiblecleanupstage,
+                cleanup_request_finished.useransiblecleanupstage,
+            ],
+        )
 
 
 @pytest.mark.integration
@@ -339,18 +406,22 @@ class TestAllocationRequestHandler:
     def set_up(self, mocker):
         empty_queues()
 
-        stack_execute_patch_target = 'crczp.sandbox_instance_app.lib.request_handlers.' \
-                                     'AllocationStackStageHandler.execute'
+        stack_execute_patch_target = (
+            'crczp.sandbox_instance_app.lib.request_handlers.AllocationStackStageHandler.execute'
+        )
         mocker.patch(stack_execute_patch_target, new_callable=PicklableMock)
-        stack_cancel_patch_target = 'crczp.sandbox_instance_app.lib.request_handlers.' \
-                                    'AllocationStackStageHandler.cancel'
+        stack_cancel_patch_target = (
+            'crczp.sandbox_instance_app.lib.request_handlers.AllocationStackStageHandler.cancel'
+        )
         self.stack_cancel = mocker.patch(stack_cancel_patch_target, new_callable=PicklableMock)
 
-        ansible_execute_patch_target = 'crczp.sandbox_instance_app.lib.request_handlers.' \
-                                       'AllocationAnsibleStageHandler.execute'
+        ansible_execute_patch_target = (
+            'crczp.sandbox_instance_app.lib.request_handlers.AllocationAnsibleStageHandler.execute'
+        )
         mocker.patch(ansible_execute_patch_target, new_callable=PicklableMock)
-        ansible_cancel_patch_target = 'crczp.sandbox_instance_app.lib.request_handlers.' \
-                                      'AllocationAnsibleStageHandler.cancel'
+        ansible_cancel_patch_target = (
+            'crczp.sandbox_instance_app.lib.request_handlers.AllocationAnsibleStageHandler.cancel'
+        )
         self.ansible_cancel = mocker.patch(ansible_cancel_patch_target, new_callable=PicklableMock)
 
     @pytest.mark.django_db(transaction=True)
@@ -364,16 +435,20 @@ class TestAllocationRequestHandler:
         assert allocation_request.stages.all().count() == 3
 
         assert isinstance(allocation_request.stackallocationstage, StackAllocationStage)
-        assert isinstance(allocation_request.networkingansibleallocationstage,
-                          NetworkingAnsibleAllocationStage)
+        assert isinstance(
+            allocation_request.networkingansibleallocationstage, NetworkingAnsibleAllocationStage
+        )
         assert isinstance(allocation_request.useransibleallocationstage, UserAnsibleAllocationStage)
 
-        job_stack = handler.queue_stack\
-            .fetch_job(allocation_request.stackallocationstage.rq_job.job_id)
-        job_networking = handler.queue_ansible\
-            .fetch_job(allocation_request.networkingansibleallocationstage.rq_job.job_id)
-        job_user = handler.queue_ansible\
-            .fetch_job(allocation_request.useransibleallocationstage.rq_job.job_id)
+        job_stack = handler.queue_stack.fetch_job(
+            allocation_request.stackallocationstage.rq_job.job_id
+        )
+        job_networking = handler.queue_ansible.fetch_job(
+            allocation_request.networkingansibleallocationstage.rq_job.job_id
+        )
+        job_user = handler.queue_ansible.fetch_job(
+            allocation_request.useransibleallocationstage.rq_job.job_id
+        )
 
         assert job_stack.is_queued
         assert job_networking.is_deferred
@@ -397,8 +472,9 @@ class TestAllocationRequestHandler:
         assert self.ansible_cancel.call_count == 2
 
     def test_cancel_request_failed_on_completed_sandbox(self, sandbox_finished):
-        handler = request_handlers\
-            .AllocationRequestHandler(sandbox_finished.allocation_unit.allocation_request)
+        handler = request_handlers.AllocationRequestHandler(
+            sandbox_finished.allocation_unit.allocation_request
+        )
 
         with pytest.raises(api_exceptions.ValidationError):
             handler.cancel_request()
@@ -418,7 +494,9 @@ class TestCleanupRequestHandler:
         target = 'crczp.sandbox_instance_app.lib.request_handlers.CleanupStackStageHandler.cancel'
         self.stack_cancel = mocker.patch(target, new_callable=PicklableMock)
 
-        target = 'crczp.sandbox_instance_app.lib.request_handlers.CleanupAnsibleStageHandler.execute'
+        target = (
+            'crczp.sandbox_instance_app.lib.request_handlers.CleanupAnsibleStageHandler.execute'
+        )
         mocker.patch(target, new_callable=PicklableMock)
         target = 'crczp.sandbox_instance_app.lib.request_handlers.CleanupAnsibleStageHandler.cancel'
         self.ansible_cancel = mocker.patch(target, new_callable=PicklableMock)
@@ -435,16 +513,18 @@ class TestCleanupRequestHandler:
 
         cleanup_request: request_handlers.CleanupRequest
         assert isinstance(cleanup_request.useransiblecleanupstage, UserAnsibleCleanupStage)
-        assert isinstance(cleanup_request.networkingansiblecleanupstage,
-                          NetworkingAnsibleCleanupStage)
+        assert isinstance(
+            cleanup_request.networkingansiblecleanupstage, NetworkingAnsibleCleanupStage
+        )
         assert isinstance(cleanup_request.stackcleanupstage, StackCleanupStage)
 
-        job_user = handler.queue_ansible \
-            .fetch_job(cleanup_request.useransiblecleanupstage.rq_job.job_id)
-        job_networking = handler.queue_ansible \
-            .fetch_job(cleanup_request.networkingansiblecleanupstage.rq_job.job_id)
-        job_stack = handler.queue_stack \
-            .fetch_job(cleanup_request.stackcleanupstage.rq_job.job_id)
+        job_user = handler.queue_ansible.fetch_job(
+            cleanup_request.useransiblecleanupstage.rq_job.job_id
+        )
+        job_networking = handler.queue_ansible.fetch_job(
+            cleanup_request.networkingansiblecleanupstage.rq_job.job_id
+        )
+        job_stack = handler.queue_stack.fetch_job(cleanup_request.stackcleanupstage.rq_job.job_id)
 
         assert job_user.is_queued
         assert job_networking.is_deferred

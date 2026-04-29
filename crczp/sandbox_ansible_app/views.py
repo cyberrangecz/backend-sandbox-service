@@ -1,6 +1,6 @@
 import structlog
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import generics
 from rest_framework.views import APIView
 
@@ -14,18 +14,22 @@ COMMON_RESPONSE_PATTERNS = {
     401: OpenApiResponse(description='Unauthorized'),
     403: OpenApiResponse(description='Forbidden'),
     404: OpenApiResponse(description='Not Found'),
-    500: OpenApiResponse(description='Internal Server Error')
+    500: OpenApiResponse(description='Internal Server Error'),
 }
 
+
 @extend_schema(
-    methods=["GET"],
-    responses={200: serializers.NetworkingAnsibleAllocationStageSerializer(many=True),
-               **COMMON_RESPONSE_PATTERNS}
+    methods=['GET'],
+    responses={
+        200: serializers.NetworkingAnsibleAllocationStageSerializer(many=True),
+        **COMMON_RESPONSE_PATTERNS,
+    },
 )
 class NetworkingAnsibleAllocationStageDetailView(generics.RetrieveAPIView):
     """
     get: Retrieve a `Networking Ansible` Allocation stage.
     """
+
     serializer_class = serializers.NetworkingAnsibleAllocationStageSerializer
     queryset = AllocationRequest.objects.all()
     lookup_url_kwarg = 'request_id'
@@ -36,14 +40,17 @@ class NetworkingAnsibleAllocationStageDetailView(generics.RetrieveAPIView):
 
 
 @extend_schema(
-    methods=["GET"],
-    responses={200: serializers.UserAnsibleAllocationStageSerializer(many=True),
-               **COMMON_RESPONSE_PATTERNS}
+    methods=['GET'],
+    responses={
+        200: serializers.UserAnsibleAllocationStageSerializer(many=True),
+        **COMMON_RESPONSE_PATTERNS,
+    },
 )
 class UserAnsibleAllocationStageDetailView(generics.RetrieveAPIView):
     """
     get: Retrieve a `User Ansible` Allocation stage.
     """
+
     serializer_class = serializers.UserAnsibleAllocationStageSerializer
     queryset = AllocationRequest.objects.all()
     lookup_url_kwarg = 'request_id'
@@ -54,14 +61,17 @@ class UserAnsibleAllocationStageDetailView(generics.RetrieveAPIView):
 
 
 @extend_schema(
-    methods=["GET"],
-    responses={200: serializers.NetworkingAnsibleCleanupStageSerializer(many=True),
-               **COMMON_RESPONSE_PATTERNS}
+    methods=['GET'],
+    responses={
+        200: serializers.NetworkingAnsibleCleanupStageSerializer(many=True),
+        **COMMON_RESPONSE_PATTERNS,
+    },
 )
 class NetworkingAnsibleCleanupStageDetailView(generics.RetrieveAPIView):
     """
     get: Retrieve a `Networking Ansible` Cleanup stage.
     """
+
     serializer_class = serializers.NetworkingAnsibleCleanupStageSerializer
     queryset = CleanupRequest.objects.all()
     lookup_url_kwarg = 'request_id'
@@ -72,14 +82,17 @@ class NetworkingAnsibleCleanupStageDetailView(generics.RetrieveAPIView):
 
 
 @extend_schema(
-    methods=["GET"],
-    responses={200: serializers.UserAnsibleCleanupStageSerializer(many=True),
-               **COMMON_RESPONSE_PATTERNS}
+    methods=['GET'],
+    responses={
+        200: serializers.UserAnsibleCleanupStageSerializer(many=True),
+        **COMMON_RESPONSE_PATTERNS,
+    },
 )
 class UserAnsibleCleanupStageDetailView(generics.RetrieveAPIView):
     """
     get: Retrieve a `User Ansible` Cleanup stage.
     """
+
     serializer_class = serializers.UserAnsibleCleanupStageSerializer
     queryset = CleanupRequest.objects.all()
     lookup_url_kwarg = 'request_id'
@@ -90,27 +103,28 @@ class UserAnsibleCleanupStageDetailView(generics.RetrieveAPIView):
 
 
 @extend_schema(
-    methods=["GET"],
+    methods=['GET'],
     parameters=[
         OpenApiParameter(
             name='from_row',
             type=int,
             location=OpenApiParameter.QUERY,
             description='Row index (DB relative), used for incremental fetch',
-            required=False
+            required=False,
         )
     ],
     responses={
         200: OpenApiResponse(
-            description="Networking Ansible Outputs with trimmed content and row count"
+            description='Networking Ansible Outputs with trimmed content and row count'
         ),
-        **COMMON_RESPONSE_PATTERNS
-    }
+        **COMMON_RESPONSE_PATTERNS,
+    },
 )
 class NetworkingAnsibleOutputListView(log_output_mixin.CompressedOutputMixin, APIView):
     """
     get: Retrieve Ansible Outputs with trimmed content.
     """
+
     queryset = AllocationRequest.objects.all()
 
     def get(self, request, request_id):
@@ -127,27 +141,26 @@ class NetworkingAnsibleOutputListView(log_output_mixin.CompressedOutputMixin, AP
 
 
 @extend_schema(
-    methods=["GET"],
+    methods=['GET'],
     parameters=[
         OpenApiParameter(
             name='from_row',
             type=int,
             location=OpenApiParameter.QUERY,
             description='Row index (DB relative), used for incremental fetch',
-            required=False
+            required=False,
         )
     ],
     responses={
-        200: OpenApiResponse(
-            description="User Ansible Outputs with trimmed content and row count"
-        ),
-        **COMMON_RESPONSE_PATTERNS
-    }
+        200: OpenApiResponse(description='User Ansible Outputs with trimmed content and row count'),
+        **COMMON_RESPONSE_PATTERNS,
+    },
 )
 class UserAnsibleOutputListView(log_output_mixin.CompressedOutputMixin, APIView):
     """
     get: Retrieve Ansible Outputs with trimmed content.
     """
+
     queryset = AllocationRequest.objects.all()
 
     def get(self, request, request_id):

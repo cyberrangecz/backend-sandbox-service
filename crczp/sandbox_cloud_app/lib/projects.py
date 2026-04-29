@@ -1,5 +1,6 @@
-from crczp.sandbox_common_lib import utils
 from django.core.cache import cache
+
+from crczp.sandbox_common_lib import utils
 
 IMAGE_LIST_CACHE_KEY = 'image_list'
 IMAGE_LIST_CACHE_TIMEOUT = 60 * 60 * 24

@@ -10,7 +10,6 @@ ALLOCATION_REQUEST_ID = 1
 
 
 class TestStages:
-
     @pytest.fixture
     def arf(self):
         return APIRequestFactory()
@@ -18,7 +17,9 @@ class TestStages:
     def test_networking_stage_views(self, arf):
         request_kwargs = {'request_id': ALLOCATION_REQUEST_ID}
         request = arf.get(reverse('networking-ansible-allocation-stage', kwargs=request_kwargs))
-        response = NetworkingAnsibleAllocationStageDetailView.as_view()(request, request_id=ALLOCATION_REQUEST_ID)
+        response = NetworkingAnsibleAllocationStageDetailView.as_view()(
+            request, request_id=ALLOCATION_REQUEST_ID
+        )
 
         assert response.data['id'] == 2
         assert response.data['rev'] == '04e97bb05456b37a74cd28732547b65f213e1b99'

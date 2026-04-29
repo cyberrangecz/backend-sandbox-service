@@ -1,12 +1,14 @@
 """
 REST API configuration file
 """
-from yamlize import Attribute, Object, YamlizingError, StrList, Sequence, Typed
 
-from crczp.sandbox_common_lib.exceptions import ImproperlyConfigured
+from yamlize import Attribute, Object, Sequence, StrList, Typed, YamlizingError
+
 from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration
+from crczp.sandbox_common_lib.exceptions import ImproperlyConfigured
 
-# StrList default value must be cast to tuple, otherwise TypeError: unhashable type: 'list' will be thrown
+# StrList default value must be cast to tuple, otherwise
+# TypeError: unhashable type: 'list' will be thrown
 
 STACK_NAME_PREFIX = 'default0'
 MICROSERVICE_NAME = 'sandbox-service'
@@ -20,7 +22,7 @@ ALLOWED_OIDC_PROVIDERS = []
 
 
 def stack_name_prefix_validator(_, value):
-    if len(value) < 1 or 8 < len(value):
+    if len(value) < 1 or len(value) > 8:
         raise ValueError('Value stack_name_prefix can have only 1 to 8 characters')
 
 
@@ -30,13 +32,19 @@ class AllowedOidcProviders(Sequence):
 
 class Authentication(Object):
     authenticated_rest_api = Attribute(type=bool, default=AUTHENTICATED_REST_API)
-    allowed_oidc_providers = Attribute(type=AllowedOidcProviders,
-                                       default=tuple(ALLOWED_OIDC_PROVIDERS))
+    allowed_oidc_providers = Attribute(
+        type=AllowedOidcProviders, default=tuple(ALLOWED_OIDC_PROVIDERS)
+    )
     roles_registration_url = Attribute(type=str)
     roles_acquisition_url = Attribute(type=str)
 
-    def __init__(self, authenticated_rest_api, allowed_oidc_providers,
-                 roles_registration_url, roles_acquisition_url):
+    def __init__(
+        self,
+        authenticated_rest_api,
+        allowed_oidc_providers,
+        roles_registration_url,
+        roles_acquisition_url,
+    ):
         self.authenticated_rest_api = authenticated_rest_api
         self.allowed_oidc_providers = allowed_oidc_providers
         self.roles_registration_url = roles_registration_url
@@ -44,8 +52,9 @@ class Authentication(Object):
 
 
 class CrczpServiceConfig(Object):
-    stack_name_prefix = Attribute(type=str, default=STACK_NAME_PREFIX,
-                                  validator=stack_name_prefix_validator)
+    stack_name_prefix = Attribute(
+        type=str, default=STACK_NAME_PREFIX, validator=stack_name_prefix_validator
+    )
     microservice_name = Attribute(type=str, default=MICROSERVICE_NAME)
     debug = Attribute(type=bool, default=DEBUG)
     django_secret_key = Attribute(type=str, default=DJANGO_SECRET_KEY)
@@ -67,7 +76,7 @@ class CrczpServiceConfig(Object):
         try:
             obj = super().load(*args, **kwargs)
         except YamlizingError as ex:
-            raise ImproperlyConfigured(ex)
+            raise ImproperlyConfigured(ex) from ex
         return obj
 
     @classmethod

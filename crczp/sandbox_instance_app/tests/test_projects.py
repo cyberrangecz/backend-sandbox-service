@@ -1,6 +1,8 @@
-import pytest
 from unittest import mock
+
+import pytest
 from django.core.cache import cache
+
 from crczp.sandbox_common_lib.common_cloud import list_images
 
 IMAGE_LIST_CACHE_KEY = 'image_list'
@@ -22,7 +24,9 @@ def setup_cache():
 
 @pytest.mark.django_db
 def test_list_images_cached(mock_terraform_client, setup_cache):
-    with mock.patch('crczp.sandbox_common_lib.utils.get_terraform_client', return_value=mock_terraform_client):
+    with mock.patch(
+        'crczp.sandbox_common_lib.utils.get_terraform_client', return_value=mock_terraform_client
+    ):
         images = list_images(cached=True)
         assert images == ['image1', 'image2', 'image3']
 
@@ -34,7 +38,9 @@ def test_list_images_cached(mock_terraform_client, setup_cache):
 
 @pytest.mark.django_db
 def test_list_images_not_cached(mock_terraform_client, setup_cache):
-    with mock.patch('crczp.sandbox_common_lib.utils.get_terraform_client', return_value=mock_terraform_client):
+    with mock.patch(
+        'crczp.sandbox_common_lib.utils.get_terraform_client', return_value=mock_terraform_client
+    ):
         images = list_images(cached=False)
         assert images == ['image1', 'image2', 'image3']
 

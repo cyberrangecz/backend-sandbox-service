@@ -1,12 +1,12 @@
-import uuid
 import zipfile
+from unittest import mock
+
 import pytest
 from django.db import IntegrityError
 from django.http import Http404
-from unittest import mock
 
-from crczp.sandbox_instance_app import serializers
 from crczp.sandbox_common_lib import exceptions
+from crczp.sandbox_instance_app import serializers
 from crczp.sandbox_instance_app.lib import sandboxes, sshconfig
 from crczp.sandbox_instance_app.models import Sandbox, SandboxAllocationUnit
 
@@ -25,14 +25,16 @@ class TestGetSandbox:
             sandboxes.get_sandbox(-1)
 
     def test_id_generation_raises(self, created_by):
-        au: SandboxAllocationUnit = SandboxAllocationUnit.objects.create(pool_id=1,
-                                                                         created_by=created_by)
+        au: SandboxAllocationUnit = SandboxAllocationUnit.objects.create(
+            pool_id=1, created_by=created_by
+        )
         with pytest.raises(IntegrityError):
             Sandbox.objects.create(allocation_unit=au)
 
     def test_id_generation_success(self, created_by):
-        au: SandboxAllocationUnit = SandboxAllocationUnit.objects.create(pool_id=1,
-                                                                         created_by=created_by)
+        au: SandboxAllocationUnit = SandboxAllocationUnit.objects.create(
+            pool_id=1, created_by=created_by
+        )
         sandbox: Sandbox = Sandbox.objects.create(id=64, allocation_unit=au, ready=True)
         assert sandboxes.get_sandbox(sandbox.id) is not None
 
@@ -41,7 +43,8 @@ class TestSandboxesManipulation:
     @pytest.fixture(autouse=True)
     def set_up(self, mocker, top_ins):
         self.mock_get_top_ins = mocker.patch(
-            'crczp.sandbox_instance_app.lib.sandboxes.get_topology_instance')
+            'crczp.sandbox_instance_app.lib.sandboxes.get_topology_instance'
+        )
         self.mock_get_top_ins.return_value = top_ins
         yield
 
@@ -64,24 +67,27 @@ class TestSandboxesManipulation:
             sandboxes.lock_sandbox(mocker.Mock(), created_by)
 
     def test_get_sandbox_topology(self, mocker, topology, image):
-        mock_images = mocker.patch(
-            'crczp.terraform_driver.CrczpTerraformClient.list_images')
+        mock_images = mocker.patch('crczp.terraform_driver.CrczpTerraformClient.list_images')
         mock_images.return_value = [image]
 
-        with mock.patch('django.core.cache.cache.get') as mock_cache_get, \
-             mock.patch('django.core.cache.cache.set') as mock_cache_set:
+        with (
+            mock.patch('django.core.cache.cache.get') as mock_cache_get,
+            mock.patch('django.core.cache.cache.set'),
+        ):
             mock_cache_get.return_value = None
             topo = sandboxes.get_sandbox_topology(mocker.Mock())
 
         result = serializers.TopologySerializer(topo).data
 
         for item in ['hosts', 'routers', 'switches', 'ports']:
-            assert sorted(topology[item], key=lambda x: x['name']) == \
-                   sorted(result[item], key=lambda x: x['name'])
+            assert sorted(topology[item], key=lambda x: x['name']) == sorted(
+                result[item], key=lambda x: x['name']
+            )
 
         for item in ['links']:
-            assert sorted(topology[item], key=lambda x: x['port_a']) == \
-                   sorted(result[item], key=lambda x: x['port_a'])
+            assert sorted(topology[item], key=lambda x: x['port_a']) == sorted(
+                result[item], key=lambda x: x['port_a']
+            )
 
     def test_get_user_ssh_config(self, mocker, user_ssh_config):
         sandbox = mocker.MagicMock()
@@ -99,15 +105,19 @@ class TestSandboxesManipulation:
 
         for host in user_ssh_config:
             identity_file = host.get('IdentityFile')
-            host.set('IdentityFile', identity_file.replace('<path_to_sandbox_private_key>',
-                                                           f'~/.ssh/{private_key}'))
+            host.set(
+                'IdentityFile',
+                identity_file.replace('<path_to_sandbox_private_key>', f'~/.ssh/{private_key}'),
+            )
 
         in_memory_zip_file = sandboxes.get_user_ssh_access(sandbox)
 
         with zipfile.ZipFile(in_memory_zip_file, 'r', zipfile.ZIP_DEFLATED) as zip_file:
             with zip_file.open(ssh_config_name) as file:
-                assert sshconfig.CrczpSSHConfig.from_str(file.read().decode('utf-8')).asdict()\
-                       == user_ssh_config.asdict()
+                assert (
+                    sshconfig.CrczpSSHConfig.from_str(file.read().decode('utf-8')).asdict()
+                    == user_ssh_config.asdict()
+                )
             with zip_file.open(private_key) as file:
                 assert file.read().decode('utf-8') == sandbox.private_user_key
             with zip_file.open(f'{private_key}.pub') as file:
@@ -122,7 +132,7 @@ class TestSandboxesManipulation:
         assert ssh_conf.asdict() == management_ssh_config.asdict()
 
     def test_get_ansible_ssh_config(self, mocker, ansible_ssh_config):
-        ssh_conf = sandboxes.get_ansible_sshconfig(mocker.Mock(),
-                                                   mng_key='/root/.ssh/pool_mng_key',
-                                                   proxy_key='/root/.ssh/id_rsa')
+        ssh_conf = sandboxes.get_ansible_sshconfig(
+            mocker.Mock(), mng_key='/root/.ssh/pool_mng_key', proxy_key='/root/.ssh/id_rsa'
+        )
         assert ssh_conf.asdict() == ansible_ssh_config.asdict()
