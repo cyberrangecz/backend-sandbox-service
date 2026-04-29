@@ -92,7 +92,7 @@ all:
     monitored_hosts_tcp:
       hosts:
         server:
-          targets:
+          tcp_targets:
             - port: 45
               interface: eth0
             - port: 45
@@ -100,21 +100,21 @@ all:
             - port: 200
               address: 10.10.20.5/32
         home:
-          targets:
+          tcp_targets:
             - port: 55
               address: 10.10.30.5/32
         home-router:
-          targets:
+          tcp_targets:
             - port: 555
               interface: eth0
     monitored_hosts_icmp:
       hosts:
         server:
-          targets:
+          icmp_targets:
             - interface: eth0
             - address: 10.10.20.5/32
         home-router:
-          targets:
+          icmp_targets:
             - address: 10.10.30.1/32
 
   vars:
