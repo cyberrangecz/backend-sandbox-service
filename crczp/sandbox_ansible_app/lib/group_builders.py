@@ -97,7 +97,7 @@ def _add_monitored_hosts_tcp_group(inventory: 'Inventory',
         host = inventory.hosts[monitored_node.node]
         hosts.append(host)
         hosts_variables[host.name] = {
-            'targets': [
+            'tcp_targets': [
                 {k: v for k, v in {
                     'port': target.port,
                     'interface': target.interface,
@@ -121,7 +121,7 @@ def _add_monitored_hosts_icmp_group(inventory: 'Inventory',
         host = inventory.hosts[monitored_node.node]
         hosts.append(host)
         hosts_variables[host.name] = {
-            'targets': [
+            'icmp_targets': [
                 {k: v for k, v in {
                     'interface': target.interface,
                     'address': _normalize_address(target.address),
