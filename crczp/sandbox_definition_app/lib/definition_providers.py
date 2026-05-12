@@ -2,9 +2,9 @@
 
 import base64
 from abc import ABC, abstractmethod
+from urllib.parse import ParseResult, urlparse
 
 import gitlab
-import giturlparse
 import requests
 import structlog
 from github import Auth, Github, GithubException, UnknownObjectException
@@ -38,20 +38,15 @@ class DefinitionProvider(ABC):
         """Get a sha of a rev."""
 
     @staticmethod
-    def validate_https(url: str) -> giturlparse.parser.Parsed:
+    def validate_https(url: str) -> ParseResult:
         """Validate and parse an HTTPS git URL."""
-        try:
-            url_parsed = giturlparse.parse(url)
-        except giturlparse.parser.ParserError:
-            raise exceptions.GitError(f'Could not parse GIT URL: url={url}') from None
-
         if not url.startswith('https://') or not url.endswith('.git'):
             raise exceptions.GitError(
                 f'Invalid URL. Has to be a GIT URL cloned with HTTPS: expected='
                 f'https://example.gitlab.com/[url path].git, actual={url}'
             )
 
-        return url_parsed
+        return urlparse(url)
 
 
 class GitlabProvider(DefinitionProvider):
@@ -113,15 +108,11 @@ class GitlabProvider(DefinitionProvider):
             raise exceptions.GitError('Failed to get sha of the GIT rev.', ex) from ex
 
     @staticmethod
-    def get_project_path(url_parsed) -> str:
+    def get_project_path(url_parsed: ParseResult) -> str:
         """Extract the GitLab project path from a parsed HTTPS URL."""
-        project_path = (
-            url_parsed.pathname[:-4] if url_parsed.pathname[-4:] == '.git' else url_parsed.pathname
-        )
-        # https leaves two // at the start
-        path = project_path[2:] if project_path[0:2] == '//' else project_path
-        path_start = path.index('/') + 1
-        return path[path_start:]
+        project_path = url_parsed.path[:-4] if url_parsed.path[-4:] == '.git' else url_parsed.path
+        path_start = project_path.index('/') + 1
+        return project_path[path_start:]
 
 
 class GitHubProvider(DefinitionProvider):

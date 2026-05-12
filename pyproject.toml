@@ -42,7 +42,6 @@ dependencies = [
     "six",
     "drf-spectacular",
     "cryptography",
-    "git-url-parse",
     "pyparsing",
     "kubernetes",
     "paramiko",
