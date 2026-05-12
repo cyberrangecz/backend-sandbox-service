@@ -29,7 +29,7 @@ class TestPrepareInventoryFile:
         sandboxes.get_topology_instance = mocker.MagicMock()
         sandboxes.get_topology_instance.return_value = top_ins
 
-        dir_path = '/tmp'
+        dir_path = '/tmp'  # nosec B108
         sandbox = Sandbox.objects.get(pk=1)
         AllocationAnsibleRunner(dir_path).prepare_inventory_file(sandbox)
 

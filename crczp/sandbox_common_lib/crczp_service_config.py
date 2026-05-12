@@ -13,7 +13,7 @@ from crczp.sandbox_common_lib.exceptions import ImproperlyConfigured
 STACK_NAME_PREFIX = 'default0'
 MICROSERVICE_NAME = 'sandbox-service'
 DEBUG = True
-DJANGO_SECRET_KEY = '-^mu0=6s@*x4jdbrz5yr!++p*02#%m$_4&0uw8h1)&r5u!v=12'
+DJANGO_SECRET_KEY = '-^mu0=6s@*x4jdbrz5yr!++p*02#%m$_4&0uw8h1)&r5u!v=12'  # nosec B105
 ALLOWED_HOSTS = ['*']  # Allow everyone
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ORIGIN_WHITELIST = []

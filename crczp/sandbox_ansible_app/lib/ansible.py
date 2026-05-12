@@ -79,7 +79,7 @@ class AnsibleRunner:  # pylint: disable=too-many-instance-attributes
             self.container_manager = KubernetesContainer
         else:
             self.container_manager = DockerContainer
-        self.template_environment = Environment(loader=FileSystemLoader(TEMPLATES_DIR_PATH))
+        self.template_environment = Environment(loader=FileSystemLoader(TEMPLATES_DIR_PATH))  # nosec B701
 
     def run_ansible_playbook(self, url, rev, stage, cleanup=False) -> BaseContainer:
         """

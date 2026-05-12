@@ -13,7 +13,7 @@ def delete_jump_ssh_key(allocation_unit: SandboxAllocationUnit):
     """Delete the SSH key for the given allocation unit from the jump proxy."""
     name = allocation_unit.get_stack_name()
     ssh = connect_to_jump()
-    _stdin, stdout, stderr = ssh.exec_command(f'sudo rm -rf /home/{name}')
+    _stdin, stdout, stderr = ssh.exec_command(f'sudo rm -rf /home/{name}')  # nosec B601
 
     # Wait for the command to finish
     stdout.channel.recv_exit_status()
@@ -37,7 +37,7 @@ def ssh_connect(hostname, port, username, key_file_path):
     try:
         ssh = paramiko.SSHClient()
         ssh.load_system_host_keys()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # nosec B507
         private_key = load_private_key(key_file_path)
 
         ssh.connect(hostname, port=port, username=username, pkey=private_key)

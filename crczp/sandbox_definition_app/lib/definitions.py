@@ -183,7 +183,7 @@ def get_variables(url: str, rev: str, config: CrczpConfiguration) -> list:
         raise exceptions.GitError(
             f'Unable to retrieve {VARIABLES_FILENAME} file from repository.\n' + str(ex)
         ) from ex
-    var_list = yaml.load(variables_file, Loader=yaml.FullLoader)
+    var_list = yaml.safe_load(variables_file)
 
     variables = []
     for var in var_list:

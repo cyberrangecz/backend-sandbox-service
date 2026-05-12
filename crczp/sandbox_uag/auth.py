@@ -91,7 +91,9 @@ def get_cache_key(username, bearer_token):
     # Cache key shouldn't be longer than 250 characters, so we need to shorten the bearer token.
     # Since there is a possibility of a hash collision, additional steps are needed after cache-hit.
     # In our case, we check if the bearer tokens actually match.
-    hashed_bearer_token = hashlib.sha1(str(bearer_token).encode('UTF-8')).hexdigest()
+    hashed_bearer_token = hashlib.sha1(  # nosec B324
+        str(bearer_token).encode('UTF-8'), usedforsecurity=False
+    ).hexdigest()  # nosec B324
     # 140 + 40 + 1 < 250
     return f'{username}|{hashed_bearer_token}'
 

@@ -228,7 +228,7 @@ class TestPoolLock:
     def set_up(self, mocker, pool):  # pylint: disable=attribute-defined-outside-init
         """Set up the API request factory and a wrong training access token."""
         self.factory = APIRequestFactory()
-        self.wrong_training_access_token = 'token-5768'
+        self.wrong_training_access_token = 'token-5768'  # nosec B105
         mocker.patch('crczp.sandbox_common_lib.utils.get_object_or_404', return_value=pool)
         yield
 

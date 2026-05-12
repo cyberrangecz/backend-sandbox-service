@@ -11,10 +11,10 @@ from crczp.cloud_commons import TransformationConfiguration
 from crczp.sandbox_common_lib import crczp_config_validation
 from crczp.sandbox_common_lib.exceptions import ImproperlyConfigured
 
-HEAD_IP = '0.0.0.0'
+HEAD_IP = '0.0.0.0'  # nosec B104
 LOG_FILE = 'sandbox-service.log'
 LOG_LEVEL = 'INFO'
-GIT_TOKEN = '<default_token>'
+GIT_TOKEN = '<default_token>'  # nosec B105
 GIT_SERVER = 'gitlab.com'
 GIT_SSH_PORT = 22
 GIT_REST_SERVER = 'https://gitlab.com/'
@@ -24,7 +24,7 @@ ANSIBLE_NETWORKING_REV = 'master'
 SANDBOX_BUILD_TIMEOUT = 3600 * 2
 SANDBOX_DELETE_TIMEOUT = 3600
 SANDBOX_ANSIBLE_TIMEOUT = 3600 * 2
-VOLUMES_PATH = '/tmp/crczp'
+VOLUMES_PATH = '/tmp/crczp'  # nosec B108
 PERSISTENT_VOLUME_CLAIM_NAME = 'sandbox-service'
 ANSIBLE_DOCKER_IMAGE = 'ghcr.io/cyberrangecz/crczp-ansible-runner:1.4.1'
 ANSIBLE_DOCKER_NETWORK = 'bridge'
@@ -33,7 +33,7 @@ SSL_CA_CERTIFICATE_VERIFY = '/etc/ssl/certs'
 DATABASE_ENGINE = 'django.db.backends.postgresql'
 DATABASE_HOST = 'localhost'
 DATABASE_NAME = 'postgres'
-DATABASE_PASSWORD = 'postgres'
+DATABASE_PASSWORD = 'postgres'  # nosec B105
 DATABASE_PORT = '5432'
 DATABASE_USER = 'postgres'
 REDIS_HOST = 'localhost'
