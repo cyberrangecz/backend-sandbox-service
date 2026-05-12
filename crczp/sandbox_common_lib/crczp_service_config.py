@@ -22,15 +22,20 @@ ALLOWED_OIDC_PROVIDERS = []
 
 
 def stack_name_prefix_validator(_, value):
+    """Validate that stack_name_prefix is between 1 and 8 characters long."""
     if len(value) < 1 or len(value) > 8:
         raise ValueError('Value stack_name_prefix can have only 1 to 8 characters')
 
 
 class AllowedOidcProviders(Sequence):
+    """Sequence type for allowed OIDC provider configurations."""
+
     item_type = Typed(dict)
 
 
 class Authentication(Object):
+    """Authentication configuration for the sandbox service."""
+
     authenticated_rest_api = Attribute(type=bool, default=AUTHENTICATED_REST_API)
     allowed_oidc_providers = Attribute(
         type=AllowedOidcProviders, default=tuple(ALLOWED_OIDC_PROVIDERS)
@@ -52,6 +57,8 @@ class Authentication(Object):
 
 
 class CrczpServiceConfig(Object):
+    """Top-level service configuration combining Django and app settings."""
+
     stack_name_prefix = Attribute(
         type=str, default=STACK_NAME_PREFIX, validator=stack_name_prefix_validator
     )
@@ -81,5 +88,6 @@ class CrczpServiceConfig(Object):
 
     @classmethod
     def from_file(cls, path):
-        with open(path) as f:
+        """Load service configuration from a YAML file."""
+        with open(path, encoding='utf-8') as f:
             return cls.load(f)

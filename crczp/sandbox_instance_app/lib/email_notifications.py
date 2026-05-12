@@ -1,3 +1,5 @@
+"""Email notification utilities for sandbox allocation events."""
+
 import smtplib
 import ssl
 from email.message import EmailMessage
@@ -12,6 +14,7 @@ LOG = structlog.get_logger()
 
 
 def send_email(receiver_email, subject, body, crczp_config: CrczpConfiguration):
+    """Send an email using the configured SMTP server."""
     if not crczp_config.smtp_server:
         LOG.warning(
             'ERROR: SMTP server is not configured, email notifications disabled. No email sent.'
@@ -30,6 +33,7 @@ def send_email(receiver_email, subject, body, crczp_config: CrczpConfiguration):
 
 
 def validate_emails_enabled(value: bool):
+    """Validate that email notifications are enabled when required."""
     if value and not settings.CRCZP_CONFIG.smtp_server:
         raise ValidationError(
             'Email SMTP server is not configured, email notifications are disabled.'
@@ -37,6 +41,8 @@ def validate_emails_enabled(value: bool):
 
 
 class EmailManager:
+    """Context manager for sending emails via SMTP."""
+
     def __init__(self, crczp_config: CrczpConfiguration):
         self.config = crczp_config
         self.smtp = None
@@ -44,7 +50,7 @@ class EmailManager:
     def __enter__(self):
         encryption = self.config.smtp_encryption
 
-        if encryption == SMTPEncryption.INSECURE or encryption == SMTPEncryption.TSL:
+        if encryption in (SMTPEncryption.INSECURE, SMTPEncryption.TSL):
             self.smtp = smtplib.SMTP(
                 self.config.smtp_server,
                 self.config.smtp_port,
@@ -69,6 +75,7 @@ class EmailManager:
         return self
 
     def send_email(self, sender_email, receiver_email, message: EmailMessage):
+        """Send the given email message via the active SMTP connection."""
         try:
             self.smtp.sendmail(sender_email, receiver_email, message.as_string())
             LOG.debug('Email sent successfully!')

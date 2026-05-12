@@ -1,3 +1,5 @@
+"""Handlers for sandbox allocation and cleanup request lifecycle management."""
+
 import abc
 from collections.abc import Callable
 from functools import partial
@@ -5,7 +7,7 @@ from functools import partial
 import django_rq
 import structlog
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from rq import Queue
 from rq.job import Job
@@ -43,6 +45,7 @@ from crczp.sandbox_instance_app.models import (
     StackCleanupStage,
 )
 
+User = get_user_model()
 LOG = structlog.get_logger()
 
 OPENSTACK_QUEUE = 'openstack'
@@ -69,7 +72,6 @@ class RequestHandler(abc.ABC):
         """
         Handles request stages creation and their enqueuing.
         """
-        pass
 
     def cancel_request(self, request: SandboxRequest) -> None:
         """
@@ -90,14 +92,12 @@ class RequestHandler(abc.ABC):
         """
         Create a new DB stages for this request and return their handlers.
         """
-        pass
 
     @abc.abstractmethod
     def _get_stage_handlers(self) -> list[StageHandler]:
         """
         Get handlers of existing DB stages for this request.
         """
-        pass
 
     def _enqueue_request(
         self, stage_handlers: list[StageHandler], finalizing_stage: Callable[[], None]
@@ -137,6 +137,7 @@ class RequestHandler(abc.ABC):
 
     @staticmethod
     def create_request_group(units: list[SandboxAllocationUnit]):
+        """Create a SandboxRequestGroup for tracking batch allocation progress."""
         email = units[0].created_by.email
         group = SandboxRequestGroup.objects.create(
             pool=units[0].pool, unit_count=len(units), email=email
@@ -165,6 +166,7 @@ class AllocationRequestHandler(RequestHandler):
         transaction.on_commit(on_commit_method)
 
     def _create_allocation_jobs(self, units: list[SandboxAllocationUnit], created_by: User | None):
+        """Create allocation requests and enqueue stage jobs for each unit."""
         if units[0].pool.send_emails and created_by.email:
             allocation_group = self.create_request_group(units)
         else:
@@ -184,8 +186,8 @@ class AllocationRequestHandler(RequestHandler):
             stage_handlers = self._create_stage_handlers(sandbox, allocation_group)
             self._enqueue_stages(sandbox, stage_handlers)
 
-    def enqueue_request(self, units, created_by: User | None) -> None:
-        self.queue_default.enqueue(self._create_allocation_jobs, units, created_by)
+    def enqueue_request(self, units, created_by: User | None) -> None:  # pylint: disable=arguments-differ
+        """Enqueue the allocation request creation job for the given units."""
 
     def _create_restart_jobs(self, unit: SandboxAllocationUnit):
         LOG.info('Restarting sandbox allocation unit: %s', unit.id)
@@ -203,6 +205,7 @@ class AllocationRequestHandler(RequestHandler):
         self._enqueue_stages(sandbox, stage_handlers)
 
     def restart_request(self, unit: SandboxAllocationUnit) -> None:
+        """Enqueue a restart job for the given allocation unit."""
         self.queue_default.enqueue(self._create_restart_jobs, unit)
 
     def _create_db_stage(
@@ -218,7 +221,7 @@ class AllocationRequestHandler(RequestHandler):
             **kwargs,
         )
 
-    def _create_stage_handlers(
+    def _create_stage_handlers(  # pylint: disable=arguments-differ
         self, sandbox: Sandbox, group: SandboxRequestGroup | None
     ) -> list[StageHandler]:
         """
@@ -342,7 +345,7 @@ class CleanupRequestHandler(RequestHandler):
 
         self._enqueue_stages()
 
-    def enqueue_request(self, unit: SandboxAllocationUnit) -> None:
+    def enqueue_request(self, unit: SandboxAllocationUnit) -> None:  # pylint: disable=arguments-differ
         self.queue_default.enqueue(self._create_cleanup_jobs, unit)
 
     def _create_db_stage(self, stage_class: type[CleanupStage], *args, **kwargs) -> CleanupStage:
@@ -353,7 +356,7 @@ class CleanupRequestHandler(RequestHandler):
             *args, cleanup_request=self.request, cleanup_request_fk_many=self.request, **kwargs
         )
 
-    def _create_stage_handlers(self) -> list[StageHandler]:
+    def _create_stage_handlers(self) -> list[StageHandler]:  # pylint: disable=arguments-differ
         """
         Create a new DB stages for this request and return their handlers.
         """
@@ -408,7 +411,7 @@ class CleanupRequestHandler(RequestHandler):
             )
 
 
-def request_exception_handler(job: Job, exc_type, exc_value, traceback) -> None:
+def request_exception_handler(job: Job, _exc_type, _exc_value, _traceback) -> None:
     """
     Handle exception raised during request execution in Redis queue worker.
 

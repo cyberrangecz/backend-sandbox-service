@@ -1,3 +1,5 @@
+"""Validation helpers for CrczpConfiguration attributes."""
+
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator, validate_ipv4_address
 
@@ -5,6 +7,7 @@ ALLOWED_SCHEMES = ['http', 'https']
 
 
 def validate_git_rest_url(obj, git_rest_server) -> bool:
+    """Validate that the git REST server URL uses an allowed scheme."""
     validate = URLValidator(schemes=ALLOWED_SCHEMES)
 
     try:
@@ -19,6 +22,7 @@ def validate_git_rest_url(obj, git_rest_server) -> bool:
 
 
 def validate_head_ip(obj, head_ip):
+    """Validate that the head IP is a valid IPv4 address."""
     try:
         validate_ipv4_address(head_ip)
     except ValidationError:

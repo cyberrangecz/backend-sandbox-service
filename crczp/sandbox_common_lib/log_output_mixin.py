@@ -7,7 +7,9 @@ from rest_framework.response import Response
 from crczp.sandbox_common_lib import utils
 
 
-class CompressedOutputMixin:
+class CompressedOutputMixin:  # pylint: disable=too-few-public-methods
+    """Mixin that provides a helper for building compressed output responses."""
+
     def create_outputs_response(self, outputs_queryset, from_row: int) -> Response:
         """
         Create a compressed response for outputs endpoints.

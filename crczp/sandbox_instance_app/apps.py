@@ -1,9 +1,13 @@
+"""Django app configuration for the sandbox instance app."""
+
 from django.apps import AppConfig
 
 from crczp.sandbox_common_lib import utils
 
 
 class CrczpSandboxInstanceAppConfig(AppConfig):
+    """App configuration for CRCZP sandbox instance application."""
+
     name = __package__
 
     def ready(self):

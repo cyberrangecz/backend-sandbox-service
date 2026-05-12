@@ -1,3 +1,5 @@
+"""Cloud utility functions for accessing OpenStack images."""
+
 from django.core.cache import cache
 
 from crczp.sandbox_common_lib import utils

@@ -1,3 +1,5 @@
+"""Topology representation classes for sandbox visualization."""
+
 import structlog
 
 from crczp.sandbox_common_lib.common_cloud import list_images
@@ -6,11 +8,15 @@ from crczp.sandbox_instance_app.lib.nodes import find_image_for_node, get_node_i
 LOG = structlog.getLogger()
 
 
-class Topology:
+class Topology:  # pylint: disable=too-few-public-methods
     """Represents a topology of a sandbox."""
 
-    class HostNode:
-        def __init__(self, name, os_type, gui_access, is_accessible, ip):
+    class HostNode:  # pylint: disable=too-few-public-methods
+        """Represents a host node in the topology."""
+
+        def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+            self, name, os_type, gui_access, is_accessible, ip
+        ):
             """
             Initialize a HostNode instance.
 
@@ -25,8 +31,12 @@ class Topology:
             self.is_accessible = is_accessible
             self.ip = ip
 
-    class RouterNode(HostNode):
-        def __init__(self, name, os_type, gui_access, subnets, is_accessible, ip):
+    class RouterNode(HostNode):  # pylint: disable=too-few-public-methods
+        """Represents a router node in the topology."""
+
+        def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+            self, name, os_type, gui_access, subnets, is_accessible, ip
+        ):
             """
             Initialize a RouterNode instance.
 
@@ -40,7 +50,9 @@ class Topology:
             super().__init__(name, os_type, gui_access, is_accessible, ip)
             self.subnets = subnets
 
-    class Subnet:
+    class Subnet:  # pylint: disable=too-few-public-methods
+        """Represents a subnet in the topology."""
+
         def __init__(self, name, cidr, hosts):
             """
             Initialize a Subnet instance.

@@ -10,14 +10,13 @@ import zipfile
 
 import requests
 import structlog
-from crczp.cloud_commons import TopologyInstance
-from crczp.topology_definition.models import DockerContainers, Host, Router, TopologyDefinition
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.db import transaction
 from rest_framework.generics import get_object_or_404
 
+from crczp.cloud_commons import TopologyInstance
 from crczp.sandbox_common_lib import exceptions, utils
 from crczp.sandbox_definition_app.lib import definitions
 from crczp.sandbox_instance_app.lib.sshconfig import (
@@ -27,16 +26,19 @@ from crczp.sandbox_instance_app.lib.sshconfig import (
 )
 from crczp.sandbox_instance_app.lib.topology import Topology
 from crczp.sandbox_instance_app.models import Sandbox, SandboxLock
+from crczp.topology_definition.models import DockerContainers, Host, Router, TopologyDefinition
 
 SANDBOX_CACHE_TIMEOUT = None  # Cache indefinitely
 SANDBOX_CACHE_PREFIX = 'terraformstack-{}'
 TEMPLATE_DIR_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'assets')
 HEADERS = {'accept': 'application/json', 'Content-Type': 'application/json'}
 
+User = get_user_model()
 LOG = structlog.getLogger()
 
 
 def get_post_data_json(user_id, access_token, generated_variables):
+    """Build and return a JSON payload for posting sandbox answers."""
     post_data = {'user_id': user_id, 'access_token': access_token, 'sandbox_answers': []}
 
     for variable in generated_variables:
@@ -49,6 +51,7 @@ def get_post_data_json(user_id, access_token, generated_variables):
 
 
 def post_answers(user_id, access_token, generated_variables):
+    """Post generated sandbox answer variables to the answers storage service."""
     try:
         post_data_json = get_post_data_json(user_id, access_token, generated_variables)
         answers_storage_endpoint = (
@@ -57,7 +60,7 @@ def post_answers(user_id, access_token, generated_variables):
             else '/sandboxes'
         )
         post_response = requests.post(
-            answers_storage_endpoint, data=post_data_json, headers=HEADERS
+            answers_storage_endpoint, data=post_data_json, headers=HEADERS, timeout=30
         )
         post_response.raise_for_status()
     except requests.HTTPError as exc:
@@ -198,10 +201,12 @@ def clear_cache(sandbox: Sandbox) -> None:
 
 
 def get_cache_key(sandbox: Sandbox) -> str:
+    """Return the cache key for the given sandbox."""
     return SANDBOX_CACHE_PREFIX.format(sandbox.id)
 
 
 def generate_new_sandbox_uuid():
+    """Generate a new unique sandbox UUID not already present in the database."""
     while True:
         new_uuid = str(uuid.uuid4())
         if not Sandbox.objects.filter(pk=new_uuid).count():

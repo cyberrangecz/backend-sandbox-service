@@ -1,3 +1,5 @@
+"""OIDC JWT authentication utilities for sandbox UAG."""
+
 import base64
 from urllib.parse import urlparse
 
@@ -23,15 +25,17 @@ class JWTAccessTokenAuthentication(BearerTokenAuthentication):
 
     @staticmethod
     def extract_issuer(token):
+        """Extract the issuer from a JWT token payload."""
         data = JWT().unpack(token).payload()
         return data.get('iss').rstrip('/')
 
     @cache(ttl=WELL_KNOWN_CONFIG_CACHE_TTL)
     def get_well_known_config(self, provider):
+        """Fetch and cache the OpenID Connect well-known configuration for the given provider."""
         well_known_config_url = provider.get('well_known_config')
         if not well_known_config_url:
             well_known_config_url = provider['issuer'] + '/.well-known/openid-configuration'
-        response = requests.get(well_known_config_url)
+        response = requests.get(well_known_config_url, timeout=30)
         response.raise_for_status()
         return response.json()
 
@@ -55,9 +59,9 @@ class JWTAccessTokenAuthentication(BearerTokenAuthentication):
         userinfo_endpoint = provider.get('userinfo_endpoint')
         if not userinfo_endpoint:
             userinfo_endpoint = well_known_config['userinfo_endpoint']
-        http_headers = {'Authorization': 'Bearer {}'.format(token.decode('ascii'))}
+        http_headers = {'Authorization': f'Bearer {token.decode("ascii")}'}
 
-        response = requests.get(userinfo_endpoint, headers=http_headers)
+        response = requests.get(userinfo_endpoint, headers=http_headers, timeout=30)
         response.raise_for_status()
 
         return response.json()
@@ -77,7 +81,7 @@ class JWTAccessTokenAuthentication(BearerTokenAuthentication):
                 payload_decoded_trim = payload_string[sub_pos + len('"sub":"') :]
                 sub = payload_decoded_trim[: payload_decoded_trim.find('"')]
                 userinfo = CACHE.get(OIDC_SUB_PREFIX + sub)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             LOG.warn(f'An exception occurred during parsing of the token: {e}')
 
         if not userinfo:

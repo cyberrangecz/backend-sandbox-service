@@ -1,3 +1,6 @@
+"""Tests for sandbox instance request handlers."""
+
+# pylint: disable=missing-function-docstring
 from unittest.mock import MagicMock, call
 
 import pytest
@@ -22,7 +25,10 @@ pytestmark = [pytest.mark.django_db]
 
 
 class PicklableMock(MagicMock):
+    """MagicMock subclass that can be pickled for use with RQ workers."""
+
     def __reduce__(self):
+        """Return pickling instructions for MagicMock."""
         return MagicMock, ()
 
 
@@ -68,6 +74,8 @@ def assert_jobs_dependencies(jobs, default_queue):
 
 
 class TestAllocationRequestHandlerUnit:
+    """Unit tests for AllocationRequestHandler."""
+
     @pytest.fixture(autouse=True)
     def set_up(self, mocker):
         mocker.patch('crczp.sandbox_instance_app.lib.request_handlers.LOG')
@@ -98,9 +106,11 @@ class TestAllocationRequestHandlerUnit:
         assert user_handler.stage == stages[2]
 
     def test_enqueue_stages(self, sandbox, mocker):
-        fake_get_fin_stage_fn = mocker.patch(
-            'crczp.sandbox_instance_app.lib.request_handlers.RequestHandler._get_finalizing_stage_function'
+        target = (
+            'crczp.sandbox_instance_app.lib.request_handlers'
+            '.RequestHandler._get_finalizing_stage_function'
         )
+        fake_get_fin_stage_fn = mocker.patch(target)
         fake_get_fin_stage_fn.return_value = 'fake_finalization_fn'
         fake_transaction = mocker.patch(
             'crczp.sandbox_instance_app.lib.request_handlers.transaction'
@@ -291,6 +301,8 @@ class TestAllocationRequestHandlerUnit:
 
 
 class TestCleanupRequestHandlerUnit:
+    """Unit tests for CleanupRequestHandler."""
+
     @pytest.fixture(autouse=True)
     def set_up(self, mocker):
         mocker.patch('crczp.sandbox_instance_app.lib.request_handlers.LOG')
@@ -402,6 +414,8 @@ class TestCleanupRequestHandlerUnit:
 
 @pytest.mark.integration
 class TestAllocationRequestHandler:
+    """Integration tests for AllocationRequestHandler."""
+
     @pytest.fixture(autouse=True)
     def set_up(self, mocker):
         empty_queues()
@@ -485,6 +499,8 @@ class TestAllocationRequestHandler:
 
 @pytest.mark.integration
 class TestCleanupRequestHandler:
+    """Integration tests for CleanupRequestHandler."""
+
     @pytest.fixture(autouse=True)
     def set_up(self, mocker):
         empty_queues()

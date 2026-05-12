@@ -1,3 +1,5 @@
+"""Django REST Framework permission classes for sandbox API access."""
+
 from rest_framework.permissions import DjangoModelPermissions
 
 

@@ -1,3 +1,5 @@
+"""REST API views for sandbox instance management."""
+
 from wsgiref.util import FileWrapper
 
 import structlog
@@ -125,6 +127,7 @@ class PoolDetailDeleteUpdateView(generics.RetrieveDestroyAPIView):
         responses={200: serializers.PoolSerializer, **POOL_RESPONSES},
     )
     def patch(self, request, *args, **kwargs):
+        """Partially update a pool."""
         pool = self.get_object()
         serializer = self.serializer_class(pool, data=request.data, partial=True)
 
@@ -166,10 +169,11 @@ class PoolDefinitionView(generics.RetrieveAPIView):
     },
 )
 class PoolLockListCreateView(generics.ListCreateAPIView):
-    serializer_class = serializers.PoolLockSerializer
     """
     get: List locks for given pool.
     """
+
+    serializer_class = serializers.PoolLockSerializer
 
     def get_queryset(self):
         pool_id = self.kwargs.get('pool_id')
@@ -278,6 +282,8 @@ class PoolCleanupRequestsListCreateView(generics.ListCreateAPIView):
 
 
 class PoolCleanupRequestUnlockedCreateView(APIView):
+    """API view to create cleanup requests for unlocked sandboxes in a pool."""
+
     serializer_class = serializers.PoolCleanupRequestSerializer
     queryset = CleanupRequest.objects.none()
 
@@ -309,6 +315,8 @@ class PoolCleanupRequestUnlockedCreateView(APIView):
 
 
 class PoolCleanupRequestFailedCreateView(APIView):
+    """API view to create cleanup requests for failed sandboxes in a pool."""
+
     serializer_class = serializers.PoolCleanupRequestFailedSerializer
     queryset = CleanupRequest.objects.none()
 
@@ -431,6 +439,7 @@ class SandboxAllocationUnitDetailUpdateView(generics.RetrieveAPIView):
     lookup_url_kwarg = 'unit_id'
 
     def patch(self, request, *args, **kwargs):
+        """Partially update a sandbox allocation unit."""
         allocation_unit = self.get_object()
         serializer = self.serializer_class(allocation_unit, data=request.data, partial=True)
         if serializer.is_valid():
@@ -489,6 +498,8 @@ class AllocationRequestDetailView(generics.RetrieveAPIView):
 
 
 class AllocationRequestCancelView(generics.GenericAPIView):
+    """API view to cancel an allocation request."""
+
     serializer_class = serializers.AllocationRequestSerializer
     queryset = AllocationRequest.objects.all()
     lookup_url_kwarg = 'request_id'
@@ -514,7 +525,9 @@ class AllocationRequestCancelView(generics.GenericAPIView):
         **SANDBOX_RESPONSES,
     },
 )
-class SandboxCleanupRequestView(generics.RetrieveDestroyAPIView, generics.CreateAPIView):
+class SandboxCleanupRequestView(generics.RetrieveDestroyAPIView, generics.CreateAPIView):  # pylint: disable=too-many-ancestors
+    """API view to get, create, or delete a sandbox cleanup request."""
+
     queryset = SandboxAllocationUnit.objects.all()
     lookup_url_kwarg = 'unit_id'
     serializer_class = serializers.CleanupRequestSerializer
@@ -552,6 +565,8 @@ class SandboxCleanupRequestView(generics.RetrieveDestroyAPIView, generics.Create
 
 
 class SandboxAllocationStagesRestartView(generics.GenericAPIView):
+    """API view to restart failed sandbox allocation stages."""
+
     serializer_class = serializers.SandboxAllocationUnitSerializer
     queryset = SandboxAllocationUnit.objects.all()
     lookup_url_kwarg = 'unit_id'
@@ -591,6 +606,8 @@ class CleanupRequestDetailView(generics.RetrieveAPIView):
 
 
 class CleanupRequestCancelView(generics.GenericAPIView):
+    """API view to cancel a cleanup request."""
+
     serializer_class = serializers.CleanupRequestSerializer
     queryset = CleanupRequest.objects.all()
     lookup_url_kwarg = 'request_id'
@@ -666,9 +683,12 @@ class TerraformCleanupStageDetailView(generics.RetrieveAPIView):
     },
 )
 class TerraformAllocationStageOutputListView(log_output_mixin.CompressedOutputMixin, APIView):
+    """API view to list terraform allocation stage log output."""
+
     queryset = AllocationRequest.objects.all()
 
     def get(self, request, request_id):
+        """List terraform allocation stage log output."""
         from_row = request.query_params.get('from_row', 0)
         try:
             from_row = int(from_row)
@@ -696,6 +716,8 @@ class TerraformAllocationStageOutputListView(log_output_mixin.CompressedOutputMi
     },
 )
 class PoolSandboxListView(generics.ListAPIView):
+    """API view to list all ready sandboxes in a pool."""
+
     serializer_class = serializers.SandboxSerializer
     permission_classes = [OrganizerPermission | AdminPermission]
 
@@ -707,6 +729,8 @@ class PoolSandboxListView(generics.ListAPIView):
 
 
 class SandboxGetAndLockView(generics.RetrieveAPIView):
+    """API view to retrieve an unlocked sandbox from a pool and lock it."""
+
     serializer_class = serializers.SandboxSerializer
     queryset = Sandbox.objects.filter(ready=True)  # To allow trainee to access training run!
     lookup_url_kwarg = 'pool_id'
@@ -736,7 +760,7 @@ class SandboxGetAndLockView(generics.RetrieveAPIView):
                     {'detail': 'This pool does not have a training assigned'},
                     status=status.HTTP_403_FORBIDDEN,
                 )
-            elif pool.lock.training_access_token != training_access_token:
+            if pool.lock.training_access_token != training_access_token:
                 return Response(
                     {'detail': 'Provided training access token is not valid.'},
                     status=status.HTTP_403_FORBIDDEN,
@@ -795,7 +819,8 @@ class SandboxDetailView(generics.RetrieveAPIView):
     },
 )
 class SandboxAllocationUnitLockRetrieveCreateDestroyView(
-    generics.RetrieveDestroyAPIView, generics.CreateAPIView
+    generics.RetrieveDestroyAPIView,
+    generics.CreateAPIView,  # pylint: disable=too-many-ancestors
 ):
     """
     post: Create locks for given sandbox allocation unit if its sandbox exists.
@@ -875,6 +900,8 @@ class SandboxTopologyView(generics.RetrieveAPIView):
     },
 )
 class SandboxVMDetailView(generics.GenericAPIView):
+    """API view to retrieve VM details and perform actions on a VM in a sandbox."""
+
     queryset = Sandbox.objects.filter(ready=True)
     lookup_url_kwarg = 'sandbox_uuid'
     serializer_class = serializers.NodeSerializer
@@ -908,6 +935,8 @@ class SandboxVMDetailView(generics.GenericAPIView):
 
 
 class SandboxVMConsoleView(APIView):
+    """API view to get a console URL for a VM in a sandbox."""
+
     queryset = Sandbox.objects.none()
 
     @extend_schema(responses={200: OpenApiResponse(description='Console URL'), **SANDBOX_RESPONSES})
@@ -927,6 +956,8 @@ class SandboxVMConsoleView(APIView):
 
 @extend_schema(responses={200: OpenApiResponse(description='SSH Config File'), **SANDBOX_RESPONSES})
 class SandboxUserSSHAccessView(APIView):
+    """API view to generate SSH config for user access to a sandbox."""
+
     queryset = Sandbox.objects.none()
 
     # noinspection PyMethodMayBeStatic
@@ -942,6 +973,8 @@ class SandboxUserSSHAccessView(APIView):
 
 @extend_schema(responses={200: OpenApiResponse(description='Man IP'), **SANDBOX_RESPONSES})
 class SandboxManOutPortIPView(APIView):
+    """API view to retrieve the MAN out-port IP address for a sandbox."""
+
     queryset = Sandbox.objects.none()
 
     # noinspection PyMethodMayBeStatic
@@ -954,6 +987,8 @@ class SandboxManOutPortIPView(APIView):
 
 @extend_schema(responses={200: OpenApiResponse(description='SSH Config File'), **SANDBOX_RESPONSES})
 class PoolManagementSSHAccessView(APIView):
+    """API view to generate management SSH access config for a pool."""
+
     queryset = Pool.objects.none()
 
     # noinspection PyMethodMayBeStatic
@@ -968,6 +1003,8 @@ class PoolManagementSSHAccessView(APIView):
 
 
 class SandboxConsolesView(APIView):
+    """API view to retrieve SPICE console URLs for all nodes in a sandbox topology."""
+
     queryset = Sandbox.objects.none()
 
     @extend_schema(
@@ -995,6 +1032,8 @@ class SandboxConsolesView(APIView):
 
 @extend_schema(responses={200: OpenApiResponse(description='Variables List'), **SANDBOX_RESPONSES})
 class PoolVariablesView(APIView):
+    """API view to retrieve APG variable names from a pool's sandbox definition."""
+
     queryset = Pool.objects.none()
 
     # noinspection PyMethodMayBeStatic
@@ -1026,6 +1065,8 @@ class PoolVariablesView(APIView):
     }
 )
 class TopologyNodeConnectionData(APIView):
+    """API view to retrieve connection data for a node in a sandbox topology."""
+
     queryset = Sandbox.objects.none()
     serializer_class = serializers.NodeAccessDataSerializer
 

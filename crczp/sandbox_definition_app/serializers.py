@@ -17,10 +17,13 @@ from crczp.sandbox_definition_app import models
 
 
 class DefinitionSerializer(serializers.ModelSerializer):
+    """Serializer for the Definition model."""
+
     created_by = serializers.SerializerMethodField()
 
-    class Meta:
-        model = models.Definition
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for DefinitionSerializer."""
+
         fields = ('id', 'name', 'url', 'rev', 'created_by')
         read_only_fields = ('id', 'name', 'created_by')
         validators = [
@@ -30,21 +33,28 @@ class DefinitionSerializer(serializers.ModelSerializer):
     @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
     def get_created_by(obj: models.Definition) -> bool:
+        """Return the serialized user who created this definition."""
         return UserSerializer(obj.created_by).data
 
 
 class DefinitionSerializerCreate(DefinitionSerializer):
     """The name needs to be a readable field, otherwise it is ignored."""
 
-    class Meta(DefinitionSerializer.Meta):
+    class Meta(DefinitionSerializer.Meta):  # pylint: disable=too-few-public-methods
+        """Meta options for DefinitionSerializerCreate."""
+
         read_only_fields = ('id',)
 
 
 class DefinitionRevSerializer(serializers.Serializer):
+    """Serializer for a definition rev (name)."""
+
     name = serializers.CharField()
 
 
 class LocalVariableSerializer(serializers.Serializer):
+    """Serializer for a local sandbox variable definition."""
+
     name = serializers.CharField()
     type = serializers.CharField()
     generated_value = serializers.CharField(read_only=True)
@@ -55,5 +65,7 @@ class LocalVariableSerializer(serializers.Serializer):
 
 
 class LocalSandboxVariablesSerializer(serializers.Serializer):
+    """Serializer for local sandbox variable access credentials."""
+
     user_id = serializers.IntegerField()
     access_token = serializers.CharField()

@@ -1,8 +1,10 @@
+"""Business logic for creating and managing sandbox allocation and cleanup requests."""
+
 import enum
 from functools import partial
 
 import structlog
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 
@@ -15,10 +17,13 @@ from crczp.sandbox_instance_app.models import (
     SandboxAllocationUnit,
 )
 
+User = get_user_model()
 LOG = structlog.get_logger()
 
 
 class StageState(enum.Enum):
+    """Enumeration of possible states for a sandbox request stage."""
+
     IN_QUEUE = 'IN_QUEUE'
     RUNNING = 'RUNNING'
     FINISHED = 'FINISHED'

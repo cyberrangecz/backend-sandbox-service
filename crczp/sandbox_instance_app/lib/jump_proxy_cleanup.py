@@ -1,3 +1,5 @@
+"""Utilities for cleaning up resources on the jump proxy host."""
+
 import paramiko
 import structlog
 from django.conf import settings
@@ -8,9 +10,10 @@ LOG = structlog.get_logger()
 
 
 def delete_jump_ssh_key(allocation_unit: SandboxAllocationUnit):
+    """Delete the SSH key for the given allocation unit from the jump proxy."""
     name = allocation_unit.get_stack_name()
     ssh = connect_to_jump()
-    stdin, stdout, stderr = ssh.exec_command(f'sudo rm -rf /home/{name}')
+    _stdin, stdout, stderr = ssh.exec_command(f'sudo rm -rf /home/{name}')
 
     # Wait for the command to finish
     stdout.channel.recv_exit_status()
@@ -20,6 +23,7 @@ def delete_jump_ssh_key(allocation_unit: SandboxAllocationUnit):
 
 
 def connect_to_jump():
+    """Establish an SSH connection to the configured jump proxy host."""
     hostname = settings.CRCZP_CONFIG.proxy_jump_to_man.Host
     user = settings.CRCZP_CONFIG.proxy_jump_to_man.User
     identity_file = settings.CRCZP_CONFIG.proxy_jump_to_man.IdentityFile
@@ -29,6 +33,7 @@ def connect_to_jump():
 
 
 def ssh_connect(hostname, port, username, key_file_path):
+    """Create and return an authenticated SSH connection."""
     try:
         ssh = paramiko.SSHClient()
         ssh.load_system_host_keys()
@@ -43,6 +48,7 @@ def ssh_connect(hostname, port, username, key_file_path):
 
 
 def load_private_key(key_path):
+    """Load and return a Paramiko private key from the given file path."""
     key_classes = [paramiko.RSAKey, paramiko.ECDSAKey, paramiko.Ed25519Key]
     for key_class in key_classes:
         try:

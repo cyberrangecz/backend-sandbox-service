@@ -2,18 +2,23 @@
 Serializers for ostack_proxy_elements classes.
 """
 
-from crczp.cloud_commons import Image
 from rest_framework import serializers
+
+from crczp.cloud_commons import Image
 
 OPENSTACK_OWNER_SPECIFIED_PREFIX = 'owner_specified.openstack.'
 
 
 class QuotaSerializer(serializers.Serializer):
+    """Serializer for a single OpenStack quota value."""
+
     limit = serializers.FloatField()
     in_use = serializers.FloatField()
 
 
 class QuotaSetSerializer(serializers.Serializer):
+    """Serializer for a complete set of OpenStack project quotas."""
+
     vcpu = QuotaSerializer()
     ram = QuotaSerializer()
     instances = QuotaSerializer()
@@ -23,6 +28,8 @@ class QuotaSetSerializer(serializers.Serializer):
 
 
 class ImageSerializer(serializers.Serializer):
+    """Serializer for an OpenStack image."""
+
     os_distro = serializers.CharField()
     os_type = serializers.CharField()
     disk_format = serializers.CharField()
@@ -41,12 +48,14 @@ class ImageSerializer(serializers.Serializer):
 
     @staticmethod
     def get_size(obj: Image) -> int | None:
+        """Return image size in GiB, or None if not set."""
         if obj.size is None:
             return None
         return obj.size / 1024**3
 
     @staticmethod
     def get_owner_specified(obj: Image) -> dict:
+        """Return owner_specified metadata with the OpenStack prefix stripped."""
         return {
             (
                 key[len(OPENSTACK_OWNER_SPECIFIED_PREFIX) :]
@@ -58,6 +67,8 @@ class ImageSerializer(serializers.Serializer):
 
 
 class ProjectLimitsSerializer(serializers.Serializer):
+    """Serializer for OpenStack project absolute limits."""
+
     vcpu = serializers.IntegerField()
     ram = serializers.FloatField()
     instances = serializers.IntegerField()

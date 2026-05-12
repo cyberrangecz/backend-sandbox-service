@@ -9,7 +9,6 @@ import logging
 import uuid
 
 import structlog
-from crczp.terraform_driver import CrczpTerraformClient
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
@@ -22,6 +21,8 @@ from drf_spectacular.utils import OpenApiResponse
 from rest_framework import serializers, status
 from rest_framework.generics import get_object_or_404 as gen_get_object_or_404
 from rest_framework.response import Response
+
+from crczp.terraform_driver import CrczpTerraformClient
 
 # Create logger
 LOG = structlog.get_logger()
@@ -152,7 +153,7 @@ def clear_cache(cache_key: str) -> None:
 
 def get_simple_uuid() -> str:
     """First four bytes of UUID as string."""
-    return str(uuid.uuid4()).split('-')[0]
+    return str(uuid.uuid4()).split('-', maxsplit=1)[0]
 
 
 class ErrorSerilizer(serializers.Serializer):
@@ -179,6 +180,7 @@ ERROR_RESPONSES = {
 
 
 def get_object_or_404(queryset, *filter_args, **filter_kwargs):
+    """Wrap get_object_or_404 to include the model name and filter kwargs in the 404 message."""
     try:
         return gen_get_object_or_404(queryset, *filter_args, **filter_kwargs)
     except Http404:

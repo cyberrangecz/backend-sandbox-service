@@ -14,27 +14,39 @@ from crczp.sandbox_ansible_app import models
 
 
 class NetworkingAnsibleAllocationStageSerializer(serializers.ModelSerializer):
+    """Serializer for NetworkingAnsibleAllocationStage."""
+
     request_id = serializers.PrimaryKeyRelatedField(source='allocation_request', read_only=True)
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for NetworkingAnsibleAllocationStageSerializer."""
+
         model = models.NetworkingAnsibleAllocationStage
         fields = ('id', 'request_id', 'start', 'end', 'failed', 'error_message', 'repo_url', 'rev')
         read_only_fields = fields
 
 
 class UserAnsibleAllocationStageSerializer(serializers.ModelSerializer):
+    """Serializer for UserAnsibleAllocationStage."""
+
     request_id = serializers.PrimaryKeyRelatedField(source='allocation_request', read_only=True)
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for UserAnsibleAllocationStageSerializer."""
+
         model = models.UserAnsibleAllocationStage
         fields = ('id', 'request_id', 'start', 'end', 'failed', 'error_message', 'repo_url', 'rev')
         read_only_fields = fields
 
 
 class NetworkingAnsibleCleanupStageSerializer(serializers.ModelSerializer):
+    """Serializer for NetworkingAnsibleCleanupStage."""
+
     request_id = serializers.PrimaryKeyRelatedField(source='cleanup_request', read_only=True)
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for NetworkingAnsibleCleanupStageSerializer."""
+
         model = models.NetworkingAnsibleCleanupStage
         fields = (
             'id',
@@ -48,9 +60,13 @@ class NetworkingAnsibleCleanupStageSerializer(serializers.ModelSerializer):
 
 
 class UserAnsibleCleanupStageSerializer(serializers.ModelSerializer):
+    """Serializer for UserAnsibleCleanupStage."""
+
     request_id = serializers.PrimaryKeyRelatedField(source='cleanup_request', read_only=True)
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for UserAnsibleCleanupStageSerializer."""
+
         model = models.UserAnsibleCleanupStage
         fields = (
             'id',
@@ -64,7 +80,11 @@ class UserAnsibleCleanupStageSerializer(serializers.ModelSerializer):
 
 
 class AllocationAnsibleOutputSerializer(serializers.ModelSerializer):
-    class Meta:
+    """Serializer for AllocationAnsibleOutput."""
+
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for AllocationAnsibleOutputSerializer."""
+
         model = models.AllocationAnsibleOutput
         fields = ('content',)
         read_only_fields = fields

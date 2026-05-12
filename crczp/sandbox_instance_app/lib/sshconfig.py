@@ -1,8 +1,11 @@
+"""SSH configuration classes for CRCZP sandbox access."""
+
 from typing import Any
 
 import structlog
-from crczp.cloud_commons import Link, TopologyInstance
 from ssh_config.client import Host, parse_config  # Don't import SSHConfig unless reading from file
+
+from crczp.cloud_commons import Link, TopologyInstance
 
 LOG = structlog.getLogger()
 
@@ -29,7 +32,7 @@ class CrczpSSHConfig:
         """
         return str(self)
 
-    def add_host(
+    def add_host(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         host_name: str,
         user: str,
@@ -42,14 +45,14 @@ class CrczpSSHConfig:
         """
         Create and add Host instance to this SSH config file.
         """
-        opts = dict(
-            HostName=host_name,
-            User=user,
-            IdentityFile=identity_file,
-            UserKnownHostsFile='/dev/null',
-            StrictHostKeyChecking='no',
-            IdentitiesOnly='yes',
-        )
+        opts = {
+            'HostName': host_name,
+            'User': user,
+            'IdentityFile': identity_file,
+            'UserKnownHostsFile': '/dev/null',
+            'StrictHostKeyChecking': 'no',
+            'IdentitiesOnly': 'yes',
+        }
         if port is not None:
             opts['Port'] = port
         if proxy_jump:
@@ -60,7 +63,7 @@ class CrczpSSHConfig:
         host = Host(names, opts)
         self.hosts.append(host)
 
-    def add_docker_host(
+    def add_docker_host(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         host_name: str,
         user: str,
@@ -70,21 +73,28 @@ class CrczpSSHConfig:
         alias: str | None = None,
         **kwargs,
     ) -> None:
-        opts = dict(
-            HostName=host_name,
-            User=user,
-            IdentityFile=identity_file,
-            Port=port,
-            UserKnownHostsFile='/dev/null',
-            StrictHostKeyChecking='no',
-            IdentitiesOnly='yes',
-        )
+        """Create and add a Host entry for a Docker container to this SSH config."""
+        opts = {
+            'HostName': host_name,
+            'User': user,
+            'IdentityFile': identity_file,
+            'Port': port,
+            'UserKnownHostsFile': '/dev/null',
+            'StrictHostKeyChecking': 'no',
+            'IdentitiesOnly': 'yes',
+        }
         if proxy_jump:
             opts['ProxyJump'] = proxy_jump
         opts.update(kwargs)
         # For containers, alias is always present
         host = Host([alias, host_name] if alias else host_name, opts)
         self.hosts.append(host)
+
+    @classmethod
+    def load(cls, file_path: str):
+        """Load SSH config from a file path."""
+        with open(file_path, encoding='utf-8') as f:
+            return cls.from_str(f.read())
 
     @classmethod
     def from_str(cls, ssh_config: str):
@@ -94,8 +104,8 @@ class CrczpSSHConfig:
         instance = cls()
         instance.raw = ssh_config
         if not ssh_config or not ssh_config.strip():
-            raise Exception('Empty SSHConfig string')
-        hosts, global_options = parse_config(ssh_config)
+            raise ValueError('Empty SSHConfig string')
+        hosts, _global_options = parse_config(ssh_config)
         for host_dict in hosts:
             name = host_dict['host']
             attrs = host_dict['attrs']
@@ -119,7 +129,7 @@ class CrczpUserSSHConfig(CrczpSSHConfig):
     Represents SSH config file used by CRCZP trainees.
     """
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         top_ins: TopologyInstance,
         proxy_host: str,
@@ -173,7 +183,7 @@ class CrczpMgmtSSHConfig(CrczpSSHConfig):
     Represents SSH config file used by CRCZP designers/organizers.
     """
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         top_ins: TopologyInstance,
         proxy_host: str,
@@ -226,7 +236,7 @@ class CrczpAnsibleSSHConfig(CrczpMgmtSSHConfig):
     Represents SSH config file used by CRCZP automated provisioning using Ansible.
     """
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         top_ins: TopologyInstance,
         pool_private_key_path: str,

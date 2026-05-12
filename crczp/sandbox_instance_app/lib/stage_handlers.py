@@ -1,3 +1,5 @@
+"""Stage handler classes for managing sandbox allocation and cleanup stage execution."""
+
 import abc
 import contextlib
 import os
@@ -5,13 +7,13 @@ import signal
 
 import docker.errors
 import structlog
-from crczp.cloud_commons import CrczpException, StackCreationFailed
 from django.conf import settings
 from django.utils import timezone
 from redis import Redis
 from rq.exceptions import NoSuchJobError
 from rq.job import Job
 
+from crczp.cloud_commons import CrczpException, StackCreationFailed
 from crczp.sandbox_ansible_app.lib.ansible import AllocationAnsibleRunner, AnsibleRunner
 from crczp.sandbox_ansible_app.models import (
     AnsibleAllocationStage,
@@ -101,7 +103,6 @@ class StageHandler(abc.ABC):
         """
         Execute the stage.
         """
-        pass
 
     def cancel(self) -> None:
         """
@@ -116,7 +117,7 @@ class StageHandler(abc.ABC):
             try:
                 LOG.info(f'Cancellation of stage {self.name} started', stage=self.stage)
                 self._delete_job()
-                return self._cancel()
+                self._cancel()
             except Exception as ex:
                 self.stage.error_message = str(ex)
                 raise
@@ -145,7 +146,6 @@ class StageHandler(abc.ABC):
         """
         Cancel the stage
         """
-        pass
 
 
 class StackStageHandler(StageHandler):
@@ -157,11 +157,11 @@ class StackStageHandler(StageHandler):
 
     @abc.abstractmethod
     def _execute(self) -> None:
-        pass
+        """Execute the stack stage."""
 
     @abc.abstractmethod
     def _cancel(self) -> None:
-        pass
+        """Cancel the stack stage."""
 
     def _log_process_output(self, process, terraform_output, **kwargs):
         output = self._client.get_process_output(process)
@@ -180,7 +180,7 @@ class StackStageHandler(StageHandler):
         """
         Wait for process to finish.
         """
-        stdout, stderr, return_code = self._client.wait_for_process(process, timeout)
+        _stdout, stderr, return_code = self._client.wait_for_process(process, timeout)
         if return_code:
             LOG.error('Terraform execution failed', stderr=stderr, **kwargs)
             terraform_output.objects.create(**kwargs, content=stderr)
@@ -280,7 +280,7 @@ class AllocationStackStageHandler(StackStageHandler):
                 process_id = int(self.stage.terraformstack.stack_id)
                 os.kill(process_id, signal.SIGTERM)
         except ProcessLookupError:
-            return
+            pass
 
 
 class CleanupStackStageHandler(StackStageHandler):
@@ -303,7 +303,6 @@ class CleanupStackStageHandler(StackStageHandler):
 
         INFO: Nothing to be done. Deletion is irreversible operation.
         """
-        pass
 
 
 class AnsibleStageHandler(StageHandler):
@@ -321,12 +320,10 @@ class AnsibleStageHandler(StageHandler):
         self.stage = stage
 
     @abc.abstractmethod
-    def _execute(self) -> None:
-        pass
+    def _execute(self) -> None: ...
 
     @abc.abstractmethod
-    def _cancel(self) -> None:
-        pass
+    def _cancel(self) -> None: ...
 
     def create_directory_path(self, allocation_unit: SandboxAllocationUnit):
         """
@@ -443,4 +440,3 @@ class CleanupAnsibleStageHandler(AnsibleStageHandler):
 
         INFO: Nothing to be done. The clean up is irreversible operation.
         """
-        pass

@@ -1,12 +1,14 @@
+"""Ansible runner utilities for executing playbooks inside Docker/Kubernetes containers."""
+
 import os
 import shutil
 from dataclasses import dataclass
 
 import structlog
-from crczp.cloud_commons import TopologyInstance
 from django.conf import settings
 from jinja2 import Environment, FileSystemLoader
 
+from crczp.cloud_commons import TopologyInstance
 from crczp.sandbox_ansible_app.lib.container import (
     BaseContainer,
     DockerContainer,
@@ -25,6 +27,8 @@ LOG = structlog.get_logger()
 
 @dataclass
 class DockerVolume:
+    """Volume binding configuration for a Docker container."""
+
     name: str
     bind: str
     mode: str
@@ -42,7 +46,7 @@ DOCKERFILE_TEMPLATE = 'Dockerfile.j2'
 GIT_CREDENTIALS_FILENAME = '.git-credentials'
 
 
-class AnsibleRunner:
+class AnsibleRunner:  # pylint: disable=too-many-instance-attributes
     """
     Represents Docker container environment for executing Ansible.
     """
@@ -71,12 +75,11 @@ class AnsibleRunner:
             settings.CRCZP_CONFIG.proxy_jump_to_man.IdentityFile
         )
 
-        self.container_manager = (
-            KubernetesContainer
-            if settings.CRCZP_CONFIG.ansible_runner_settings.backend == 'kubernetes'
-            else DockerContainer
-        )
-        self.template_environment = Environment(loader=(FileSystemLoader(TEMPLATES_DIR_PATH)))
+        if settings.CRCZP_CONFIG.ansible_runner_settings.backend == 'kubernetes':
+            self.container_manager = KubernetesContainer
+        else:
+            self.container_manager = DockerContainer
+        self.template_environment = Environment(loader=FileSystemLoader(TEMPLATES_DIR_PATH))
 
     def run_ansible_playbook(self, url, rev, stage, cleanup=False) -> BaseContainer:
         """
@@ -107,6 +110,7 @@ class AnsibleRunner:
         shutil.copy(settings.CRCZP_CONFIG.proxy_jump_to_man.IdentityFile, self.ssh_directory)
 
     def _prepare_container_directory(self):
+        """Create the containers directory for Docker compose files."""
         self.make_dir(self.containers_path)
 
     @staticmethod
@@ -121,7 +125,7 @@ class AnsibleRunner:
         """
         Save data to the file.
         """
-        with open(file_path, 'w') as file:
+        with open(file_path, 'w', encoding='utf-8') as file:
             file.write(data)
 
     def host_ssh_path(self, filename: str):
@@ -137,6 +141,7 @@ class AnsibleRunner:
         return os.path.join(self.ANSIBLE_DOCKER_SSH_DIR.bind, os.path.basename(filename))
 
     def prepare_git_credentials(self, config: CrczpConfiguration):
+        """Generate and save Git credentials file for private repository access."""
         username = config.git_user
         credentials = ''
         for host, token in config.git_providers.items():
@@ -149,7 +154,7 @@ class AllocationAnsibleRunner(AnsibleRunner):
     Represents Docker container environment for executing Ansible during allocation stage.
     """
 
-    # TODO review this and refactor so that the private keys are not copied around
+    # Note: private keys are copied into the container for Ansible SSH access
     def prepare_ssh_dir(self, pool: Pool, sandbox: Sandbox):
         """
         Prepare files for SSH communication that will be bind to Docker container.
@@ -173,6 +178,7 @@ class AllocationAnsibleRunner(AnsibleRunner):
         self.save_file(self.inventory_path, inventory_object.serialize())
 
     def _generate_docker_composes(self, top_ins: TopologyInstance):
+        """Generate docker-compose files for each host in the topology."""
         parsed_docker_hosts = []
         for container_mapping in top_ins.containers.container_mappings:
             if container_mapping.host not in parsed_docker_hosts:
@@ -198,6 +204,7 @@ class AllocationAnsibleRunner(AnsibleRunner):
                 parsed_docker_hosts.append(container_mapping.host)
 
     def _generate_dockerfiles(self, sandbox: Sandbox):
+        """Generate Dockerfiles for each container in the topology."""
         top_ins = sandboxes.get_topology_instance(sandbox)
         for container_mapping in top_ins.containers.container_mappings:
             host_path = os.path.join(self.containers_path, container_mapping.host)
@@ -226,6 +233,7 @@ class AllocationAnsibleRunner(AnsibleRunner):
             self.save_file(os.path.join(host_container_path, 'Dockerfile'), dockerfile)
 
     def prepare_containers_directory(self, sandbox: Sandbox):
+        """Create and populate the containers directory if the topology has containers."""
         top_ins = sandboxes.get_topology_instance(sandbox)
         if top_ins.containers:
             self._prepare_container_directory()

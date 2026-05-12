@@ -1,3 +1,5 @@
+"""REST API views for Ansible stage operations."""
+
 import structlog
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
@@ -128,6 +130,7 @@ class NetworkingAnsibleOutputListView(log_output_mixin.CompressedOutputMixin, AP
     queryset = AllocationRequest.objects.all()
 
     def get(self, request, request_id):
+        """Return networking Ansible outputs for the given allocation request."""
         from_row = request.query_params.get('from_row', 0)
         try:
             from_row = int(from_row)
@@ -164,6 +167,7 @@ class UserAnsibleOutputListView(log_output_mixin.CompressedOutputMixin, APIView)
     queryset = AllocationRequest.objects.all()
 
     def get(self, request, request_id):
+        """Return user Ansible outputs for the given allocation request."""
         from_row = request.query_params.get('from_row', 0)
         try:
             from_row = int(from_row)

@@ -1,3 +1,5 @@
+"""Tests for topology serialization and Docker container topology."""
+
 import pytest
 
 from crczp.sandbox_instance_app import serializers
@@ -8,7 +10,10 @@ pytestmark = pytest.mark.django_db
 
 
 class TestTopology:
+    """Tests for topology serialization from a topology instance."""
+
     def test_topology_success(self, mocker, top_ins, topology, image):
+        """Test that a topology instance serializes correctly."""
         mock_images = mocker.patch('crczp.terraform_driver.CrczpTerraformClient.list_images')
         mock_images.return_value = [image]
         topo = mock_topology_cache(top_ins)
@@ -25,6 +30,7 @@ class TestTopology:
             )
 
     def test_topology_hidden_success(self, mocker, top_ins_hidden, topology_hidden, image):
+        """Test that hidden topology items are serialized correctly."""
         mock_images = mocker.patch('crczp.terraform_driver.CrczpTerraformClient.list_images')
         mock_images.return_value = [image]
         topo = mock_topology_cache(top_ins_hidden)
@@ -42,6 +48,8 @@ class TestTopology:
 
 
 class TestDockerContainers:
+    """Tests for Docker container entries in the topology object."""
+
     def test_docker_containers_in_topology_object(
         self, mocker, top_ins_with_containers, image, topology_containers
     ):
@@ -65,6 +73,7 @@ class TestDockerContainers:
     def test_server_host_is_hidden(
         self, mocker, top_ins_with_containers_with_server, image, topology_containers
     ):
+        """Test that a server container host is marked hidden in the topology."""
         mock_images = mocker.patch('crczp.terraform_driver.CrczpTerraformClient.list_images')
         mock_images.return_value = [image]
 

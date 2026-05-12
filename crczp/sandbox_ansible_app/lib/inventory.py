@@ -1,3 +1,5 @@
+"""Ansible inventory generation utilities for sandbox topology instances."""
+
 import abc
 import re
 from enum import Enum
@@ -7,9 +9,10 @@ from typing import Optional
 
 import structlog
 import yaml
+from django.conf import settings
+
 from crczp.cloud_commons import Link, TopologyInstance
 from crczp.topology_definition.models import Network, Router
-from django.conf import settings
 
 PROXY_JUMP_NAME = 'proxy-jump'
 
@@ -64,14 +67,18 @@ class DefaultAnsibleHostsGroups(Enum):
 
 
 class Base(abc.ABC):
+    """Abstract base class for Ansible inventory entries."""
+
     def __init__(self):
         self.variables = {}
 
     @abc.abstractmethod
     def to_dict(self) -> dict:
+        """Convert this entry to a dictionary for YAML serialization."""
         return self.variables
 
     def add_variables(self, **kwargs):
+        """Add or update inventory variables for this entry."""
         self.variables.update(kwargs)
 
 
@@ -90,7 +97,7 @@ class Host(Base):
         """
         Return Ansible inventory host entry represented as a dict.
         """
-        return super().to_dict()
+        return self.variables
 
 
 class Group(Base):
@@ -148,7 +155,7 @@ class Group(Base):
         return self.groups.get(name)
 
 
-class Route:
+class Route:  # pylint: disable=too-few-public-methods
     """
     Represents route information to be set on an interface.
     """
@@ -197,7 +204,7 @@ class Interface:
         }
 
 
-class Routing:
+class Routing:  # pylint: disable=too-few-public-methods
     """
     Represents sandbox routing information.
     """
@@ -317,7 +324,7 @@ class Inventory(BaseInventory):
     `extra_vars` dictionary to constructor.
     """
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         proxy_jump_user_access_mgmt_name: str,
         proxy_jump_user_access_user_name: str,
@@ -393,7 +400,9 @@ class Inventory(BaseInventory):
         """
         # Imported lazily to avoid a circular import: group_builders.py itself
         # imports Group / DefaultAnsibleHostsGroups from this module.
-        from crczp.sandbox_ansible_app.lib.group_builders import GROUP_BUILDERS  # noqa: PLC0415
+        from crczp.sandbox_ansible_app.lib.group_builders import (
+            GROUP_BUILDERS,  # pylint: disable=import-outside-toplevel
+        )
 
         for builder in GROUP_BUILDERS:
             builder(self, self.topology_instance)

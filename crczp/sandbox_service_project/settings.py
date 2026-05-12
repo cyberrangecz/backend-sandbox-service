@@ -22,17 +22,54 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
 CRCZP_SANDBOX_SERVICE_CONFIG_PATH = os.path.join(BASE_DIR, 'config.yml')
-CRCZP_SERVICE_CONFIG = CrczpServiceConfig.from_file(CRCZP_SANDBOX_SERVICE_CONFIG_PATH)
-CRCZP_CONFIG = CRCZP_SERVICE_CONFIG.app_config
-os.environ['REQUESTS_CA_BUNDLE'] = CRCZP_CONFIG.ssl_ca_certificate_verify
 
-# -----------SIMPLIFY CLOUD PROVIDER CHANGE-----------
-# To reduce setup overhead, create Terraform client during startup of application.
-AWS_PROVIDER_CONFIGURED = bool(CRCZP_CONFIG.aws)
-TERRAFORM_CLIENT = (
-    get_aws_client(CRCZP_CONFIG) if AWS_PROVIDER_CONFIGURED else get_ostack_client(CRCZP_CONFIG)
-)
-# ----------------------------------------------------
+if os.path.exists(CRCZP_SANDBOX_SERVICE_CONFIG_PATH):
+    CRCZP_SERVICE_CONFIG = CrczpServiceConfig.from_file(CRCZP_SANDBOX_SERVICE_CONFIG_PATH)
+    CRCZP_CONFIG = CRCZP_SERVICE_CONFIG.app_config
+    os.environ['REQUESTS_CA_BUNDLE'] = CRCZP_CONFIG.ssl_ca_certificate_verify
+    # -----------SIMPLIFY CLOUD PROVIDER CHANGE-----------
+    # To reduce setup overhead, create Terraform client during startup of application.
+    AWS_PROVIDER_CONFIGURED = bool(CRCZP_CONFIG.aws)
+    TERRAFORM_CLIENT = (
+        get_aws_client(CRCZP_CONFIG) if AWS_PROVIDER_CONFIGURED else get_ostack_client(CRCZP_CONFIG)
+    )
+    # ------------------------------------------------
+else:
+    # Config file not present (e.g. static analysis / pylint). Use stubs.
+    class _RedisConfig:  # pylint: disable=too-few-public-methods
+        host, port, db = 'localhost', 6379, 0
+        default_cache_timeout = uag_cache_timeout = topology_cache_timeout = None
+
+    class _DatabaseConfig:  # pylint: disable=too-few-public-methods
+        engine = 'django.db.backends.sqlite3'
+        host, name, password, port, user = '', ':memory:', '', '', ''
+
+    class _AuthConfig:  # pylint: disable=too-few-public-methods
+        allowed_oidc_providers = []
+        authenticated_rest_api = False
+        roles_registration_url = roles_acquisition_url = None
+
+    class _CrczpConfig:  # pylint: disable=too-few-public-methods
+        ssl_ca_certificate_verify = ''
+        aws = None
+        log_level = 'WARNING'
+        log_file = '/dev/null'
+        redis = _RedisConfig()
+        database = _DatabaseConfig()
+
+    class _ServiceConfig:  # pylint: disable=too-few-public-methods
+        django_secret_key = 'pylint-only-secret-key'  # noqa: S105
+        debug = False
+        allowed_hosts = []
+        cors_origin_allow_all = False
+        cors_origin_whitelist = []
+        microservice_name = 'sandbox-service'
+        authentication = _AuthConfig()
+
+    CRCZP_SERVICE_CONFIG = _ServiceConfig()
+    CRCZP_CONFIG = _CrczpConfig()
+    AWS_PROVIDER_CONFIGURED = False
+    TERRAFORM_CLIENT = None
 
 # API
 VERSION = 'v1'

@@ -1,3 +1,5 @@
+"""Database models for sandbox instance app."""
+
 from functools import partial
 
 import structlog
@@ -15,6 +17,8 @@ LOG = structlog.get_logger()
 
 
 class Pool(models.Model):
+    """Represents a pool of sandboxes sharing a common definition and key-pair."""
+
     definition = models.ForeignKey(
         Definition,
         on_delete=models.PROTECT,
@@ -48,7 +52,9 @@ class Pool(models.Model):
         ),
     )
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for Pool model."""
+
         ordering = ['id']
 
     def __str__(self):
@@ -68,14 +74,18 @@ class Pool(models.Model):
 
     @property
     def ssh_keypair_name(self) -> str:
+        """Return the SSH key-pair name for this pool."""
         return self.get_keypair_name() + '-ssh'
 
     @property
     def certificate_keypair_name(self) -> str:
+        """Return the certificate key-pair name for this pool."""
         return self.get_keypair_name() + '-cert'
 
 
 class SandboxAllocationUnit(models.Model):
+    """Represents a single sandbox allocation unit within a pool."""
+
     pool = models.ForeignKey(
         Pool,
         on_delete=models.PROTECT,
@@ -97,6 +107,8 @@ class SandboxAllocationUnit(models.Model):
 
 
 class Sandbox(models.Model):
+    """Represents an allocated sandbox with user access keys."""
+
     id = models.CharField(
         primary_key=True,
         auto_created=False,
@@ -115,7 +127,9 @@ class Sandbox(models.Model):
         default=False, help_text='Is the sandbox ready to use for trainings.'
     )
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for Sandbox model."""
+
         ordering = ['id']
 
     def __str__(self):
@@ -126,6 +140,8 @@ class Sandbox(models.Model):
 
 
 class SandboxLock(models.Model):
+    """Represents a lock on a sandbox preventing concurrent access."""
+
     sandbox = models.OneToOneField(
         Sandbox,
         on_delete=models.PROTECT,
@@ -140,6 +156,8 @@ class SandboxLock(models.Model):
 
 
 class PoolLock(models.Model):
+    """Represents a lock on a pool used during active training sessions."""
+
     pool = models.OneToOneField(
         Pool,
         on_delete=models.PROTECT,
@@ -157,7 +175,9 @@ class SandboxRequest(models.Model):
 
     created = models.DateTimeField(default=timezone.now)
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for SandboxRequest model."""
+
         abstract = True
         ordering = ['created']
 
@@ -166,6 +186,8 @@ class SandboxRequest(models.Model):
 
 
 class AllocationRequest(SandboxRequest):
+    """Represents a request to allocate a sandbox for an allocation unit."""
+
     allocation_unit = models.OneToOneField(
         SandboxAllocationUnit,
         on_delete=models.CASCADE,
@@ -182,6 +204,8 @@ class AllocationRequest(SandboxRequest):
 
 
 class CleanupRequest(SandboxRequest):
+    """Represents a request to clean up and delete a sandbox allocation unit."""
+
     allocation_unit = models.OneToOneField(
         SandboxAllocationUnit,
         on_delete=models.CASCADE,
@@ -221,7 +245,9 @@ class Stage(models.Model):
         default=False, help_text='Indicates whether the stage execution has finished.'
     )
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for Stage model."""
+
         abstract = True
         ordering = ['id']
 
@@ -233,18 +259,24 @@ class Stage(models.Model):
 
 
 class AllocationStage(Stage):
+    """Concrete stage associated with an allocation request."""
+
     allocation_request_fk_many = models.ForeignKey(
         AllocationRequest, on_delete=models.CASCADE, related_name='stages'
     )
 
 
 class CleanupStage(Stage):
+    """Concrete stage associated with a cleanup request."""
+
     cleanup_request_fk_many = models.ForeignKey(
         CleanupRequest, on_delete=models.CASCADE, related_name='stages'
     )
 
 
 class StackAllocationStage(AllocationStage):
+    """Allocation stage tracking Terraform stack creation."""
+
     allocation_request = models.OneToOneField(
         AllocationRequest,
         on_delete=models.CASCADE,
@@ -260,6 +292,8 @@ class StackAllocationStage(AllocationStage):
 
 
 class StackCleanupStage(CleanupStage):
+    """Cleanup stage tracking Terraform stack deletion."""
+
     cleanup_request = models.OneToOneField(
         CleanupRequest,
         on_delete=models.CASCADE,
@@ -270,13 +304,19 @@ class StackCleanupStage(CleanupStage):
 
 
 class RQJob(models.Model):
+    """Abstract base class for RQ job tracking models."""
+
     job_id = models.TextField()
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for RQJob model."""
+
         abstract = True
 
 
 class AllocationRQJob(RQJob):
+    """Tracks the RQ job ID for an allocation stage."""
+
     allocation_stage = models.OneToOneField(
         AllocationStage,
         on_delete=models.CASCADE,
@@ -289,6 +329,8 @@ class AllocationRQJob(RQJob):
 
 
 class CleanupRQJob(RQJob):
+    """Tracks the RQ job ID for a cleanup stage."""
+
     cleanup_stage = models.OneToOneField(
         CleanupStage,
         on_delete=models.CASCADE,
@@ -301,23 +343,35 @@ class CleanupRQJob(RQJob):
 
 
 class ExternalDependency(models.Model):
+    """Abstract base class for external allocation dependencies."""
+
     allocation_stage = models.OneToOneField(AllocationStage, on_delete=models.CASCADE)
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for ExternalDependency model."""
+
         abstract = True
 
 
 class ExternalDependencyCleanup(models.Model):
+    """Abstract base class for external cleanup dependencies."""
+
     cleanup_stage = models.OneToOneField(CleanupStage, on_delete=models.CASCADE)
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for ExternalDependencyCleanup model."""
+
         abstract = True
 
 
 class TerraformOutput(models.Model):
+    """Abstract base class for storing Terraform process output lines."""
+
     content = models.TextField()
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for TerraformOutput model."""
+
         abstract = True
         ordering = ['id']
 
@@ -326,6 +380,8 @@ class TerraformOutput(models.Model):
 
 
 class AllocationTerraformOutput(TerraformOutput):
+    """Stores Terraform output lines for an allocation stage."""
+
     allocation_stage = models.ForeignKey(
         AllocationStage, on_delete=models.CASCADE, related_name='terraform_outputs'
     )
@@ -335,6 +391,8 @@ class AllocationTerraformOutput(TerraformOutput):
 
 
 class CleanupTerraformOutput(TerraformOutput):
+    """Stores Terraform output lines for a cleanup stage."""
+
     cleanup_stage = models.ForeignKey(
         CleanupStage, on_delete=models.CASCADE, related_name='terraform_outputs'
     )
@@ -344,6 +402,8 @@ class CleanupTerraformOutput(TerraformOutput):
 
 
 class TerraformStack(ExternalDependency):
+    """Tracks the Terraform stack process associated with an allocation stage."""
+
     stack_id = models.TextField()
 
     def __str__(self):
@@ -351,6 +411,8 @@ class TerraformStack(ExternalDependency):
 
 
 class SystemProcess(ExternalDependency):
+    """Tracks a system process associated with an allocation stage."""
+
     process_id = models.TextField()
 
     def __str__(self):
@@ -371,6 +433,7 @@ class SandboxRequestGroup(models.Model):
     finished_count = models.IntegerField(default=0)
 
     def on_allocation_fail(self, exc):
+        """Handle a sandbox allocation failure: track counts and send notification if first fail."""
         with transaction.atomic():
             self.refresh_from_db()
             if self.failed_count == 0:
@@ -384,6 +447,7 @@ class SandboxRequestGroup(models.Model):
                 LOG.debug('Sandbox allocation End email notification sent.')
 
     def on_allocation_end(self):
+        """Handle a sandbox allocation completion: track counts and send summary if all done."""
         with transaction.atomic():
             self.refresh_from_db()
             self.finished_count += 1

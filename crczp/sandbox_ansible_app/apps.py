@@ -1,9 +1,13 @@
+"""Django app configuration for the sandbox Ansible application."""
+
 from django.apps import AppConfig
 
 from crczp.sandbox_common_lib import utils
 
 
 class CrczpSandboxAnsibleAppConfig(AppConfig):
+    """App config for the sandbox Ansible application."""
+
     name = __package__
 
     def ready(self):

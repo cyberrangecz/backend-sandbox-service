@@ -1,10 +1,13 @@
+"""Test fixtures for sandbox_definition_app tests."""
+
 import io
 import os
 
 import pytest
-from crczp.cloud_commons import Image
 from django.contrib.auth.models import User
 from ruamel.yaml import YAML
+
+from crczp.cloud_commons import Image
 
 TESTING_DATA_DIR = 'assets'
 
@@ -13,11 +16,13 @@ TESTING_CORRECT_TOPOLOGY = 'correct_topology.yml'
 
 
 def data_path_join(file: str, data_dir: str = TESTING_DATA_DIR) -> str:
+    """Return the absolute path to a test data file."""
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), data_dir, file)
 
 
 @pytest.fixture
 def created_by():
+    """Create and return a test user."""
     return User.objects.create(
         username='test-user',
         first_name='test-first-name',
@@ -29,12 +34,13 @@ def created_by():
 @pytest.fixture
 def topology_definition_stream():
     """Creates example topology definition for a sandbox."""
-    with open(data_path_join(TESTING_DEFINITION)) as f:
+    with open(data_path_join(TESTING_DEFINITION), encoding='utf-8') as f:
         return io.StringIO(f.read())
 
 
 @pytest.fixture
-def image():
+def image():  # pylint: disable=redefined-outer-name
+    """Return a test Image object."""
     return Image(
         os_distro=None,
         os_type='debian',
@@ -55,7 +61,8 @@ def image():
 
 
 @pytest.fixture
-def get_terraform_client(mocker, image):
+def get_terraform_client(mocker, image):  # pylint: disable=redefined-outer-name
+    """Mock get_terraform_client with a fake client returning test images and flavors."""
     mock_client = mocker.MagicMock()
     mock_client.get_flavors_dict.return_value = {
         'standard.large': '',
@@ -75,6 +82,6 @@ def correct_topology() -> str:
     yaml = YAML()
     stream = io.StringIO()
 
-    with open(data_path_join(TESTING_CORRECT_TOPOLOGY)) as f:
+    with open(data_path_join(TESTING_CORRECT_TOPOLOGY), encoding='utf-8') as f:
         yaml.dump(yaml.load(f), stream)
         return stream.getvalue()

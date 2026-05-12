@@ -1,3 +1,5 @@
+"""REST API views for sandbox definition management."""
+
 import structlog
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
@@ -138,6 +140,8 @@ class DefinitionTopologyView(generics.RetrieveAPIView):
     responses={201: serializers.LocalVariableSerializer(many=True), **COMMON_RESPONSE_PATTERNS},
 )
 class LocalSandboxVariablesView(generics.CreateAPIView):
+    """View to generate and post variables for local sandboxes."""
+
     queryset = Definition.objects.all()
     lookup_url_kwarg = 'definition_id'
     serializer_class = serializers.LocalSandboxVariablesSerializer
@@ -161,10 +165,12 @@ class LocalSandboxVariablesView(generics.CreateAPIView):
     responses={200: OpenApiResponse(description='Variables List'), **COMMON_RESPONSE_PATTERNS},
 )
 class DefinitionVariablesView(APIView):
+    """View to retrieve APG variable names from a definition."""
+
     queryset = Definition.objects.none()
 
     # noinspection PyMethodMayBeStatic
-    def get(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):  # pylint: disable=unused-argument
         """Retrieve APG variables from TopologyDefinition, empty list if variables.yml was not
         found."""
         definition = utils.get_object_or_404(Definition, pk=kwargs.get('definition_id'))

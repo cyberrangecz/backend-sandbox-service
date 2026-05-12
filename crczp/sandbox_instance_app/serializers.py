@@ -21,6 +21,8 @@ from crczp.sandbox_instance_app.lib import pools, requests
 
 
 class PoolSerializer(serializers.ModelSerializer):
+    """Serializer for Pool model."""
+
     size = serializers.SerializerMethodField(
         help_text='Number of allocation units associated with this pool.'
     )
@@ -32,7 +34,9 @@ class PoolSerializer(serializers.ModelSerializer):
     created_by = serializers.SerializerMethodField()
     hardware_usage = serializers.SerializerMethodField()
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for PoolSerializer."""
+
         model = models.Pool
         fields = (
             'id',
@@ -62,6 +66,7 @@ class PoolSerializer(serializers.ModelSerializer):
         )
 
     def update(self, instance: Meta.model, validated_data):
+        """Update pool fields from validated data."""
         instance.max_size = validated_data.get('max_size', instance.max_size)
         instance.comment = validated_data.get('comment', instance.comment)
         instance.visible = validated_data.get('visible', instance.visible)
@@ -80,6 +85,7 @@ class PoolSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_size(pool: models.Pool) -> int:
+        """Return pool size, recalculating from allocation units if currently zero."""
         # Required only because of the migration from older versions.
         # For the release after 23.12 remove this method and set size attribute of serialize to
         # IntegerField
@@ -93,79 +99,109 @@ class PoolSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_lock_id(obj: models.Pool) -> int | None:
+        """Return the pool lock id, or None if not locked."""
         return obj.lock.id if hasattr(obj, 'lock') else None
 
     @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
     def get_created_by(obj: models.Pool) -> bool:
+        """Return serialized created_by user data."""
         return UserSerializer(obj.created_by).data
 
     @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
     def get_hardware_usage(obj: models.Pool) -> bool:
+        """Return serialized hardware usage data for the pool."""
         hardware_usage = pools.get_hardware_usage_of_sandbox(obj)
         return HardwareUsageSerializer(hardware_usage).data
 
     @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
     def get_definition(obj: models.Pool) -> bool:
+        """Return serialized definition data for the pool."""
         return DefinitionSerializer(obj.definition).data
 
 
 class PoolSerializerCreate(PoolSerializer):
-    class Meta(PoolSerializer.Meta):
+    """Serializer for creating a new Pool."""
+
+    class Meta(PoolSerializer.Meta):  # pylint: disable=too-few-public-methods
+        """Meta options for PoolSerializerCreate."""
+
         read_only_fields = ('id', 'size')
 
 
 class RequestSerializer(serializers.ModelSerializer):
+    """Base serializer for allocation and cleanup request models."""
+
     allocation_unit_id = serializers.PrimaryKeyRelatedField(
         source='allocation_unit', read_only=True
     )
     stages = serializers.SerializerMethodField()
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for RequestSerializer."""
+
         fields = ('id', 'allocation_unit_id', 'created', 'stages')
         read_only_fields = ('id', 'allocation_unit_id', 'created', 'stages')
 
 
 class AllocationRequestSerializer(RequestSerializer):
+    """Serializer for AllocationRequest model."""
+
     @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
     def get_stages(obj) -> bool:
+        """Return the allocation request stages completion state."""
         return requests.get_allocation_request_stages_state(obj)
 
-    class Meta(RequestSerializer.Meta):
+    class Meta(RequestSerializer.Meta):  # pylint: disable=too-few-public-methods
+        """Meta options for AllocationRequestSerializer."""
+
         model = models.AllocationRequest
 
 
 class CleanupRequestSerializer(RequestSerializer):
+    """Serializer for CleanupRequest model."""
+
     @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
     def get_stages(obj) -> bool:
+        """Return the cleanup request stages completion state."""
         return requests.get_cleanup_request_stages_state(obj)
 
-    class Meta(RequestSerializer.Meta):
+    class Meta(RequestSerializer.Meta):  # pylint: disable=too-few-public-methods
+        """Meta options for CleanupRequestSerializer."""
+
         model = models.CleanupRequest
 
 
 class PoolCleanupRequestSerializer(serializers.Serializer):
+    """Serializer for pool cleanup request input."""
+
     pool_id = serializers.IntegerField()
     reason = serializers.CharField(required=False)
 
 
 class PoolCleanupRequestFailedSerializer(serializers.Serializer):
+    """Serializer for failed pool cleanup request data."""
+
     pool_id = serializers.IntegerField()
     error_message = serializers.CharField()
 
 
 class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
+    """Serializer for SandboxAllocationUnit model."""
+
     allocation_request = AllocationRequestSerializer(read_only=True)
     cleanup_request = CleanupRequestSerializer()
     pool_id = serializers.PrimaryKeyRelatedField(source='pool', read_only=True)
     created_by = serializers.SerializerMethodField()
     locked = serializers.SerializerMethodField()
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for SandboxAllocationUnitSerializer."""
+
         model = models.SandboxAllocationUnit
         fields = (
             'id',
@@ -186,6 +222,7 @@ class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
         )
 
     def update(self, instance: Meta.model, validated_data):
+        """Update allocation unit comment from validated data."""
         instance.comment = validated_data.get('comment', instance.comment)
         instance.save()
         return instance
@@ -193,22 +230,30 @@ class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
     @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
     def get_created_by(obj: models.SandboxAllocationUnit) -> bool:
+        """Return serialized created_by user data."""
         return UserSerializer(obj.created_by).data
 
     @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
     def get_locked(obj: models.SandboxAllocationUnit) -> bool:
+        """Return True if the sandbox allocation unit has a lock."""
         return hasattr(obj, 'sandbox') and hasattr(obj.sandbox, 'lock')
 
 
 class SandboxAllocationUnitIdListSerializer(serializers.Serializer):
+    """Serializer for a list of sandbox allocation unit IDs."""
+
     unit_ids = serializers.ListField(child=serializers.IntegerField())
 
 
 class TerraformAllocationStageSerializer(serializers.ModelSerializer):
+    """Serializer for StackAllocationStage model."""
+
     request_id = serializers.PrimaryKeyRelatedField(source='allocation_request', read_only=True)
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for TerraformAllocationStageSerializer."""
+
         model = models.StackAllocationStage
         fields = (
             'id',
@@ -224,11 +269,15 @@ class TerraformAllocationStageSerializer(serializers.ModelSerializer):
 
 
 class TerraformCleanupStageSerializer(serializers.ModelSerializer):
+    """Serializer for StackCleanupStage model."""
+
     request_id = serializers.PrimaryKeyRelatedField(source='cleanup_request', read_only=True)
     # allocation_stage_id = serializers.PrimaryKeyRelatedField(
     #    source='allocation_stage', read_only=True)
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for TerraformCleanupStageSerializer."""
+
         model = models.StackCleanupStage
         fields = (
             'id',
@@ -243,41 +292,58 @@ class TerraformCleanupStageSerializer(serializers.ModelSerializer):
 
 
 class AllocationTerraformOutputSerializer(serializers.ModelSerializer):
-    class Meta:
+    """Serializer for AllocationTerraformOutput model."""
+
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for AllocationTerraformOutputSerializer."""
+
         model = models.AllocationTerraformOutput
         fields = ('content',)
         read_only_fields = fields
 
 
 class SandboxSerializer(serializers.ModelSerializer):
+    """Serializer for Sandbox model."""
+
     lock_id = serializers.SerializerMethodField()
     allocation_unit_id = serializers.PrimaryKeyRelatedField(
         source='allocation_unit', read_only=True
     )
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for SandboxSerializer."""
+
         model = models.Sandbox
         fields = ('id', 'lock_id', 'allocation_unit_id', 'ready')
         read_only_fields = ('id', 'lock', 'allocation_unit_id', 'ready')
 
     @staticmethod
     def get_lock_id(obj: models.Sandbox) -> int | None:
+        """Return the sandbox lock id, or None if not locked."""
         return obj.lock.id if hasattr(obj, 'lock') else None
 
 
 class SandboxLockSerializer(serializers.ModelSerializer):
+    """Serializer for SandboxLock model."""
+
     sandbox_id = serializers.PrimaryKeyRelatedField(source='sandbox', read_only=True)
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for SandboxLockSerializer."""
+
         model = models.SandboxLock
         fields = ('id', 'sandbox_id', 'created_by')
         read_only_fields = fields
 
 
 class PoolLockSerializer(serializers.ModelSerializer):
+    """Serializer for PoolLock model."""
+
     pool_id = serializers.PrimaryKeyRelatedField(source='pool', read_only=True)
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for PoolLockSerializer."""
+
         model = models.PoolLock
         fields = ('id', 'pool_id')
         read_only_fields = ('id', 'pool_id')
@@ -285,6 +351,8 @@ class PoolLockSerializer(serializers.ModelSerializer):
 
 
 class NodeActionSerializer(serializers.Serializer):
+    """Serializer for VM node action requests."""
+
     ACTION_CHOICES = ('suspend', 'resume', 'reboot')
     action = serializers.ChoiceField(
         choices=ACTION_CHOICES, help_text='Action you with to perform on the node.'
@@ -307,6 +375,8 @@ class HostSerializer(serializers.Serializer):
 
 
 class SubnetSerializer(serializers.Serializer):
+    """CRCZP OS lib Subnet topology serializer."""
+
     name = serializers.CharField()
     cidr = serializers.CharField()
     hosts = HostSerializer(many=True)
@@ -347,10 +417,14 @@ class NodeSerializer(serializers.Serializer):
 
 
 class NodeConsoleSerializer(serializers.Serializer):
+    """Serializer for a VM console URL."""
+
     url = serializers.CharField()
 
 
 class SandboxEventSerializer(serializers.Serializer):
+    """Serializer for a sandbox stack event."""
+
     time = serializers.CharField(source='event_time')
     name = serializers.CharField(source='resource_name')
     status = serializers.CharField(source='resource_status')
@@ -358,12 +432,16 @@ class SandboxEventSerializer(serializers.Serializer):
 
 
 class SandboxResourceSerializer(serializers.Serializer):
+    """Serializer for a sandbox stack resource."""
+
     name = serializers.CharField(source='resource_name')
     type = serializers.CharField(source='resource_type')
     status = serializers.CharField(source='resource_status')
 
 
 class HardwareUsageSerializer(serializers.Serializer):
+    """Serializer for hardware usage quota data."""
+
     vcpu = serializers.DecimalField(decimal_places=3, max_digits=7)
     ram = serializers.DecimalField(decimal_places=3, max_digits=7)
     instances = serializers.DecimalField(decimal_places=3, max_digits=7)
@@ -373,11 +451,15 @@ class HardwareUsageSerializer(serializers.Serializer):
 
 
 class ProtocolSerializer(serializers.Serializer):
+    """Serializer for a network protocol with port."""
+
     name = serializers.CharField()
     port = serializers.IntegerField(max_value=65535)
 
 
 class NodeAccessDataSerializer(serializers.Serializer):
+    """Serializer for node access data including IP and protocols."""
+
     man_ip = serializers.CharField()
     man_port = serializers.IntegerField(max_value=65535)
     host_ip = serializers.CharField()

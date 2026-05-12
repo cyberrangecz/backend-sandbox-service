@@ -1,11 +1,13 @@
+"""Tests for allocation and cleanup stage handlers."""
+
 import pytest
-from crczp.cloud_commons import exceptions as driver_exceptions
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils import timezone
 from docker.errors import DockerException
 from docker.errors import NotFound as DockerContainerNotFound
 
+from crczp.cloud_commons import exceptions as driver_exceptions
 from crczp.sandbox_ansible_app.lib.container import DockerContainer
 from crczp.sandbox_ansible_app.models import NetworkingAnsibleAllocationStage
 from crczp.sandbox_common_lib import exceptions as api_exceptions
@@ -16,6 +18,7 @@ pytestmark = pytest.mark.django_db
 
 
 def assert_db_stage(stage: Stage, start_time: timezone.datetime, failed: bool = False):
+    """Assert that a stage's DB record has correct start/end times and failure state."""
     assert start_time < stage.start
     assert stage.start < stage.end
     assert stage.end < timezone.now()
@@ -24,8 +27,11 @@ def assert_db_stage(stage: Stage, start_time: timezone.datetime, failed: bool = 
 
 
 class TestAllocationStackStageHandler:
+    """Tests for the Terraform stack allocation stage handler."""
+
     @pytest.fixture(autouse=True)
     def set_up(self, mocker, process):
+        """Patch stage handler internals and return a mock process."""
         mocker.patch('crczp.sandbox_instance_app.lib.stage_handlers.LOG')
         mocker.patch('crczp.sandbox_instance_app.lib.stage_handlers.definitions.get_definition')
         mocker.patch('crczp.sandbox_instance_app.lib.stage_handlers.utils.get_terraform_client')
@@ -37,6 +43,7 @@ class TestAllocationStackStageHandler:
         stage_handlers.AllocationStackStageHandler._wait_for_process = mocker.Mock()
 
     def test_execute_success(self, now, allocation_stage_stack, process):
+        """Test successful execution of the allocation stack stage."""
         handler = stage_handlers.AllocationStackStageHandler(allocation_stage_stack)
 
         handler.execute()
@@ -45,6 +52,7 @@ class TestAllocationStackStageHandler:
         assert_db_stage(allocation_stage_stack, now, failed=False)
 
     def test_execute_failed_creation_request(self, now, allocation_stage_stack):
+        """Test that a failed stack creation request marks the stage as failed."""
         handler = stage_handlers.AllocationStackStageHandler(allocation_stage_stack)
         stage_handlers.AllocationStackStageHandler._client.create_stack.side_effect = (
             driver_exceptions.StackCreationFailed('error-message')
@@ -59,6 +67,7 @@ class TestAllocationStackStageHandler:
 
     @pytest.mark.xfail(reason="cancellation should set error_message to 'canceled'")
     def test_cancel_success(self, now, allocation_stage_stack_started):
+        """Test successful cancellation of a started allocation stack stage."""
         handler = stage_handlers.AllocationStackStageHandler(allocation_stage_stack_started)
 
         handler.cancel()
@@ -67,6 +76,7 @@ class TestAllocationStackStageHandler:
 
     @pytest.mark.xfail(reason="cancellation should set error_message to 'canceled'")
     def test_cancel_failed_deletion(self, now, allocation_stage_stack_started):
+        """Test that a failed stack deletion during cancel still marks the stage as failed."""
         handler = stage_handlers.AllocationStackStageHandler(allocation_stage_stack_started)
         stage_handlers.AllocationStackStageHandler._client.delete_stack.side_effect = (
             driver_exceptions.StackException('error-message')
@@ -78,8 +88,11 @@ class TestAllocationStackStageHandler:
 
 
 class TestCleanupStackStageHandler:
+    """Tests for the Terraform stack cleanup stage handler."""
+
     @pytest.fixture(autouse=True)
     def set_up(self, mocker, process):
+        """Patch stage handler internals and return a mock process."""
         mocker.patch('crczp.sandbox_instance_app.lib.stage_handlers.LOG')
         mocker.patch('crczp.sandbox_instance_app.lib.stage_handlers.utils.get_terraform_client')
         stage_handlers.CleanupStackStageHandler._client = mocker.Mock()
@@ -87,6 +100,7 @@ class TestCleanupStackStageHandler:
         stage_handlers.CleanupStackStageHandler._wait_for_process = mocker.Mock()
 
     def test_execute_success(self, now, cleanup_stage_stack):
+        """Test successful execution of the cleanup stack stage."""
         handler = stage_handlers.CleanupStackStageHandler(cleanup_stage_stack)
 
         handler.execute()
@@ -95,6 +109,7 @@ class TestCleanupStackStageHandler:
 
     @pytest.mark.xfail(reason="cancellation should set error_message to 'canceled'")
     def test_cancel_success(self, now, cleanup_stage_stack_started):
+        """Test successful cancellation of a started cleanup stack stage."""
         handler = stage_handlers.CleanupStackStageHandler(cleanup_stage_stack_started)
 
         handler.cancel()
@@ -103,8 +118,11 @@ class TestCleanupStackStageHandler:
 
 
 class TestAllocationAnsibleStageHandler:
+    """Tests for the Ansible allocation stage handler."""
+
     @pytest.fixture(autouse=True)
     def set_up(self, mocker, allocation_stage_networking):
+        """Set up mocked Docker and Ansible runner for allocation stage tests."""
         mocker.patch('crczp.sandbox_instance_app.lib.stage_handlers.LOG')
         mocker.patch('crczp.sandbox_instance_app.lib.stage_handlers.os.path.join')
         mocker.patch('crczp.sandbox_instance_app.lib.sandboxes.get_topology_instance')
@@ -141,6 +159,7 @@ class TestAllocationAnsibleStageHandler:
         self.container_class = container_class
 
     def test_execute_success(self, now, allocation_stage_networking, sandbox):
+        """Test successful execution of the Ansible allocation stage."""
         handler = stage_handlers.AllocationAnsibleStageHandler(allocation_stage_networking, sandbox)
 
         handler.execute()
@@ -154,6 +173,7 @@ class TestAllocationAnsibleStageHandler:
         assert_db_stage(allocation_stage_networking, now, failed=False)
 
     def test_execute_failed_to_create_docker(self, now, allocation_stage_networking, sandbox):
+        """Test that a Docker creation failure marks the stage as failed with no container."""
         handler = stage_handlers.AllocationAnsibleStageHandler(allocation_stage_networking, sandbox)
         self.runner.run_ansible_playbook.side_effect = DockerException('error-message')
 
@@ -168,6 +188,7 @@ class TestAllocationAnsibleStageHandler:
     def test_execute_failed_to_obtain_docker_logs(
         self, now, allocation_stage_networking, sandbox, mocker
     ):
+        """Test that a failure to get Docker logs marks the stage as failed."""
         handler = stage_handlers.AllocationAnsibleStageHandler(allocation_stage_networking, sandbox)
         self.runner.run_ansible_playbook.return_value.get_container_outputs = mocker.MagicMock()
         self.runner.run_ansible_playbook.return_value.get_container_outputs.side_effect = (
@@ -185,6 +206,7 @@ class TestAllocationAnsibleStageHandler:
         assert_db_stage(allocation_stage_networking, now, failed=True)
 
     def test_execute_failed_ansible(self, now, allocation_stage_networking, sandbox):
+        """Test that an Ansible failure marks the stage as failed with error output."""
         handler = stage_handlers.AllocationAnsibleStageHandler(allocation_stage_networking, sandbox)
         self.runner.run_ansible_playbook.return_value.container.wait.return_value = {
             'StatusCode': -1
@@ -203,6 +225,7 @@ class TestAllocationAnsibleStageHandler:
 
     @pytest.mark.xfail(reason="cancellation should set error_message to 'canceled'")
     def test_cancel_success(self, now, allocation_stage_networking_started, sandbox):
+        """Test successful cancellation of a started Ansible allocation stage."""
         handler = stage_handlers.AllocationAnsibleStageHandler(
             allocation_stage_networking_started, sandbox
         )
@@ -221,6 +244,7 @@ class TestAllocationAnsibleStageHandler:
     def test_cancel_nonexistent_docker_container(
         self, now, allocation_stage_networking_started, sandbox
     ):
+        """Test that cancellation handles a missing Docker container gracefully."""
         handler = stage_handlers.AllocationAnsibleStageHandler(
             allocation_stage_networking_started, sandbox
         )
@@ -232,8 +256,11 @@ class TestAllocationAnsibleStageHandler:
 
 
 class TestCleanupAnsibleStageHandler:
+    """Tests for the Ansible cleanup stage handler."""
+
     @pytest.fixture(autouse=True)
     def set_up(self, mocker, allocation_stage_networking):
+        """Set up mocked Docker and Ansible runner for cleanup stage tests."""
         mocker.patch('crczp.sandbox_instance_app.lib.stage_handlers.LOG')
         mocker.patch('crczp.sandbox_ansible_app.lib.container.DockerContainer._run_container')
         mocker.patch('crczp.sandbox_ansible_app.lib.container.DockerContainer.delete')
@@ -267,6 +294,7 @@ class TestCleanupAnsibleStageHandler:
 
     @pytest.mark.xfail(reason="cancellation should set error_message to 'canceled'")
     def test_cancel_success(self, now, cleanup_stage_networking_started):
+        """Test successful cancellation of a started Ansible cleanup stage."""
         handler = stage_handlers.CleanupAnsibleStageHandler(cleanup_stage_networking_started)
 
         handler.cancel()

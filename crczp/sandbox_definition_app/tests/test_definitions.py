@@ -1,3 +1,5 @@
+"""Tests for sandbox definition management."""
+
 import io
 
 import pytest
@@ -13,17 +15,21 @@ pytestmark = pytest.mark.django_db
 
 
 class TestCreateDefinition:
+    """Tests for creating sandbox definitions."""
+
     URL = 'https://gitlab.example.com/my-repo.git'
     REV = 'def-rev'
     NAME = 'def-name'
 
     @pytest.fixture(autouse=True)
     def setup(self, mocker):
+        """Set up mocks for DefinitionProvider and topology validation."""
         mocker.patch('crczp.sandbox_definition_app.lib.definitions.DefinitionProvider')
         mocker.patch('crczp.terraform_driver.CrczpTerraformClient.validate_topology_definition')
 
     @pytest.fixture
     def topology_definition(self, mocker):
+        """Return a mocked topology definition with a fixed name."""
         definition = mocker.Mock()
         definition.name = self.NAME
         mocker.patch(
@@ -31,7 +37,8 @@ class TestCreateDefinition:
         )
         return definition
 
-    def test_create_definition(self, mocker, topology_definition, created_by):
+    def test_create_definition(self, mocker, topology_definition, created_by):  # pylint: disable=unused-argument
+        """Test that a definition is created and persisted with correct fields."""
         mocker.patch('crczp.sandbox_definition_app.lib.definitions.validate_topology_definition')
         definitions.create_definition(url=self.URL, rev=self.REV, created_by=created_by)
 
@@ -40,13 +47,15 @@ class TestCreateDefinition:
         assert database_definition.url == self.URL
         assert database_definition.rev == self.REV
 
-    def test_create_definition_nonunique(self, mocker, topology_definition, created_by):
+    def test_create_definition_nonunique(self, mocker, topology_definition, created_by):  # pylint: disable=unused-argument
+        """Test that creating a duplicate definition raises ValidationError."""
         mocker.patch('crczp.sandbox_definition_app.lib.definitions.validate_topology_definition')
         definitions.create_definition(url=self.URL, rev=self.REV, created_by=created_by)
         with pytest.raises(exceptions.ValidationError):
             definitions.create_definition(url=self.URL, rev=self.REV, created_by=created_by)
 
     def test_create_definition_invalid_hosts_group(self, mocker, topology_definition, created_by):
+        """Test that a definition with an invalid hosts group raises ValidationError."""
         hosts_group = mocker.Mock()
         hosts_group.name = 'hidden_hosts'
         topology_definition.groups = [hosts_group]
@@ -55,7 +64,10 @@ class TestCreateDefinition:
 
 
 class TestLoadDefinition:
+    """Tests for loading a topology definition from a stream."""
+
     def test_load_definition(self, topology_definition_stream):
+        """Test that a valid definition is loaded correctly."""
         topology_definition = definitions.load_definition(topology_definition_stream)
 
         for host in topology_definition.hosts:
@@ -67,6 +79,7 @@ class TestLoadDefinition:
             assert router.flavor == 'standard.small'
 
     def test_load_definition_invalid_definition(self, mocker, topology_definition_stream):
+        """Test that a YamlizingError during load raises ValidationError."""
         topology_definition = mocker.patch(
             'crczp.sandbox_definition_app.lib.definitions.TopologyDefinition'
         )
@@ -77,9 +90,12 @@ class TestLoadDefinition:
 
 
 class TestGetDefinition:
+    """Tests for fetching a definition from a git provider."""
+
     CFG = CrczpConfiguration()
 
     def test_get_definition(self, mocker):
+        """Test that get_definition fetches the file, loads and returns the definition."""
         topology_provider = mocker.MagicMock()
         topology_provider.get_file.return_value = 'test1'
         mocker.patch(
@@ -100,6 +116,7 @@ class TestGetDefinition:
         mock_load_definition.assert_called_with(definitions.io.StringIO('test1'))
 
     def test_get_definition_file_not_found(self, mocker):
+        """Test that a GitError is raised when the definition file is not found."""
         topology_provider = mocker.MagicMock()
         topology_provider.get_file.side_effect = exceptions.GitError('file not found error')
         mocker.patch(
@@ -110,16 +127,22 @@ class TestGetDefinition:
             definitions.get_definition('url', 'rev', self.CFG)
 
 
-class TestGetDefProvider:
+class TestGetDefProvider:  # pylint: disable=too-few-public-methods
+    """Tests for the get_def_provider factory function."""
+
     def test_get_def_provider_gitlab(self):
+        """Test that a Gitlab URL returns a GitlabProvider instance."""
         url_git = 'https://gitlab.com/crczp/backend-python/sandbox-service.git'
         cfg_git = CrczpConfiguration()
         assert isinstance(definitions.get_def_provider(url_git, cfg_git), GitlabProvider)
 
 
 class TestTopologyDefinitionValidation:
+    """Tests for topology definition validation."""
+
     @pytest.mark.skip(reason='fix for this implemented in issue 291')
-    def test_incorrect_image_name(self, get_terraform_client, correct_topology):
+    def test_incorrect_image_name(self, get_terraform_client, correct_topology):  # pylint: disable=unused-argument
+        """Test that an invalid image name raises ValidationError."""
         print(correct_topology)
         bad_topology = correct_topology.replace('image: debian', 'image: debn', 1)
         stream = io.StringIO(bad_topology)
@@ -140,7 +163,8 @@ class TestTopologyDefinitionValidation:
             ('2-number-cannot-be-first', True),
         ],
     )
-    def test_definition_name_validness(self, get_terraform_client, name, raises, correct_topology):
+    def test_definition_name_validness(self, get_terraform_client, name, raises, correct_topology):  # pylint: disable=unused-argument
+        """Test that topology definition names are validated correctly."""
         new_topology = correct_topology.replace('sandbox-definition', name, 1)
         stream = io.StringIO(new_topology)
 
@@ -151,7 +175,8 @@ class TestTopologyDefinitionValidation:
             definition = definitions.load_definition(stream)
             definitions.validate_topology_definition(definition)
 
-    def test_unique_host_network_router_names(self, get_terraform_client, correct_topology):
+    def test_unique_host_network_router_names(self, get_terraform_client, correct_topology):  # pylint: disable=unused-argument
+        """Test that duplicate names across hosts, networks and routers raise ValidationError."""
         new_topology = (
             correct_topology
             .replace('- name: deb', '- name: same-name', 1)
@@ -162,7 +187,8 @@ class TestTopologyDefinitionValidation:
         with pytest.raises(exceptions.ValidationError):
             definitions.load_definition(stream)
 
-    def test_unique_host_network_names(self, get_terraform_client, correct_topology):
+    def test_unique_host_network_names(self, get_terraform_client, correct_topology):  # pylint: disable=unused-argument
+        """Test that duplicate names between hosts and networks raise ValidationError."""
         new_topology = correct_topology.replace('- name: deb', '- name: same-name', 1).replace(
             '- name: router', '- name: same-name', 1
         )
@@ -172,8 +198,12 @@ class TestTopologyDefinitionValidation:
 
     @pytest.mark.parametrize('group_name', ['management', 'routers', 'hosts'])
     def test_redefinition_of_default_groups_fails(
-        self, get_terraform_client, group_name, correct_topology
+        self,
+        get_terraform_client,
+        group_name,
+        correct_topology,  # pylint: disable=unused-argument
     ):
+        """Test that redefining reserved group names raises ValidationError."""
         new_topology = correct_topology.replace(
             '- name: linux-machines', '- name: ' + group_name, 1
         )

@@ -1,3 +1,5 @@
+"""Git configuration utilities for the sandbox service."""
+
 from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration, GitType
 
 from .exceptions import ImproperlyConfigured
@@ -28,7 +30,7 @@ def get_git_type(rest_server) -> GitType:
     """
     if 'github.' in rest_server:
         return GitType.GITHUB
-    else:
+    if 'gitlab.' in rest_server:
         return GitType.GITLAB
     raise ImproperlyConfigured(
         f'Trying to use unsupported git type: {rest_server} Supported types: gitlab, github'

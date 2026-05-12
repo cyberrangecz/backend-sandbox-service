@@ -1,14 +1,16 @@
+"""Docker and Kubernetes container wrappers for executing Ansible playbooks."""
+
 import abc
 from dataclasses import dataclass
 
 import docker
 import structlog
-from crczp.cloud_commons import CrczpException
 from django.conf import settings
 from docker.models.containers import Container
 from kubernetes import client, config, watch
 from kubernetes.client import V1PersistentVolumeClaimVolumeSource
 
+from crczp.cloud_commons import CrczpException
 from crczp.sandbox_ansible_app.models import AllocationAnsibleOutput, CleanupAnsibleOutput
 from crczp.sandbox_common_lib import exceptions
 
@@ -18,12 +20,14 @@ ANSIBLE_FILE_VOLUME_NAME = 'ansible-files-path'
 
 @dataclass
 class ContainerVolume:
+    """Volume binding configuration for a container."""
+
     name: str
     bind: str
     mode: str
 
 
-class BaseContainer(abc.ABC):
+class BaseContainer(abc.ABC):  # pylint: disable=too-many-instance-attributes
     """Base class for all containers."""
 
     ANSIBLE_SSH_DIR = ContainerVolume(name='ansible-ssh-dir', bind='/root/.ssh', mode='rw')
@@ -38,7 +42,7 @@ class BaseContainer(abc.ABC):
     )
 
     @abc.abstractmethod
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         url,
         rev,
@@ -66,33 +70,27 @@ class BaseContainer(abc.ABC):
     @abc.abstractmethod
     def _run_container(self):
         """Run the container."""
-        pass
 
     @abc.abstractmethod
     def get_container_name(self):
         """Get the container ID."""
-        pass
 
     @abc.abstractmethod
     def get_container_outputs(self):
         """Get the container outputs."""
-        pass
 
     @abc.abstractmethod
     def check_container_status(self):
         """Check the container status."""
-        pass
 
     @abc.abstractmethod
     def delete(self):
         """Delete the container."""
-        pass
 
     @classmethod
     @abc.abstractmethod
     def delete_container(cls, container_name):
         """Delete the container. Used when cancelling a stage."""
-        pass
 
 
 class DockerContainer(BaseContainer):
@@ -101,7 +99,7 @@ class DockerContainer(BaseContainer):
     DOCKER_NETWORK = settings.CRCZP_CONFIG.ansible_docker_network
     CLIENT = docker.from_env
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         url,
         rev,
@@ -201,7 +199,7 @@ class KubernetesContainer(BaseContainer):
     CORE_API = client.CoreV1Api()
     BATCH_API = client.BatchV1Api()
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         url,
         rev,
@@ -324,7 +322,9 @@ class KubernetesContainer(BaseContainer):
                             client.V1Volume(
                                 name=ANSIBLE_FILE_VOLUME_NAME,
                                 persistent_volume_claim=V1PersistentVolumeClaimVolumeSource(
-                                    claim_name=settings.CRCZP_CONFIG.ansible_runner_settings.persistent_volume_claim_name
+                                    claim_name=(
+                                        settings.CRCZP_CONFIG.ansible_runner_settings.persistent_volume_claim_name
+                                    ),
                                 ),
                             )
                         ],
@@ -355,12 +355,13 @@ class KubernetesContainer(BaseContainer):
             label_selector=f'job-name={self.job_name}',
         ):
             pod_phase = event['object'].status.phase
-            if pod_phase == 'Running' or pod_phase == 'Failed':
+            if pod_phase in ('Running', 'Failed'):
                 w.stop()
                 return event['object'].metadata.name
             if event['type'] == 'DELETED':
                 w.stop()
                 raise CrczpException('Pod was deleted before it was ready.')
+        return None
 
     def _wait_for_job_finish(self):
         """
@@ -376,6 +377,7 @@ class KubernetesContainer(BaseContainer):
             if job_status.failed or job_status.succeeded:
                 w.stop()
                 return job_status
+        return None
 
     def _save_pod_outputs(self, pod_name: str):
         """

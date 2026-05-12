@@ -11,15 +11,15 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 import structlog
-from crczp.cloud_commons import TopologyInstance
-from crczp.topology_definition.models import Protocol
 
+from crczp.cloud_commons import TopologyInstance
 from crczp.sandbox_ansible_app.lib.inventory import (
     DefaultAnsibleHostsGroups,
     Group,
     _normalize_address,
 )
 from crczp.sandbox_common_lib.common_cloud import list_images
+from crczp.topology_definition.models import Protocol
 
 if TYPE_CHECKING:
     from crczp.sandbox_ansible_app.lib.inventory import Inventory
@@ -68,7 +68,7 @@ def _add_ssh_nodes_group(inventory: 'Inventory', topology: TopologyInstance) -> 
     inventory.add_group(Group(DefaultAnsibleHostsGroups.SSH_NODES.value, ssh_nodes))
 
 
-def _add_user_accessible_nodes_group(inventory: 'Inventory', topology: TopologyInstance) -> None:
+def _add_user_accessible_nodes_group(inventory: 'Inventory', _topology: TopologyInstance) -> None:
     inventory.add_group(
         Group(
             DefaultAnsibleHostsGroups.USER_ACCESSIBLE_NODES.value,
@@ -195,7 +195,7 @@ def _get_windows_hosts(inventory: 'Inventory', topology: TopologyInstance) -> li
                     windows_hosts.append(host)
 
         return windows_hosts
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         LOG.warning(f'Failed to create windows_hosts group: {e}')
         return []
 

@@ -1,3 +1,5 @@
+"""Authentication and role management utilities for sandbox UAG."""
+
 import hashlib
 import json
 
@@ -22,7 +24,7 @@ CACHE = caches['uag_auth_groups_cache']
 UAG_SETTINGS = settings.SANDBOX_UAG
 
 
-def get_or_create_user(request, user_info):
+def get_or_create_user(request, user_info):  # pylint: disable=too-many-locals
     """
     Retrieve (or create if non-existent) user from database.
     Set corresponding roles (Django groups).
@@ -43,8 +45,8 @@ def get_or_create_user(request, user_info):
     # the limit for username is 140 characters so this may be a problem for long sub+iss
     username = get_unique_username(sub, iss)
 
-    User = get_user_model()  # this is suggested way of getting User model
-    (user, _) = User.objects.update_or_create(
+    user_cls = get_user_model()  # this is suggested way of getting User model
+    (user, _) = user_cls.objects.update_or_create(
         username=username,
         defaults={'first_name': first_name, 'last_name': last_name, 'email': email},
     )
@@ -72,9 +74,8 @@ def get_or_create_user(request, user_info):
             group = Group.objects.get(name=group_name)
         except Group.DoesNotExist as ex:
             raise AuthenticationFailed(
-                'User {} ({}) has role {}, that is not in database: {}'.format(
-                    user.username, f'{sub},{iss}', group_name, str(ex)
-                )
+                f'User {user.username} ({sub},{iss}) has role {group_name},'
+                f' that is not in database: {ex}'
             ) from ex
         groups.append(group)
 
@@ -86,6 +87,7 @@ def get_or_create_user(request, user_info):
 
 
 def get_cache_key(username, bearer_token):
+    """Build a cache key from username and a hashed bearer token."""
     # Cache key shouldn't be longer than 250 characters, so we need to shorten the bearer token.
     # Since there is a possibility of a hash collision, additional steps are needed after cache-hit.
     # In our case, we check if the bearer tokens actually match.
@@ -95,6 +97,7 @@ def get_cache_key(username, bearer_token):
 
 
 def get_unique_username(sub, iss):
+    """Return a unique username string derived from OIDC subject and issuer."""
     return f'{str(sub)}|{str(iss)}'
 
 
@@ -102,9 +105,9 @@ def get_user_roles(url: str, bearer_token: bytes) -> list[str]:
     """Get user roles from User-and-group service."""
     err_msg = f"Failed to get User roles from '{url}': "
 
-    headers = {'Authorization': 'Bearer {}'.format(bearer_token.decode('ascii'))}
+    headers = {'Authorization': f'Bearer {bearer_token.decode("ascii")}'}
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=30)
         response.raise_for_status()
 
     # All request exceptions inherit from requests.RequestException
@@ -136,7 +139,7 @@ def post_user_roles(
     headers = {'Content-Type': 'application/json'}
     LOG.debug('Posting roles', data=data, headers=headers, url=url)
     try:
-        response = requests.post(url, data=data, headers=headers)
+        response = requests.post(url, data=data, headers=headers, timeout=30)
         response.raise_for_status()
 
     # All request exceptions inherit from requests.RequestException
@@ -162,7 +165,7 @@ def create_roles(roles_path: str) -> list[dict]:
     """Create roles (Django groups) and set permissions to them.
     Permissions MUST EXIST! Unlike groups which are created if do not exist.
     """
-    with open(roles_path) as f:
+    with open(roles_path, encoding='utf-8') as f:
         roles = yaml.full_load(f)
     for role in roles:
         (group, _) = Group.objects.get_or_create(name=get_full_role_name(role['name']))

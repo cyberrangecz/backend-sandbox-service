@@ -8,8 +8,6 @@ from typing import TextIO
 
 import structlog
 import yaml
-from crczp.topology_definition.image_naming import image_name_replace
-from crczp.topology_definition.models import DockerContainers, TopologyDefinition
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import caches
@@ -27,6 +25,8 @@ from crczp.sandbox_definition_app.lib.definition_providers import (
     GitlabProvider,
 )
 from crczp.sandbox_definition_app.models import Definition
+from crczp.topology_definition.image_naming import image_name_replace
+from crczp.topology_definition.models import DockerContainers, TopologyDefinition
 
 LOG = structlog.get_logger()
 
@@ -52,7 +52,7 @@ def create_definition(url: str, created_by: User | None, rev: str = None) -> Def
     client.validate_topology_definition(top_def)
 
     serializer = serializers.DefinitionSerializerCreate(
-        data=dict(name=top_def.name, url=url, rev=rev)
+        data={'name': top_def.name, 'url': url, 'rev': rev}
     )
     if not serializer.is_valid():
         if str(serializer.errors).find("code='unique'") != -1:
@@ -204,7 +204,7 @@ def get_def_provider(url: str, config: CrczpConfiguration) -> DefinitionProvider
     git_type = git_config.get_git_type(url)
     if git_type == GitType.GITLAB:
         return GitlabProvider(url, config)
-    elif git_type == GitType.GITHUB:
+    if git_type == GitType.GITHUB:
         return GitHubProvider(url, config)
     raise exceptions.ImproperlyConfigured(
         f'Cannot determine provider type: {git_config.get_rest_server(url)} '
@@ -284,7 +284,7 @@ def validate_docker_containers(url: str, rev: str, config: CrczpConfiguration) -
                 raise exceptions.ValidationError(
                     f'Container {container.name} contains invalid Dockerfile path. Error: {ex}'
                 ) from ex
-        # TODO add check for the existence of the image
+        # Note: image existence check not yet implemented
         # client = utils.get_terraform_client()
         # images = client.list_images()
     topdef_host_names = [host.name for host in topology_definition.hosts]

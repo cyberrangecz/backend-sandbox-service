@@ -1,3 +1,5 @@
+"""Business logic for retrieving OpenStack project information."""
+
 from django.core.cache import cache
 
 from crczp.sandbox_common_lib import utils

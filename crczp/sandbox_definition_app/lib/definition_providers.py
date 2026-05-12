@@ -1,3 +1,5 @@
+"""Git provider implementations for accessing sandbox definition files."""
+
 import base64
 from abc import ABC, abstractmethod
 
@@ -26,20 +28,18 @@ class DefinitionProvider(ABC):
     @abstractmethod
     def get_file(self, path: str, rev: str) -> str:
         """Get file from repo as a string."""
-        pass
 
     @abstractmethod
     def get_refs(self):
         """Get a list of refs (branches + tags)."""
-        pass
 
     @abstractmethod
     def get_rev_sha(self, rev: str) -> str:
         """Get a sha of a rev."""
-        pass
 
     @staticmethod
     def validate_https(url: str) -> giturlparse.parser.Parsed:
+        """Validate and parse an HTTPS git URL."""
         try:
             url_parsed = giturlparse.parse(url)
         except giturlparse.parser.ParserError:
@@ -83,14 +83,15 @@ class GitlabProvider(DefinitionProvider):
             raise exceptions.GitError(ex) from ex
 
     def get_branches(self):
+        """Return a list of branches for this repository."""
         try:
             project = self.gl.projects.get(self.project_path)
-
             return project.branches.list()
         except (requests.exceptions.RequestException, gitlab.exceptions.GitlabError) as ex:
             raise exceptions.GitError(ex) from ex
 
     def get_tags(self):
+        """Return a list of tags for this repository."""
         try:
             project = self.gl.projects.get(self.project_path)
             return project.tags.list()
@@ -113,6 +114,7 @@ class GitlabProvider(DefinitionProvider):
 
     @staticmethod
     def get_project_path(url_parsed) -> str:
+        """Extract the GitLab project path from a parsed HTTPS URL."""
         project_path = (
             url_parsed.pathname[:-4] if url_parsed.pathname[-4:] == '.git' else url_parsed.pathname
         )
@@ -160,7 +162,7 @@ class GitHubProvider(DefinitionProvider):
         """
         Not implemented as it is not needed.
         """
-        return super().get_refs()
+        raise NotImplementedError('get_refs is not supported for GitHub provider')
 
     def get_rev_sha(self, rev: str) -> str:
         """

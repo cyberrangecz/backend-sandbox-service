@@ -6,15 +6,15 @@ import itertools
 from dataclasses import dataclass
 
 import django_rq
-from crczp.cloud_commons import Image, TopologyInstance
-from crczp.cloud_commons.topology_elements import Node
-from crczp.terraform_driver import TerraformInstance
 from django.conf import settings
 from django.core.cache import cache
 
+from crczp.cloud_commons import Image, TopologyInstance
+from crczp.cloud_commons.topology_elements import Node
 from crczp.sandbox_common_lib import exceptions, utils
 from crczp.sandbox_common_lib.common_cloud import list_images
 from crczp.sandbox_instance_app.models import Sandbox
+from crczp.terraform_driver import TerraformInstance
 
 CACHE_CONSOLE_PREFIX = 'console-'
 CACHE_CONSOLE_TIMEOUT = 7200  # the console URLs can last for about 2-3 hours
@@ -34,14 +34,17 @@ class Protocol:
 
     @classmethod
     def ssh(cls):
+        """Return a Protocol instance for SSH."""
         return cls('SSH', 22)
 
     @classmethod
     def rdp(cls):
+        """Return a Protocol instance for RDP."""
         return cls('RDP', 3389)
 
     @classmethod
     def vnc(cls):
+        """Return a Protocol instance for VNC."""
         return cls('VNC', 5900)
 
 
@@ -84,6 +87,7 @@ def get_node(sandbox: Sandbox, node_name: str) -> TerraformInstance:
 def get_console_url_job(
     stack_name, node_name, console_type, console_cache_name, job_cache_id_running
 ):
+    """Fetch and cache the console URL for the given node (runs as a background job)."""
     client = utils.get_terraform_client()
     console_url = client.get_console_url(stack_name, node_name, console_type)
     cache.set(console_cache_name, console_url, CACHE_CONSOLE_TIMEOUT)
@@ -113,6 +117,7 @@ def get_console_url(sandbox: Sandbox, node_name: str) -> str:
 
 
 def get_node_access_data(topology_instance: TopologyInstance, node: Node) -> NodeAccessData:
+    """Return node access data containing management IP, port, host IP and available protocols."""
     if topology_instance is None:
         raise exceptions.ValidationError('Topology instance is None')
     if node is None:
@@ -147,6 +152,7 @@ def find_image_for_node(node: Node, images=None) -> Image:
 
 
 def get_node_available_protocols(node: Node) -> list[Protocol]:
+    """Return the list of available access protocols for the given node."""
     image = find_image_for_node(node)
     protocols = [Protocol.ssh()]
     if get_node_image_has_gui_access(image):
@@ -158,6 +164,7 @@ def get_node_available_protocols(node: Node) -> list[Protocol]:
 
 
 def get_node_image_has_gui_access(image: Image) -> bool:
+    """Return True if the image has GUI access enabled."""
     return image.owner_specified.get('owner_specified.openstack.gui_access') == 'true'
 
 

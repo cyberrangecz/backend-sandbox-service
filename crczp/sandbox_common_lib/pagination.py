@@ -1,7 +1,8 @@
+"""Custom pagination classes for the sandbox service API."""
+
 from collections import OrderedDict
 
 from django.db.models.query import QuerySet
-from rest_framework.compat import coreapi, coreschema
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
@@ -14,26 +15,26 @@ class PageNumberWithPageSizePagination(PageNumberPagination):
     order_default_param = 'asc'
     sorting_default_values = {}
 
-    def get_schema_fields(self, view):
-        fields = super().get_schema_fields(view)
-        fields += [
-            coreapi.Field(
-                name='sort_by',
-                required=False,
-                location='query',
-                schema=coreschema.String(
-                    title='Sort by', description='Attribute used to sort result set'
-                ),
-            ),
-            coreapi.Field(
-                name='order',
-                required=False,
-                location='query',
-                schema=coreschema.String(title='Order', description='Sort order'),
-            ),
+    def get_schema_operation_parameters(self, view):
+        """Extend schema operation parameters with sort_by and order parameters."""
+        parameters = super().get_schema_operation_parameters(view)
+        parameters += [
+            {
+                'name': 'sort_by',
+                'required': False,
+                'in': 'query',
+                'description': 'Attribute used to sort result set',
+                'schema': {'type': 'string'},
+            },
+            {
+                'name': 'order',
+                'required': False,
+                'in': 'query',
+                'description': 'Sort order',
+                'schema': {'type': 'string'},
+            },
         ]
-
-        return fields
+        return parameters
 
     def get_paginated_response(self, data):
         """Override base class method and extend it with extra args."""

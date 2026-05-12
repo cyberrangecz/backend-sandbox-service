@@ -1,3 +1,5 @@
+"""Tests for the Ansible runner utilities."""
+
 import pytest
 
 from crczp.sandbox_ansible_app.lib.ansible import AllocationAnsibleRunner
@@ -8,8 +10,11 @@ pytestmark = pytest.mark.django_db
 
 
 class TestPrepareInventoryFile:
+    """Tests for Ansible inventory file preparation."""
+
     @pytest.fixture(autouse=True)
-    def set_up(self, mocker, top_ins):
+    def set_up(self, mocker, top_ins):  # pylint: disable=attribute-defined-outside-init
+        """Set up mocks for each test."""
         self.client = mocker.patch('crczp.sandbox_common_lib.utils.get_terraform_client')
         self.client.get_sandbox.return_value = top_ins
         self.save_file = mocker.patch(
@@ -17,7 +22,8 @@ class TestPrepareInventoryFile:
         )
         yield
 
-    def test_prepare_inventory_file_success(self, mocker, top_ins):
+    def test_prepare_inventory_file_success(self, mocker, top_ins):  # pylint: disable=unused-argument
+        """Test that the inventory file is saved when preparing a successful allocation."""
         mock_inventory = mocker.patch('crczp.sandbox_ansible_app.lib.ansible.Inventory')
         mocker.patch('crczp.sandbox_ansible_app.lib.ansible.docker.from_env')
         sandboxes.get_topology_instance = mocker.MagicMock()
@@ -30,6 +36,7 @@ class TestPrepareInventoryFile:
         mock_inventory.assert_called_once()
 
     def test_prepare_inventory_object(self, mocker, top_ins, inventory):
+        """Test that create_inventory returns a correctly structured inventory dict."""
         mocker.patch('crczp.sandbox_ansible_app.lib.ansible.docker.from_env')
         dir_path = mocker.MagicMock()
         sandbox = Sandbox.objects.get(pk=1)

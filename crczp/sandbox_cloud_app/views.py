@@ -1,3 +1,5 @@
+"""REST API views for OpenStack cloud project information."""
+
 import datetime
 
 import structlog
@@ -15,6 +17,8 @@ LOG = structlog.get_logger()
 
 
 class ProjectInfoView(generics.RetrieveAPIView):
+    """View to retrieve project quota information."""
+
     # Exploitation of the Pool model permissions, Since the Cloud App does not have any models.
     queryset = Pool.objects.none()  # Required for DjangoModelPermissions
     serializer_class = serializers.QuotaSetSerializer
@@ -40,6 +44,8 @@ class ProjectInfoView(generics.RetrieveAPIView):
 
 
 class ProjectImagesView(generics.ListAPIView):
+    """View to retrieve and filter available OpenStack images."""
+
     queryset = Pool.objects.none()
     serializer_class = serializers.ImageSerializer
 
@@ -143,6 +149,8 @@ class ProjectImagesView(generics.ListAPIView):
 
 
 class ProjectLimitsView(generics.RetrieveAPIView):
+    """View to retrieve absolute project limits."""
+
     queryset = Pool.objects.none()
     serializer_class = serializers.ProjectLimitsSerializer
 

@@ -1,16 +1,18 @@
+"""Test fixtures for sandbox instance app tests."""
+
+# pylint: disable=redefined-outer-name
 import io
 import os
 from unittest import mock
 
 import pytest
 import yaml
-from crczp.cloud_commons import Image, TopologyInstance, TransformationConfiguration
-from crczp.topology_definition.models import TopologyDefinition
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.utils import timezone
 from ruamel.yaml import YAML
 
+from crczp.cloud_commons import Image, TopologyInstance, TransformationConfiguration
 from crczp.sandbox_ansible_app.lib.container import DockerContainer
 from crczp.sandbox_ansible_app.models import (
     Container,
@@ -36,6 +38,9 @@ from crczp.sandbox_instance_app.models import (
     StackCleanupStage,
     TerraformStack,
 )
+from crczp.topology_definition.models import TopologyDefinition
+
+User = get_user_model()
 
 TESTING_DATA_DIR = 'assets'
 
@@ -58,6 +63,7 @@ TESTING_TOPOLOGY_CUSTOM_FLAVORS = 'definition_flavor_mapping.yml'
 
 
 def mock_topology_cache(top_ins):
+    """Build a Topology object using a mocked cache to simulate a cache miss."""
     with (
         mock.patch('django.core.cache.cache.get') as mock_cache_get,
         mock.patch('django.core.cache.cache.set'),
@@ -70,6 +76,7 @@ def mock_topology_cache(top_ins):
 
 @pytest.fixture
 def get_terraform_client(mocker, image, flavor_dict):
+    """Fixture providing a mocked terraform client pre-configured with image and flavor data."""
     mock_client = mocker.MagicMock()
     mock_client.get_flavors_dict.return_value = flavor_dict
     mock_client.list_images.return_value = [image]
@@ -79,43 +86,47 @@ def get_terraform_client(mocker, image, flavor_dict):
 
 
 def data_path_join(file: str, data_dir: str = TESTING_DATA_DIR) -> str:
+    """Return the absolute path to a test data file."""
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), data_dir, file)
 
 
 @pytest.fixture(scope='session')
-def django_db_setup(django_db_setup, django_db_blocker):
+def django_db_setup(django_db_setup, django_db_blocker):  # pylint: disable=unused-argument
+    """Session-scoped fixture to load the test database from a fixture file."""
     with django_db_blocker.unblock():
         call_command('loaddata', data_path_join(TESTING_DATABASE))
 
 
 @pytest.fixture(autouse=True)
 def docker_sys_mock(mocker):
+    """Autouse fixture to mock the Docker client for all tests."""
     mocker.patch.object(DockerContainer, 'CLIENT')
 
 
 @pytest.fixture
 def trc_config():
+    """Fixture providing a TransformationConfiguration from the test config file."""
     return TransformationConfiguration.from_file(data_path_join(TESTING_TRC_CONFIG))
 
 
 @pytest.fixture
 def top_def():
     """Creates example topology definition for a sandbox."""
-    with open(data_path_join(TESTING_DEFINITION)) as f:
+    with open(data_path_join(TESTING_DEFINITION), encoding='utf-8') as f:
         return TopologyDefinition.load(f)
 
 
 @pytest.fixture
 def top_def_hidden():
     """Creates example topology definition for a sandbox."""
-    with open(data_path_join(TESTING_DEFINITION_HIDDEN)) as f:
+    with open(data_path_join(TESTING_DEFINITION_HIDDEN), encoding='utf-8') as f:
         return TopologyDefinition.load(f)
 
 
 @pytest.fixture
 def links():
     """Creates example links definition"""
-    with open(data_path_join(TESTING_LINKS)) as f:
+    with open(data_path_join(TESTING_LINKS), encoding='utf-8') as f:
         return yaml.full_load(f)
 
 
@@ -145,6 +156,7 @@ def top_ins_hidden(top_def_hidden, trc_config):
 
 @pytest.fixture
 def flavor_dict():
+    """Fixture providing a dictionary of available flavor names."""
     return {
         'standard.small': '',
         'standard.tiny1x4': '',
@@ -176,7 +188,7 @@ def top_ins_with_containers(top_def, trc_config, links, containers):
 
 
 @pytest.fixture
-def top_ins_with_containers_with_server(top_def, trc_config, links, containers):
+def top_ins_with_containers_with_server(top_def, trc_config, links, containers):  # pylint: disable=unused-argument
     """Creates example topology instance."""
     containers = containers.replace('home', 'server', 1)
     loaded_containers = load_docker_containers(io.StringIO(containers))
@@ -191,7 +203,7 @@ def top_ins_with_containers_with_server(top_def, trc_config, links, containers):
 @pytest.fixture
 def topology_containers():
     """Creates container topology. Not to be mistaken with topology instance."""
-    with open(data_path_join(TESTING_TOPOLOGY_CONTAINERS)) as f:
+    with open(data_path_join(TESTING_TOPOLOGY_CONTAINERS), encoding='utf-8') as f:
         return yaml.full_load(f)
 
 
@@ -202,7 +214,7 @@ def containers() -> str:
     ruamel_yaml = YAML()
     stream = io.StringIO()
 
-    with open(data_path_join(TESTING_CONTAINERS)) as f:
+    with open(data_path_join(TESTING_CONTAINERS), encoding='utf-8') as f:
         ruamel_yaml.dump(ruamel_yaml.load(f), stream)
         return stream.getvalue()
 
@@ -228,14 +240,14 @@ def ansible_ssh_config():
 @pytest.fixture
 def topology():
     """Creates example topology for a sandbox."""
-    with open(data_path_join(TESTING_TOPOLOGY)) as f:
+    with open(data_path_join(TESTING_TOPOLOGY), encoding='utf-8') as f:
         return yaml.full_load(f)
 
 
 @pytest.fixture
 def topology_hidden():
     """Creates example topology for a sandbox."""
-    with open(data_path_join(TESTING_TOPOLOGY_HIDDEN)) as f:
+    with open(data_path_join(TESTING_TOPOLOGY_HIDDEN), encoding='utf-8') as f:
         return yaml.full_load(f)
 
 
@@ -246,13 +258,14 @@ def definition_custom_flavors():
     ruamel_yaml = YAML()
     stream = io.StringIO()
 
-    with open(data_path_join(TESTING_TOPOLOGY_CUSTOM_FLAVORS)) as f:
+    with open(data_path_join(TESTING_TOPOLOGY_CUSTOM_FLAVORS), encoding='utf-8') as f:
         ruamel_yaml.dump(yaml.unsafe_load(f), stream)
         return stream.getvalue()
 
 
 @pytest.fixture
 def image():
+    """Fixture providing a test OS image."""
     return Image(
         os_distro=None,
         os_type='debian',
@@ -273,11 +286,13 @@ def image():
 
 
 def set_stage_started(stage):
+    """Mark the given allocation/cleanup stage as started."""
     stage.start = timezone.now()
     stage.save()
 
 
 def set_stage_finished(stage):
+    """Mark the given stage as successfully finished."""
     set_stage_started(stage)
     stage.failed = False
     stage.error_message = None
@@ -289,6 +304,7 @@ def set_stage_finished(stage):
 
 
 def set_stage_failed(stage):
+    """Mark the given stage as failed."""
     set_stage_started(stage)
     stage.failed = True
     stage.error_message = 'Stack CREATE failed'
@@ -301,11 +317,13 @@ def set_stage_failed(stage):
 
 @pytest.fixture
 def stack():
+    """Fixture providing a minimal Terraform stack response dict."""
     return {'stack': {'id': 'stack-id'}}
 
 
 @pytest.fixture
 def process(mocker):
+    """Fixture providing a mock process with pid=1."""
     proc = mocker.MagicMock()
     proc.pid = 1
     return proc
@@ -313,6 +331,7 @@ def process(mocker):
 
 @pytest.fixture
 def created_by():
+    """Fixture providing a test user to act as owner of created objects."""
     return User.objects.create(
         username='test-user',
         first_name='test-first-name',
@@ -323,6 +342,7 @@ def created_by():
 
 @pytest.fixture
 def definition(created_by):
+    """Fixture providing a sandbox Definition database object."""
     return Definition.objects.create(
         name='test-def-name', url='test-def-url', rev='test-def-rev', created_by=created_by
     )
@@ -330,6 +350,7 @@ def definition(created_by):
 
 @pytest.fixture
 def pool(definition, created_by):
+    """Fixture providing a sandbox Pool database object."""
     return Pool.objects.create(
         definition=definition,
         max_size=3,
@@ -342,16 +363,19 @@ def pool(definition, created_by):
 
 @pytest.fixture
 def allocation_unit(pool, created_by):
+    """Fixture providing a SandboxAllocationUnit database object."""
     return SandboxAllocationUnit.objects.create(pool=pool, created_by=created_by)
 
 
 @pytest.fixture
 def allocation_request(allocation_unit):
+    """Fixture providing an AllocationRequest database object."""
     return AllocationRequest.objects.create(allocation_unit=allocation_unit)
 
 
 @pytest.fixture
 def allocation_stage_stack(allocation_request):
+    """Fixture providing a StackAllocationStage database object."""
     return StackAllocationStage.objects.create(
         allocation_request=allocation_request, allocation_request_fk_many=allocation_request
     )
@@ -359,6 +383,7 @@ def allocation_stage_stack(allocation_request):
 
 @pytest.fixture
 def allocation_stage_stack_started(allocation_stage_stack, stack):
+    """Fixture providing a StackAllocationStage in started state."""
     set_stage_started(allocation_stage_stack)
     TerraformStack.objects.create(
         allocation_stage=allocation_stage_stack, stack_id=stack['stack']['id']
@@ -372,6 +397,7 @@ def allocation_stage_stack_started(allocation_stage_stack, stack):
 
 @pytest.fixture
 def allocation_stage_networking(allocation_request):
+    """Fixture providing a NetworkingAnsibleAllocationStage database object."""
     return NetworkingAnsibleAllocationStage.objects.create(
         allocation_request=allocation_request,
         allocation_request_fk_many=allocation_request,
@@ -384,6 +410,7 @@ def allocation_stage_networking(allocation_request):
 def allocation_stage_networking_started(
     allocation_stage_networking, allocation_stage_stack_started
 ):
+    """Fixture providing a NetworkingAnsibleAllocationStage in started state."""
     set_stage_finished(allocation_stage_stack_started)
     set_stage_started(allocation_stage_networking)
     Container.objects.create(
@@ -398,6 +425,7 @@ def allocation_stage_networking_started(
 
 @pytest.fixture
 def allocation_stage_user(allocation_request):
+    """Fixture providing a UserAnsibleAllocationStage database object."""
     return UserAnsibleAllocationStage.objects.create(
         allocation_request=allocation_request,
         allocation_request_fk_many=allocation_request,
@@ -408,6 +436,7 @@ def allocation_stage_user(allocation_request):
 
 @pytest.fixture
 def allocation_stage_user_started(allocation_stage_user, allocation_stage_networking_started):
+    """Fixture providing a UserAnsibleAllocationStage in started state."""
     set_stage_finished(allocation_stage_networking_started)
     set_stage_started(allocation_stage_user)
     Container.objects.create(
@@ -422,16 +451,19 @@ def allocation_stage_user_started(allocation_stage_user, allocation_stage_networ
 
 @pytest.fixture
 def allocation_request_started(allocation_stage_user_started):
+    """Fixture providing an AllocationRequest with all stages started."""
     return allocation_stage_user_started.allocation_request
 
 
 @pytest.fixture
 def now():
+    """Fixture providing the current datetime."""
     return timezone.now()
 
 
 @pytest.fixture
 def sandbox(allocation_unit):
+    """Fixture providing a Sandbox database object."""
     return Sandbox.objects.create(
         id=allocation_unit.id,
         allocation_unit=allocation_unit,
@@ -443,6 +475,7 @@ def sandbox(allocation_unit):
 
 @pytest.fixture
 def sandbox_finished(allocation_stage_user_started, sandbox):
+    """Fixture providing a sandbox whose allocation has completed successfully."""
     set_stage_finished(allocation_stage_user_started)
     return sandbox
 
@@ -451,6 +484,7 @@ def sandbox_finished(allocation_stage_user_started, sandbox):
 def sandbox_failed_stack_stage(
     allocation_stage_stack, allocation_stage_networking, allocation_stage_user, sandbox
 ):
+    """Fixture providing a sandbox where all allocation stages have failed."""
     set_stage_failed(allocation_stage_stack)
     set_stage_failed(allocation_stage_networking)
     set_stage_failed(allocation_stage_user)
@@ -461,6 +495,7 @@ def sandbox_failed_stack_stage(
 def sandbox_failed_user_stage(
     allocation_stage_stack, allocation_stage_networking, allocation_stage_user, sandbox
 ):
+    """Fixture providing a sandbox where only the user allocation stage has failed."""
     set_stage_finished(allocation_stage_stack)
     set_stage_finished(allocation_stage_networking)
     set_stage_failed(allocation_stage_user)
@@ -469,26 +504,31 @@ def sandbox_failed_user_stage(
 
 @pytest.fixture
 def sandbox_lock(sandbox_finished):
+    """Fixture providing a SandboxLock for a finished sandbox."""
     return SandboxLock.objects.create(sandbox=sandbox_finished)
 
 
 @pytest.fixture
 def pool_lock(pool, training_access_token):
+    """Fixture providing a locked pool with a training access token."""
     return pools.lock_pool(pool=pool, training_access_token=training_access_token)
 
 
 @pytest.fixture
 def training_access_token():
+    """Fixture providing a test training access token string."""
     return 'token-1234'
 
 
 @pytest.fixture
 def cleanup_request(allocation_unit):
+    """Fixture providing a CleanupRequest database object."""
     return CleanupRequest.objects.create(allocation_unit=allocation_unit)
 
 
 @pytest.fixture
 def cleanup_stage_user(cleanup_request):
+    """Fixture providing a UserAnsibleCleanupStage database object."""
     return UserAnsibleCleanupStage.objects.create(
         cleanup_request=cleanup_request,
         cleanup_request_fk_many=cleanup_request,
@@ -496,13 +536,15 @@ def cleanup_stage_user(cleanup_request):
 
 
 @pytest.fixture
-def cleanup_stage_user_started(cleanup_stage_user, allocation_request_started):
+def cleanup_stage_user_started(cleanup_stage_user, allocation_request_started):  # pylint: disable=unused-argument
+    """Fixture providing a UserAnsibleCleanupStage in started state."""
     set_stage_started(cleanup_stage_user)
     return cleanup_stage_user
 
 
 @pytest.fixture
 def cleanup_stage_networking(cleanup_request):
+    """Fixture providing a NetworkingAnsibleCleanupStage database object."""
     return NetworkingAnsibleCleanupStage.objects.create(
         cleanup_request=cleanup_request,
         cleanup_request_fk_many=cleanup_request,
@@ -511,6 +553,7 @@ def cleanup_stage_networking(cleanup_request):
 
 @pytest.fixture
 def cleanup_stage_networking_started(cleanup_stage_networking, cleanup_stage_user_started):
+    """Fixture providing a NetworkingAnsibleCleanupStage in started state."""
     set_stage_finished(cleanup_stage_user_started)
     set_stage_started(cleanup_stage_networking)
     return cleanup_stage_networking
@@ -518,6 +561,7 @@ def cleanup_stage_networking_started(cleanup_stage_networking, cleanup_stage_use
 
 @pytest.fixture
 def cleanup_stage_stack(cleanup_request):
+    """Fixture providing a StackCleanupStage database object."""
     return StackCleanupStage.objects.create(
         cleanup_request=cleanup_request,
         cleanup_request_fk_many=cleanup_request,
@@ -526,6 +570,7 @@ def cleanup_stage_stack(cleanup_request):
 
 @pytest.fixture
 def cleanup_stage_stack_started(cleanup_stage_stack, cleanup_stage_networking_started):
+    """Fixture providing a StackCleanupStage in started state."""
     set_stage_finished(cleanup_stage_networking_started)
     set_stage_started(cleanup_stage_stack)
     return cleanup_stage_stack
@@ -533,10 +578,12 @@ def cleanup_stage_stack_started(cleanup_stage_stack, cleanup_stage_networking_st
 
 @pytest.fixture
 def cleanup_request_started(cleanup_stage_stack_started):
+    """Fixture providing a CleanupRequest with all stages started."""
     return cleanup_stage_stack_started.cleanup_request
 
 
 @pytest.fixture
 def cleanup_request_finished(cleanup_stage_stack_started):
+    """Fixture providing a CleanupRequest that has finished successfully."""
     set_stage_finished(cleanup_stage_stack_started)
     return cleanup_stage_stack_started.cleanup_request

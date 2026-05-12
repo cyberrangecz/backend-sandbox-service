@@ -5,9 +5,9 @@ Django Apps configuration file
 import os
 from enum import Enum
 
-from crczp.cloud_commons import TransformationConfiguration
 from yamlize import Attribute, Map, Object, Typed, YamlizingError
 
+from crczp.cloud_commons import TransformationConfiguration
 from crczp.sandbox_common_lib import crczp_config_validation
 from crczp.sandbox_common_lib.exceptions import ImproperlyConfigured
 
@@ -43,6 +43,9 @@ REDIS_TIMEOUT = 86400 * 30
 
 
 class ProxyJump(Object):
+    """SSH ProxyJump configuration for connecting to managed nodes."""
+
+    # pylint: disable=invalid-name
     Host = Attribute(type=str)
     User = Attribute(type=str)
     Port = Attribute(type=int, default=22)
@@ -56,10 +59,14 @@ class ProxyJump(Object):
 
 
 class TerraformConfiguration(Object):
+    """Terraform backend configuration settings."""
+
     backend_type = Attribute(type=str)
 
 
 class AnsibleRunnerSettings(Object):
+    """Settings for the Ansible runner backend (Docker or Kubernetes)."""
+
     backend = Attribute(type=str, default='docker')
     namespace = Attribute(type=str, default='crczp')
     volumes_path = Attribute(type=str, default=VOLUMES_PATH)
@@ -67,6 +74,8 @@ class AnsibleRunnerSettings(Object):
 
 
 class Database(Object):
+    """Database connection configuration."""
+
     engine = Attribute(type=str, default=DATABASE_ENGINE)
     host = Attribute(type=str, default=DATABASE_HOST)
     name = Attribute(type=str, default=DATABASE_NAME)
@@ -80,6 +89,8 @@ class Database(Object):
 
 
 class Redis(Object):
+    """Redis connection and cache timeout configuration."""
+
     host = Attribute(type=str, default=REDIS_HOST)
     port = Attribute(type=int, default=REDIS_PORT)
     db = Attribute(type=int, default=REDIS_DB)
@@ -89,12 +100,16 @@ class Redis(Object):
 
 
 class GitType(Enum):
+    """Supported Git provider types."""
+
     GITLAB = 1
     INTERNAL = 2  # DEPRECATED
     GITHUB = 3
 
 
 class OpenStackConsoleType(Enum):
+    """Supported OpenStack console types."""
+
     NOVNC = 'novnc'
     XVPVNC = 'xvpvnc'
     SPICE_HTML5 = 'spice-html5'
@@ -104,6 +119,7 @@ class OpenStackConsoleType(Enum):
 
     @classmethod
     def create(cls, value: str) -> None:
+        """Create an OpenStackConsoleType from a string value."""
         try:
             return cls[value.upper().replace('-', '_')]
         except KeyError:
@@ -111,6 +127,8 @@ class OpenStackConsoleType(Enum):
 
 
 class AwsConfiguration(Object):
+    """AWS cloud provider configuration."""
+
     access_key_id = Attribute(type=str, default='')
     secret_access_key = Attribute(type=str, default='')
     region = Attribute(type=str, default='')
@@ -120,27 +138,37 @@ class AwsConfiguration(Object):
 
 
 class NamingStrategy(Object):
+    """Naming strategy for OpenStack resource names."""
+
     pattern = Attribute(type=str)
     replace = Attribute(type=str, default='')
 
 
 class FlavorMapping(Map):
+    """Mapping from sandbox flavor keys to OpenStack flavor names."""
+
     key_type = Typed(str)
     value_type = Typed(str)
 
 
 class GitProviders(Map):
+    """Mapping from Git server base URLs to access tokens."""
+
     key_type = Typed(str)
     value_type = Typed(str)
 
 
 class SMTPEncryption(Enum):
+    """Supported SMTP encryption modes."""
+
     TSL = 1
     SSL = 2
     INSECURE = 3
 
 
 class CrczpConfiguration(Object):
+    """Top-level CRCZP application configuration loaded from a YAML file."""
+
     head_host = Attribute(type=str, default=HEAD_IP)
     syslog_destination_port = Attribute(type=int, default=515)
 
@@ -234,7 +262,7 @@ class CrczpConfiguration(Object):
         for key, val in kwargs.items():
             setattr(self, key, val)
 
-    # TODO get rid of this horror
+    # Note: overrides yamlize Object.load to add error handling
     # Override
     @classmethod
     def load(cls, *args, **kwargs) -> 'CrczpConfiguration':
@@ -244,17 +272,18 @@ class CrczpConfiguration(Object):
         except YamlizingError as ex:
             raise ImproperlyConfigured(ex) from ex
 
-        # TODO deal with absolute paths in ProxyJump object validation
+        # Note: absolute paths required for ProxyJump IdentityFile
         # Key-paths need to be absolute
         obj.proxy_jump_to_man.IdentityFile = os.path.abspath(
             os.path.expanduser(obj.proxy_jump_to_man.IdentityFile)
         )
 
-        # TODO move this somewhere
+        # Note: set REQUESTS_CA_BUNDLE for SSL verification
         os.environ['REQUESTS_CA_BUNDLE'] = obj.ssl_ca_certificate_verify
         return obj
 
     @classmethod
     def from_file(cls, path):
-        with open(path) as f:
+        """Load configuration from a YAML file at the given path."""
+        with open(path, encoding='utf-8') as f:
             return cls.load(f)

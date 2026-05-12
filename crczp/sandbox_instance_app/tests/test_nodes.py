@@ -1,3 +1,5 @@
+"""Tests for VM node actions and retrieval."""
+
 import pytest
 
 from crczp.sandbox_common_lib import exceptions
@@ -5,6 +7,8 @@ from crczp.sandbox_instance_app.lib import nodes
 
 
 class TestNodeAction:
+    """Tests for node_action function."""
+
     @pytest.mark.parametrize(
         'action',
         [
@@ -13,6 +17,7 @@ class TestNodeAction:
         ],
     )
     def test_node_action_success(self, mocker, action):
+        """Test that a valid node action calls the correct client method."""
         mock_client = mocker.patch('crczp.sandbox_common_lib.utils.get_terraform_client')
         mock_instance = mock_client.return_value
         action_dict = {
@@ -29,13 +34,17 @@ class TestNodeAction:
         )
 
     def test_node_action_unknown_action(self, mocker):
+        """Test that an unknown action raises ValidationError."""
         mocker.patch('crczp.sandbox_common_lib.utils.get_terraform_client')
         with pytest.raises(exceptions.ValidationError):
             nodes.node_action(mocker.MagicMock(), 'node_name', 'non-action')
 
 
-class TestGetNode:
+class TestGetNode:  # pylint: disable=too-few-public-methods
+    """Tests for get_node function."""
+
     def test_get_node(self, mocker):
+        """Test that get_node returns the client's get_node result."""
         mock_client = mocker.patch('crczp.terraform_driver.CrczpTerraformClient.get_node')
         result = nodes.get_node(mocker.MagicMock(), 'node_name')
         assert result == mock_client.return_value

@@ -1,3 +1,5 @@
+"""Unit tests for sandbox_common_lib utils."""
+
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 
@@ -5,6 +7,7 @@ from crczp.sandbox_common_lib import utils
 
 
 def test_generate_ssh_keypair_correct_format():
+    """Test that generated SSH key pair has the expected format."""
     priv_key, pub_key = utils.generate_ssh_keypair()
     assert priv_key.startswith('-----BEGIN RSA PRIVATE KEY-----')
     assert priv_key.endswith('-----END RSA PRIVATE KEY-----\n')
@@ -27,6 +30,7 @@ def test_generate_ssh_keypair_correct_format():
 
 
 def test_generate_create_self_signed_certificate_correct_format():
+    """Test that a generated self-signed certificate has the expected PEM format."""
     priv_key, _ = utils.generate_ssh_keypair()
     certificate = utils.create_self_signed_certificate(priv_key)
 

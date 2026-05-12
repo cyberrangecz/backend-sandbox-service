@@ -72,6 +72,7 @@ exclude-packages = [
 [tool.ruff]
 line-length = 100
 preview = true
+src = ["crczp"]
 
 [tool.ruff.lint]
 select = [
@@ -89,6 +90,9 @@ select = [
     "I",
 ]
 
+[tool.ruff.lint.isort]
+known-first-party = ["crczp"]
+
 [tool.ruff.format]
 quote-style = "single"
 indent-style = "space"
@@ -103,8 +107,14 @@ show_error_codes = true
 enable_error_code = ["deprecated", "explicit-override"]
 explicit_package_bases = true
 
-[tool.pylint]
-# You can add pylint configs here or in .pylintrc
+[tool.pylint.main]
+ignore-paths = [".*/migrations/.*"]
+
+[tool.pylint.messages_control]
+disable = [
+    "duplicate-code",
+    "abstract-method",
+]
 
 [tool.bandit]
 skips = ["B101"]

@@ -7,19 +7,19 @@ import io
 import zipfile
 
 import structlog
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.core.cache import cache
+from django.db import transaction
+from django.db.models import ProtectedError, QuerySet
+from django.shortcuts import get_object_or_404
+
 from crczp.cloud_commons import (
     CrczpException,
     HardwareUsage,
     InvalidTopologyDefinition,
     StackCreationFailed,
 )
-from django.conf import settings
-from django.contrib.auth.models import User
-from django.core.cache import cache
-from django.db import transaction
-from django.db.models import ProtectedError, QuerySet
-from django.shortcuts import get_object_or_404
-
 from crczp.sandbox_common_lib import exceptions, utils
 from crczp.sandbox_definition_app.lib import definitions
 from crczp.sandbox_definition_app.models import Definition
@@ -33,6 +33,7 @@ from crczp.sandbox_instance_app.models import (
     SandboxLock,
 )
 
+User = get_user_model()
 LOG = structlog.get_logger()
 POOL_CACHE_TIMEOUT = None
 PROJECT_LIMITS_CACHE_IDENTIFIER = 'project-limits'
@@ -204,7 +205,7 @@ def create_sandboxes_in_pool(
 
 def get_unlocked_sandbox(pool: Pool, created_by: User | None) -> Sandbox | None:
     """Return unlocked sandbox."""
-    # TODO: Create Locks immediately on Sandbox creation
+    # Note: Locks should be created immediately on Sandbox creation to simplify this logic
     with transaction.atomic():
         sb_queryset = (
             Sandbox.objects

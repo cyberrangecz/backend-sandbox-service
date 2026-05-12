@@ -1,3 +1,5 @@
+"""Django management command for registering roles with the User and Group service."""
+
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
@@ -9,7 +11,7 @@ class Command(BaseCommand):
     # DB needs to be migrated, otherwise the used permissions may not exist.
     requires_migrations_checks = True
 
-    def handle(self, **options):
+    def handle(self, *args, **options):
         # The authentication needs to be on, so that the auth framework has
         # all required settings. Otherwise, it dies with an ambiguous error.
         if not settings.CRCZP_SERVICE_CONFIG.authentication.authenticated_rest_api:
@@ -18,6 +20,6 @@ class Command(BaseCommand):
                 ' to register the roles.'
             )
         # The module can be imported only if the required settings are set. It fails otherwise.
-        from crczp.sandbox_uag import auth
+        from crczp.sandbox_uag import auth  # pylint: disable=import-outside-toplevel
 
         auth.post_user_roles()
