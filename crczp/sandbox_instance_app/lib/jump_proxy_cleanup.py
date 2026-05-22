@@ -3,13 +3,14 @@
 import paramiko
 import structlog
 from django.conf import settings
+from paramiko import PKey, SSHClient
 
 from crczp.sandbox_instance_app.models import SandboxAllocationUnit
 
 LOG = structlog.get_logger()
 
 
-def delete_jump_ssh_key(allocation_unit: SandboxAllocationUnit):
+def delete_jump_ssh_key(allocation_unit: SandboxAllocationUnit) -> None:
     """Delete the SSH key for the given allocation unit from the jump proxy."""
     name = allocation_unit.get_stack_name()
     ssh = connect_to_jump()
@@ -22,7 +23,7 @@ def delete_jump_ssh_key(allocation_unit: SandboxAllocationUnit):
         LOG.warning(f'Failed to delete key for {name} from proxy jump: {error}')
 
 
-def connect_to_jump():
+def connect_to_jump() -> SSHClient:
     """Establish an SSH connection to the configured jump proxy host."""
     hostname = settings.CRCZP_CONFIG.proxy_jump_to_man.Host
     user = settings.CRCZP_CONFIG.proxy_jump_to_man.User
@@ -32,7 +33,7 @@ def connect_to_jump():
     return ssh_connect(hostname, port, user, identity_file)
 
 
-def ssh_connect(hostname, port, username, key_file_path):
+def ssh_connect(hostname: str, port: int, username: str, key_file_path: str) -> SSHClient:
     """Create and return an authenticated SSH connection."""
     try:
         ssh = paramiko.SSHClient()
@@ -47,12 +48,12 @@ def ssh_connect(hostname, port, username, key_file_path):
         raise
 
 
-def load_private_key(key_path):
+def load_private_key(key_path: str) -> PKey:
     """Load and return a Paramiko private key from the given file path."""
     key_classes = [paramiko.RSAKey, paramiko.ECDSAKey, paramiko.Ed25519Key]
     for key_class in key_classes:
         try:
-            return key_class.from_private_key_file(key_path)
+            return key_class.from_private_key_file(key_path)  # type: ignore[attr-defined, no-any-return]
         except (OSError, paramiko.SSHException):
             continue
     raise ValueError('Could not load private key. Unsupported key type or file not found.')

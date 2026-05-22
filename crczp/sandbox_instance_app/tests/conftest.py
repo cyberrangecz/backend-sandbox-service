@@ -3,6 +3,7 @@
 # pylint: disable=redefined-outer-name
 import io
 import os
+from typing import Any
 from unittest import mock
 
 import pytest
@@ -62,7 +63,7 @@ TESTING_TOPOLOGY_CONTAINERS = 'topology_containers.yml'
 TESTING_TOPOLOGY_CUSTOM_FLAVORS = 'definition_flavor_mapping.yml'
 
 
-def mock_topology_cache(top_ins):
+def mock_topology_cache(top_ins: TopologyInstance) -> Topology:
     """Build a Topology object using a mocked cache to simulate a cache miss."""
     with (
         mock.patch('django.core.cache.cache.get') as mock_cache_get,
@@ -285,13 +286,13 @@ def image():
     )
 
 
-def set_stage_started(stage):
+def set_stage_started(stage: Any) -> None:
     """Mark the given allocation/cleanup stage as started."""
     stage.start = timezone.now()
     stage.save()
 
 
-def set_stage_finished(stage):
+def set_stage_finished(stage: Any) -> None:
     """Mark the given stage as successfully finished."""
     set_stage_started(stage)
     stage.failed = False
@@ -303,7 +304,7 @@ def set_stage_finished(stage):
     stage.save()
 
 
-def set_stage_failed(stage):
+def set_stage_failed(stage: Any) -> None:
     """Mark the given stage as failed."""
     set_stage_started(stage)
     stage.failed = True

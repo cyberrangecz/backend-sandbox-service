@@ -2,6 +2,7 @@
 
 import base64
 from abc import ABC, abstractmethod
+from typing import Any, override
 from urllib.parse import ParseResult, urlparse
 
 import gitlab
@@ -30,7 +31,7 @@ class DefinitionProvider(ABC):
         """Get file from repo as a string."""
 
     @abstractmethod
-    def get_refs(self):
+    def get_refs(self) -> list[Any]:
         """Get a list of refs (branches + tags)."""
 
     @abstractmethod
@@ -68,6 +69,7 @@ class GitlabProvider(DefinitionProvider):
                 self.git_rest_server, ssl_verify=not config.git_skip_ssl_verification
             )
 
+    @override
     def get_file(self, path: str, rev: str) -> str:
         """Get file from repo as a string."""
         try:
@@ -77,7 +79,7 @@ class GitlabProvider(DefinitionProvider):
         except (requests.exceptions.RequestException, gitlab.exceptions.GitlabError) as ex:
             raise exceptions.GitError(ex) from ex
 
-    def get_branches(self):
+    def get_branches(self) -> list[Any]:
         """Return a list of branches for this repository."""
         try:
             project = self.gl.projects.get(self.project_path)
@@ -85,7 +87,7 @@ class GitlabProvider(DefinitionProvider):
         except (requests.exceptions.RequestException, gitlab.exceptions.GitlabError) as ex:
             raise exceptions.GitError(ex) from ex
 
-    def get_tags(self):
+    def get_tags(self) -> list[Any]:
         """Return a list of tags for this repository."""
         try:
             project = self.gl.projects.get(self.project_path)
@@ -93,17 +95,19 @@ class GitlabProvider(DefinitionProvider):
         except (requests.exceptions.RequestException, gitlab.exceptions.GitlabError) as ex:
             raise exceptions.GitError(ex) from ex
 
-    def get_refs(self):
+    @override
+    def get_refs(self) -> list[Any]:
         return self.get_branches() + self.get_tags()
 
+    @override
     def get_rev_sha(self, rev: str) -> str:
         try:
             for ref in self.get_refs():
                 if ref.name == rev:
-                    return ref.commit['id']
+                    return ref.commit['id']  # type: ignore[no-any-return]
             project = self.gl.projects.get(self.project_path)
             commit = project.commits.get(rev)
-            return commit.id
+            return commit.id  # type: ignore[no-any-return]
         except (requests.exceptions.RequestException, gitlab.exceptions.GitlabError) as ex:
             raise exceptions.GitError('Failed to get sha of the GIT rev.', ex) from ex
 
@@ -136,12 +140,13 @@ class GitHubProvider(DefinitionProvider):
     def _get_repo_name(self, url: str) -> str:
         return url.removeprefix(self.git_rest_server).removesuffix('.git')
 
+    @override
     def get_file(self, path: str, rev: str) -> str:
         """
         Get the plain text content of the file.
         """
         try:
-            contents: ContentFile = self.repo.get_contents(path, ref=rev)
+            contents: ContentFile = self.repo.get_contents(path, ref=rev)  # type: ignore[assignment]
         except (UnknownObjectException, GithubException) as exc:
             raise exceptions.GitError(
                 f"Cannot find '{path}' in {self.repo.name} [rev: '{rev}']"
@@ -149,12 +154,14 @@ class GitHubProvider(DefinitionProvider):
 
         return base64.b64decode(contents.content).decode()
 
-    def get_refs(self):
+    @override
+    def get_refs(self) -> list[Any]:
         """
         Not implemented as it is not needed.
         """
         raise NotImplementedError('get_refs is not supported for GitHub provider')
 
+    @override
     def get_rev_sha(self, rev: str) -> str:
         """
         Return revision specified on the input. This method is created

@@ -1,9 +1,11 @@
 """Custom pagination classes for the sandbox service API."""
 
 from collections import OrderedDict
+from typing import Any, override
 
 from django.db.models.query import QuerySet
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.request import Request
 from rest_framework.response import Response
 
 
@@ -13,9 +15,10 @@ class PageNumberWithPageSizePagination(PageNumberPagination):
     page_size_query_param = 'page_size'
     sort_by_default_param = 'id'
     order_default_param = 'asc'
-    sorting_default_values = {}
+    sorting_default_values: dict[str, Any] = {}
 
-    def get_schema_operation_parameters(self, view):
+    @override
+    def get_schema_operation_parameters(self, view: Any) -> list[dict[str, Any]]:
         """Extend schema operation parameters with sort_by and order parameters."""
         parameters = super().get_schema_operation_parameters(view)
         parameters += [
@@ -36,8 +39,11 @@ class PageNumberWithPageSizePagination(PageNumberPagination):
         ]
         return parameters
 
-    def get_paginated_response(self, data):
+    @override
+    def get_paginated_response(self, data: Any) -> Response:
         """Override base class method and extend it with extra args."""
+        assert self.page is not None
+        assert self.request is not None
         return Response(
             OrderedDict([
                 ('page', self.page.number),
@@ -49,7 +55,10 @@ class PageNumberWithPageSizePagination(PageNumberPagination):
             ])
         )
 
-    def paginate_queryset(self, queryset, request, view=None):
+    @override
+    def paginate_queryset(
+        self, queryset: Any, request: Request, view: Any = None
+    ) -> list[Any] | None:
         sort_by_param = request.GET.get('sort_by', self.sort_by_default_param)
         order_param = request.GET.get('order', self.order_default_param)
 
@@ -66,7 +75,7 @@ class PageNumberWithPageSizePagination(PageNumberPagination):
             )
         return super().paginate_queryset(queryset, request, view)
 
-    def _ensure_comparable(self, value, sort_by):
+    def _ensure_comparable(self, value: Any, sort_by: str) -> Any:
         """
         None values in parameters cause problems with sorting. This method
         replaces None with orderable values in the sorting function.

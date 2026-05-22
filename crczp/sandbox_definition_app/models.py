@@ -1,5 +1,7 @@
 """Django models for the sandbox definition app."""
 
+from typing import override
+
 from django.contrib.auth.models import User
 from django.db import models
 
@@ -22,5 +24,6 @@ class Definition(models.Model):
 
         ordering = ['id']
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return f'ID: {self.id}, NAME: {self.name}, URL: {self.url}, REV: {self.rev}'

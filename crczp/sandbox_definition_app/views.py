@@ -1,11 +1,14 @@
 """REST API views for sandbox definition management."""
 
+from typing import Any, override
+
 import structlog
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from drf_spectacular.utils import OpenApiRequest, OpenApiResponse, extend_schema
 from generator.var_generator import generate
 from rest_framework import generics, status
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -41,7 +44,7 @@ COMMON_RESPONSE_PATTERNS = {
         **{k: v for k, v in utils.ERROR_RESPONSES.items() if k in [401, 403, 500]},
     },
 )
-class DefinitionListCreateView(generics.ListCreateAPIView):
+class DefinitionListCreateView(generics.ListCreateAPIView[Any]):
     """
     get: Retrieve a list of sandbox definitions.
     """
@@ -56,11 +59,12 @@ class DefinitionListCreateView(generics.ListCreateAPIView):
             **{k: v for k, v in utils.ERROR_RESPONSES.items() if k in [400, 401, 403, 500]},
         },
     )
-    def post(self, request, *args, **kwargs):
+    @override
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         Create a new sandbox definition. Optional parameter *rev* defaults to master.
         """
-        url = request.data.get('url')
+        url: str = request.data.get('url') or ''
         rev = request.data.get('rev', 'master')
         created_by = None if isinstance(request.user, AnonymousUser) else request.user
         definition = definitions.create_definition(url, created_by, rev)
@@ -72,7 +76,7 @@ class DefinitionListCreateView(generics.ListCreateAPIView):
     methods=['GET'], responses={200: SandboxDefinitionSerializer, **COMMON_RESPONSE_PATTERNS}
 )
 @extend_schema(methods=['DELETE'], responses={**COMMON_RESPONSE_PATTERNS})
-class DefinitionDetailDeleteView(generics.RetrieveDestroyAPIView):
+class DefinitionDetailDeleteView(generics.RetrieveDestroyAPIView[Any]):
     """
     get: Retrieve the definition.
     delete: Delete the definition.
@@ -94,14 +98,15 @@ class DefinitionDetailDeleteView(generics.RetrieveDestroyAPIView):
         **COMMON_RESPONSE_PATTERNS,
     },
 )
-class DefinitionRefsListView(generics.ListAPIView):
+class DefinitionRefsListView(generics.ListAPIView[Any]):
     """
     get: Retrieve a list of definition refs (branches and tags).
     """
 
     serializer_class = serializers.DefinitionRevSerializer
 
-    def get_queryset(self):
+    @override
+    def get_queryset(self) -> Any:
         def_id = self.kwargs.get('definition_id')
         definition = utils.get_object_or_404(Definition, pk=def_id)
         provider: DefinitionProvider = definitions.get_def_provider(
@@ -114,7 +119,7 @@ class DefinitionRefsListView(generics.ListAPIView):
     methods=['GET'],
     responses={200: instance_serializers.TopologySerializer(many=True), **COMMON_RESPONSE_PATTERNS},
 )
-class DefinitionTopologyView(generics.RetrieveAPIView):
+class DefinitionTopologyView(generics.RetrieveAPIView[Any]):
     """
     get: Retrieve topology visualisation data from TopologyDefinition
     """
@@ -123,7 +128,8 @@ class DefinitionTopologyView(generics.RetrieveAPIView):
     lookup_url_kwarg = 'definition_id'
     serializer_class = instance_serializers.TopologySerializer
 
-    def get_object(self):
+    @override
+    def get_object(self) -> Any:
         definition = super().get_object()
         topology_definition = definitions.get_definition(
             definition.url, definition.rev, settings.CRCZP_CONFIG
@@ -139,14 +145,15 @@ class DefinitionTopologyView(generics.RetrieveAPIView):
     methods=['POST'],
     responses={201: serializers.LocalVariableSerializer(many=True), **COMMON_RESPONSE_PATTERNS},
 )
-class LocalSandboxVariablesView(generics.CreateAPIView):
+class LocalSandboxVariablesView(generics.CreateAPIView[Any]):
     """View to generate and post variables for local sandboxes."""
 
     queryset = Definition.objects.all()
     lookup_url_kwarg = 'definition_id'
     serializer_class = serializers.LocalSandboxVariablesSerializer
 
-    def post(self, request, *args, **kwargs):
+    @override
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Generate variables for local sandboxes, send it to answers-storage."""
         user_id = request.data.get('user_id')
         access_token = request.data.get('access_token')
@@ -154,7 +161,7 @@ class LocalSandboxVariablesView(generics.CreateAPIView):
         definition = self.get_object()
         variables = definitions.get_variables(definition.url, definition.rev, settings.CRCZP_CONFIG)
         generate(variables, user_id)
-        sandboxes.post_answers(user_id, access_token, variables)
+        sandboxes.post_answers(user_id, access_token, variables)  # type: ignore[arg-type]
 
         serialized_variables = serializers.LocalVariableSerializer(variables, many=True)
         return Response(serialized_variables.data)
@@ -170,7 +177,7 @@ class DefinitionVariablesView(APIView):
     queryset = Definition.objects.none()
 
     # noinspection PyMethodMayBeStatic
-    def get(self, request, *args, **kwargs):  # pylint: disable=unused-argument
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:  # pylint: disable=unused-argument
         """Retrieve APG variables from TopologyDefinition, empty list if variables.yml was not
         found."""
         definition = utils.get_object_or_404(Definition, pk=kwargs.get('definition_id'))

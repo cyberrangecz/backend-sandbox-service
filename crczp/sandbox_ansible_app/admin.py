@@ -5,7 +5,7 @@ from django.contrib import admin
 from crczp.sandbox_ansible_app import models
 
 
-class ShowIdAdmin(admin.ModelAdmin):
+class ShowIdAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     """Admin configuration that exposes the record ID as a read-only field."""
 
     # show id in the web admin

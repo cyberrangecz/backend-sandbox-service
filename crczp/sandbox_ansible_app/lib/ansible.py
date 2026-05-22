@@ -3,6 +3,7 @@
 import os
 import shutil
 from dataclasses import dataclass
+from typing import Any
 
 import structlog
 from django.conf import settings
@@ -76,12 +77,14 @@ class AnsibleRunner:  # pylint: disable=too-many-instance-attributes
         )
 
         if settings.CRCZP_CONFIG.ansible_runner_settings.backend == 'kubernetes':
-            self.container_manager = KubernetesContainer
+            self.container_manager: type[BaseContainer] = KubernetesContainer
         else:
             self.container_manager = DockerContainer
         self.template_environment = Environment(loader=FileSystemLoader(TEMPLATES_DIR_PATH))  # nosec B701
 
-    def run_ansible_playbook(self, url, rev, stage, cleanup=False) -> BaseContainer:
+    def run_ansible_playbook(
+        self, url: str, rev: str, stage: Any, cleanup: bool = False
+    ) -> BaseContainer:
         """
         Run Ansible playbook in container.
         """
@@ -102,14 +105,14 @@ class AnsibleRunner:  # pylint: disable=too-many-instance-attributes
         """
         self.container_manager.delete_container(container_name)
 
-    def _prepare_ssh_dir(self):
+    def _prepare_ssh_dir(self) -> None:
         """
         Create SSH directory with private key for communication with Proxy Jump.
         """
         self.make_dir(self.ssh_directory)
         shutil.copy(settings.CRCZP_CONFIG.proxy_jump_to_man.IdentityFile, self.ssh_directory)
 
-    def _prepare_container_directory(self):
+    def _prepare_container_directory(self) -> None:
         """Create the containers directory for Docker compose files."""
         self.make_dir(self.containers_path)
 
@@ -128,19 +131,19 @@ class AnsibleRunner:  # pylint: disable=too-many-instance-attributes
         with open(file_path, 'w', encoding='utf-8') as file:
             file.write(data)
 
-    def host_ssh_path(self, filename: str):
+    def host_ssh_path(self, filename: str) -> str:
         """
         Compose absolute path to file in SSH directory volume.
         """
         return os.path.join(self.ssh_directory, os.path.basename(filename))
 
-    def container_ssh_path(self, filename):
+    def container_ssh_path(self, filename: str) -> str:
         """
         Compose absolute path to file in SSH directory in the container.
         """
         return os.path.join(self.ANSIBLE_DOCKER_SSH_DIR.bind, os.path.basename(filename))
 
-    def prepare_git_credentials(self, config: CrczpConfiguration):
+    def prepare_git_credentials(self, config: CrczpConfiguration) -> None:
         """Generate and save Git credentials file for private repository access."""
         username = config.git_user
         credentials = ''
@@ -155,7 +158,7 @@ class AllocationAnsibleRunner(AnsibleRunner):
     """
 
     # Note: private keys are copied into the container for Ansible SSH access
-    def prepare_ssh_dir(self, pool: Pool, sandbox: Sandbox):
+    def prepare_ssh_dir(self, pool: Pool, sandbox: Sandbox) -> None:
         """
         Prepare files for SSH communication that will be bind to Docker container.
         """
@@ -170,14 +173,14 @@ class AllocationAnsibleRunner(AnsibleRunner):
         )
         self.save_file(self.host_ssh_path('config'), str(ans_ssh_config))
 
-    def prepare_inventory_file(self, sandbox: Sandbox):
+    def prepare_inventory_file(self, sandbox: Sandbox) -> None:
         """
         Prepare and save Ansible inventory file that will be bind to Docker container.
         """
         inventory_object = self.create_inventory(sandbox)
         self.save_file(self.inventory_path, inventory_object.serialize())
 
-    def _generate_docker_composes(self, top_ins: TopologyInstance):
+    def _generate_docker_composes(self, top_ins: TopologyInstance) -> None:
         """Generate docker-compose files for each host in the topology."""
         parsed_docker_hosts = []
         for container_mapping in top_ins.containers.container_mappings:
@@ -203,7 +206,7 @@ class AllocationAnsibleRunner(AnsibleRunner):
                     ) from e
                 parsed_docker_hosts.append(container_mapping.host)
 
-    def _generate_dockerfiles(self, sandbox: Sandbox):
+    def _generate_dockerfiles(self, sandbox: Sandbox) -> None:
         """Generate Dockerfiles for each container in the topology."""
         top_ins = sandboxes.get_topology_instance(sandbox)
         for container_mapping in top_ins.containers.container_mappings:
@@ -232,7 +235,7 @@ class AllocationAnsibleRunner(AnsibleRunner):
                 )
             self.save_file(os.path.join(host_container_path, 'Dockerfile'), dockerfile)
 
-    def prepare_containers_directory(self, sandbox: Sandbox):
+    def prepare_containers_directory(self, sandbox: Sandbox) -> None:
         """Create and populate the containers directory if the topology has containers."""
         top_ins = sandboxes.get_topology_instance(sandbox)
         if top_ins.containers:
@@ -240,7 +243,7 @@ class AllocationAnsibleRunner(AnsibleRunner):
             self._generate_docker_composes(top_ins)
             self._generate_dockerfiles(sandbox)
 
-    def create_inventory(self, sandbox):
+    def create_inventory(self, sandbox: Sandbox) -> Inventory:
         """
         Return Ansible inventory file.
         """
@@ -280,7 +283,7 @@ class CleanupAnsibleRunner(AnsibleRunner):
     Represents Docker container environment for executing Ansible during allocation stage.
     """
 
-    def prepare_inventory_file(self, allocation_unit: SandboxAllocationUnit):
+    def prepare_inventory_file(self, allocation_unit: SandboxAllocationUnit) -> None:
         """
         Prepare and save Ansible inventory file that will be bind to Docker container.
         """
@@ -294,7 +297,7 @@ class CleanupAnsibleRunner(AnsibleRunner):
 
         self.save_file(self.inventory_path, inventory_object.serialize())
 
-    def prepare_ssh_dir(self, pool: Pool):
+    def prepare_ssh_dir(self, pool: Pool) -> None:
         """
         Prepare files for SSH communication that will be bind to Docker container.
         """

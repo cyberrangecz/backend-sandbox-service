@@ -21,7 +21,7 @@ class TestGitlabProvider:
     CFG = CrczpConfiguration()
 
     @staticmethod
-    def get_expected_url(url):
+    def get_expected_url(url: str) -> str:
         """Return the expected project path derived from the URL."""
         no_prefix = url.replace('https://', '')
         return no_prefix[no_prefix.find('/') + 1 : -4]

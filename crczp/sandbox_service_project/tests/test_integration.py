@@ -1,6 +1,7 @@
 """Integration tests for the full sandbox allocation and cleanup lifecycle."""
 
 import os
+from typing import Any
 
 import pytest
 import structlog
@@ -109,13 +110,13 @@ class TestIntegration:
             self.delete_definition(client, def_id)
 
     @classmethod
-    def run_worker(cls):
+    def run_worker(cls) -> None:
         """Start a SimpleWorker to process all queued RQ jobs."""
         worker = SimpleWorker(queues=cls.RQ_QUEUES, connection=Redis())
         worker.work(burst=True)
 
     @staticmethod
-    def create_definition(client, url, rev):
+    def create_definition(client: Any, url: str, rev: str) -> Any:
         """POST a new definition and return its ID."""
         LOG.info('Creating definition')
         data = {'url': url, 'rev': rev}
@@ -126,7 +127,7 @@ class TestIntegration:
         return response.data['id']
 
     @staticmethod
-    def create_pool(client, def_id):
+    def create_pool(client: Any, def_id: Any) -> Any:
         """POST a new pool for the given definition and return its ID."""
         LOG.info('Creating Pool')
         max_size = 10
@@ -139,7 +140,7 @@ class TestIntegration:
         return response.data['id']
 
     @classmethod
-    def create_alloc_unit(cls, client, pool_id):
+    def create_alloc_unit(cls, client: Any, pool_id: Any) -> tuple[Any, Any]:
         """Create one sandbox allocation unit in the pool, run the worker, and return IDs."""
         LOG.info('Creating Allocation Unit')
         base_url = reverse(ALLOCATION_UNIT_LIST, kwargs={'pool_id': pool_id})
@@ -157,7 +158,7 @@ class TestIntegration:
         return unit_id, alloc_req_id
 
     @staticmethod
-    def get_allocation_stages(client, request_id):
+    def get_allocation_stages(client: Any, request_id: Any) -> None:
         """Assert all three allocation stage endpoints return 200 for the given request."""
         LOG.info('Retrieving Allocation stages.')
 
@@ -172,7 +173,7 @@ class TestIntegration:
             assert response.data['request_id'] == request_id
 
     @staticmethod
-    def get_cleanup_stages(client, request_id):
+    def get_cleanup_stages(client: Any, request_id: Any) -> None:
         """Assert all three cleanup stage endpoints return 200 for the given request."""
         LOG.info('Retrieving Cleanup stages.')
 
@@ -187,7 +188,7 @@ class TestIntegration:
             assert response.data['request_id'] == request_id
 
     @staticmethod
-    def cancel_allocation_request(client, allocation_req_id):
+    def cancel_allocation_request(client: Any, allocation_req_id: Any) -> None:
         """PATCH to cancel the given allocation request and assert 200."""
         LOG.info('Canceling Allocation Request')
 
@@ -197,7 +198,7 @@ class TestIntegration:
         assert response.status_code == status.HTTP_200_OK
 
     @staticmethod
-    def create_cancel_delete_cleanup_request(client, unit_id):
+    def create_cancel_delete_cleanup_request(client: Any, unit_id: Any) -> None:
         """Test create, cancel, and delete of a cleanup request for an allocation unit."""
         LOG.info('Test Create, Cancel and Delete of Cleanup request')
 
@@ -225,7 +226,7 @@ class TestIntegration:
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
     @classmethod
-    def create_cleanup_req(cls, client, unit_id):
+    def create_cleanup_req(cls, client: Any, unit_id: Any) -> None:
         """Create a cleanup request, run the worker, and assert stages are accessible."""
         LOG.info('Creating Cleanup request')
         response = client.post(reverse(SANDBOX_CLEANUP_REQUEST, kwargs={'unit_id': unit_id}))
@@ -238,7 +239,7 @@ class TestIntegration:
         cls.run_worker()
 
     @staticmethod
-    def get_and_lock(client, pool_id):
+    def get_and_lock(client: Any, pool_id: Any) -> tuple[Any, Any]:
         """GET to retrieve and lock a sandbox from the pool; return sandbox and lock IDs."""
         LOG.info('Get and lock sandbox')
         response = client.get(reverse(SANDBOX_GET_AND_LOCK, kwargs={'pool_id': pool_id}))
@@ -249,7 +250,7 @@ class TestIntegration:
         return sb_id, lock_id
 
     @staticmethod
-    def unlock_sandbox(client, sb_id, lock_id):
+    def unlock_sandbox(client: Any, sb_id: Any, lock_id: Any) -> None:
         """DELETE the sandbox lock to unlock the sandbox."""
         LOG.info('Unlocking sandbox')
         response = client.delete(
@@ -258,14 +259,14 @@ class TestIntegration:
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
     @staticmethod
-    def delete_definition(client, def_id):
+    def delete_definition(client: Any, def_id: Any) -> None:
         """DELETE the given definition and assert 204."""
         LOG.info('Deleting definition')
         response = client.delete(reverse(DEFINITION_DETAIL, kwargs={'definition_id': def_id}))
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
     @staticmethod
-    def delete_pool(client, pool_id):
+    def delete_pool(client: Any, pool_id: Any) -> None:
         """DELETE the given pool and assert 204."""
         LOG.info('Deleting Pool')
         response = client.delete(reverse(POOL_DETAIL, kwargs={'pool_id': pool_id}))

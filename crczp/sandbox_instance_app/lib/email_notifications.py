@@ -3,6 +3,7 @@
 import smtplib
 import ssl
 from email.message import EmailMessage
+from smtplib import SMTP, SMTP_SSL
 
 import structlog
 from django.conf import settings
@@ -13,7 +14,9 @@ from crczp.sandbox_common_lib.exceptions import EmailException, ValidationError
 LOG = structlog.get_logger()
 
 
-def send_email(receiver_email, subject, body, crczp_config: CrczpConfiguration):
+def send_email(
+    receiver_email: str, subject: str, body: str, crczp_config: CrczpConfiguration
+) -> None:
     """Send an email using the configured SMTP server."""
     if not crczp_config.smtp_server:
         LOG.warning(
@@ -32,7 +35,7 @@ def send_email(receiver_email, subject, body, crczp_config: CrczpConfiguration):
         mail.send_email(sender_email, receiver_email, em)
 
 
-def validate_emails_enabled(value: bool):
+def validate_emails_enabled(value: bool) -> None:
     """Validate that email notifications are enabled when required."""
     if value and not settings.CRCZP_CONFIG.smtp_server:
         raise ValidationError(
@@ -43,11 +46,11 @@ def validate_emails_enabled(value: bool):
 class EmailManager:
     """Context manager for sending emails via SMTP."""
 
-    def __init__(self, crczp_config: CrczpConfiguration):
+    def __init__(self, crczp_config: CrczpConfiguration) -> None:
         self.config = crczp_config
-        self.smtp = None
+        self.smtp: SMTP | SMTP_SSL | None = None
 
-    def __enter__(self):
+    def __enter__(self) -> 'EmailManager':
         encryption = self.config.smtp_encryption
 
         if encryption in (SMTPEncryption.INSECURE, SMTPEncryption.TSL):
@@ -64,9 +67,11 @@ class EmailManager:
             )
 
         if encryption == SMTPEncryption.TSL:
+            assert self.smtp is not None
             self.smtp.starttls()
 
         if encryption != SMTPEncryption.INSECURE:
+            assert self.smtp is not None
             self.smtp.login(
                 self.config.sender_email,
                 self.config.sender_email_password,
@@ -74,8 +79,9 @@ class EmailManager:
 
         return self
 
-    def send_email(self, sender_email, receiver_email, message: EmailMessage):
+    def send_email(self, sender_email: str, receiver_email: str, message: EmailMessage) -> None:
         """Send the given email message via the active SMTP connection."""
+        assert self.smtp is not None
         try:
             self.smtp.sendmail(sender_email, receiver_email, message.as_string())
             LOG.debug('Email sent successfully!')
@@ -92,6 +98,6 @@ class EmailManager:
             LOG.warning(f'Email notification failed to send for unknown reason. Detail: {exc}')
             raise exc
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
         if self.smtp:
             self.smtp.quit()

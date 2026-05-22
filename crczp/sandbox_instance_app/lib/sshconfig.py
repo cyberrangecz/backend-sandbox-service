@@ -1,6 +1,6 @@
 """SSH configuration classes for CRCZP sandbox access."""
 
-from typing import Any
+from typing import Any, override
 
 import structlog
 from ssh_config.client import Host, parse_config  # Don't import SSHConfig unless reading from file
@@ -19,11 +19,12 @@ class CrczpSSHConfig:
     This class works in-memory and does not require a backing file.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.hosts: list[Host] = []
         self.raw: str | None = None
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return '\n'.join([str(host) for host in self.hosts]) + '\n'
 
     def serialize(self) -> str:
@@ -40,7 +41,7 @@ class CrczpSSHConfig:
         proxy_jump: str | None = None,
         alias: str | None = None,
         port: int | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """
         Create and add Host instance to this SSH config file.
@@ -54,7 +55,7 @@ class CrczpSSHConfig:
             'IdentitiesOnly': 'yes',
         }
         if port is not None:
-            opts['Port'] = port
+            opts['Port'] = str(port)
         if proxy_jump:
             opts['ProxyJump'] = proxy_jump
         opts.update(kwargs)
@@ -71,14 +72,14 @@ class CrczpSSHConfig:
         port: int,
         proxy_jump: str | None = None,
         alias: str | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Create and add a Host entry for a Docker container to this SSH config."""
         opts = {
             'HostName': host_name,
             'User': user,
             'IdentityFile': identity_file,
-            'Port': port,
+            'Port': str(port),
             'UserKnownHostsFile': '/dev/null',
             'StrictHostKeyChecking': 'no',
             'IdentitiesOnly': 'yes',
@@ -91,13 +92,13 @@ class CrczpSSHConfig:
         self.hosts.append(host)
 
     @classmethod
-    def load(cls, file_path: str):
+    def load(cls, file_path: str) -> 'CrczpSSHConfig':
         """Load SSH config from a file path."""
         with open(file_path, encoding='utf-8') as f:
             return cls.from_str(f.read())
 
     @classmethod
-    def from_str(cls, ssh_config: str):
+    def from_str(cls, ssh_config: str) -> 'CrczpSSHConfig':
         """
         Load SSH config file from string.
         """
@@ -136,7 +137,7 @@ class CrczpUserSSHConfig(CrczpSSHConfig):
         proxy_user: str,
         sandbox_private_key_path: str = '<path_to_sandbox_private_key>',
         proxy_port: int = 22,
-    ):
+    ) -> None:
         super().__init__()
         # Create an entry for PROXY JUMP host.
         self.add_host(proxy_host, proxy_user, sandbox_private_key_path, port=proxy_port)
@@ -191,7 +192,7 @@ class CrczpMgmtSSHConfig(CrczpSSHConfig):
         proxy_port: int = 22,
         pool_private_key_path: str = '<path_to_pool_private_key>',
         proxy_private_key_path: str = '<path_to_pool_private_key>',
-    ):
+    ) -> None:
         super().__init__()
         # Create an entry for PROXY JUMP host.
         self.add_host(proxy_host, proxy_user, proxy_private_key_path, port=proxy_port)
@@ -242,16 +243,16 @@ class CrczpAnsibleSSHConfig(CrczpMgmtSSHConfig):
         pool_private_key_path: str,
         proxy_host: str,
         proxy_user: str,
-        proxy_private_key_path: str,
+        proxy_private_key_path: str | None,
         proxy_port: int = 22,
-    ):
+    ) -> None:
         super().__init__(
             top_ins=top_ins,
             proxy_host=proxy_host,
             proxy_user=proxy_user,
             proxy_port=proxy_port,
             pool_private_key_path=pool_private_key_path,
-            proxy_private_key_path=proxy_private_key_path,
+            proxy_private_key_path=proxy_private_key_path or '<path_to_pool_private_key>',
         )
 
 
@@ -266,6 +267,6 @@ class CrczpAnsibleCleanupSSHConfig(CrczpSSHConfig):
         proxy_jump_user: str,
         pool_private_key_path: str,
         proxy_port: int = 22,
-    ):
+    ) -> None:
         super().__init__()
         self.add_host(proxy_jump_host, proxy_jump_user, pool_private_key_path, port=proxy_port)

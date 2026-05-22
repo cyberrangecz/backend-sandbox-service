@@ -1,6 +1,7 @@
 """Database models for sandbox instance app."""
 
 from functools import partial
+from typing import override
 
 import structlog
 from django.conf import settings
@@ -57,7 +58,8 @@ class Pool(models.Model):
 
         ordering = ['id']
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return (
             f'ID: {self.id}, DEFINITION: {self.definition.id}, MAX_SIZE: {self.max_size}, '
             f'REV: {self.rev}'
@@ -132,7 +134,8 @@ class Sandbox(models.Model):
 
         ordering = ['id']
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return (
             f'ID: {self.id}, ALLOCATION_UNIT: {self.allocation_unit.id}, '
             f'LOCK: {self.lock.id if hasattr(self, "lock") else None}'
@@ -151,7 +154,8 @@ class SandboxLock(models.Model):
         User, on_delete=models.PROTECT, null=True, help_text='The user that created this lock.'
     )
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return f'ID: {self.id}, Sandbox: {self.sandbox.id}'
 
 
@@ -166,13 +170,15 @@ class PoolLock(models.Model):
 
     training_access_token = models.CharField(max_length=256, default=None, null=True)
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return f'ID: {self.id}, Pool: {self.pool.id}'
 
 
 class SandboxRequest(models.Model):
     """Abstract base class for Sandbox Requests."""
 
+    id: int
     created = models.DateTimeField(default=timezone.now)
 
     class Meta:  # pylint: disable=too-few-public-methods
@@ -181,7 +187,8 @@ class SandboxRequest(models.Model):
         abstract = True
         ordering = ['created']
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return f'ID: {self.id}, CREATED: {self.created}'
 
 
@@ -195,12 +202,13 @@ class AllocationRequest(SandboxRequest):
     )
 
     @property
-    def is_finished(self):
+    def is_finished(self) -> bool:
         """Whether all stages are finished."""
         return self.stages.filter(finished=False).count() == 0
 
-    def __str__(self):
-        return super().__str__() + f', ALLOCATION_UNIT: {self.allocation_unit.id}'
+    @override
+    def __str__(self) -> str:
+        return str(super().__str__()) + f', ALLOCATION_UNIT: {self.allocation_unit.id}'
 
 
 class CleanupRequest(SandboxRequest):
@@ -213,17 +221,18 @@ class CleanupRequest(SandboxRequest):
     )
 
     @property
-    def is_finished(self):
+    def is_finished(self) -> bool:
         """Whether all stages are finished."""
         return self.stages.filter(finished=False).count() == 0
 
     @property
-    def is_failed(self):
+    def is_failed(self) -> bool:
         """Whether all stages are finished."""
         return self.stages.filter(failed=True).count() > 0
 
-    def __str__(self):
-        return super().__str__() + f', ALLOCATION_UNIT: {self.allocation_unit.id}'
+    @override
+    def __str__(self) -> str:
+        return str(super().__str__()) + f', ALLOCATION_UNIT: {self.allocation_unit.id}'
 
 
 class Stage(models.Model):
@@ -245,13 +254,16 @@ class Stage(models.Model):
         default=False, help_text='Indicates whether the stage execution has finished.'
     )
 
+    id: int
+
     class Meta:  # pylint: disable=too-few-public-methods
         """Meta options for Stage model."""
 
         abstract = True
         ordering = ['id']
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return (
             f'ID: {self.id}, START: {self.start}, END: {self.end}, FAILED: {self.failed}, '
             f'ERROR: {self.error_message}'
@@ -284,9 +296,10 @@ class StackAllocationStage(AllocationStage):
     status = models.CharField(null=True, max_length=30, help_text='Stack status')
     status_reason = models.TextField(null=True, help_text='Stack status reason')
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return (
-            super().__str__() + f', REQUEST: {self.allocation_request}, STATUS: {self.status},'
+            str(super().__str__()) + f', REQUEST: {self.allocation_request}, STATUS: {self.status},'
             f' STATUS_REASON: {self.status_reason}'
         )
 
@@ -299,8 +312,9 @@ class StackCleanupStage(CleanupStage):
         on_delete=models.CASCADE,
     )
 
-    def __str__(self):
-        return super().__str__() + f', REQUEST: {self.cleanup_request}'
+    @override
+    def __str__(self) -> str:
+        return str(super().__str__()) + f', REQUEST: {self.cleanup_request}'
 
 
 class RQJob(models.Model):
@@ -324,7 +338,8 @@ class AllocationRQJob(RQJob):
         related_name='rq_job',
     )
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return f'STAGE: {self.allocation_stage.id}, JOB_ID: {self.job_id}'
 
 
@@ -338,7 +353,8 @@ class CleanupRQJob(RQJob):
         related_name='rq_job',
     )
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return f'STAGE: {self.cleanup_stage.id}, JOB_ID: {self.job_id}'
 
 
@@ -369,13 +385,16 @@ class TerraformOutput(models.Model):
 
     content = models.TextField()
 
+    id: int
+
     class Meta:  # pylint: disable=too-few-public-methods
         """Meta options for TerraformOutput model."""
 
         abstract = True
         ordering = ['id']
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return f'ID: {self.id}, CONTENT: {self.content}'
 
 
@@ -386,8 +405,9 @@ class AllocationTerraformOutput(TerraformOutput):
         AllocationStage, on_delete=models.CASCADE, related_name='terraform_outputs'
     )
 
-    def __str__(self):
-        return f'{super().__str__()} STAGE: {self.allocation_stage.id}'
+    @override
+    def __str__(self) -> str:
+        return f'{str(super().__str__())} STAGE: {self.allocation_stage.id}'
 
 
 class CleanupTerraformOutput(TerraformOutput):
@@ -397,8 +417,9 @@ class CleanupTerraformOutput(TerraformOutput):
         CleanupStage, on_delete=models.CASCADE, related_name='terraform_outputs'
     )
 
-    def __str__(self):
-        return f'{super().__str__()} STAGE: {self.cleanup_stage.id}'
+    @override
+    def __str__(self) -> str:
+        return f'{str(super().__str__())} STAGE: {self.cleanup_stage.id}'
 
 
 class TerraformStack(ExternalDependency):
@@ -406,7 +427,8 @@ class TerraformStack(ExternalDependency):
 
     stack_id = models.TextField()
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return f'STAGE: {self.allocation_stage.id}, STACK: {self.stack_id}'
 
 
@@ -415,7 +437,8 @@ class SystemProcess(ExternalDependency):
 
     process_id = models.TextField()
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return f'STAGE: {self.allocation_stage.id}, PROCESS: {self.process_id}'
 
 
@@ -432,7 +455,7 @@ class SandboxRequestGroup(models.Model):
     failed_count = models.IntegerField(default=0)
     finished_count = models.IntegerField(default=0)
 
-    def on_allocation_fail(self, exc):
+    def on_allocation_fail(self, exc: Exception) -> None:
         """Handle a sandbox allocation failure: track counts and send notification if first fail."""
         with transaction.atomic():
             self.refresh_from_db()
@@ -446,7 +469,7 @@ class SandboxRequestGroup(models.Model):
                 transaction.on_commit(self._send_summary_notification)
                 LOG.debug('Sandbox allocation End email notification sent.')
 
-    def on_allocation_end(self):
+    def on_allocation_end(self) -> None:
         """Handle a sandbox allocation completion: track counts and send summary if all done."""
         with transaction.atomic():
             self.refresh_from_db()
@@ -456,7 +479,7 @@ class SandboxRequestGroup(models.Model):
                 transaction.on_commit(self._send_summary_notification)
                 LOG.debug('Sandbox allocation End email notification sent.')
 
-    def _send_fail_notification(self, exc):
+    def _send_fail_notification(self, exc: Exception) -> None:
         body = f"""
         Something went wrong during sandbox allocation in Pool {self.pool.id}.
 
@@ -469,7 +492,7 @@ class SandboxRequestGroup(models.Model):
             settings.CRCZP_CONFIG,
         )
 
-    def _send_summary_notification(self):
+    def _send_summary_notification(self) -> None:
         try:
             body = f"""
             All allocations you created in Pool {self.pool.id} have finished.

@@ -1,10 +1,14 @@
 """REST API views for OpenStack cloud project information."""
 
 import datetime
+from typing import Any, override
 
 import structlog
-from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, OpenApiTypes, extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import generics
+from rest_framework.pagination import BasePagination
+from rest_framework.request import Request
 from rest_framework.response import Response
 
 from crczp.sandbox_cloud_app import serializers
@@ -16,7 +20,7 @@ from crczp.sandbox_instance_app.models import Pool
 LOG = structlog.get_logger()
 
 
-class ProjectInfoView(generics.RetrieveAPIView):
+class ProjectInfoView(generics.RetrieveAPIView[Any]):
     """View to retrieve project quota information."""
 
     # Exploitation of the Pool model permissions, Since the Cloud App does not have any models.
@@ -33,7 +37,8 @@ class ProjectInfoView(generics.RetrieveAPIView):
             **{k: v for k, v in utils.ERROR_RESPONSES.items() if k in [401, 403, 500]},
         },
     )
-    def get(self, request, *args, **kwargs):
+    @override
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         Get the quota set and name of project.
         """
@@ -43,17 +48,18 @@ class ProjectInfoView(generics.RetrieveAPIView):
         return Response({'project_name': project_name, 'quotas': serialized_quota.data})
 
 
-class ProjectImagesView(generics.ListAPIView):
+class ProjectImagesView(generics.ListAPIView[Any]):
     """View to retrieve and filter available OpenStack images."""
 
     queryset = Pool.objects.none()
     serializer_class = serializers.ImageSerializer
 
+    @override
     @property
-    def paginator(self):
+    def paginator(self) -> BasePagination | None:
         _paginator = super().paginator
-        _paginator.sort_by_default_param = 'name'
-        _paginator.sorting_default_values = {
+        _paginator.sort_by_default_param = 'name'  # type: ignore[union-attr]
+        _paginator.sorting_default_values = {  # type: ignore[union-attr]
             # values replace None during sorting
             'size': float('-inf'),
             'updated_at': datetime.MINYEAR,
@@ -107,7 +113,8 @@ class ProjectImagesView(generics.ListAPIView):
             **{k: v for k, v in utils.ERROR_RESPONSES.items() if k in [401, 403, 500]},
         },
     )
-    def get(self, request, *args, **kwargs):
+    @override
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         Get list of images.
         """
@@ -142,13 +149,13 @@ class ProjectImagesView(generics.ListAPIView):
                         and attribute_filter in getattr(image, attribute)
                     ]
         serialized_image_set = serializers.ImageSerializer(image_set, many=True)
-        page = self.paginate_queryset(serialized_image_set.data)
+        page = self.paginate_queryset(serialized_image_set.data)  # type: ignore[arg-type]
         if page is not None:
             return self.get_paginated_response(page)
         return Response({'image_set': serialized_image_set.data})
 
 
-class ProjectLimitsView(generics.RetrieveAPIView):
+class ProjectLimitsView(generics.RetrieveAPIView[Any]):
     """View to retrieve absolute project limits."""
 
     queryset = Pool.objects.none()
@@ -164,7 +171,8 @@ class ProjectLimitsView(generics.RetrieveAPIView):
             **{k: v for k, v in utils.ERROR_RESPONSES.items() if k in [401, 403, 500]},
         },
     )
-    def get(self, request, *args, **kwargs):
+    @override
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         Get Absolute limits of OpenStack project.
         """

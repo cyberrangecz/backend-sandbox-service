@@ -2,15 +2,18 @@
 
 import hashlib
 import json
+from typing import Any, cast
 
 import requests
 import structlog
 import yaml
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.models import Group, Permission
 from django.core.cache import caches
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.request import Request
 
 from crczp.sandbox_uag.oidc_jwt import JWTAccessTokenAuthentication
 
@@ -24,7 +27,7 @@ CACHE = caches['uag_auth_groups_cache']
 UAG_SETTINGS = settings.SANDBOX_UAG
 
 
-def get_or_create_user(request, user_info):  # pylint: disable=too-many-locals
+def get_or_create_user(request: Request, user_info: dict[str, Any]) -> AbstractBaseUser:  # pylint: disable=too-many-locals
     """
     Retrieve (or create if non-existent) user from database.
     Set corresponding roles (Django groups).
@@ -34,10 +37,10 @@ def get_or_create_user(request, user_info):  # pylint: disable=too-many-locals
     # noinspection PyPep8Naming
     bearer_token = authenticator_class.get_bearer_token(request)
 
-    first_name = user_info.get('given_name')
-    last_name = user_info.get('family_name')
-    email = user_info.get('email')
-    sub = user_info.get('sub')
+    user_info.get('given_name')
+    user_info.get('family_name')
+    user_info.get('email')
+    sub = cast(str, user_info.get('sub', ''))
     iss = authenticator_class.extract_issuer(bearer_token)
 
     # username should ALWAYS uniquely identify the user, which is possible only with
@@ -48,7 +51,14 @@ def get_or_create_user(request, user_info):  # pylint: disable=too-many-locals
     user_cls = get_user_model()  # this is suggested way of getting User model
     (user, _) = user_cls.objects.update_or_create(
         username=username,
-        defaults={'first_name': first_name, 'last_name': last_name, 'email': email},
+        defaults=cast(
+            dict[str, Any],
+            {
+                'first_name': user_info.get('given_name'),
+                'last_name': user_info.get('family_name'),
+                'email': user_info.get('email'),
+            },
+        ),
     )
 
     cache_key = get_cache_key(username, bearer_token)
@@ -86,7 +96,7 @@ def get_or_create_user(request, user_info):  # pylint: disable=too-many-locals
     return user
 
 
-def get_cache_key(username, bearer_token):
+def get_cache_key(username: str, bearer_token: bytes) -> str:
     """Build a cache key from username and a hashed bearer token."""
     # Cache key shouldn't be longer than 250 characters, so we need to shorten the bearer token.
     # Since there is a possibility of a hash collision, additional steps are needed after cache-hit.
@@ -98,7 +108,7 @@ def get_cache_key(username, bearer_token):
     return f'{username}|{hashed_bearer_token}'
 
 
-def get_unique_username(sub, iss):
+def get_unique_username(sub: str, iss: str) -> str:
     """Return a unique username string derived from OIDC subject and issuer."""
     return f'{str(sub)}|{str(iss)}'
 
@@ -151,7 +161,7 @@ def post_user_roles(
     LOG.info('Roles successfully posted', url=url)
 
 
-def create_roles_post_data(roles: list[dict]) -> dict:
+def create_roles_post_data(roles: list[dict[str, Any]]) -> dict[str, Any]:
     """Create body for POST to User-and-group service."""
     return {
         'endpoint': UAG_SETTINGS['ENDPOINT'],
@@ -163,7 +173,7 @@ def create_roles_post_data(roles: list[dict]) -> dict:
     }
 
 
-def create_roles(roles_path: str) -> list[dict]:
+def create_roles(roles_path: str) -> list[dict[str, Any]]:
     """Create roles (Django groups) and set permissions to them.
     Permissions MUST EXIST! Unlike groups which are created if do not exist.
     """
@@ -173,7 +183,7 @@ def create_roles(roles_path: str) -> list[dict]:
         (group, _) = Group.objects.get_or_create(name=get_full_role_name(role['name']))
         permissions = [Permission.objects.get(codename=name) for name in role['permissions']]
         group.permissions.set(permissions)
-    return roles
+    return cast(list[dict[str, Any]], roles)
 
 
 def get_full_role_name(

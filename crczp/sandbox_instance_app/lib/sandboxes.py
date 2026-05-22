@@ -7,11 +7,12 @@ import json
 import os
 import uuid
 import zipfile
+from typing import Any
 
 import requests
 import structlog
 from django.conf import settings
-from django.contrib.auth import get_user_model
+from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.db import transaction
 from rest_framework.generics import get_object_or_404
@@ -32,14 +33,16 @@ SANDBOX_CACHE_TIMEOUT = None  # Cache indefinitely
 SANDBOX_CACHE_PREFIX = 'terraformstack-{}'
 TEMPLATE_DIR_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'assets')
 HEADERS = {'accept': 'application/json', 'Content-Type': 'application/json'}
-
-User = get_user_model()
 LOG = structlog.getLogger()
 
 
-def get_post_data_json(user_id, access_token, generated_variables):
+def get_post_data_json(user_id: int, access_token: str, generated_variables: Any) -> str:
     """Build and return a JSON payload for posting sandbox answers."""
-    post_data = {'user_id': user_id, 'access_token': access_token, 'sandbox_answers': []}
+    post_data: dict[str, Any] = {
+        'user_id': user_id,
+        'access_token': access_token,
+        'sandbox_answers': [],
+    }
 
     for variable in generated_variables:
         post_data['sandbox_answers'].append({
@@ -50,7 +53,7 @@ def get_post_data_json(user_id, access_token, generated_variables):
     return json.dumps(post_data, indent=4)
 
 
-def post_answers(user_id, access_token, generated_variables):
+def post_answers(user_id: int, access_token: str, generated_variables: Any) -> None:
     """Post generated sandbox answer variables to the answers storage service."""
     try:
         post_data_json = get_post_data_json(user_id, access_token, generated_variables)
@@ -67,7 +70,7 @@ def post_answers(user_id, access_token, generated_variables):
         raise exceptions.ApiException(f'Sending generated variables failed. Error: {exc}') from exc
 
 
-def get_sandbox(sb_pk: int, include_unfinished=False) -> Sandbox:
+def get_sandbox(sb_pk: int | str, include_unfinished: bool = False) -> Sandbox:
     """
     Retrieve sandbox instance from DB (or raises 404)
     and possibly update its state.
@@ -84,7 +87,7 @@ def get_sandbox(sb_pk: int, include_unfinished=False) -> Sandbox:
 
 def get_topology_definition_and_containers(
     sandbox: Sandbox,
-) -> (TopologyDefinition, DockerContainers):
+) -> tuple[TopologyDefinition, DockerContainers]:
     """Create topology definition for given sandbox."""
     pool = sandbox.allocation_unit.pool
     definition = pool.definition
@@ -205,7 +208,7 @@ def get_cache_key(sandbox: Sandbox) -> str:
     return SANDBOX_CACHE_PREFIX.format(sandbox.id)
 
 
-def generate_new_sandbox_uuid():
+def generate_new_sandbox_uuid() -> str:
     """Generate a new unique sandbox UUID not already present in the database."""
     while True:
         new_uuid = str(uuid.uuid4())

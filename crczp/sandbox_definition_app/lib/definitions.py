@@ -36,7 +36,7 @@ DOCKERFILE_FILENAME = 'Dockerfile'
 VARIABLES_FILENAME = 'variables.yml'
 
 
-def create_definition(url: str, created_by: User | None, rev: str = None) -> Definition:
+def create_definition(url: str, created_by: User | None, rev: str = 'master') -> Definition:
     """Validates and creates a new definition in database.
 
     :param url: URL of sandbox definition Git repository
@@ -167,7 +167,7 @@ def get_dockerfile(url: str, rev: str, config: CrczpConfiguration, path: str) ->
     return provider.get_file(os.path.join(path, DOCKERFILE_FILENAME), rev)
 
 
-def get_variables(url: str, rev: str, config: CrczpConfiguration) -> list:
+def get_variables(url: str, rev: str, config: CrczpConfiguration) -> list[Variable]:
     """Get APG variables file contents as an array of Variable object.
 
     :param url: URL of sandbox definition Git repository

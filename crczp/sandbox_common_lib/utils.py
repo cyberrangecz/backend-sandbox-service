@@ -7,6 +7,7 @@ import gzip
 import json
 import logging
 import uuid
+from typing import Any
 
 import structlog
 from cryptography import x509
@@ -61,15 +62,15 @@ def configure_logging() -> None:
     LOG.debug('Logging is set and ready to use.')
 
 
-def create_self_signed_certificate(private_key: str) -> str:
+def create_self_signed_certificate(private_key_pem: str) -> str:
     """
     Create self-signed certificate.
 
-    :param private_key: Private key used to sign certificate
+    :param private_key_pem: Private key used to sign certificate
     :return: Certificate string
     """
-    private_key = serialization.load_pem_private_key(
-        bytes(private_key, encoding='UTF-8'), password=None, backend=default_backend()
+    key = serialization.load_pem_private_key(
+        bytes(private_key_pem, encoding='UTF-8'), password=None, backend=default_backend()
     )
 
     subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, WIN_USERNAME)])
@@ -79,9 +80,11 @@ def create_self_signed_certificate(private_key: str) -> str:
         .CertificateBuilder()
         .subject_name(subject)
         .issuer_name(issuer)
-        .public_key(private_key.public_key())
+        .public_key(key.public_key())  # type: ignore[arg-type]
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.utcnow() - datetime.timedelta(hours=48))
+        .not_valid_before(
+            datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=48)
+        )
         .not_valid_after(datetime.datetime.max)
         .add_extension(
             x509.ExtendedKeyUsage(
@@ -98,7 +101,7 @@ def create_self_signed_certificate(private_key: str) -> str:
             ]),
             critical=False,
         )
-        .sign(private_key, hashes.SHA256(), backend=default_backend())
+        .sign(key, hashes.SHA256(), backend=default_backend())  # type: ignore[arg-type]
     )
 
     return cert.public_bytes(encoding=serialization.Encoding.PEM).decode()
@@ -156,7 +159,7 @@ def get_simple_uuid() -> str:
     return str(uuid.uuid4()).split('-', maxsplit=1)[0]
 
 
-class ErrorSerilizer(serializers.Serializer):
+class ErrorSerilizer(serializers.Serializer[Any]):
     """Serializer for error responses."""
 
     detail = serializers.CharField(help_text='String message describing the error.')
@@ -179,7 +182,7 @@ ERROR_RESPONSES = {
 }
 
 
-def get_object_or_404(queryset, *filter_args, **filter_kwargs):
+def get_object_or_404(queryset: Any, *filter_args: Any, **filter_kwargs: Any) -> Any:
     """Wrap get_object_or_404 to include the model name and filter kwargs in the 404 message."""
     try:
         return gen_get_object_or_404(queryset, *filter_args, **filter_kwargs)
@@ -189,7 +192,7 @@ def get_object_or_404(queryset, *filter_args, **filter_kwargs):
         ) from None
 
 
-def create_compressed_response(data: dict) -> Response:
+def create_compressed_response(data: dict[str, Any]) -> Response:
     """
     Create a Response with gzip compression if the JSON size exceeds ~5KB.
     Uses Content-Encoding header so Angular will automatically decode it.

@@ -1,6 +1,7 @@
 """Tests for sandbox instance request handlers."""
 
 # pylint: disable=missing-function-docstring
+from typing import Any, override
 from unittest.mock import MagicMock, call
 
 import pytest
@@ -27,12 +28,13 @@ pytestmark = [pytest.mark.django_db]
 class PicklableMock(MagicMock):
     """MagicMock subclass that can be pickled for use with RQ workers."""
 
+    @override
     def __reduce__(self):
         """Return pickling instructions for MagicMock."""
         return MagicMock, ()
 
 
-def empty_queues():
+def empty_queues() -> None:
     for queue_name in ['default', 'openstack', 'ansible']:
         queue = get_queue(queue_name)
         queue.empty()
@@ -47,15 +49,15 @@ def empty_queues():
                 register.remove(job_id)
 
 
-def assert_jobs_dependencies(jobs, default_queue):
-    def _get_dependency(_job):
+def assert_jobs_dependencies(jobs: Any, default_queue: Any) -> None:
+    def _get_dependency(_job: Any) -> tuple[list[str], list[str]]:
         _dependencies = [d.decode('utf-8') for d in _job.connection.smembers(_job.dependencies_key)]
         _dependents = [d.decode('utf-8') for d in _job.connection.smembers(_job.dependents_key)]
         return _dependencies, _dependents
 
     assert len(jobs) > 0
     expected_id = jobs[0].id
-    expected_dependencies = []
+    expected_dependencies: list[str] = []
     for job in jobs:
         dependencies, dependents = _get_dependency(job)
         assert len(dependents) == 1
@@ -97,7 +99,7 @@ class TestAllocationRequestHandlerUnit:
         self.fake_gen_ssh.return_value = ('fake_private_key', 'fake_public_key')
 
     @staticmethod
-    def assert_handlers(handlers, stages):
+    def assert_handlers(handlers: Any, stages: Any) -> None:
         stack_handler = handlers[0]
         assert stack_handler.stage == stages[0]
         network_handler = handlers[1]
@@ -118,7 +120,7 @@ class TestAllocationRequestHandlerUnit:
         fake_partial = mocker.patch('crczp.sandbox_instance_app.lib.request_handlers.partial')
         fake_partial.return_value = 'fake_partial'
 
-        self.handler._enqueue_stages(sandbox, 'stage_handlers')
+        self.handler._enqueue_stages(sandbox, 'stage_handlers')  # type: ignore[arg-type]
         fake_partial.assert_called_once_with(
             self.handler._enqueue_request, 'stage_handlers', 'fake_finalization_fn'
         )
@@ -309,7 +311,7 @@ class TestCleanupRequestHandlerUnit:
         self.handler = request_handlers.CleanupRequestHandler()
 
     @staticmethod
-    def assert_handlers(handlers, stages):
+    def assert_handlers(handlers: Any, stages: Any) -> None:
         assert len(handlers) == len(stages)
         for handler, stage in zip(handlers, stages, strict=False):
             assert handler.stage == stage
@@ -440,11 +442,11 @@ class TestAllocationRequestHandler:
 
     @pytest.mark.django_db(transaction=True)
     def test_enqueue_request(self, allocation_request, sandbox):
-        handler = request_handlers.AllocationRequestHandler(allocation_request)
+        handler = request_handlers.AllocationRequestHandler(allocation_request)  # type: ignore[call-arg]
 
         assert allocation_request.stages.all().count() == 0
 
-        handler.enqueue_request(sandbox)
+        handler.enqueue_request(sandbox)  # type: ignore[call-arg]
 
         assert allocation_request.stages.all().count() == 3
 
@@ -478,20 +480,20 @@ class TestAllocationRequestHandler:
         assert job_user.is_finished
 
     def test_cancel_request(self, allocation_request_started):
-        handler = request_handlers.AllocationRequestHandler(allocation_request_started)
+        handler = request_handlers.AllocationRequestHandler(allocation_request_started)  # type: ignore[call-arg]
 
-        handler.cancel_request()
+        handler.cancel_request()  # type: ignore[call-arg]
 
         assert self.stack_cancel.call_count == 1
         assert self.ansible_cancel.call_count == 2
 
     def test_cancel_request_failed_on_completed_sandbox(self, sandbox_finished):
-        handler = request_handlers.AllocationRequestHandler(
+        handler = request_handlers.AllocationRequestHandler(  # type: ignore[call-arg]
             sandbox_finished.allocation_unit.allocation_request
         )
 
         with pytest.raises(api_exceptions.ValidationError):
-            handler.cancel_request()
+            handler.cancel_request()  # type: ignore[call-arg]
 
         self.stack_cancel.assert_not_called()
         self.ansible_cancel.assert_not_called()
@@ -523,11 +525,10 @@ class TestCleanupRequestHandler:
 
         assert cleanup_request.stages.all().count() == 0
 
-        handler.enqueue_request()
+        handler.enqueue_request()  # type: ignore[call-arg]
 
         assert cleanup_request.stages.all().count() == 3
 
-        cleanup_request: request_handlers.CleanupRequest
         assert isinstance(cleanup_request.useransiblecleanupstage, UserAnsibleCleanupStage)
         assert isinstance(
             cleanup_request.networkingansiblecleanupstage, NetworkingAnsibleCleanupStage
@@ -558,16 +559,16 @@ class TestCleanupRequestHandler:
     def test_cancel_request(self, cleanup_request_started):
         handler = request_handlers.CleanupRequestHandler(cleanup_request_started)
 
-        handler.cancel_request()
+        handler.cancel_request()  # type: ignore[call-arg]
 
         assert self.stack_cancel.call_count == 1
         assert self.ansible_cancel.call_count == 2
 
     def test_cancel_request_failed_on_completed_sandbox(self, cleanup_request_finished):
-        handler = request_handlers.AllocationRequestHandler(cleanup_request_finished)
+        handler = request_handlers.AllocationRequestHandler(cleanup_request_finished)  # type: ignore[call-arg]
 
         with pytest.raises(api_exceptions.ValidationError):
-            handler.cancel_request()
+            handler.cancel_request()  # type: ignore[call-arg]
 
         self.stack_cancel.assert_not_called()
         self.ansible_cancel.assert_not_called()

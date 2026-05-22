@@ -1,9 +1,11 @@
 """Permission classes for sandbox REST API endpoint access control."""
 
 from enum import Enum
+from typing import Any, override
 
 from django.conf import settings
 from rest_framework import permissions
+from rest_framework.request import Request
 
 from crczp.sandbox_uag.auth import get_user_roles
 from crczp.sandbox_uag.oidc_jwt import JWTAccessTokenAuthentication
@@ -24,12 +26,12 @@ class EndpointPermissionClass(permissions.BasePermission):
         ADMIN = 4
 
     @staticmethod
-    def get_role_string(level: AccessLevel):
+    def get_role_string(level: 'EndpointPermissionClass.AccessLevel') -> str:
         """Return the full role string for a given access level."""
         return f'ROLE_SANDBOX-SERVICE_{level.name}'
 
     @staticmethod
-    def has_access_level(request, level: AccessLevel):
+    def has_access_level(request: Request, level: 'EndpointPermissionClass.AccessLevel') -> bool:
         """Check whether the request bearer token grants the required access level."""
         if not settings.CRCZP_SERVICE_CONFIG.authentication.authenticated_rest_api:
             return True
@@ -43,7 +45,8 @@ class EndpointPermissionClass(permissions.BasePermission):
 class TraineePermission(EndpointPermissionClass):
     """Permission class granting access to users with the TRAINEE role."""
 
-    def has_permission(self, request, view):
+    @override
+    def has_permission(self, request: Request, view: Any) -> bool:
         """Return True if the request user has at least TRAINEE access level."""
         return self.has_access_level(request, self.AccessLevel.TRAINEE)
 
@@ -51,7 +54,8 @@ class TraineePermission(EndpointPermissionClass):
 class DesignerPermission(EndpointPermissionClass):
     """Permission class granting access to users with the DESIGNER role."""
 
-    def has_permission(self, request, view):
+    @override
+    def has_permission(self, request: Request, view: Any) -> bool:
         """Return True if the request user has at least DESIGNER access level."""
         return self.has_access_level(request, self.AccessLevel.DESIGNER)
 
@@ -59,7 +63,8 @@ class DesignerPermission(EndpointPermissionClass):
 class OrganizerPermission(EndpointPermissionClass):
     """Permission class granting access to users with the ORGANIZER role."""
 
-    def has_permission(self, request, view):
+    @override
+    def has_permission(self, request: Request, view: Any) -> bool:
         """Return True if the request user has at least ORGANIZER access level."""
         return self.has_access_level(request, self.AccessLevel.ORGANIZER)
 
@@ -67,6 +72,7 @@ class OrganizerPermission(EndpointPermissionClass):
 class AdminPermission(EndpointPermissionClass):
     """Permission class granting access to users with the ADMIN role."""
 
-    def has_permission(self, request, view):
+    @override
+    def has_permission(self, request: Request, view: Any) -> bool:
         """Return True if the request user has at least ADMIN access level."""
         return self.has_access_level(request, self.AccessLevel.ADMIN)

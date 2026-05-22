@@ -1,5 +1,7 @@
 """Custom DRF exception handler for the sandbox service."""
 
+from typing import Any
+
 import structlog
 from django.conf import settings
 from django.http import Http404
@@ -15,7 +17,7 @@ from crczp.sandbox_common_lib.exceptions import ApiException
 LOG = structlog.get_logger()
 
 
-def custom_exception_handler(exc, context):
+def custom_exception_handler(exc: Exception, context: dict[str, Any]) -> Response:
     """Log all exceptions and handle CRCZP exceptions in a special way."""
 
     if isinstance(exc, PermissionDenied):
@@ -29,15 +31,17 @@ def custom_exception_handler(exc, context):
     else:
         # Call REST framework's default exception handler, to get the standard error response.
         # Handles only Django Errors.
-        response = exception_handler(exc, context)
+        exc_response = exception_handler(exc, context)
 
-        if response is None:
+        if exc_response is None:
             response = Response(
                 {
                     'detail': str(exc),
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+        else:
+            response = exc_response
 
     exc_info = settings.DEBUG or not isinstance(
         exc,
@@ -51,7 +55,7 @@ def custom_exception_handler(exc, context):
     return response
 
 
-def handle_crczp_exception(exc, _context):
+def handle_crczp_exception(exc: Exception, _context: dict[str, Any]) -> Response:
     """Handle OpenStack lib and this project exceptions."""
     return Response(
         {
@@ -61,7 +65,7 @@ def handle_crczp_exception(exc, _context):
     )
 
 
-def handle_permission_denied(exc, context):
+def handle_permission_denied(exc: PermissionDenied, context: dict[str, Any]) -> Response:
     """Add user-role list to Permission denied error."""
     try:
         user = context['request'].user
@@ -73,7 +77,7 @@ def handle_permission_denied(exc, context):
     )
 
 
-def handle_model_validation_error(exc, _context):
+def handle_model_validation_error(exc: ValidationError, _context: dict[str, Any]) -> Response:
     """Fix error message in model validation error."""
     return Response(
         {
@@ -83,7 +87,7 @@ def handle_model_validation_error(exc, _context):
     )
 
 
-def handle_not_found(exc, _context):
+def handle_not_found(exc: Http404, _context: dict[str, Any]) -> Response:
     """Fix error message in 404 not found."""
     return Response(
         {

@@ -8,6 +8,8 @@ Validators validate single fields or entire objects.
 Swagger can utilise type hints to determine type, so use them in your own methods.
 """
 
+from typing import Any
+
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
@@ -16,7 +18,7 @@ from crczp.sandbox_common_lib.serializers import UserSerializer
 from crczp.sandbox_definition_app import models
 
 
-class DefinitionSerializer(serializers.ModelSerializer):
+class DefinitionSerializer(serializers.ModelSerializer['models.Definition']):
     """Serializer for the Definition model."""
 
     created_by = serializers.SerializerMethodField()
@@ -32,7 +34,7 @@ class DefinitionSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
-    def get_created_by(obj: models.Definition) -> bool:
+    def get_created_by(obj: models.Definition) -> Any:
         """Return the serialized user who created this definition."""
         return UserSerializer(obj.created_by).data
 
@@ -43,16 +45,16 @@ class DefinitionSerializerCreate(DefinitionSerializer):
     class Meta(DefinitionSerializer.Meta):  # pylint: disable=too-few-public-methods
         """Meta options for DefinitionSerializerCreate."""
 
-        read_only_fields = ('id',)
+        read_only_fields = ('id',)  # type: ignore[assignment]
 
 
-class DefinitionRevSerializer(serializers.Serializer):
+class DefinitionRevSerializer(serializers.Serializer[Any]):
     """Serializer for a definition rev (name)."""
 
     name = serializers.CharField()
 
 
-class LocalVariableSerializer(serializers.Serializer):
+class LocalVariableSerializer(serializers.Serializer[Any]):
     """Serializer for a local sandbox variable definition."""
 
     name = serializers.CharField()
@@ -64,7 +66,7 @@ class LocalVariableSerializer(serializers.Serializer):
     prohibited = serializers.ListField()
 
 
-class LocalSandboxVariablesSerializer(serializers.Serializer):
+class LocalSandboxVariablesSerializer(serializers.Serializer[Any]):
     """Serializer for local sandbox variable access credentials."""
 
     user_id = serializers.IntegerField()

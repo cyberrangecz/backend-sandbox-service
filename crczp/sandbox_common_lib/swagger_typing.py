@@ -1,9 +1,11 @@
 """Serializer type stubs used for Swagger/OpenAPI schema generation."""
 
+from typing import Any
+
 from rest_framework import serializers
 
 
-class UserSerializer(serializers.Serializer):
+class UserSerializer(serializers.Serializer[Any]):
     """Swagger stub serializer for a user."""
 
     id = serializers.IntegerField()
@@ -14,7 +16,7 @@ class UserSerializer(serializers.Serializer):
     mail = serializers.CharField()
 
 
-class HardwareUsageSerializer(serializers.Serializer):
+class HardwareUsageSerializer(serializers.Serializer[Any]):
     """Swagger stub serializer for hardware usage."""
 
     vcpu = serializers.CharField()
@@ -25,7 +27,7 @@ class HardwareUsageSerializer(serializers.Serializer):
     port = serializers.CharField()
 
 
-class SandboxDefinitionSerializer(serializers.Serializer):
+class SandboxDefinitionSerializer(serializers.Serializer[Any]):
     """Swagger stub serializer for a sandbox definition."""
 
     id = serializers.IntegerField()
@@ -35,14 +37,14 @@ class SandboxDefinitionSerializer(serializers.Serializer):
     created_by = UserSerializer()
 
 
-class DefinitionRequestSerializer(serializers.Serializer):
+class DefinitionRequestSerializer(serializers.Serializer[Any]):
     """Swagger stub serializer for a sandbox definition request."""
 
     url = serializers.CharField(help_text='SSH git URL of the definition')
     rev = serializers.CharField(help_text='Git revision used')
 
 
-class PoolResponseSerializer(serializers.Serializer):
+class PoolResponseSerializer(serializers.Serializer[Any]):
     """Swagger stub serializer for a pool response."""
 
     id = serializers.IntegerField(read_only=True)
@@ -59,7 +61,7 @@ class PoolResponseSerializer(serializers.Serializer):
     definition = SandboxDefinitionSerializer()
 
 
-class PoolRequestSerializer(serializers.Serializer):
+class PoolRequestSerializer(serializers.Serializer[Any]):
     """Swagger stub serializer for a pool creation request."""
 
     definition_id = serializers.IntegerField(help_text='Sandbox definition ID')
@@ -70,10 +72,12 @@ class PoolRequestSerializer(serializers.Serializer):
 
 
 # Optional: paginated list response serializer
-def get_paginated_response_serializer(item_serializer_class):
+def get_paginated_response_serializer(
+    item_serializer_class: type[serializers.Serializer[Any]],
+) -> type[serializers.Serializer[Any]]:
     """Return a dynamically generated paginated response serializer class."""
 
-    class PaginatedSerializer(serializers.Serializer):
+    class PaginatedSerializer(serializers.Serializer[Any]):
         """Inner paginated serializer with count/page metadata."""
 
         page = serializers.IntegerField()

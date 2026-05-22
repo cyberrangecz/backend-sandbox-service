@@ -1,5 +1,7 @@
 """Tests for allocation and cleanup stage handlers."""
 
+import datetime
+
 import pytest
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
@@ -17,8 +19,10 @@ from crczp.sandbox_instance_app.models import Stage
 pytestmark = pytest.mark.django_db
 
 
-def assert_db_stage(stage: Stage, start_time: timezone.datetime, failed: bool = False):
+def assert_db_stage(stage: Stage, start_time: datetime.datetime, failed: bool = False) -> None:
     """Assert that a stage's DB record has correct start/end times and failure state."""
+    assert stage.start is not None
+    assert stage.end is not None
     assert start_time < stage.start
     assert stage.start < stage.end
     assert stage.end < timezone.now()

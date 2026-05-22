@@ -45,7 +45,7 @@ else:
         host, name, password, port, user = '', ':memory:', '', '', ''
 
     class _AuthConfig:  # pylint: disable=too-few-public-methods
-        allowed_oidc_providers = []
+        allowed_oidc_providers: list[str] = []
         authenticated_rest_api = False
         roles_registration_url = roles_acquisition_url = None
 
@@ -60,13 +60,13 @@ else:
     class _ServiceConfig:  # pylint: disable=too-few-public-methods
         django_secret_key = 'pylint-only-secret-key'  # noqa: S105  # nosec B105
         debug = False
-        allowed_hosts = []
+        allowed_hosts: list[str] = []
         cors_origin_allow_all = False
-        cors_origin_whitelist = []
+        cors_origin_whitelist: list[str] = []
         microservice_name = 'sandbox-service'
         authentication = _AuthConfig()
 
-    CRCZP_SERVICE_CONFIG = _ServiceConfig()
+    CRCZP_SERVICE_CONFIG = _ServiceConfig()  # type: ignore[assignment]
     CRCZP_CONFIG = _CrczpConfig()
     AWS_PROVIDER_CONFIGURED = False
     TERRAFORM_CLIENT = None

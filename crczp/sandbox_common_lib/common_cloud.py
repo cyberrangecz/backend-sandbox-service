@@ -1,5 +1,7 @@
 """Cloud utility functions for accessing OpenStack images."""
 
+from typing import Any
+
 from django.core.cache import cache
 
 from crczp.sandbox_common_lib import utils
@@ -8,7 +10,7 @@ IMAGE_LIST_CACHE_KEY = 'image_list'
 IMAGE_LIST_CACHE_TIMEOUT = 60 * 60 * 24
 
 
-def list_images(cached=True):
+def list_images(cached: bool = True) -> Any:
     """
     Get list of images as generator
     """

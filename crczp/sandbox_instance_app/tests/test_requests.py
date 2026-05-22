@@ -1,6 +1,7 @@
 """Tests for sandbox allocation and cleanup request logic."""
 
 from functools import partial
+from typing import Any
 from unittest.mock import call
 
 import pytest
@@ -87,7 +88,9 @@ class TestCleanupRequest:  # pylint: disable=too-many-public-methods
             'crczp.sandbox_instance_app.lib.requests.request_handlers.CleanupRequestHandler'
         )
 
-    def assert_cleanup_request_success(self, allocation_unit, force=False):
+    def assert_cleanup_request_success(
+        self, allocation_unit: SandboxAllocationUnit, force: bool = False
+    ) -> None:
         """Assert a cleanup request is created successfully and sandbox is deleted."""
         requests.create_cleanup_requests([allocation_unit], force)
 
@@ -96,7 +99,7 @@ class TestCleanupRequest:  # pylint: disable=too-many-public-methods
 
         self.handler.return_value.enqueue_request.assert_called_once_with(allocation_unit)
 
-    def assert_cleanup_request_failed(self, allocation_unit):
+    def assert_cleanup_request_failed(self, allocation_unit: SandboxAllocationUnit) -> None:
         """Assert that creating a cleanup request raises ValidationError."""
         with pytest.raises(api_exceptions.ValidationError):
             requests.create_cleanup_request(allocation_unit)
@@ -105,13 +108,13 @@ class TestCleanupRequest:  # pylint: disable=too-many-public-methods
             assert CleanupRequest.objects.get(pk=allocation_unit.id)
         self.handler.assert_not_called()
 
-    def assert_cleanup_ongoing_force_skipped(self, allocation_unit):
+    def assert_cleanup_ongoing_force_skipped(self, allocation_unit: SandboxAllocationUnit) -> None:
         """Assert that a force cleanup is skipped when one is already ongoing."""
         requests.create_cleanup_request_force(allocation_unit, False)
 
         self.handler.assert_not_called()
 
-    def assert_multiple_cleanup_requests_success(self, allocation_units):
+    def assert_multiple_cleanup_requests_success(self, allocation_units: Any) -> None:
         """Assert that cleanup requests are created for all units and sandboxes deleted."""
         for allocation_unit in allocation_units:
             with pytest.raises(ObjectDoesNotExist):
@@ -185,7 +188,7 @@ class TestCleanupRequest:  # pylint: disable=too-many-public-methods
         self.assert_multiple_cleanup_requests_success([allocation_unit])
 
     @staticmethod
-    def assert_cleanup_request_all_failed(allocation_units):
+    def assert_cleanup_request_all_failed(allocation_units: Any) -> None:
         """Assert that cleanup request creation fails for all given allocation units."""
         with pytest.raises(api_exceptions.ValidationError):
             requests.create_cleanup_requests(list(allocation_units))

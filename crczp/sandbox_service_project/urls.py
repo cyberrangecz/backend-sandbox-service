@@ -16,10 +16,10 @@ Including another URLconf
 
 from django.conf import settings
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import URLPattern, URLResolver, include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
-api_patterns = [
+api_patterns: list[URLPattern | URLResolver] = [
     path('admin', admin.site.urls, name='admin'),
     # OpenAPI schema JSON
     path('schema/', SpectacularAPIView.as_view(), name='schema'),

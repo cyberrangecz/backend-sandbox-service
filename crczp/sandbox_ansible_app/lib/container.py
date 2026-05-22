@@ -2,6 +2,7 @@
 
 import abc
 from dataclasses import dataclass
+from typing import Any, override
 
 import docker
 import structlog
@@ -44,15 +45,15 @@ class BaseContainer(abc.ABC):  # pylint: disable=too-many-instance-attributes
     @abc.abstractmethod
     def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
-        url,
-        rev,
-        stage,
-        ssh_directory,
-        inventory_path,
-        containers_path,
-        credentials_path,
-        cleanup=False,
-    ):
+        url: str,
+        rev: str,
+        stage: Any,
+        ssh_directory: str,
+        inventory_path: str,
+        containers_path: str,
+        credentials_path: str,
+        cleanup: bool = False,
+    ) -> None:
         """Initialize the container."""
         self.url = url
         self.rev = rev
@@ -68,28 +69,28 @@ class BaseContainer(abc.ABC):  # pylint: disable=too-many-instance-attributes
         )
 
     @abc.abstractmethod
-    def _run_container(self):
+    def _run_container(self) -> Any:
         """Run the container."""
 
     @abc.abstractmethod
-    def get_container_name(self):
+    def get_container_name(self) -> str:
         """Get the container ID."""
 
     @abc.abstractmethod
-    def get_container_outputs(self):
+    def get_container_outputs(self) -> None:
         """Get the container outputs."""
 
     @abc.abstractmethod
-    def check_container_status(self):
+    def check_container_status(self) -> None:
         """Check the container status."""
 
     @abc.abstractmethod
-    def delete(self):
+    def delete(self) -> None:
         """Delete the container."""
 
     @classmethod
     @abc.abstractmethod
-    def delete_container(cls, container_name):
+    def delete_container(cls, container_name: str) -> None:
         """Delete the container. Used when cancelling a stage."""
 
 
@@ -99,17 +100,18 @@ class DockerContainer(BaseContainer):
     DOCKER_NETWORK = settings.CRCZP_CONFIG.ansible_docker_network
     CLIENT = docker.from_env
 
+    @override
     def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
-        url,
-        rev,
-        stage,
-        ssh_directory,
-        inventory_path,
-        containers_path,
-        credentials_path,
-        cleanup=False,
-    ):
+        url: str,
+        rev: str,
+        stage: Any,
+        ssh_directory: str,
+        inventory_path: str,
+        containers_path: str,
+        credentials_path: str,
+        cleanup: bool = False,
+    ) -> None:
         """Initialize the container."""
         super().__init__(
             url,
@@ -123,7 +125,8 @@ class DockerContainer(BaseContainer):
         )
         self.container = self._run_container()
 
-    def _run_container(self):
+    @override
+    def _run_container(self) -> Container:
         """
         Run Ansible in Docker container.
         """
@@ -153,18 +156,21 @@ class DockerContainer(BaseContainer):
             network=self.DOCKER_NETWORK,
         )
 
-    def get_container_name(self):
+    @override
+    def get_container_name(self) -> str:
         """Get the container ID."""
-        return self.container.id
+        return str(self.container.id)
 
-    def get_container_outputs(self):
+    @override
+    def get_container_outputs(self) -> None:
         """Get the container outputs."""
         for output in self.container.logs(stream=True):
             output = output.decode('utf-8')
             output = output[:-1] if output[-1] == '\n' else output
             self.output_class.objects.create(**self.stage_info, content=output)
 
-    def check_container_status(self):
+    @override
+    def check_container_status(self) -> None:
         """Check the container status."""
         status = self.container.wait(timeout=settings.CRCZP_CONFIG.sandbox_ansible_timeout)
         status_code = status['StatusCode']
@@ -181,11 +187,13 @@ class DockerContainer(BaseContainer):
         return cls.CLIENT().containers.get(container_id)
 
     @classmethod
-    def delete_container(cls, container_name):
+    @override
+    def delete_container(cls, container_name: str) -> None:
         """Delete the container. Used when cancelling a stage."""
         cls._get_container(container_name).remove(force=True)
 
-    def delete(self):
+    @override
+    def delete(self) -> None:
         """Delete the container."""
         self.delete_container(self.get_container_name())
 
@@ -199,17 +207,18 @@ class KubernetesContainer(BaseContainer):
     CORE_API = client.CoreV1Api()
     BATCH_API = client.BatchV1Api()
 
+    @override
     def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
-        url,
-        rev,
-        stage,
-        ssh_directory,
-        inventory_path,
-        containers_path,
-        credentials_path,
-        cleanup=False,
-    ):
+        url: str,
+        rev: str,
+        stage: Any,
+        ssh_directory: str,
+        inventory_path: str,
+        containers_path: str,
+        credentials_path: str,
+        cleanup: bool = False,
+    ) -> None:
         """Initialize the container."""
         super().__init__(
             url,
@@ -230,7 +239,7 @@ class KubernetesContainer(BaseContainer):
         self.container = self._run_container()
 
     @classmethod
-    def _initialize_kube_config(cls):
+    def _initialize_kube_config(cls) -> None:
         """Initialize the kubernetes config."""
         try:
             config.load_incluster_config()
@@ -240,7 +249,7 @@ class KubernetesContainer(BaseContainer):
         cls.CORE_API = client.CoreV1Api()
         cls.BATCH_API = client.BatchV1Api()
 
-    def _create_container(self):
+    def _create_container(self) -> Any:
         """Create the container."""
         kuber_container = client.V1Container(
             name=self.job_name,
@@ -301,7 +310,7 @@ class KubernetesContainer(BaseContainer):
 
         return kuber_container
 
-    def _create_kube_job(self):
+    def _create_kube_job(self) -> Any:
         """
         Run Ansible in Kubernetes job.
         """
@@ -336,15 +345,17 @@ class KubernetesContainer(BaseContainer):
 
         return job
 
-    def _run_container(self):
+    @override
+    def _run_container(self) -> Any:
         """Run the container."""
         return self._create_kube_job()
 
-    def get_container_name(self):
+    @override
+    def get_container_name(self) -> str:
         """Return the container name."""
         return self.job_name
 
-    def _wait_for_pod_start(self):
+    def _wait_for_pod_start(self) -> str | None:
         """
         Wait for pod to start.
         """
@@ -357,13 +368,13 @@ class KubernetesContainer(BaseContainer):
             pod_phase = event['object'].status.phase
             if pod_phase in ('Running', 'Failed'):
                 w.stop()
-                return event['object'].metadata.name
+                return str(event['object'].metadata.name)
             if event['type'] == 'DELETED':
                 w.stop()
                 raise CrczpException('Pod was deleted before it was ready.')
         return None
 
-    def _wait_for_job_finish(self):
+    def _wait_for_job_finish(self) -> Any:
         """
         Wait for job to finish.
         """
@@ -379,7 +390,7 @@ class KubernetesContainer(BaseContainer):
                 return job_status
         return None
 
-    def _save_pod_outputs(self, pod_name: str):
+    def _save_pod_outputs(self, pod_name: str) -> None:
         """
         Replace live outputs of the pod with the ones from the storage.
         """
@@ -391,13 +402,15 @@ class KubernetesContainer(BaseContainer):
         for output in pod_outputs.split('\n'):
             self.output_class.objects.create(**self.stage_info, content=output)
 
-    def get_container_outputs(self):
+    @override
+    def get_container_outputs(self) -> None:
         """
         Return the container outputs.
         """
         w = watch.Watch()
 
         pod_name = self._wait_for_pod_start()
+        assert pod_name is not None, 'Pod did not start in time'
         job_done = False
         while not job_done:
             for log in w.stream(
@@ -416,7 +429,8 @@ class KubernetesContainer(BaseContainer):
                     break
         self._save_pod_outputs(pod_name)
 
-    def check_container_status(self):
+    @override
+    def check_container_status(self) -> None:
         """Check the container status."""
         status = self._wait_for_job_finish()
         if status.failed or (status.conditions and status.conditions[0].type == 'Failed'):
@@ -425,7 +439,8 @@ class KubernetesContainer(BaseContainer):
             )
 
     @classmethod
-    def delete_container(cls, container_name):
+    @override
+    def delete_container(cls, container_name: str) -> None:
         """Delete the container."""
         cls._initialize_kube_config()
         try:
@@ -437,6 +452,7 @@ class KubernetesContainer(BaseContainer):
         except client.ApiException as exc:
             raise CrczpException(f'Failed to delete job: {exc}') from exc
 
-    def delete(self):
+    @override
+    def delete(self) -> None:
         """Delete the container."""
         self.delete_container(self.get_container_name())

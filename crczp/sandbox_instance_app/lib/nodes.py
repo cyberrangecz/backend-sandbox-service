@@ -1,6 +1,4 @@
-"""
-VM Service module for VM management.
-"""
+"""VM Service module for VM management."""
 
 import itertools
 from dataclasses import dataclass
@@ -33,17 +31,17 @@ class Protocol:
         self.port = port
 
     @classmethod
-    def ssh(cls):
+    def ssh(cls) -> 'Protocol':
         """Return a Protocol instance for SSH."""
         return cls('SSH', 22)
 
     @classmethod
-    def rdp(cls):
+    def rdp(cls) -> 'Protocol':
         """Return a Protocol instance for RDP."""
         return cls('RDP', 3389)
 
     @classmethod
-    def vnc(cls):
+    def vnc(cls) -> 'Protocol':
         """Return a Protocol instance for VNC."""
         return cls('VNC', 5900)
 
@@ -73,7 +71,7 @@ def node_action(sandbox: Sandbox, node_name: str, action: str) -> None:
         'reboot': client.reboot_node,
     }
     try:
-        return action_dict[action](sandbox.allocation_unit.get_stack_name(), node_name)
+        action_dict[action](sandbox.allocation_unit.get_stack_name(), node_name)
     except KeyError:
         raise exceptions.ValidationError(f"Unknown action: '{action}'") from None
 
@@ -85,8 +83,12 @@ def get_node(sandbox: Sandbox, node_name: str) -> TerraformInstance:
 
 
 def get_console_url_job(
-    stack_name, node_name, console_type, console_cache_name, job_cache_id_running
-):
+    stack_name: str,
+    node_name: str,
+    console_type: str,
+    console_cache_name: str,
+    job_cache_id_running: str,
+) -> None:
     """Fetch and cache the console URL for the given node (runs as a background job)."""
     client = utils.get_terraform_client()
     console_url = client.get_console_url(stack_name, node_name, console_type)
@@ -100,7 +102,7 @@ def get_console_url(sandbox: Sandbox, node_name: str) -> str:
     job_cache_id_running = CACHE_CONSOLE_PREFIX + str(sandbox.id) + '-' + node_name + '-running'
     console_url = cache.get(console_cache_name, None)
     if console_url:
-        return console_url
+        return console_url  # type: ignore[no-any-return]
 
     job_running = cache.get(job_cache_id_running, False)
     if not job_running:
@@ -133,7 +135,7 @@ def get_node_access_data(topology_instance: TopologyInstance, node: Node) -> Nod
     )
 
 
-def find_image_for_node(node: Node, images=None) -> Image:
+def find_image_for_node(node: Node, images: list[Image] | None = None) -> Image:
     """
     Find the image for a given node.
 
@@ -165,7 +167,7 @@ def get_node_available_protocols(node: Node) -> list[Protocol]:
 
 def get_node_image_has_gui_access(image: Image) -> bool:
     """Return True if the image has GUI access enabled."""
-    return image.owner_specified.get('owner_specified.openstack.gui_access') == 'true'
+    return image.owner_specified.get('owner_specified.openstack.gui_access') == 'true'  # type: ignore[no-any-return]
 
 
 def _get_node_ip(topology_instance: TopologyInstance, node: Node) -> str:
@@ -182,6 +184,6 @@ def _get_node_ip(topology_instance: TopologyInstance, node: Node) -> str:
         ):
             raise exceptions.ValidationError(f'Node {node.name} is not user-accessible')
         if link.ip:
-            return link.ip
+            return link.ip  # type: ignore[no-any-return]
 
     raise exceptions.ValidationError(f'No accessible IP found for node {node.name}')

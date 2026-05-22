@@ -6,7 +6,7 @@ from django.core.validators import URLValidator, validate_ipv4_address
 ALLOWED_SCHEMES = ['http', 'https']
 
 
-def validate_git_rest_url(obj, git_rest_server) -> bool:
+def validate_git_rest_url(obj: object, git_rest_server: str) -> bool:
     """Validate that the git REST server URL uses an allowed scheme."""
     validate = URLValidator(schemes=ALLOWED_SCHEMES)
 
@@ -21,7 +21,7 @@ def validate_git_rest_url(obj, git_rest_server) -> bool:
     return True
 
 
-def validate_head_ip(obj, head_ip):
+def validate_head_ip(obj: object, head_ip: str) -> bool:
     """Validate that the head IP is a valid IPv4 address."""
     try:
         validate_ipv4_address(head_ip)

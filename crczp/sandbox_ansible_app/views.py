@@ -1,9 +1,13 @@
 """REST API views for Ansible stage operations."""
 
+from typing import Any, override
+
 import structlog
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import generics
+from rest_framework.request import Request
+from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from crczp.sandbox_ansible_app import serializers
@@ -27,7 +31,7 @@ COMMON_RESPONSE_PATTERNS = {
         **COMMON_RESPONSE_PATTERNS,
     },
 )
-class NetworkingAnsibleAllocationStageDetailView(generics.RetrieveAPIView):
+class NetworkingAnsibleAllocationStageDetailView(generics.RetrieveAPIView[Any]):
     """
     get: Retrieve a `Networking Ansible` Allocation stage.
     """
@@ -36,7 +40,8 @@ class NetworkingAnsibleAllocationStageDetailView(generics.RetrieveAPIView):
     queryset = AllocationRequest.objects.all()
     lookup_url_kwarg = 'request_id'
 
-    def get_object(self):
+    @override
+    def get_object(self) -> Any:
         request = super().get_object()
         return request.networkingansibleallocationstage
 
@@ -48,7 +53,7 @@ class NetworkingAnsibleAllocationStageDetailView(generics.RetrieveAPIView):
         **COMMON_RESPONSE_PATTERNS,
     },
 )
-class UserAnsibleAllocationStageDetailView(generics.RetrieveAPIView):
+class UserAnsibleAllocationStageDetailView(generics.RetrieveAPIView[Any]):
     """
     get: Retrieve a `User Ansible` Allocation stage.
     """
@@ -57,7 +62,8 @@ class UserAnsibleAllocationStageDetailView(generics.RetrieveAPIView):
     queryset = AllocationRequest.objects.all()
     lookup_url_kwarg = 'request_id'
 
-    def get_object(self):
+    @override
+    def get_object(self) -> Any:
         request = super().get_object()
         return request.useransibleallocationstage
 
@@ -69,7 +75,7 @@ class UserAnsibleAllocationStageDetailView(generics.RetrieveAPIView):
         **COMMON_RESPONSE_PATTERNS,
     },
 )
-class NetworkingAnsibleCleanupStageDetailView(generics.RetrieveAPIView):
+class NetworkingAnsibleCleanupStageDetailView(generics.RetrieveAPIView[Any]):
     """
     get: Retrieve a `Networking Ansible` Cleanup stage.
     """
@@ -78,7 +84,8 @@ class NetworkingAnsibleCleanupStageDetailView(generics.RetrieveAPIView):
     queryset = CleanupRequest.objects.all()
     lookup_url_kwarg = 'request_id'
 
-    def get_object(self):
+    @override
+    def get_object(self) -> Any:
         request = super().get_object()
         return request.networkingansiblecleanupstage
 
@@ -90,7 +97,7 @@ class NetworkingAnsibleCleanupStageDetailView(generics.RetrieveAPIView):
         **COMMON_RESPONSE_PATTERNS,
     },
 )
-class UserAnsibleCleanupStageDetailView(generics.RetrieveAPIView):
+class UserAnsibleCleanupStageDetailView(generics.RetrieveAPIView[Any]):
     """
     get: Retrieve a `User Ansible` Cleanup stage.
     """
@@ -99,7 +106,8 @@ class UserAnsibleCleanupStageDetailView(generics.RetrieveAPIView):
     queryset = CleanupRequest.objects.all()
     lookup_url_kwarg = 'request_id'
 
-    def get_object(self):
+    @override
+    def get_object(self) -> Any:
         request = super().get_object()
         return request.useransiblecleanupstage
 
@@ -129,7 +137,7 @@ class NetworkingAnsibleOutputListView(log_output_mixin.CompressedOutputMixin, AP
 
     queryset = AllocationRequest.objects.all()
 
-    def get(self, request, request_id):
+    def get(self, request: Request, request_id: int) -> Response:
         """Return networking Ansible outputs for the given allocation request."""
         from_row = request.query_params.get('from_row', 0)
         try:
@@ -138,7 +146,7 @@ class NetworkingAnsibleOutputListView(log_output_mixin.CompressedOutputMixin, AP
             from_row = 0
 
         allocation_request = get_object_or_404(AllocationRequest, pk=request_id)
-        outputs_queryset = allocation_request.networkingansibleallocationstage.outputs
+        outputs_queryset = allocation_request.networkingansibleallocationstage.outputs.all()
 
         return self.create_outputs_response(outputs_queryset, from_row)
 
@@ -166,7 +174,7 @@ class UserAnsibleOutputListView(log_output_mixin.CompressedOutputMixin, APIView)
 
     queryset = AllocationRequest.objects.all()
 
-    def get(self, request, request_id):
+    def get(self, request: Request, request_id: int) -> Response:
         """Return user Ansible outputs for the given allocation request."""
         from_row = request.query_params.get('from_row', 0)
         try:
@@ -175,6 +183,6 @@ class UserAnsibleOutputListView(log_output_mixin.CompressedOutputMixin, APIView)
             from_row = 0
 
         allocation_request = get_object_or_404(AllocationRequest, pk=request_id)
-        outputs_queryset = allocation_request.useransibleallocationstage.outputs
+        outputs_queryset = allocation_request.useransibleallocationstage.outputs.all()
 
         return self.create_outputs_response(outputs_queryset, from_row)

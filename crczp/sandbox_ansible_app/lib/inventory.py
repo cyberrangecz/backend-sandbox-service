@@ -5,7 +5,7 @@ import re
 from enum import Enum
 from ipaddress import ip_network
 from itertools import chain
-from typing import Optional
+from typing import Any, Optional, override
 
 import structlog
 import yaml
@@ -69,15 +69,15 @@ class DefaultAnsibleHostsGroups(Enum):
 class Base(abc.ABC):
     """Abstract base class for Ansible inventory entries."""
 
-    def __init__(self):
-        self.variables = {}
+    def __init__(self) -> None:
+        self.variables: dict[str, Any] = {}
 
     @abc.abstractmethod
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert this entry to a dictionary for YAML serialization."""
         return self.variables
 
-    def add_variables(self, **kwargs):
+    def add_variables(self, **kwargs: Any) -> None:
         """Add or update inventory variables for this entry."""
         self.variables.update(kwargs)
 
@@ -93,7 +93,8 @@ class Host(Base):
         self.add_variables(ansible_host=host)
         self.add_variables(ansible_user=user)
 
-    def to_dict(self) -> dict:
+    @override
+    def to_dict(self) -> dict[str, Any]:
         """
         Return Ansible inventory host entry represented as a dict.
         """
@@ -105,18 +106,21 @@ class Group(Base):
     Represents Ansible inventory group entry.
     """
 
-    def __init__(self, name: str, hosts: list[Host] = None, hosts_vars=None):
+    def __init__(
+        self, name: str, hosts: list['Host'] | None = None, hosts_vars: dict[str, Any] | None = None
+    ) -> None:
         super().__init__()
         self.name = name
-        self.hosts = {host.name: host for host in hosts} if hosts else {}
-        self.groups = {}
-        self.hosts_vars = {} if hosts_vars is None else hosts_vars
+        self.hosts: dict[str, Host] = {host.name: host for host in hosts} if hosts else {}
+        self.groups: dict[str, Group] = {}
+        self.hosts_vars: dict[str, Any] = {} if hosts_vars is None else hosts_vars
 
-    def to_dict(self) -> dict:
+    @override
+    def to_dict(self) -> dict[str, Any]:
         """
         Return Ansible inventory group entry represented as a dict.
         """
-        dictionary = {}
+        dictionary: dict[str, Any] = {}
         if self.hosts:
             dictionary['hosts'] = {host.name: None for host in self.hosts.values()}
             if self.hosts_vars:
@@ -165,7 +169,7 @@ class Route:  # pylint: disable=too-few-public-methods
         self.network_mask = str(ip_network(network_cidr).netmask)
         self.gateway_ip = gateway_ip
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """
         Return route information represented as a dict.
         """
@@ -181,11 +185,11 @@ class Interface:
     Represents a network interface.
     """
 
-    def __init__(self, mac: str, ip: str, default_gateway_ip: str = None):
+    def __init__(self, mac: str, ip: str, default_gateway_ip: str | None = None) -> None:
         self.mac = mac
         self.ip = ip
         self.default_gateway_ip = default_gateway_ip
-        self.routes = []
+        self.routes: list[Route] = []
 
     def add_route(self, route: Route) -> None:
         """
@@ -193,7 +197,7 @@ class Interface:
         """
         self.routes.append(route)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """
         Return a network interface represented as a dict.
         """
@@ -298,11 +302,12 @@ class BaseInventory(Group):
         )
         self.add_host(host)
 
-    def to_dict(self) -> dict:
+    @override
+    def to_dict(self) -> dict[str, Any]:
         """
         Return Ansible inventory represented as a dict.
         """
-        inventory = {'all': super().to_dict()}
+        inventory: dict[str, Any] = {'all': super().to_dict()}
         inventory['all']['hosts'] = {host.name: host.to_dict() for host in self.hosts.values()}
         return inventory
 
@@ -324,6 +329,8 @@ class Inventory(BaseInventory):
     `extra_vars` dictionary to constructor.
     """
 
+    docker_hosts: list['Host'] | None
+
     def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         proxy_jump_user_access_mgmt_name: str,
@@ -333,9 +340,10 @@ class Inventory(BaseInventory):
         mgmt_public_certificate: str,
         mgmt_public_key: str,
         user_public_key: str,
-        extra_vars: dict = None,
-    ):
+        extra_vars: dict[str, Any] | None = None,
+    ) -> None:
         super().__init__(proxy_jump_user_access_mgmt_name, proxy_jump_user_access_user_name)
+        self.docker_hosts = None
         self.topology_instance = topology_instance
         self.routing = Routing(topology_instance)
 
@@ -345,8 +353,12 @@ class Inventory(BaseInventory):
         self._create_user_defined_groups()
         self._add_user_network_ip_to_user_defined_nodes()
 
-        self.get_host(PROXY_JUMP_NAME).add_variables(user_access_present=True)
-        self.get_group('winrm_nodes').add_variables(
+        proxy_jump_host = self.get_host(PROXY_JUMP_NAME)
+        assert proxy_jump_host is not None
+        proxy_jump_host.add_variables(user_access_present=True)
+        winrm_nodes_group = self.get_group('winrm_nodes')
+        assert winrm_nodes_group is not None
+        winrm_nodes_group.add_variables(
             **self._get_winrm_connection_variables(mgmt_private_key, mgmt_public_certificate)
         )
         self.add_variables(
@@ -428,10 +440,10 @@ class Inventory(BaseInventory):
         Add IP of user network as variable for every user defined nodes.
         """
         user_defined_networks = self.topology_instance.get_hosts_networks()
-        networks_links = [
+        links_lists = [
             self.topology_instance.get_network_links(network) for network in user_defined_networks
         ]
-        networks_links = chain(*networks_links)
+        networks_links = chain(*links_lists)
 
         for link in networks_links:
             if link.node.name == 'uan':
@@ -440,19 +452,20 @@ class Inventory(BaseInventory):
 
     def _update_docker_hosts(self) -> None:
         print('Updating docker hosts')
+        assert self.docker_hosts is not None
         docker_host_names = [host.name for host in self.docker_hosts]
         for hostname in self.hosts:
             if hostname in docker_host_names:
                 print(f'Found docker host: {hostname}')
                 print(f'Docker containers host path: /root/containers/{hostname}/')
-                self.get_host(hostname).add_variables(
-                    containers_path=f'/root/containers/{hostname}/'
-                )
+                host = self.get_host(hostname)
+                if host is not None:
+                    host.add_variables(containers_path=f'/root/containers/{hostname}/')
 
     @staticmethod
     def _get_winrm_connection_variables(
         mgmt_private_key: str, mgmt_public_certificate: str
-    ) -> dict:
+    ) -> dict[str, Any]:
         """
         Return Ansible variables needed for connection with nodes over WinRM protocol.
         """

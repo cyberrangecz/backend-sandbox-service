@@ -1,10 +1,12 @@
 """Business logic for creating and managing sandbox allocation and cleanup requests."""
 
 import enum
+from collections.abc import Iterable
 from functools import partial
+from typing import Any
 
 import structlog
-from django.contrib.auth import get_user_model
+from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 
@@ -17,7 +19,6 @@ from crczp.sandbox_instance_app.models import (
     SandboxAllocationUnit,
 )
 
-User = get_user_model()
 LOG = structlog.get_logger()
 
 
@@ -57,12 +58,12 @@ def create_allocations_requests(
     return units
 
 
-def cancel_allocation_request(alloc_req: AllocationRequest):
+def cancel_allocation_request(alloc_req: AllocationRequest) -> None:
     """(Soft) cancel all stages of the Allocation Request."""
     request_handlers.AllocationRequestHandler().cancel_request(alloc_req)
 
 
-def create_cleanup_request_force(allocation_unit: SandboxAllocationUnit, delete_pool):
+def create_cleanup_request_force(allocation_unit: SandboxAllocationUnit, delete_pool: bool) -> None:
     """Create cleanup request and enqueue it. Immediately delete sandbox from database.
     The force parameter forces the deletion."""
     if (
@@ -76,7 +77,7 @@ def create_cleanup_request_force(allocation_unit: SandboxAllocationUnit, delete_
     except ObjectDoesNotExist:
         sandbox = None
     else:
-        if hasattr(sandbox, 'lock'):
+        if sandbox is not None and hasattr(sandbox, 'lock'):
             sandbox.lock.delete()
 
     if (
@@ -101,13 +102,14 @@ def create_cleanup_request_force(allocation_unit: SandboxAllocationUnit, delete_
     request_handlers.CleanupRequestHandler(delete_pool=delete_pool).enqueue_request(allocation_unit)
 
 
-def create_cleanup_request(allocation_unit: SandboxAllocationUnit):
+def create_cleanup_request(allocation_unit: SandboxAllocationUnit) -> None:
     """Create cleanup request and enqueue it. Immediately delete sandbox from database."""
     try:
         sandbox = allocation_unit.sandbox
     except ObjectDoesNotExist:
         sandbox = None
     else:
+        assert sandbox is not None
         if hasattr(sandbox, 'lock'):
             raise exceptions.ValidationError(f'Sandbox ID={sandbox.id} is locked. Unlock it first.')
 
@@ -143,8 +145,10 @@ def create_cleanup_request(allocation_unit: SandboxAllocationUnit):
 
 
 def create_cleanup_requests(
-    allocation_units: list[SandboxAllocationUnit], force: bool = False, delete_pool: bool = False
-):
+    allocation_units: Iterable[SandboxAllocationUnit],
+    force: bool = False,
+    delete_pool: bool = False,
+) -> None:
     """Batch version of create_cleanup_request."""
     for unit in allocation_units:
         if force:
@@ -195,7 +199,7 @@ def get_cleanup_request_stages_state(request: CleanupRequest) -> list[str]:
     return _get_request_stages_state(stages)
 
 
-def _get_request_stages_state(stages) -> list[str]:
+def _get_request_stages_state(stages: list[Any]) -> list[str]:
     """Get SandboxRequests stages state."""
     stages_state = []
 

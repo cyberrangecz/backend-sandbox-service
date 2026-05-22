@@ -1,13 +1,16 @@
 """REST API views for sandbox instance management."""
 
+from typing import Any, override
 from wsgiref.util import FileWrapper
 
 import structlog
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
+from django.db.models import QuerySet
 from django.http import Http404, HttpResponse
 from drf_spectacular.utils import OpenApiParameter, OpenApiRequest, OpenApiResponse, extend_schema
 from rest_framework import generics, status
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -56,7 +59,7 @@ SANDBOX_RESPONSES = {**COMMON_RESPONSE_PATTERNS}
         **{k: v for k, v in utils.ERROR_RESPONSES.items() if k in [401, 403, 500]},
     },
 )
-class PoolListCreateView(generics.ListCreateAPIView):
+class PoolListCreateView(generics.ListCreateAPIView[Any]):
     """
     get: Get a list of pools.
     """
@@ -71,7 +74,8 @@ class PoolListCreateView(generics.ListCreateAPIView):
             **POOL_RESPONSES,
         },
     )
-    def post(self, request, *args, **kwargs):
+    @override
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Creates new pool.
         Also creates a new key-pair and certificate, which is then passed to terraform client.
         The key is then used as management key for this pool, which means that the management
@@ -84,7 +88,7 @@ class PoolListCreateView(generics.ListCreateAPIView):
 
 
 @extend_schema(methods=['GET'], responses={200: PoolResponseSerializer, **POOL_RESPONSES})
-class PoolDetailDeleteUpdateView(generics.RetrieveDestroyAPIView):
+class PoolDetailDeleteUpdateView(generics.RetrieveDestroyAPIView[Any]):
     """
     get: Retrieve a pool.
     """
@@ -106,7 +110,8 @@ class PoolDetailDeleteUpdateView(generics.RetrieveDestroyAPIView):
         ],
         responses={**POOL_RESPONSES},
     )
-    def delete(self, request, *args, **kwargs):
+    @override
+    def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         Delete pool. The pool must be empty.
         First delete all sandboxes in given Pool.
@@ -126,7 +131,7 @@ class PoolDetailDeleteUpdateView(generics.RetrieveDestroyAPIView):
         request=serializers.PoolSerializer,
         responses={200: serializers.PoolSerializer, **POOL_RESPONSES},
     )
-    def patch(self, request, *args, **kwargs):
+    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Partially update a pool."""
         pool = self.get_object()
         serializer = self.serializer_class(pool, data=request.data, partial=True)
@@ -138,7 +143,7 @@ class PoolDetailDeleteUpdateView(generics.RetrieveDestroyAPIView):
 
 
 @extend_schema(methods=['GET'], responses={200: SandboxDefinitionSerializer, **SANDBOX_RESPONSES})
-class PoolDefinitionView(generics.RetrieveAPIView):
+class PoolDefinitionView(generics.RetrieveAPIView[Any]):
     """
     get: Retrieve the definition associated with a pool.
     """
@@ -147,7 +152,8 @@ class PoolDefinitionView(generics.RetrieveAPIView):
     lookup_url_kwarg = 'pool_id'
     serializer_class = DefinitionSerializer
 
-    def get_object(self):
+    @override
+    def get_object(self) -> Any:
         return super().get_object().definition
 
 
@@ -168,21 +174,23 @@ class PoolDefinitionView(generics.RetrieveAPIView):
         **POOL_RESPONSES,
     },
 )
-class PoolLockListCreateView(generics.ListCreateAPIView):
+class PoolLockListCreateView(generics.ListCreateAPIView[Any]):
     """
     get: List locks for given pool.
     """
 
     serializer_class = serializers.PoolLockSerializer
 
-    def get_queryset(self):
+    @override
+    def get_queryset(self) -> QuerySet[Any, Any]:
         pool_id = self.kwargs.get('pool_id')
         get_object_or_404(Pool, pk=pool_id)
         return PoolLock.objects.filter(pool=pool_id)
 
-    def post(self, request, *args, **kwargs):
+    @override
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Lock given pool."""
-        pool = pools.get_pool(kwargs.get('pool_id'))
+        pool = pools.get_pool(kwargs['pool_id'])
         training_access_token = request.data.get('training_access_token', None)
         lock = pools.lock_pool(pool, training_access_token)
         return Response(self.serializer_class(lock).data, status=status.HTTP_201_CREATED)
@@ -196,7 +204,7 @@ class PoolLockListCreateView(generics.ListCreateAPIView):
     methods=['DELETE'],
     responses={204: OpenApiResponse(description='No Content'), **SANDBOX_RESPONSES},
 )
-class PoolLockDetailDeleteView(generics.RetrieveDestroyAPIView):
+class PoolLockDetailDeleteView(generics.RetrieveDestroyAPIView[Any]):
     """
     get: Retrieve details about given lock.
     delete: Delete given lock.
@@ -217,14 +225,15 @@ class PoolLockDetailDeleteView(generics.RetrieveDestroyAPIView):
         **SANDBOX_RESPONSES,
     },
 )
-class PoolAllocationRequestListView(generics.ListAPIView):
+class PoolAllocationRequestListView(generics.ListAPIView[Any]):
     """
     get: List Allocation Request for this pool.
     """
 
     serializer_class = serializers.AllocationRequestSerializer
 
-    def get_queryset(self):
+    @override
+    def get_queryset(self) -> QuerySet[Any, Any]:
         pool_id = self.kwargs.get('pool_id')
         pool = get_object_or_404(Pool, pk=pool_id)
         return AllocationRequest.objects.filter(allocation_unit__in=pool.allocation_units.all())
@@ -258,22 +267,24 @@ class PoolAllocationRequestListView(generics.ListAPIView):
         **POOL_RESPONSES,
     },
 )
-class PoolCleanupRequestsListCreateView(generics.ListCreateAPIView):
+class PoolCleanupRequestsListCreateView(generics.ListCreateAPIView[Any]):
     """
     get: List Cleanup Requests for this pool.
     """
 
     serializer_class = serializers.CleanupRequestSerializer
 
-    def get_queryset(self):
+    @override
+    def get_queryset(self) -> QuerySet[Any, Any]:
         pool_id = self.kwargs.get('pool_id')
         get_object_or_404(Pool, pk=pool_id)
         return CleanupRequest.objects.filter(allocation_unit__pool_id=pool_id)
 
-    def post(self, request, *args, **kwargs):
+    @override
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Deletes all sandboxes in the pool. With an optional parameter *force*,
         it forces the deletion."""
-        pool_id = kwargs.get('pool_id')
+        pool_id = kwargs['pool_id']
         get_object_or_404(Pool, pk=pool_id)
         pool_units = SandboxAllocationUnit.objects.filter(pool_id=pool_id)
         force = request.GET.get('force', 'false') == 'true'
@@ -298,15 +309,15 @@ class PoolCleanupRequestUnlockedCreateView(APIView):
             )
         ]
     )
-    def post(self, request, *args, **kwargs):
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Deletes all unlocked sandboxes in a pool. With an optional parameter *force*, it forces
         the deletion."""
-        pool_id = kwargs.get('pool_id')
+        pool_id = kwargs['pool_id']
         get_object_or_404(Pool, pk=pool_id)
-        pool_units = SandboxAllocationUnit.objects.filter(pool_id=pool_id)
+        all_pool_units = SandboxAllocationUnit.objects.filter(pool_id=pool_id)
         pool_units = [
             unit
-            for unit in pool_units
+            for unit in all_pool_units
             if hasattr(unit, 'sandbox') and not hasattr(unit.sandbox, 'lock')
         ]
         force = request.GET.get('force', 'false') == 'true'
@@ -332,16 +343,16 @@ class PoolCleanupRequestFailedCreateView(APIView):
         ],
         responses={201: OpenApiResponse(description='Cleanup Request created')},
     )
-    def post(self, request, *args, **kwargs):
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Deletes all failed sandboxes in a pool. With an optional parameter *force*, it forces
         the deletion."""
-        pool_id = kwargs.get('pool_id')
+        pool_id = kwargs['pool_id']
         get_object_or_404(Pool, pk=pool_id)
-        pool_units = SandboxAllocationUnit.objects.filter(pool_id=pool_id)
+        all_pool_units = SandboxAllocationUnit.objects.filter(pool_id=pool_id)
         force = request.GET.get('force', 'false') == 'true'
         pool_units = [
             unit
-            for unit in pool_units
+            for unit in all_pool_units
             if unit.allocation_request.stages.filter(failed=True).count()
         ]
         sandbox_requests.create_cleanup_requests(pool_units, force)
@@ -357,15 +368,16 @@ class PoolCleanupRequestFailedCreateView(APIView):
         **SANDBOX_RESPONSES,
     }
 )
-class SandboxAllocationUnitListCreateView(generics.ListCreateAPIView):
+class SandboxAllocationUnitListCreateView(generics.ListCreateAPIView[Any]):
     """
     get: Get a list of Sandbox Allocation Units.
     """
 
     serializer_class = serializers.SandboxAllocationUnitSerializer
 
-    def get_queryset(self):
-        return SandboxAllocationUnit.objects.filter(pool_id=self.kwargs.get('pool_id'))
+    @override
+    def get_queryset(self) -> QuerySet[Any, Any]:
+        return SandboxAllocationUnit.objects.filter(pool_id=self.kwargs['pool_id'])
 
     @extend_schema(
         parameters=[
@@ -385,25 +397,29 @@ class SandboxAllocationUnitListCreateView(generics.ListCreateAPIView):
             **POOL_RESPONSES,
         },
     )
-    def post(self, request, *args, **kwargs):
+    @override
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create Sandbox Allocation Unit.
         For each Allocation Unit the Allocation Request is created in given pool.
         If count is not specified, builds *max_size - current size*.
         Query Parameters:
         - *count:* How many sandboxes to build. Optional (defaults to max_size - current size).
         """
-        pool = pools.get_pool(kwargs.get('pool_id'))
-        count = request.GET.get('count')
-        if count is not None:
+        pool = pools.get_pool(kwargs['pool_id'])
+        count_param = request.GET.get('count')
+        count: int | None = None
+        if count_param is not None:
             try:
-                count = int(count)
+                count = int(count_param)
             except ValueError:
-                raise exceptions.ValidationError(f'Invalid parameter count: {count}') from None
+                raise exceptions.ValidationError(
+                    f'Invalid parameter count: {count_param}'
+                ) from None
 
         created_by = None if isinstance(request.user, AnonymousUser) else request.user
         units = pools.create_sandboxes_in_pool(pool, created_by, count=count)
         serializer = self.serializer_class(units, many=True)
-        page = self.paginate_queryset(serializer.data)
+        page = self.paginate_queryset(serializer.data)  # type: ignore[arg-type]
         if page is not None:
             return self.get_paginated_response(page)
 
@@ -431,14 +447,14 @@ class SandboxAllocationUnitListCreateView(generics.ListCreateAPIView):
         **POOL_RESPONSES,
     },
 )
-class SandboxAllocationUnitDetailUpdateView(generics.RetrieveAPIView):
+class SandboxAllocationUnitDetailUpdateView(generics.RetrieveAPIView[Any]):
     """get: Retrieve a Sandbox Allocation Unit."""
 
     serializer_class = serializers.SandboxAllocationUnitSerializer
     queryset = SandboxAllocationUnit.objects.all()
     lookup_url_kwarg = 'unit_id'
 
-    def patch(self, request, *args, **kwargs):
+    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Partially update a sandbox allocation unit."""
         allocation_unit = self.get_object()
         serializer = self.serializer_class(allocation_unit, data=request.data, partial=True)
@@ -458,7 +474,7 @@ class SandboxAllocationUnitDetailUpdateView(generics.RetrieveAPIView):
         **SANDBOX_RESPONSES,
     },
 )
-class SandboxAllocationRequestView(generics.RetrieveAPIView):
+class SandboxAllocationRequestView(generics.RetrieveAPIView[Any]):
     """
     get: Retrieve a Sandbox Allocation Request for an Allocation Unit.
     Each Allocation Unit has exactly one Allocation Request.
@@ -469,7 +485,8 @@ class SandboxAllocationRequestView(generics.RetrieveAPIView):
     lookup_url_kwarg = 'unit_id'
     serializer_class = serializers.AllocationRequestSerializer
 
-    def get_object(self):
+    @override
+    def get_object(self) -> Any:
         unit = super().get_object()
         try:
             return unit.allocation_request
@@ -489,7 +506,7 @@ class SandboxAllocationRequestView(generics.RetrieveAPIView):
         **SANDBOX_RESPONSES,
     },
 )
-class AllocationRequestDetailView(generics.RetrieveAPIView):
+class AllocationRequestDetailView(generics.RetrieveAPIView[Any]):
     """get: Retrieve a Sandbox Allocation Request."""
 
     queryset = AllocationRequest.objects.all()
@@ -497,7 +514,7 @@ class AllocationRequestDetailView(generics.RetrieveAPIView):
     lookup_url_kwarg = 'request_id'
 
 
-class AllocationRequestCancelView(generics.GenericAPIView):
+class AllocationRequestCancelView(generics.GenericAPIView[Any]):
     """API view to cancel an allocation request."""
 
     serializer_class = serializers.AllocationRequestSerializer
@@ -510,7 +527,7 @@ class AllocationRequestCancelView(generics.GenericAPIView):
             **POOL_RESPONSES,
         }
     )
-    def patch(self, request, *args, **kwargs):
+    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Cancel given Allocation Request. Returns no data if OK (200)."""
         sandbox_requests.cancel_allocation_request(self.get_object())
         return Response()
@@ -525,14 +542,15 @@ class AllocationRequestCancelView(generics.GenericAPIView):
         **SANDBOX_RESPONSES,
     },
 )
-class SandboxCleanupRequestView(generics.RetrieveDestroyAPIView, generics.CreateAPIView):  # pylint: disable=too-many-ancestors
+class SandboxCleanupRequestView(generics.RetrieveDestroyAPIView[Any], generics.CreateAPIView[Any]):  # pylint: disable=too-many-ancestors
     """API view to get, create, or delete a sandbox cleanup request."""
 
     queryset = SandboxAllocationUnit.objects.all()
     lookup_url_kwarg = 'unit_id'
     serializer_class = serializers.CleanupRequestSerializer
 
-    def get(self, request, *args, **kwargs):
+    @override
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Retrieve a Sandbox Cleanup Request for an Allocation Unit.
         Each Allocation Unit has at most one Cleanup Request.
         If it has none, then it returns 404.
@@ -550,21 +568,23 @@ class SandboxCleanupRequestView(generics.RetrieveDestroyAPIView, generics.Create
             201: serializers.CleanupRequestSerializer,
         }
     )
-    def post(self, request, *args, **kwargs):
+    @override
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create cleanup request."""
         unit = self.get_object()
         force = request.GET.get('force', 'false') == 'true'
         sandbox_requests.create_cleanup_requests([unit], force)
         return Response(status=status.HTTP_201_CREATED)
 
-    def delete(self, request, *args, **kwargs):
+    @override
+    def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Delete cleanup request. Must be finished or cancelled."""
         unit = self.get_object()
         sandbox_requests.delete_cleanup_request(unit.cleanup_request)
         return Response({}, status=status.HTTP_204_NO_CONTENT)
 
 
-class SandboxAllocationStagesRestartView(generics.GenericAPIView):
+class SandboxAllocationStagesRestartView(generics.GenericAPIView[Any]):
     """API view to restart failed sandbox allocation stages."""
 
     serializer_class = serializers.SandboxAllocationUnitSerializer
@@ -577,14 +597,14 @@ class SandboxAllocationStagesRestartView(generics.GenericAPIView):
             **POOL_RESPONSES,
         }
     )
-    def patch(self, request, *args, **kwargs):
+    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         Restart all failed sandbox allocation stages.
         """
         allocation_unit = self.get_object()
-        request = sandbox_requests.restart_allocation_stages(allocation_unit)
+        allocation_unit_updated = sandbox_requests.restart_allocation_stages(allocation_unit)
 
-        serializer = self.serializer_class(request)
+        serializer = self.serializer_class(allocation_unit_updated)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -597,7 +617,7 @@ class SandboxAllocationStagesRestartView(generics.GenericAPIView):
         **SANDBOX_RESPONSES,
     },
 )
-class CleanupRequestDetailView(generics.RetrieveAPIView):
+class CleanupRequestDetailView(generics.RetrieveAPIView[Any]):
     """get: Retrieve a Sandbox Cleanup Request."""
 
     serializer_class = serializers.CleanupRequestSerializer
@@ -605,7 +625,7 @@ class CleanupRequestDetailView(generics.RetrieveAPIView):
     lookup_url_kwarg = 'request_id'
 
 
-class CleanupRequestCancelView(generics.GenericAPIView):
+class CleanupRequestCancelView(generics.GenericAPIView[Any]):
     """API view to cancel a cleanup request."""
 
     serializer_class = serializers.CleanupRequestSerializer
@@ -618,7 +638,7 @@ class CleanupRequestCancelView(generics.GenericAPIView):
             **POOL_RESPONSES,
         }
     )
-    def patch(self, request, *args, **kwargs):
+    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Cancel given Cleanup Request. Returns no data if OK (200)."""
         sandbox_requests.cancel_cleanup_request(self.get_object())
         return Response()
@@ -634,7 +654,7 @@ class CleanupRequestCancelView(generics.GenericAPIView):
         **SANDBOX_RESPONSES,
     },
 )
-class TerraformAllocationStageDetailView(generics.RetrieveAPIView):
+class TerraformAllocationStageDetailView(generics.RetrieveAPIView[Any]):
     """
     get: Retrieve an `openstack` allocation stage.
     Null `status` and `status_reason` attributes mean, that stack does not have them;
@@ -645,7 +665,8 @@ class TerraformAllocationStageDetailView(generics.RetrieveAPIView):
     queryset = AllocationRequest.objects.all()
     lookup_url_kwarg = 'request_id'
 
-    def get_object(self):
+    @override
+    def get_object(self) -> Any:
         request = super().get_object()
         return stage_handlers.AllocationStackStageHandler(request.stackallocationstage).stage
 
@@ -660,14 +681,15 @@ class TerraformAllocationStageDetailView(generics.RetrieveAPIView):
         **SANDBOX_RESPONSES,
     },
 )
-class TerraformCleanupStageDetailView(generics.RetrieveAPIView):
+class TerraformCleanupStageDetailView(generics.RetrieveAPIView[Any]):
     """get: Retrieve an `openstack` Cleanup stage."""
 
     serializer_class = serializers.TerraformCleanupStageSerializer
     queryset = CleanupRequest.objects.all()
     lookup_url_kwarg = 'request_id'
 
-    def get_object(self):
+    @override
+    def get_object(self) -> Any:
         request = super().get_object()
         return request.stackcleanupstage
 
@@ -687,7 +709,7 @@ class TerraformAllocationStageOutputListView(log_output_mixin.CompressedOutputMi
 
     queryset = AllocationRequest.objects.all()
 
-    def get(self, request, request_id):
+    def get(self, request: Request, request_id: int) -> Response:
         """List terraform allocation stage log output."""
         from_row = request.query_params.get('from_row', 0)
         try:
@@ -715,20 +737,21 @@ class TerraformAllocationStageOutputListView(log_output_mixin.CompressedOutputMi
         **SANDBOX_RESPONSES,
     },
 )
-class PoolSandboxListView(generics.ListAPIView):
+class PoolSandboxListView(generics.ListAPIView[Any]):
     """API view to list all ready sandboxes in a pool."""
 
     serializer_class = serializers.SandboxSerializer
     permission_classes = [OrganizerPermission | AdminPermission]
 
-    def get_queryset(self):
+    @override
+    def get_queryset(self) -> QuerySet[Any, Any]:
         pool_id = self.kwargs.get('pool_id')
         pool = get_object_or_404(Pool, pk=pool_id)
         alloc_unit_ids = [unit.id for unit in pool.allocation_units.all()]
         return Sandbox.objects.filter(allocation_unit_id__in=alloc_unit_ids, ready=True)
 
 
-class SandboxGetAndLockView(generics.RetrieveAPIView):
+class SandboxGetAndLockView(generics.RetrieveAPIView[Any]):
     """API view to retrieve an unlocked sandbox from a pool and lock it."""
 
     serializer_class = serializers.SandboxSerializer
@@ -744,7 +767,8 @@ class SandboxGetAndLockView(generics.RetrieveAPIView):
             **SANDBOX_RESPONSES,
         }
     )
-    def get(self, request, *args, **kwargs):
+    @override
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         Get unlocked sandbox in given pool and lock it.
         Return 409 if all are locked, 403 if training access token invalid
@@ -791,7 +815,7 @@ class SandboxGetAndLockView(generics.RetrieveAPIView):
         **SANDBOX_RESPONSES,
     },
 )
-class SandboxDetailView(generics.RetrieveAPIView):
+class SandboxDetailView(generics.RetrieveAPIView[Any]):
     """get: Retrieve a sandbox."""
 
     serializer_class = serializers.SandboxSerializer
@@ -819,8 +843,8 @@ class SandboxDetailView(generics.RetrieveAPIView):
     },
 )
 class SandboxAllocationUnitLockRetrieveCreateDestroyView(
-    generics.RetrieveDestroyAPIView,
-    generics.CreateAPIView,  # pylint: disable=too-many-ancestors
+    generics.RetrieveDestroyAPIView[Any],
+    generics.CreateAPIView[Any],  # pylint: disable=too-many-ancestors
 ):
     """
     post: Create locks for given sandbox allocation unit if its sandbox exists.
@@ -830,7 +854,8 @@ class SandboxAllocationUnitLockRetrieveCreateDestroyView(
     lookup_url_kwarg = 'unit_id'
     serializer_class = serializers.SandboxLockSerializer
 
-    def get(self, request, *args, **kwargs):
+    @override
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """get: Retrieve lock for given sandbox allocation unit if its sandbox exists."""
         allocation_unit = self.get_object()
         if not hasattr(allocation_unit, 'sandbox'):
@@ -839,7 +864,8 @@ class SandboxAllocationUnitLockRetrieveCreateDestroyView(
         lock = SandboxLock.objects.get(sandbox=sandbox_id)
         return Response(self.get_serializer(lock).data)
 
-    def post(self, request, *args, **kwargs):
+    @override
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Lock sandbox of given sandbox allocation unit if the sandbox exists."""
         allocation_unit = self.get_object()
         if not hasattr(allocation_unit, 'sandbox'):
@@ -849,7 +875,8 @@ class SandboxAllocationUnitLockRetrieveCreateDestroyView(
         lock = sandboxes.lock_sandbox(sandbox=sandbox, created_by=created_by)
         return Response(self.get_serializer(lock).data, status=status.HTTP_201_CREATED)
 
-    def delete(self, request, *args, **kwargs):
+    @override
+    def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Delete lock of given sandbox allocation unit if it has sandbox."""
         allocation_unit = self.get_object()
         if not hasattr(allocation_unit, 'sandbox'):
@@ -870,7 +897,7 @@ class SandboxAllocationUnitLockRetrieveCreateDestroyView(
         **SANDBOX_RESPONSES,
     },
 )
-class SandboxTopologyView(generics.RetrieveAPIView):
+class SandboxTopologyView(generics.RetrieveAPIView[Any]):
     """
     get: Get topology data for given sandbox.
     Hosts specified as hidden are filtered out, but the network is still visible.
@@ -880,7 +907,8 @@ class SandboxTopologyView(generics.RetrieveAPIView):
     lookup_url_kwarg = 'sandbox_uuid'
     serializer_class = serializers.TopologySerializer
 
-    def get_object(self):
+    @override
+    def get_object(self) -> Any:
         return sandboxes.get_sandbox_topology(super().get_object())
 
 
@@ -899,14 +927,14 @@ class SandboxTopologyView(generics.RetrieveAPIView):
         **SANDBOX_RESPONSES,
     },
 )
-class SandboxVMDetailView(generics.GenericAPIView):
+class SandboxVMDetailView(generics.GenericAPIView[Any]):
     """API view to retrieve VM details and perform actions on a VM in a sandbox."""
 
     queryset = Sandbox.objects.filter(ready=True)
     lookup_url_kwarg = 'sandbox_uuid'
     serializer_class = serializers.NodeSerializer
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Retrieve a VM info.
         Important Statuses:
         - ACTIVE (vm is active and running)
@@ -915,10 +943,10 @@ class SandboxVMDetailView(generics.GenericAPIView):
         - ... https://developer.openstack.org/api-guide/compute/server_concepts.html#server-status
         """
         sandbox = self.get_object()
-        node = nodes.get_node(sandbox, kwargs.get('vm_name'))
+        node = nodes.get_node(sandbox, kwargs['vm_name'])
         return Response(serializers.NodeSerializer(node).data)
 
-    def patch(self, request, *args, **kwargs):
+    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Perform specified action on given VM.
         Available actions are:
         - suspend
@@ -930,7 +958,7 @@ class SandboxVMDetailView(generics.GenericAPIView):
             action = request.data['action']
         except KeyError:
             raise exceptions.ValidationError('No action specified!') from None
-        nodes.node_action(sandbox, kwargs.get('vm_name'), action)
+        nodes.node_action(sandbox, kwargs['vm_name'], action)
         return Response()
 
 
@@ -941,12 +969,12 @@ class SandboxVMConsoleView(APIView):
 
     @extend_schema(responses={200: OpenApiResponse(description='Console URL'), **SANDBOX_RESPONSES})
     # noinspection PyMethodMayBeStatic
-    def get(self, request, *args, **kwargs):
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get a console for given machine. It is active for 2 hours.
         But when the connection is active, it does not disconnect.
         """
-        sandbox = sandboxes.get_sandbox(kwargs.get('sandbox_uuid'))
-        console_url = nodes.get_console_url(sandbox, kwargs.get('vm_name'))
+        sandbox = sandboxes.get_sandbox(kwargs['sandbox_uuid'])
+        console_url = nodes.get_console_url(sandbox, kwargs['vm_name'])
         return (
             Response({'url': console_url})
             if console_url
@@ -961,10 +989,10 @@ class SandboxUserSSHAccessView(APIView):
     queryset = Sandbox.objects.none()
 
     # noinspection PyMethodMayBeStatic
-    def get(self, request, *args, **kwargs):
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response | HttpResponse:
         """Generate SSH config for User access to this sandbox.
         Some values are user specific, the config contains placeholders for them."""
-        sandbox = sandboxes.get_sandbox(kwargs.get('sandbox_uuid'))
+        sandbox = sandboxes.get_sandbox(kwargs['sandbox_uuid'])
         in_memory_zip_file = sandboxes.get_user_ssh_access(sandbox)
         response = HttpResponse(FileWrapper(in_memory_zip_file), content_type='application/zip')
         response['Content-Disposition'] = 'attachment; filename=ssh-access.zip'
@@ -978,9 +1006,9 @@ class SandboxManOutPortIPView(APIView):
     queryset = Sandbox.objects.none()
 
     # noinspection PyMethodMayBeStatic
-    def get(self, request, *args, **kwargs):
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Retrieve a man out port ip address."""
-        sandbox = sandboxes.get_sandbox(kwargs.get('sandbox_uuid'))
+        sandbox = sandboxes.get_sandbox(kwargs['sandbox_uuid'])
         man_ip = sandboxes.get_topology_instance(sandbox).ip
         return Response({'ip': man_ip})
 
@@ -992,10 +1020,10 @@ class PoolManagementSSHAccessView(APIView):
     queryset = Pool.objects.none()
 
     # noinspection PyMethodMayBeStatic
-    def get(self, request, *args, **kwargs):
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response | HttpResponse:
         """Generate SSH config for User access to this sandbox.
         Some values are user specific, the config contains placeholders for them."""
-        pool = pools.get_pool(kwargs.get('pool_id'))
+        pool = pools.get_pool(kwargs['pool_id'])
         in_memory_zip_file = pools.get_management_ssh_access(pool)
         response = HttpResponse(FileWrapper(in_memory_zip_file), content_type='application/zip')
         response['Content-Disposition'] = 'attachment; filename=ssh-access.zip'
@@ -1012,10 +1040,10 @@ class SandboxConsolesView(APIView):
         description='Console URLs',
     )
     # noinspection PyMethodMayBeStatic
-    def get(self, request, *args, **kwargs):
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Retrieve spice console urls for all machines in the topology. Returns 202 if
         consoles are not ready yet."""
-        sandbox = sandboxes.get_sandbox(kwargs.get('sandbox_uuid'))
+        sandbox = sandboxes.get_sandbox(kwargs['sandbox_uuid'])
         topology_instance = sandboxes.get_topology_instance(sandbox)
         node_names = [host.name for host in topology_instance.get_hosts() if not host.hidden] + [
             router.name for router in topology_instance.get_routers()
@@ -1037,10 +1065,10 @@ class PoolVariablesView(APIView):
     queryset = Pool.objects.none()
 
     # noinspection PyMethodMayBeStatic
-    def get(self, request, *args, **kwargs):
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Retrieve APG variables from sandbox definition of this pool, empty list if variables.yml
         was not found."""
-        pool = utils.get_object_or_404(Pool, pk=kwargs.get('pool_id'))
+        pool = utils.get_object_or_404(Pool, pk=kwargs['pool_id'])
         definition = pool.definition
         variable_names = []
         try:
@@ -1071,12 +1099,12 @@ class TopologyNodeConnectionData(APIView):
     serializer_class = serializers.NodeAccessDataSerializer
 
     # noinspection PyMethodMayBeStatic
-    def get(self, request, *args, **kwargs):
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Retrieves data needed to establish connection to a node in the topology."""
-        sandbox = sandboxes.get_sandbox(kwargs.get('sandbox_uuid'))
+        sandbox = sandboxes.get_sandbox(kwargs['sandbox_uuid'])
         if sandbox is None:
-            raise Http404(f'Sandbox with UUID {kwargs.get("sandbox_uuid")} does not exist.')
-        node_name = kwargs.get('node_name')
+            raise Http404(f'Sandbox with UUID {kwargs["sandbox_uuid"]} does not exist.')
+        node_name = kwargs['node_name']
         topology_instance = sandboxes.get_topology_instance(sandbox)
         node = topology_instance.get_node(node_name)
         if node is None:

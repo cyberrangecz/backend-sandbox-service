@@ -4,6 +4,8 @@ import abc
 import contextlib
 import os
 import signal
+from subprocess import Popen
+from typing import Any, override
 
 import docker.errors
 import structlog
@@ -18,7 +20,6 @@ from crczp.sandbox_ansible_app.lib.ansible import AllocationAnsibleRunner, Ansib
 from crczp.sandbox_ansible_app.models import (
     AnsibleAllocationStage,
     AnsibleCleanupStage,
-    CleanupStage,
     Container,
     UserAnsibleAllocationStage,
     UserAnsibleCleanupStage,
@@ -55,7 +56,9 @@ class StageHandler(abc.ABC):
 
     _job_class: type[RQJob]
 
-    def __init__(self, stage, name: str = None, request_group: SandboxRequestGroup | None = None):
+    def __init__(
+        self, stage: Any, name: str | None = None, request_group: SandboxRequestGroup | None = None
+    ):
         self.stage = stage
         self.name = name if name is not None else self.stage.__class__.__name__
         self.request_group = request_group
@@ -92,9 +95,9 @@ class StageHandler(abc.ABC):
         :param job_id: The ID of enqueues Job that will execute this stage.
         """
         if hasattr(self._job_class, 'allocation_stage'):
-            self._job_class.objects.create(allocation_stage=self.stage, job_id=job_id)
+            self._job_class.objects.create(allocation_stage=self.stage, job_id=job_id)  # type: ignore[attr-defined]
         elif hasattr(self._job_class, 'cleanup_stage'):
-            self._job_class.objects.create(cleanup_stage=self.stage, job_id=job_id)
+            self._job_class.objects.create(cleanup_stage=self.stage, job_id=job_id)  # type: ignore[attr-defined]
         else:
             LOG.warning(f"Unknown Job class '{self._job_class}'. Job ID '{job_id}' was not set")
 
@@ -155,15 +158,19 @@ class StackStageHandler(StageHandler):
 
     _client = utils.get_terraform_client()
 
+    @override
     @abc.abstractmethod
     def _execute(self) -> None:
         """Execute the stack stage."""
 
+    @override
     @abc.abstractmethod
     def _cancel(self) -> None:
         """Cancel the stack stage."""
 
-    def _log_process_output(self, process, terraform_output, **kwargs):
+    def _log_process_output(
+        self, process: Popen[bytes], terraform_output: Any, **kwargs: Any
+    ) -> None:
         output = self._client.get_process_output(process)
         for line in output:
             line = line.rstrip()
@@ -172,11 +179,11 @@ class StackStageHandler(StageHandler):
 
     def _wait_for_process(
         self,
-        process,
-        terraform_output,
-        timeout=settings.CRCZP_CONFIG.sandbox_build_timeout,
-        **kwargs,
-    ):
+        process: Popen[bytes],
+        terraform_output: Any,
+        timeout: int = settings.CRCZP_CONFIG.sandbox_build_timeout,
+        **kwargs: Any,
+    ) -> None:
         """
         Wait for process to finish.
         """
@@ -238,10 +245,11 @@ class AllocationStackStageHandler(StackStageHandler):
     stage: StackAllocationStage
     _job_class: type[AllocationRQJob] = AllocationRQJob
 
-    def __init__(self, stage, request_group: SandboxRequestGroup | None = None):
+    def __init__(self, stage: Any, request_group: SandboxRequestGroup | None = None):
         self.process = None
         super().__init__(stage, request_group=request_group)
 
+    @override
     def _execute(self) -> None:
         """
         Allocate stack in the OpenStack cloud platform.
@@ -258,6 +266,7 @@ class AllocationStackStageHandler(StackStageHandler):
                 key_pair_name_ssh=allocation_unit.pool.ssh_keypair_name,
                 key_pair_name_cert=allocation_unit.pool.certificate_keypair_name,
             )
+            assert self.process is not None
             TerraformStack.objects.create(allocation_stage=self.stage, stack_id=self.process.pid)
             self._log_process_output(
                 self.process, AllocationTerraformOutput, allocation_stage=self.stage
@@ -271,6 +280,7 @@ class AllocationStackStageHandler(StackStageHandler):
             super()._delete_stack(allocation_unit, log_output=False)
             raise StackCreationFailed(f'Sandbox build failed: {exc}') from exc
 
+    @override
     def _cancel(self) -> None:
         """
         Stop the OpenStack stack allocation and remove what has been allocated.
@@ -291,12 +301,14 @@ class CleanupStackStageHandler(StackStageHandler):
     stage: StackCleanupStage
     _job_class: type[CleanupRQJob] = CleanupRQJob
 
+    @override
     def _execute(self) -> None:
         """
         Delete allocated stack in the OpenStack platform.
         """
         self._delete_stack(self.stage.cleanup_request.allocation_unit)
 
+    @override
     def _cancel(self) -> None:
         """
         Stop the deletion of the OpenStack stack.
@@ -312,20 +324,22 @@ class AnsibleStageHandler(StageHandler):
 
     def __init__(
         self,
-        stage: [AnsibleCleanupStage, AnsibleAllocationStage],
-        name: str = None,
+        stage: AnsibleCleanupStage | AnsibleAllocationStage,
+        name: str | None = None,
         request_group: SandboxRequestGroup | None = None,
     ):
         super().__init__(stage, name, request_group=request_group)
         self.stage = stage
 
+    @override
     @abc.abstractmethod
     def _execute(self) -> None: ...
 
+    @override
     @abc.abstractmethod
     def _cancel(self) -> None: ...
 
-    def create_directory_path(self, allocation_unit: SandboxAllocationUnit):
+    def create_directory_path(self, allocation_unit: SandboxAllocationUnit) -> str:
         """
         Compose absolute path to directory for Docker container volumes.
         """
@@ -335,7 +349,7 @@ class AnsibleStageHandler(StageHandler):
             f'{self.stage.id}-{utils.get_simple_uuid()}',
         )
 
-    def check_status(self, status: dict):
+    def check_status(self, status: dict[str, Any]) -> None:
         """
         Check status returned by Docker container
         and raise an exception if Ansible execution failed.
@@ -358,8 +372,8 @@ class AllocationAnsibleStageHandler(AnsibleStageHandler):
     def __init__(
         self,
         stage: AnsibleAllocationStage,
-        sandbox: Sandbox = None,
-        name: str = None,
+        sandbox: Sandbox | None = None,
+        name: str | None = None,
         request_group: SandboxRequestGroup | None = None,
     ):
         super().__init__(stage, name, request_group=request_group)
@@ -368,6 +382,7 @@ class AllocationAnsibleStageHandler(AnsibleStageHandler):
         self.directory_path = self.create_directory_path(self.allocation_unit)
         self.sandbox = sandbox
 
+    @override
     def _execute(self) -> None:
         """
         Prepare and execute the Ansible playbooks on the remote infrastructure.
@@ -398,6 +413,7 @@ class AllocationAnsibleStageHandler(AnsibleStageHandler):
         finally:
             container.delete()
 
+    @override
     def _cancel(self) -> None:
         """
         Stop the Ansible execution.
@@ -416,15 +432,16 @@ class CleanupAnsibleStageHandler(AnsibleStageHandler):
     Specifies tasks needed for resources cleanup created during the Ansible execution.
     """
 
-    stage: CleanupStage
+    stage: AnsibleCleanupStage
     _job_class: type[CleanupRQJob] = CleanupRQJob
 
-    def __init__(self, stage: CleanupStage):
+    def __init__(self, stage: AnsibleCleanupStage):
         super().__init__(stage)
 
         self.allocation_unit = stage.cleanup_request_fk_many.allocation_unit
         self.directory_path = self.create_directory_path(self.allocation_unit)
 
+    @override
     def _execute(self) -> None:
         """
         Clean up resources created during the Ansible execution.
@@ -434,6 +451,7 @@ class CleanupAnsibleStageHandler(AnsibleStageHandler):
         allocation_unit = self.stage.cleanup_request_fk_many.allocation_unit
         delete_jump_ssh_key(allocation_unit)
 
+    @override
     def _cancel(self) -> None:
         """
         Stop the resources clean up.

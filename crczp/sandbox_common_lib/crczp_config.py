@@ -4,6 +4,7 @@ Django Apps configuration file
 
 import os
 from enum import Enum
+from typing import Any, cast
 
 from yamlize import Attribute, Map, Object, Typed, YamlizingError
 
@@ -42,7 +43,7 @@ REDIS_DB = 0
 REDIS_TIMEOUT = 86400 * 30
 
 
-class ProxyJump(Object):
+class ProxyJump(Object):  # type: ignore[misc]
     """SSH ProxyJump configuration for connecting to managed nodes."""
 
     # pylint: disable=invalid-name
@@ -51,20 +52,20 @@ class ProxyJump(Object):
     Port = Attribute(type=int, default=22)
     IdentityFile = Attribute(type=str)
 
-    def __init__(self, host, user, identity_file, port: int = 22):
+    def __init__(self, host: str, user: str, identity_file: str, port: int = 22) -> None:
         self.Host = host
         self.User = user
         self.Port = port
         self.IdentityFile = identity_file
 
 
-class TerraformConfiguration(Object):
+class TerraformConfiguration(Object):  # type: ignore[misc]
     """Terraform backend configuration settings."""
 
     backend_type = Attribute(type=str)
 
 
-class AnsibleRunnerSettings(Object):
+class AnsibleRunnerSettings(Object):  # type: ignore[misc]
     """Settings for the Ansible runner backend (Docker or Kubernetes)."""
 
     backend = Attribute(type=str, default='docker')
@@ -73,7 +74,7 @@ class AnsibleRunnerSettings(Object):
     persistent_volume_claim_name = Attribute(type=str, default=PERSISTENT_VOLUME_CLAIM_NAME)
 
 
-class Database(Object):
+class Database(Object):  # type: ignore[misc]
     """Database connection configuration."""
 
     engine = Attribute(type=str, default=DATABASE_ENGINE)
@@ -83,12 +84,12 @@ class Database(Object):
     port = Attribute(type=str, default=DATABASE_PORT)
     user = Attribute(type=str, default=DATABASE_USER)
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         for key, val in kwargs.items():
             setattr(self, key, val)
 
 
-class Redis(Object):
+class Redis(Object):  # type: ignore[misc]
     """Redis connection and cache timeout configuration."""
 
     host = Attribute(type=str, default=REDIS_HOST)
@@ -118,7 +119,7 @@ class OpenStackConsoleType(Enum):
     WEBMKS = 'webmks'
 
     @classmethod
-    def create(cls, value: str) -> None:
+    def create(cls, value: str) -> 'OpenStackConsoleType':
         """Create an OpenStackConsoleType from a string value."""
         try:
             return cls[value.upper().replace('-', '_')]
@@ -126,7 +127,7 @@ class OpenStackConsoleType(Enum):
             raise ValueError(f'Invalid value for OpenStackConsoleType: {value}') from None
 
 
-class AwsConfiguration(Object):
+class AwsConfiguration(Object):  # type: ignore[misc]
     """AWS cloud provider configuration."""
 
     access_key_id = Attribute(type=str, default='')
@@ -137,21 +138,21 @@ class AwsConfiguration(Object):
     base_subnet = Attribute(type=str, default='Base Subnet')
 
 
-class NamingStrategy(Object):
+class NamingStrategy(Object):  # type: ignore[misc]
     """Naming strategy for OpenStack resource names."""
 
     pattern = Attribute(type=str)
     replace = Attribute(type=str, default='')
 
 
-class FlavorMapping(Map):
+class FlavorMapping(Map):  # type: ignore[misc]
     """Mapping from sandbox flavor keys to OpenStack flavor names."""
 
     key_type = Typed(str)
     value_type = Typed(str)
 
 
-class GitProviders(Map):
+class GitProviders(Map):  # type: ignore[misc]
     """Mapping from Git server base URLs to access tokens."""
 
     key_type = Typed(str)
@@ -166,7 +167,7 @@ class SMTPEncryption(Enum):
     INSECURE = 3
 
 
-class CrczpConfiguration(Object):
+class CrczpConfiguration(Object):  # type: ignore[misc]
     """Top-level CRCZP application configuration loaded from a YAML file."""
 
     head_host = Attribute(type=str, default=HEAD_IP)
@@ -258,14 +259,14 @@ class CrczpConfiguration(Object):
     sender_email = Attribute(type=str, default='sandbox.service@cyberrange.cz')
     sender_email_password = Attribute(type=str, default=None)
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         for key, val in kwargs.items():
             setattr(self, key, val)
 
     # Note: overrides yamlize Object.load to add error handling
     # Override
     @classmethod
-    def load(cls, *args, **kwargs) -> 'CrczpConfiguration':
+    def load(cls, *args: Any, **kwargs: Any) -> 'CrczpConfiguration':
         """Factory method. Use it to create a new object of this class."""
         try:
             obj = super().load(*args, **kwargs)
@@ -280,10 +281,10 @@ class CrczpConfiguration(Object):
 
         # Note: set REQUESTS_CA_BUNDLE for SSL verification
         os.environ['REQUESTS_CA_BUNDLE'] = obj.ssl_ca_certificate_verify
-        return obj
+        return cast('CrczpConfiguration', obj)
 
     @classmethod
-    def from_file(cls, path):
+    def from_file(cls, path: str) -> 'CrczpConfiguration':
         """Load configuration from a YAML file at the given path."""
         with open(path, encoding='utf-8') as f:
             return cls.load(f)

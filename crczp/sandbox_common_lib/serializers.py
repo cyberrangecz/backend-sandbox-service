@@ -12,7 +12,7 @@ from django.contrib.auth.models import User
 from rest_framework import serializers
 
 
-class UserSerializer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer[User]):
     """Serializer for Django User model exposing OIDC-compatible fields."""
 
     sub = serializers.CharField(source='username')
@@ -29,6 +29,6 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'sub', 'full_name', 'given_name', 'family_name', 'mail')
 
     @staticmethod
-    def get_full_name(obj: User):
+    def get_full_name(obj: User) -> str:
         """Return the user's full name."""
         return obj.get_full_name()

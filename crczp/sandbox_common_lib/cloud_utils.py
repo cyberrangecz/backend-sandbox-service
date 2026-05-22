@@ -1,5 +1,7 @@
 """Cloud provider utility helpers."""
 
+from typing import Any
+
 from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration
 from crczp.sandbox_common_lib.exceptions import ValidationError
 from crczp.terraform_driver import (
@@ -9,7 +11,7 @@ from crczp.terraform_driver import (
 )
 
 
-def get_database_settings(crczp_config: CrczpConfiguration) -> dict:
+def get_database_settings(crczp_config: CrczpConfiguration) -> dict[str, Any]:
     """Return database connection settings as a dict suitable for Django DATABASES."""
     db_settings = crczp_config.database
     return {

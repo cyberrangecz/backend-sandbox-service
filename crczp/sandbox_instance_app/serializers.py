@@ -8,6 +8,8 @@ Validators validate single fields or entire objects.
 Swagger can utilise type hints to determine type, so use them in your own methods.
 """
 
+from typing import Any, override
+
 from django.db import transaction
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
@@ -20,7 +22,7 @@ from crczp.sandbox_instance_app import models
 from crczp.sandbox_instance_app.lib import pools, requests
 
 
-class PoolSerializer(serializers.ModelSerializer):
+class PoolSerializer(serializers.ModelSerializer[models.Pool]):
     """Serializer for Pool model."""
 
     size = serializers.SerializerMethodField(
@@ -65,7 +67,8 @@ class PoolSerializer(serializers.ModelSerializer):
             'definition',
         )
 
-    def update(self, instance: Meta.model, validated_data):
+    @override
+    def update(self, instance: models.Pool, validated_data: Any) -> models.Pool:
         """Update pool fields from validated data."""
         instance.max_size = validated_data.get('max_size', instance.max_size)
         instance.comment = validated_data.get('comment', instance.comment)
@@ -75,7 +78,7 @@ class PoolSerializer(serializers.ModelSerializer):
         return instance
 
     @staticmethod
-    def validate_max_size(value):
+    def validate_max_size(value: int) -> int:
         """Validate that max_size is greater than 0"""
         if value < 1:
             raise serializers.ValidationError(
@@ -104,20 +107,20 @@ class PoolSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
-    def get_created_by(obj: models.Pool) -> bool:
+    def get_created_by(obj: models.Pool) -> Any:
         """Return serialized created_by user data."""
         return UserSerializer(obj.created_by).data
 
     @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
-    def get_hardware_usage(obj: models.Pool) -> bool:
+    def get_hardware_usage(obj: models.Pool) -> Any:
         """Return serialized hardware usage data for the pool."""
         hardware_usage = pools.get_hardware_usage_of_sandbox(obj)
         return HardwareUsageSerializer(hardware_usage).data
 
     @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
-    def get_definition(obj: models.Pool) -> bool:
+    def get_definition(obj: models.Pool) -> Any:
         """Return serialized definition data for the pool."""
         return DefinitionSerializer(obj.definition).data
 
@@ -128,14 +131,14 @@ class PoolSerializerCreate(PoolSerializer):
     class Meta(PoolSerializer.Meta):  # pylint: disable=too-few-public-methods
         """Meta options for PoolSerializerCreate."""
 
-        read_only_fields = ('id', 'size')
+        read_only_fields = ('id', 'size')  # type: ignore[assignment]
 
 
-class RequestSerializer(serializers.ModelSerializer):
+class RequestSerializer(serializers.ModelSerializer[Any]):
     """Base serializer for allocation and cleanup request models."""
 
-    allocation_unit_id = serializers.PrimaryKeyRelatedField(
-        source='allocation_unit', read_only=True
+    allocation_unit_id: serializers.PrimaryKeyRelatedField[Any] = (
+        serializers.PrimaryKeyRelatedField(source='allocation_unit', read_only=True)
     )
     stages = serializers.SerializerMethodField()
 
@@ -151,7 +154,7 @@ class AllocationRequestSerializer(RequestSerializer):
 
     @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
-    def get_stages(obj) -> bool:
+    def get_stages(obj: Any) -> Any:
         """Return the allocation request stages completion state."""
         return requests.get_allocation_request_stages_state(obj)
 
@@ -166,7 +169,7 @@ class CleanupRequestSerializer(RequestSerializer):
 
     @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
-    def get_stages(obj) -> bool:
+    def get_stages(obj: Any) -> Any:
         """Return the cleanup request stages completion state."""
         return requests.get_cleanup_request_stages_state(obj)
 
@@ -176,26 +179,28 @@ class CleanupRequestSerializer(RequestSerializer):
         model = models.CleanupRequest
 
 
-class PoolCleanupRequestSerializer(serializers.Serializer):
+class PoolCleanupRequestSerializer(serializers.Serializer[Any]):
     """Serializer for pool cleanup request input."""
 
     pool_id = serializers.IntegerField()
     reason = serializers.CharField(required=False)
 
 
-class PoolCleanupRequestFailedSerializer(serializers.Serializer):
+class PoolCleanupRequestFailedSerializer(serializers.Serializer[Any]):
     """Serializer for failed pool cleanup request data."""
 
     pool_id = serializers.IntegerField()
     error_message = serializers.CharField()
 
 
-class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
+class SandboxAllocationUnitSerializer(serializers.ModelSerializer[models.SandboxAllocationUnit]):
     """Serializer for SandboxAllocationUnit model."""
 
     allocation_request = AllocationRequestSerializer(read_only=True)
     cleanup_request = CleanupRequestSerializer()
-    pool_id = serializers.PrimaryKeyRelatedField(source='pool', read_only=True)
+    pool_id: serializers.PrimaryKeyRelatedField[Any] = serializers.PrimaryKeyRelatedField(
+        source='pool', read_only=True
+    )
     created_by = serializers.SerializerMethodField()
     locked = serializers.SerializerMethodField()
 
@@ -221,7 +226,10 @@ class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
             'locked',
         )
 
-    def update(self, instance: Meta.model, validated_data):
+    @override
+    def update(
+        self, instance: models.SandboxAllocationUnit, validated_data: Any
+    ) -> models.SandboxAllocationUnit:
         """Update allocation unit comment from validated data."""
         instance.comment = validated_data.get('comment', instance.comment)
         instance.save()
@@ -229,7 +237,7 @@ class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(field=serializers.BooleanField())
     @staticmethod
-    def get_created_by(obj: models.SandboxAllocationUnit) -> bool:
+    def get_created_by(obj: models.SandboxAllocationUnit) -> Any:
         """Return serialized created_by user data."""
         return UserSerializer(obj.created_by).data
 
@@ -240,16 +248,18 @@ class SandboxAllocationUnitSerializer(serializers.ModelSerializer):
         return hasattr(obj, 'sandbox') and hasattr(obj.sandbox, 'lock')
 
 
-class SandboxAllocationUnitIdListSerializer(serializers.Serializer):
+class SandboxAllocationUnitIdListSerializer(serializers.Serializer[Any]):
     """Serializer for a list of sandbox allocation unit IDs."""
 
     unit_ids = serializers.ListField(child=serializers.IntegerField())
 
 
-class TerraformAllocationStageSerializer(serializers.ModelSerializer):
+class TerraformAllocationStageSerializer(serializers.ModelSerializer[models.StackAllocationStage]):
     """Serializer for StackAllocationStage model."""
 
-    request_id = serializers.PrimaryKeyRelatedField(source='allocation_request', read_only=True)
+    request_id: serializers.PrimaryKeyRelatedField[Any] = serializers.PrimaryKeyRelatedField(
+        source='allocation_request', read_only=True
+    )
 
     class Meta:  # pylint: disable=too-few-public-methods
         """Meta options for TerraformAllocationStageSerializer."""
@@ -268,10 +278,12 @@ class TerraformAllocationStageSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class TerraformCleanupStageSerializer(serializers.ModelSerializer):
+class TerraformCleanupStageSerializer(serializers.ModelSerializer[models.StackCleanupStage]):
     """Serializer for StackCleanupStage model."""
 
-    request_id = serializers.PrimaryKeyRelatedField(source='cleanup_request', read_only=True)
+    request_id: serializers.PrimaryKeyRelatedField[Any] = serializers.PrimaryKeyRelatedField(
+        source='cleanup_request', read_only=True
+    )
     # allocation_stage_id = serializers.PrimaryKeyRelatedField(
     #    source='allocation_stage', read_only=True)
 
@@ -291,7 +303,9 @@ class TerraformCleanupStageSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class AllocationTerraformOutputSerializer(serializers.ModelSerializer):
+class AllocationTerraformOutputSerializer(
+    serializers.ModelSerializer[models.AllocationTerraformOutput]
+):
     """Serializer for AllocationTerraformOutput model."""
 
     class Meta:  # pylint: disable=too-few-public-methods
@@ -302,12 +316,12 @@ class AllocationTerraformOutputSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class SandboxSerializer(serializers.ModelSerializer):
+class SandboxSerializer(serializers.ModelSerializer[models.Sandbox]):
     """Serializer for Sandbox model."""
 
     lock_id = serializers.SerializerMethodField()
-    allocation_unit_id = serializers.PrimaryKeyRelatedField(
-        source='allocation_unit', read_only=True
+    allocation_unit_id: serializers.PrimaryKeyRelatedField[Any] = (
+        serializers.PrimaryKeyRelatedField(source='allocation_unit', read_only=True)
     )
 
     class Meta:  # pylint: disable=too-few-public-methods
@@ -323,10 +337,12 @@ class SandboxSerializer(serializers.ModelSerializer):
         return obj.lock.id if hasattr(obj, 'lock') else None
 
 
-class SandboxLockSerializer(serializers.ModelSerializer):
+class SandboxLockSerializer(serializers.ModelSerializer[models.SandboxLock]):
     """Serializer for SandboxLock model."""
 
-    sandbox_id = serializers.PrimaryKeyRelatedField(source='sandbox', read_only=True)
+    sandbox_id: serializers.PrimaryKeyRelatedField[Any] = serializers.PrimaryKeyRelatedField(
+        source='sandbox', read_only=True
+    )
 
     class Meta:  # pylint: disable=too-few-public-methods
         """Meta options for SandboxLockSerializer."""
@@ -336,10 +352,12 @@ class SandboxLockSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class PoolLockSerializer(serializers.ModelSerializer):
+class PoolLockSerializer(serializers.ModelSerializer[models.PoolLock]):
     """Serializer for PoolLock model."""
 
-    pool_id = serializers.PrimaryKeyRelatedField(source='pool', read_only=True)
+    pool_id: serializers.PrimaryKeyRelatedField[Any] = serializers.PrimaryKeyRelatedField(
+        source='pool', read_only=True
+    )
 
     class Meta:  # pylint: disable=too-few-public-methods
         """Meta options for PoolLockSerializer."""
@@ -350,7 +368,7 @@ class PoolLockSerializer(serializers.ModelSerializer):
         write_only_fields = ('training_access_token',)
 
 
-class NodeActionSerializer(serializers.Serializer):
+class NodeActionSerializer(serializers.Serializer[Any]):
     """Serializer for VM node action requests."""
 
     ACTION_CHOICES = ('suspend', 'resume', 'reboot')
@@ -364,9 +382,7 @@ class NodeActionSerializer(serializers.Serializer):
 ##########################################
 
 
-class HostSerializer(serializers.Serializer):
-    """CRCZP OS lib Host and Router topology serializer"""
-
+class HostSerializer(serializers.Serializer[Any]):
     name = serializers.CharField()
     os_type = serializers.CharField()
     gui_access = serializers.BooleanField()
@@ -374,7 +390,7 @@ class HostSerializer(serializers.Serializer):
     ip = serializers.CharField()
 
 
-class SubnetSerializer(serializers.Serializer):
+class SubnetSerializer(serializers.Serializer[Any]):
     """CRCZP OS lib Subnet topology serializer."""
 
     name = serializers.CharField()
@@ -382,7 +398,7 @@ class SubnetSerializer(serializers.Serializer):
     hosts = HostSerializer(many=True)
 
 
-class RouterSerializer(serializers.Serializer):
+class RouterSerializer(serializers.Serializer[Any]):
     """CRCZP OS lib Host and Router topology serializer"""
 
     name = serializers.CharField()
@@ -393,20 +409,20 @@ class RouterSerializer(serializers.Serializer):
     subnets = SubnetSerializer(many=True)
 
 
-class LibNetworkSerializer(serializers.Serializer):
+class LibNetworkSerializer(serializers.Serializer[Any]):
     """CRCZP OS lib Network topology serializer"""
 
     name = serializers.CharField()
     cidr = serializers.CharField()
 
 
-class TopologySerializer(serializers.Serializer):
+class TopologySerializer(serializers.Serializer[Any]):
     """Serializer for topology"""
 
     routers = RouterSerializer(many=True)
 
 
-class NodeSerializer(serializers.Serializer):
+class NodeSerializer(serializers.Serializer[Any]):
     """CRCZP OS lib Instance serializer"""
 
     name = serializers.CharField()
@@ -416,13 +432,13 @@ class NodeSerializer(serializers.Serializer):
     flavor_name = serializers.CharField()
 
 
-class NodeConsoleSerializer(serializers.Serializer):
+class NodeConsoleSerializer(serializers.Serializer[Any]):
     """Serializer for a VM console URL."""
 
     url = serializers.CharField()
 
 
-class SandboxEventSerializer(serializers.Serializer):
+class SandboxEventSerializer(serializers.Serializer[Any]):
     """Serializer for a sandbox stack event."""
 
     time = serializers.CharField(source='event_time')
@@ -431,7 +447,7 @@ class SandboxEventSerializer(serializers.Serializer):
     status_reason = serializers.CharField(source='resource_status_reason')
 
 
-class SandboxResourceSerializer(serializers.Serializer):
+class SandboxResourceSerializer(serializers.Serializer[Any]):
     """Serializer for a sandbox stack resource."""
 
     name = serializers.CharField(source='resource_name')
@@ -439,7 +455,7 @@ class SandboxResourceSerializer(serializers.Serializer):
     status = serializers.CharField(source='resource_status')
 
 
-class HardwareUsageSerializer(serializers.Serializer):
+class HardwareUsageSerializer(serializers.Serializer[Any]):
     """Serializer for hardware usage quota data."""
 
     vcpu = serializers.DecimalField(decimal_places=3, max_digits=7)
@@ -450,14 +466,14 @@ class HardwareUsageSerializer(serializers.Serializer):
     port = serializers.DecimalField(decimal_places=3, max_digits=7)
 
 
-class ProtocolSerializer(serializers.Serializer):
+class ProtocolSerializer(serializers.Serializer[Any]):
     """Serializer for a network protocol with port."""
 
     name = serializers.CharField()
     port = serializers.IntegerField(max_value=65535)
 
 
-class NodeAccessDataSerializer(serializers.Serializer):
+class NodeAccessDataSerializer(serializers.Serializer[Any]):
     """Serializer for node access data including IP and protocols."""
 
     man_ip = serializers.CharField()

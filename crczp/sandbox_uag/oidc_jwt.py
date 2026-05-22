@@ -1,6 +1,7 @@
 """OIDC JWT authentication utilities for sandbox UAG."""
 
 import base64
+from typing import Any, cast
 from urllib.parse import urlparse
 
 import requests
@@ -20,26 +21,26 @@ CACHE = caches['default']
 OIDC_SUB_PREFIX = 'oidc-sub-'
 
 
-class JWTAccessTokenAuthentication(BearerTokenAuthentication):
+class JWTAccessTokenAuthentication(BearerTokenAuthentication):  # type: ignore[misc]
     """Use for Bearer token in JWT format. It allows multiple OIDC providers support."""
 
     @staticmethod
-    def extract_issuer(token):
+    def extract_issuer(token: str | bytes) -> str:
         """Extract the issuer from a JWT token payload."""
         data = JWT().unpack(token).payload()
-        return data.get('iss').rstrip('/')
+        return cast(str, data.get('iss', '')).rstrip('/')
 
-    @cache(ttl=WELL_KNOWN_CONFIG_CACHE_TTL)
-    def get_well_known_config(self, provider):
+    @cache(ttl=WELL_KNOWN_CONFIG_CACHE_TTL)  # type: ignore[untyped-decorator]
+    def get_well_known_config(self, provider: dict[str, str]) -> dict[str, Any]:
         """Fetch and cache the OpenID Connect well-known configuration for the given provider."""
         well_known_config_url = provider.get('well_known_config')
         if not well_known_config_url:
             well_known_config_url = provider['issuer'] + '/.well-known/openid-configuration'
         response = requests.get(well_known_config_url, timeout=30)
         response.raise_for_status()
-        return response.json()
+        return cast(dict[str, Any], response.json())
 
-    def _get_userinfo(self, token):
+    def _get_userinfo(self, token: bytes) -> dict[str, Any]:
         issuer = self.extract_issuer(token)
         LOG.debug('Issuer extracted from token.', issuer=issuer)
         allowed_issuers = {
@@ -64,9 +65,9 @@ class JWTAccessTokenAuthentication(BearerTokenAuthentication):
         response = requests.get(userinfo_endpoint, headers=http_headers, timeout=30)
         response.raise_for_status()
 
-        return response.json()
+        return cast(dict[str, Any], response.json())
 
-    def get_userinfo(self, token):
+    def get_userinfo(self, token: bytes) -> dict[str, Any]:
         sub = ''
         userinfo = None
         try:

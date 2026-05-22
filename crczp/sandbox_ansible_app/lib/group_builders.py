@@ -16,6 +16,7 @@ from crczp.cloud_commons import TopologyInstance
 from crczp.sandbox_ansible_app.lib.inventory import (
     DefaultAnsibleHostsGroups,
     Group,
+    Host,
     _normalize_address,
 )
 from crczp.sandbox_common_lib.common_cloud import list_images
@@ -178,7 +179,7 @@ def _add_windows_hosts_group(inventory: 'Inventory', topology: TopologyInstance)
         inventory.add_group(windows_group)
 
 
-def _get_windows_hosts(inventory: 'Inventory', topology: TopologyInstance) -> list:
+def _get_windows_hosts(inventory: 'Inventory', topology: TopologyInstance) -> list['Host']:
     """
     Return hosts that use Windows images based on the os_type parameter.
     """

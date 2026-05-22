@@ -2,6 +2,9 @@
 Output view mixins for compressed responses.
 """
 
+from typing import Any
+
+from django.db.models import QuerySet
 from rest_framework.response import Response
 
 from crczp.sandbox_common_lib import utils
@@ -10,7 +13,7 @@ from crczp.sandbox_common_lib import utils
 class CompressedOutputMixin:  # pylint: disable=too-few-public-methods
     """Mixin that provides a helper for building compressed output responses."""
 
-    def create_outputs_response(self, outputs_queryset, from_row: int) -> Response:
+    def create_outputs_response(self, outputs_queryset: QuerySet[Any], from_row: int) -> Response:
         """
         Create a compressed response for outputs endpoints.
 
@@ -26,6 +29,7 @@ class CompressedOutputMixin:  # pylint: disable=too-few-public-methods
         if from_row == 0:
             content = content.lstrip()
 
-        rows = outputs.last().id if outputs.exists() else from_row
+        last_output = outputs.last()
+        rows = last_output.id if last_output is not None else from_row
 
         return utils.create_compressed_response({'content': content, 'rows': rows})

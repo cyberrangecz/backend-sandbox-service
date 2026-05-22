@@ -149,6 +149,7 @@ class TestGetUnlockedSandbox:
         """Test that an anonymous user can get an unlocked sandbox."""
         pool = pools.get_pool(POOL_ID)
         sb = pools.get_unlocked_sandbox(pool, None)
+        assert sb is not None
         assert sb.id == SANDBOX_UUID
         assert sb.lock
 
@@ -162,6 +163,7 @@ class TestGetUnlockedSandbox:
         """Test that an authenticated user can get an unlocked sandbox."""
         pool = pools.get_pool(POOL_ID)
         sb = pools.get_unlocked_sandbox(pool, created_by)
+        assert sb is not None
         assert sb.id == SANDBOX_UUID
         assert sb.lock
 
@@ -289,4 +291,5 @@ class TestPoolLock:
         for _ in range(pool.max_size):
             response = view.get(request)
 
+        assert response is not None
         assert response.status_code == 409

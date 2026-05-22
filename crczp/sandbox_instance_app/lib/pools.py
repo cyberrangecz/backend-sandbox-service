@@ -5,10 +5,11 @@ Pool Service module for Pool management.
 import contextlib
 import io
 import zipfile
+from typing import Any
 
 import structlog
 from django.conf import settings
-from django.contrib.auth import get_user_model
+from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.db import transaction
 from django.db.models import ProtectedError, QuerySet
@@ -33,7 +34,6 @@ from crczp.sandbox_instance_app.models import (
     SandboxLock,
 )
 
-User = get_user_model()
 LOG = structlog.get_logger()
 POOL_CACHE_TIMEOUT = None
 PROJECT_LIMITS_CACHE_IDENTIFIER = 'project-limits'
@@ -52,7 +52,7 @@ def get_pool(pool_pk: int) -> Pool:
     return get_object_or_404(Pool, pk=pool_pk)
 
 
-def create_pool(data: dict, created_by: User | None) -> Pool:
+def create_pool(data: dict[str, Any], created_by: User | None) -> Pool:
     """
     Creates new Pool instance.
     Also creates management key-pairs in OpenStack
@@ -146,13 +146,13 @@ def delete_pool(pool: Pool) -> None:
         LOG.warning(exc)
 
 
-def get_sandboxes_in_pool(pool: Pool) -> QuerySet:
+def get_sandboxes_in_pool(pool: Pool) -> QuerySet[Sandbox, Sandbox]:
     """Returns DB QuerySet of sandboxes from given pool."""
     alloc_unit_ids = [unit.id for unit in pool.allocation_units.all()]
     return Sandbox.objects.all().filter(allocation_unit_id__in=alloc_unit_ids)
 
 
-def validate_hardware_usage_of_sandboxes(pool, count) -> None:
+def validate_hardware_usage_of_sandboxes(pool: Pool, count: int) -> None:
     """
     Validates Heat Stacks hardware usage of sandboxes against OpenStack limits.
 
@@ -173,7 +173,7 @@ def validate_hardware_usage_of_sandboxes(pool, count) -> None:
 
 
 def create_sandboxes_in_pool(
-    pool: Pool, created_by: User | None, count: int = None
+    pool: Pool, created_by: User | None, count: int | None = None
 ) -> list[SandboxAllocationUnit]:
     """
     Creates count sandboxes in given pool.
@@ -227,14 +227,14 @@ def get_unlocked_sandbox(pool: Pool, created_by: User | None) -> Sandbox | None:
         return sandbox
 
 
-def _has_locked_sandbox(sb_queryset, created_by: User | None):
+def _has_locked_sandbox(sb_queryset: QuerySet[Sandbox, Sandbox], created_by: User | None) -> bool:
     """Check if User locked a sandbox in queryset"""
     if created_by is None:
         return False
     return len(sb_queryset.filter(lock__created_by=created_by)) != 0
 
 
-def lock_pool(pool: Pool, training_access_token: str = None) -> PoolLock:
+def lock_pool(pool: Pool, training_access_token: str | None = None) -> PoolLock:
     """Lock given Pool. Raise ValidationError if already locked."""
     with transaction.atomic():
         pool = Pool.objects.select_for_update().get(pk=pool.id)

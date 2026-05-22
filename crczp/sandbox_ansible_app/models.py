@@ -1,5 +1,7 @@
 """Django models for Ansible-related sandbox stages and outputs."""
 
+from typing import override
+
 from django.db import models
 
 from crczp.sandbox_instance_app.models import (
@@ -10,6 +12,23 @@ from crczp.sandbox_instance_app.models import (
     ExternalDependency,
     ExternalDependencyCleanup,
 )
+
+__all__ = [
+    'AllocationRequest',
+    'AllocationStage',
+    'CleanupRequest',
+    'CleanupStage',
+    'ExternalDependency',
+    'ExternalDependencyCleanup',
+    'AnsibleAllocationStage',
+    'AnsibleCleanupStage',
+    'NetworkingAnsibleAllocationStage',
+    'NetworkingAnsibleCleanupStage',
+    'UserAnsibleAllocationStage',
+    'UserAnsibleCleanupStage',
+    'Container',
+    'AllocationAnsibleOutput',
+]
 
 
 class AnsibleAllocationStage(AllocationStage):
@@ -23,8 +42,9 @@ class AnsibleAllocationStage(AllocationStage):
 
         abstract = True
 
-    def __str__(self):
-        return super().__str__() + f', REPO_URL: {self.repo_url}, REV: {self.rev}'
+    @override
+    def __str__(self) -> str:
+        return str(super().__str__()) + f', REPO_URL: {self.repo_url}, REV: {self.rev}'
 
 
 class NetworkingAnsibleAllocationStage(AnsibleAllocationStage):
@@ -35,7 +55,8 @@ class NetworkingAnsibleAllocationStage(AnsibleAllocationStage):
         on_delete=models.CASCADE,
     )
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return super().__str__() + f', REQUEST: {self.allocation_request}'
 
 
@@ -47,7 +68,8 @@ class UserAnsibleAllocationStage(AnsibleAllocationStage):
         on_delete=models.CASCADE,
     )
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return super().__str__() + f', REQUEST: {self.allocation_request}'
 
 
@@ -68,8 +90,9 @@ class NetworkingAnsibleCleanupStage(AnsibleCleanupStage):
         on_delete=models.CASCADE,
     )
 
-    def __str__(self):
-        return super().__str__() + f', REQUEST: {self.cleanup_request}'
+    @override
+    def __str__(self) -> str:
+        return str(super().__str__()) + f', REQUEST: {self.cleanup_request}'
 
 
 class UserAnsibleCleanupStage(AnsibleCleanupStage):
@@ -80,14 +103,16 @@ class UserAnsibleCleanupStage(AnsibleCleanupStage):
         on_delete=models.CASCADE,
     )
 
-    def __str__(self):
-        return super().__str__() + f', REQUEST: {self.cleanup_request}'
+    @override
+    def __str__(self) -> str:
+        return str(super().__str__()) + f', REQUEST: {self.cleanup_request}'
 
 
 class AnsibleOutput(models.Model):
     """Abstract model representing a single line of Ansible output."""
 
     content = models.TextField()
+    id: int  # provided by Django for concrete subclasses
 
     class Meta:  # pylint: disable=too-few-public-methods
         """Meta options for AnsibleOutput."""
@@ -95,7 +120,8 @@ class AnsibleOutput(models.Model):
         abstract = True
         ordering = ['id']
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return f'ID: {self.id}, CONTENT: {self.content}'
 
 
@@ -106,7 +132,8 @@ class AllocationAnsibleOutput(AnsibleOutput):
         AllocationStage, on_delete=models.CASCADE, related_name='outputs'
     )
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return f'{super().__str__()} STAGE: {self.allocation_stage.id}'
 
 
@@ -117,7 +144,8 @@ class CleanupAnsibleOutput(AnsibleOutput):
         CleanupStage, on_delete=models.CASCADE, related_name='outputs'
     )
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return f'{super().__str__()} STAGE: {self.cleanup_stage.id}'
 
 
@@ -126,7 +154,8 @@ class Container(ExternalDependency):
 
     container_name = models.TextField()
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return f'STAGE: {self.allocation_stage.id}, CONTAINER: {self.container_name}'
 
 
@@ -135,5 +164,6 @@ class ContainerCleanup(ExternalDependencyCleanup):
 
     container_name = models.TextField()
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return f'STAGE: {self.cleanup_stage.id}, CONTAINER: {self.container_name}'
