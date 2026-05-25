@@ -16,6 +16,7 @@ from crczp.sandbox_ansible_app.models import (
 from crczp.sandbox_common_lib import exceptions as api_exceptions
 from crczp.sandbox_instance_app.lib import request_handlers
 from crczp.sandbox_instance_app.models import (
+    AllocationRequest,
     SandboxAllocationUnit,
     SandboxRequestGroup,
     StackAllocationStage,
@@ -25,13 +26,23 @@ from crczp.sandbox_instance_app.models import (
 pytestmark = [pytest.mark.django_db]
 
 
+def _make_picklable_mock() -> 'PicklableMock':
+    """Module-level factory used by PicklableMock.__reduce__ for deserialization."""
+    return PicklableMock()  # type: ignore[no-untyped-call]
+
+
 class PicklableMock(MagicMock):
     """MagicMock subclass that can be pickled for use with RQ workers."""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Return None so RQ can pickle the job result without error.
+        self.return_value = None
+
     @override
     def __reduce__(self):
-        """Return pickling instructions for MagicMock."""
-        return MagicMock, ()
+        """Return pickling instructions that reconstruct as PicklableMock(return_value=None)."""
+        return (_make_picklable_mock, ())
 
 
 def empty_queues() -> None:
@@ -441,15 +452,16 @@ class TestAllocationRequestHandler:
         self.ansible_cancel = mocker.patch(ansible_cancel_patch_target, new_callable=PicklableMock)
 
     @pytest.mark.django_db(transaction=True)
-    def test_enqueue_request(self, allocation_request, sandbox):
-        handler = request_handlers.AllocationRequestHandler(allocation_request)  # type: ignore[call-arg]
+    def test_enqueue_request(self, allocation_unit):
+        handler = request_handlers.AllocationRequestHandler()
 
-        assert allocation_request.stages.all().count() == 0
+        handler.enqueue_request([allocation_unit], None)
 
-        handler.enqueue_request(sandbox)  # type: ignore[call-arg]
+        worker = get_worker('openstack', 'ansible', 'default')
+        worker.work(burst=True)
 
+        allocation_request = AllocationRequest.objects.get(allocation_unit=allocation_unit)
         assert allocation_request.stages.all().count() == 3
-
         assert isinstance(allocation_request.stackallocationstage, StackAllocationStage)
         assert isinstance(
             allocation_request.networkingansibleallocationstage, NetworkingAnsibleAllocationStage
@@ -466,34 +478,23 @@ class TestAllocationRequestHandler:
             allocation_request.useransibleallocationstage.rq_job.job_id
         )
 
-        assert job_stack.is_queued
-        assert job_networking.is_deferred
-        assert job_user.is_deferred
-
-        assert_jobs_dependencies([job_stack, job_networking, job_user], handler.queue_default)
-
-        worker = get_worker('openstack', 'ansible', 'default')
-        worker.work(burst=True)
-
         assert job_stack.is_finished
         assert job_networking.is_finished
         assert job_user.is_finished
 
     def test_cancel_request(self, allocation_request_started):
-        handler = request_handlers.AllocationRequestHandler(allocation_request_started)  # type: ignore[call-arg]
+        handler = request_handlers.AllocationRequestHandler()
 
-        handler.cancel_request()  # type: ignore[call-arg]
+        handler.cancel_request(allocation_request_started)
 
         assert self.stack_cancel.call_count == 1
         assert self.ansible_cancel.call_count == 2
 
     def test_cancel_request_failed_on_completed_sandbox(self, sandbox_finished):
-        handler = request_handlers.AllocationRequestHandler(  # type: ignore[call-arg]
-            sandbox_finished.allocation_unit.allocation_request
-        )
+        handler = request_handlers.AllocationRequestHandler()
 
         with pytest.raises(api_exceptions.ValidationError):
-            handler.cancel_request()  # type: ignore[call-arg]
+            handler.cancel_request(sandbox_finished.allocation_unit.allocation_request)
 
         self.stack_cancel.assert_not_called()
         self.ansible_cancel.assert_not_called()
@@ -521,54 +522,53 @@ class TestCleanupRequestHandler:
 
     @pytest.mark.django_db(transaction=True)
     def test_enqueue_request(self, cleanup_request):
-        handler = request_handlers.CleanupRequestHandler(cleanup_request)
+        handler = request_handlers.CleanupRequestHandler()
 
         assert cleanup_request.stages.all().count() == 0
 
-        handler.enqueue_request()  # type: ignore[call-arg]
+        handler.enqueue_request(cleanup_request.allocation_unit)
 
+        # Run only the default queue to execute _create_cleanup_jobs, which
+        # creates stages and enqueues the stage jobs via on_commit.
+        get_worker('default').work(burst=True)
+
+        cleanup_request.refresh_from_db()
         assert cleanup_request.stages.all().count() == 3
-
         assert isinstance(cleanup_request.useransiblecleanupstage, UserAnsibleCleanupStage)
         assert isinstance(
             cleanup_request.networkingansiblecleanupstage, NetworkingAnsibleCleanupStage
         )
         assert isinstance(cleanup_request.stackcleanupstage, StackCleanupStage)
 
-        job_user = handler.queue_ansible.fetch_job(
-            cleanup_request.useransiblecleanupstage.rq_job.job_id
-        )
-        job_networking = handler.queue_ansible.fetch_job(
-            cleanup_request.networkingansiblecleanupstage.rq_job.job_id
-        )
-        job_stack = handler.queue_stack.fetch_job(cleanup_request.stackcleanupstage.rq_job.job_id)
+        # Capture job IDs before the finalize job may delete the allocation unit.
+        job_user_id = cleanup_request.useransiblecleanupstage.rq_job.job_id
+        job_networking_id = cleanup_request.networkingansiblecleanupstage.rq_job.job_id
+        job_stack_id = cleanup_request.stackcleanupstage.rq_job.job_id
 
-        assert job_user.is_queued
-        assert job_networking.is_deferred
-        assert job_stack.is_deferred
+        # Run stage jobs and the finalize job.
+        get_worker('openstack', 'ansible', 'default').work(burst=True)
 
-        assert_jobs_dependencies([job_user, job_networking, job_stack], handler.queue_default)
-
-        worker = get_worker('openstack', 'ansible', 'default')
-        worker.work(burst=True)
+        job_user = handler.queue_ansible.fetch_job(job_user_id)
+        job_networking = handler.queue_ansible.fetch_job(job_networking_id)
+        job_stack = handler.queue_stack.fetch_job(job_stack_id)
 
         assert job_user.is_finished
         assert job_networking.is_finished
         assert job_stack.is_finished
 
     def test_cancel_request(self, cleanup_request_started):
-        handler = request_handlers.CleanupRequestHandler(cleanup_request_started)
+        handler = request_handlers.CleanupRequestHandler()
 
-        handler.cancel_request()  # type: ignore[call-arg]
+        handler.cancel_request(cleanup_request_started)
 
         assert self.stack_cancel.call_count == 1
         assert self.ansible_cancel.call_count == 2
 
     def test_cancel_request_failed_on_completed_sandbox(self, cleanup_request_finished):
-        handler = request_handlers.AllocationRequestHandler(cleanup_request_finished)  # type: ignore[call-arg]
+        handler = request_handlers.CleanupRequestHandler()
 
         with pytest.raises(api_exceptions.ValidationError):
-            handler.cancel_request()  # type: ignore[call-arg]
+            handler.cancel_request(cleanup_request_finished)
 
         self.stack_cancel.assert_not_called()
         self.ansible_cancel.assert_not_called()

@@ -26,6 +26,7 @@ class DefinitionSerializer(serializers.ModelSerializer['models.Definition']):
     class Meta:  # pylint: disable=too-few-public-methods
         """Meta options for DefinitionSerializer."""
 
+        model = models.Definition
         fields = ('id', 'name', 'url', 'rev', 'created_by')
         read_only_fields = ('id', 'name', 'created_by')
         validators = [

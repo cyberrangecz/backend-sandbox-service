@@ -113,6 +113,7 @@ class TestCreateSandboxesInPool:
     def test_create_sandboxes_in_pool_success_one(self, created_by):
         """Test creating a single sandbox in a pool."""
         pool = pools.get_pool(POOL_ID)
+        pools.create_sandboxes_in_pool(pool, created_by, 1)
         self.fake_create_allocation_requests.assert_called_once_with(pool, 1, created_by)
 
     def test_create_sandboxes_in_pool_success_all(self, created_by):
@@ -202,7 +203,7 @@ class TestGetManagementSSHAccess:
         ssh_config_name = f'{ssh_access_name}-sandbox-id-{sandbox.id}-management-config'
         private_key = f'{ssh_access_name}-management-key'
 
-        for host in management_ssh_config:
+        for host in management_ssh_config.hosts:
             identity_file = host.get('IdentityFile')
             host.set(
                 'IdentityFile',

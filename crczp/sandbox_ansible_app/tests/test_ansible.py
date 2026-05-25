@@ -25,9 +25,7 @@ class TestPrepareInventoryFile:
     def test_prepare_inventory_file_success(self, mocker, top_ins):  # pylint: disable=unused-argument
         """Test that the inventory file is saved when preparing a successful allocation."""
         mock_inventory = mocker.patch('crczp.sandbox_ansible_app.lib.ansible.Inventory')
-        mocker.patch('crczp.sandbox_ansible_app.lib.ansible.docker.from_env')
-        sandboxes.get_topology_instance = mocker.MagicMock()
-        sandboxes.get_topology_instance.return_value = top_ins
+        mocker.patch.object(sandboxes, 'get_topology_instance', return_value=top_ins)
 
         dir_path = '/tmp'  # nosec B108
         sandbox = Sandbox.objects.get(pk=1)
@@ -37,7 +35,7 @@ class TestPrepareInventoryFile:
 
     def test_prepare_inventory_object(self, mocker, top_ins, inventory):
         """Test that create_inventory returns a correctly structured inventory dict."""
-        mocker.patch('crczp.sandbox_ansible_app.lib.ansible.docker.from_env')
+        mocker.patch.object(sandboxes, 'get_topology_instance', return_value=top_ins)
         dir_path = mocker.MagicMock()
         sandbox = Sandbox.objects.get(pk=1)
         sandbox.allocation_unit.pool.get_pool_prefix = mocker.MagicMock()

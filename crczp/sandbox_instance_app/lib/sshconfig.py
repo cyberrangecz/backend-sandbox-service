@@ -110,7 +110,13 @@ class CrczpSSHConfig:
         for host_dict in hosts:
             name = host_dict['host']
             attrs = host_dict['attrs']
-            instance.hosts.append(Host(name, attrs))
+            # parse_config returns 'True'/'False' strings when loading a config
+            # serialized by the ssh_config library (which outputs Python booleans).
+            # Convert those strings back to 'yes'/'no' so Host() type converters accept them.
+            normalized = {
+                k: ('yes' if v == 'True' else 'no' if v == 'False' else v) for k, v in attrs.items()
+            }
+            instance.hosts.append(Host(name, normalized))
         return instance
 
     def asdict(self) -> list[dict[str, Any]]:

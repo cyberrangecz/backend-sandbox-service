@@ -84,6 +84,10 @@ class TestIntegration:
     #
     #  Finally, run the INTERNAL git server - by going to the crczp-it-folder and running
     #  ./build-images.sh, docker-compose up, ./populate-git.sh in this order
+    @pytest.mark.skipif(
+        not settings.CRCZP_CONFIG.os_auth_url,
+        reason='OpenStack credentials not configured (os_auth_url is empty in config.yml)',
+    )
     def test_build_sandbox_full(self, client):
         """Test full sandbox build: definition → pool → alloc unit → lock → cleanup → delete."""
         def_id = self.create_definition(client, DEFINITION_URL, DEFINITION_REV)

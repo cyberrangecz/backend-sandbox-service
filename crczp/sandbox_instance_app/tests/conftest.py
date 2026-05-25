@@ -59,6 +59,7 @@ TESTING_LINKS = 'links.yml'
 TESTING_LINKS_HIDDEN = 'links_hidden.yml'
 TESTING_CONTAINERS = 'containers.yml'
 TESTING_TOPOLOGY_CONTAINERS = 'topology_containers.yml'
+TESTING_TOPOLOGY_CONTAINERS_SERVER = 'topology_containers_server.yml'
 
 TESTING_TOPOLOGY_CUSTOM_FLAVORS = 'definition_flavor_mapping.yml'
 
@@ -249,6 +250,13 @@ def topology():
 def topology_hidden():
     """Creates example topology for a sandbox."""
     with open(data_path_join(TESTING_TOPOLOGY_HIDDEN), encoding='utf-8') as f:
+        return yaml.full_load(f)
+
+
+@pytest.fixture
+def topology_containers_server():
+    """Creates example topology for a sandbox with containers mapped to server (no link IPs set)."""
+    with open(data_path_join(TESTING_TOPOLOGY_CONTAINERS_SERVER), encoding='utf-8') as f:
         return yaml.full_load(f)
 
 

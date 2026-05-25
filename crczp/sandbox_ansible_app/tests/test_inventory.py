@@ -147,7 +147,7 @@ class TestWindowsHostsGroup:
             mocker.MagicMock(name='windows-10', os_type='linux'),  # Pretend windows-10 is Linux
         ]
         mocker.patch(
-            'crczp.sandbox_ansible_app.lib.inventory.list_images', return_value=mock_images
+            'crczp.sandbox_ansible_app.lib.group_builders.list_images', return_value=mock_images
         )
 
         ssh_public_mgmt_key = '/root/.ssh/pool_mng_key.pub'

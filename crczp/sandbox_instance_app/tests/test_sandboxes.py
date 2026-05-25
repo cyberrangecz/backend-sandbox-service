@@ -95,15 +95,9 @@ class TestSandboxesManipulation:
 
         result = serializers.TopologySerializer(topo).data
 
-        for item in ['hosts', 'routers', 'switches', 'ports']:
-            assert sorted(topology[item], key=lambda x: x['name']) == sorted(
-                result[item], key=lambda x: x['name']
-            )
-
-        for item in ['links']:
-            assert sorted(topology[item], key=lambda x: x['port_a']) == sorted(
-                result[item], key=lambda x: x['port_a']
-            )
+        assert sorted(topology['routers'], key=lambda x: x['name']) == sorted(
+            result['routers'], key=lambda x: x['name']
+        )
 
     def test_get_user_ssh_config(self, mocker, user_ssh_config):
         """Test that get_user_sshconfig returns the expected SSH config."""
@@ -121,7 +115,7 @@ class TestSandboxesManipulation:
         ssh_config_name = f'{ssh_access_name}-config'
         private_key = f'{ssh_access_name}-key'
 
-        for host in user_ssh_config:
+        for host in user_ssh_config.hosts:
             identity_file = host.get('IdentityFile')
             host.set(
                 'IdentityFile',

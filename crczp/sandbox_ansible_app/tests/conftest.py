@@ -85,7 +85,7 @@ def mock_list_images(mocker):
         ),
     ]
     return mocker.patch(
-        'crczp.sandbox_ansible_app.lib.inventory.list_images', return_value=mock_images
+        'crczp.sandbox_ansible_app.lib.group_builders.list_images', return_value=mock_images
     )
 
 

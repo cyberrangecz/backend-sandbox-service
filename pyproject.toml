@@ -140,6 +140,9 @@ skips = ["B101"]
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra -q"
+markers = [
+    "integration: mark test as integration test requiring external services (e.g. Redis)",
+]
 testpaths = [
     "crczp/sandbox_ansible_app/tests",
     "crczp/sandbox_common_lib/tests",

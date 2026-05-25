@@ -16,17 +16,8 @@ Host man 10.10.10.10
     StrictHostKeyChecking no
     IdentitiesOnly yes
 
-Host home-router 192.168.128.7
-    HostName 192.168.128.7
-    User debian
-    IdentityFile <path_to_pool_private_key>
-    ProxyJump debian@man
-    UserKnownHostsFile /dev/null
-    StrictHostKeyChecking no
-    IdentitiesOnly yes
-
-Host server-router 192.168.128.6
-    HostName 192.168.128.6
+Host server 192.168.128.2
+    HostName 192.168.128.2
     User debian
     IdentityFile <path_to_pool_private_key>
     ProxyJump debian@man
@@ -43,8 +34,17 @@ Host home 192.168.128.3
     StrictHostKeyChecking no
     IdentitiesOnly yes
 
-Host server 192.168.128.2
-    HostName 192.168.128.2
+Host server-router 192.168.128.6
+    HostName 192.168.128.6
+    User debian
+    IdentityFile <path_to_pool_private_key>
+    ProxyJump debian@man
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
+    IdentitiesOnly yes
+
+Host home-router 192.168.128.7
+    HostName 192.168.128.7
     User debian
     IdentityFile <path_to_pool_private_key>
     ProxyJump debian@man

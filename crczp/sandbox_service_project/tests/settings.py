@@ -145,6 +145,9 @@ USE_TZ = True
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATIC_URL = f'/{CRCZP_SERVICE_CONFIG.microservice_name}/static/'
 
+VERSION = 'v1'
+URL_PREFIX = f'{CRCZP_SERVICE_CONFIG.microservice_name}/api/{VERSION}/'
+
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'crczp.sandbox_common_lib.exc_handler.custom_exception_handler',
     'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.AllowAny',),
@@ -156,7 +159,7 @@ REST_FRAMEWORK = {
 
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'LOCATION': 'call_cache',
         'TIMEOUT': None,  # Expire never
         'OPTIONS': {
@@ -164,12 +167,12 @@ CACHES = {
         },
     },
     'uag_auth_groups_cache': {
-        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'LOCATION': 'uag_auth_groups_cache',
         'OPTIONS': {'MAX_ENTRIES': 500},
     },
     'topology_cache': {
-        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'LOCATION': 'topology_cache',
         'TIMEOUT': None,
         'OPTIONS': {
@@ -202,20 +205,29 @@ RQ_QUEUES = {
         'HOST': 'localhost',
         'PORT': 6379,
         'DB': 0,
+        'REDIS_CLIENT_CLASS': 'fakeredis.FakeRedis',
     },
     'openstack': {
         'HOST': 'localhost',
         'PORT': 6379,
         'DB': 0,
+        'REDIS_CLIENT_CLASS': 'fakeredis.FakeRedis',
     },
     'ansible': {
         'HOST': 'localhost',
         'PORT': 6379,
         'DB': 0,
+        'REDIS_CLIENT_CLASS': 'fakeredis.FakeRedis',
     },
 }
 
 RQ_SHOW_ADMIN_LINK = True
+
+# Use SimpleWorker (no os.fork) so SQLite in-memory databases are shared
+# between the test process and the worker executing RQ jobs.
+RQ = {
+    'WORKER_CLASS': 'rq.worker.SimpleWorker',
+}
 
 LOGGING = {
     'version': 1,

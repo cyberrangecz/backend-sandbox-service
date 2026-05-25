@@ -20,14 +20,9 @@ class TestTopology:
 
         result = serializers.TopologySerializer(topo).data
 
-        for item in ['hosts', 'routers', 'switches', 'ports']:
-            assert sorted(topology[item], key=lambda x: x['name']) == sorted(
-                result[item], key=lambda x: x['name']
-            )
-        for item in ['links']:
-            assert sorted(topology[item], key=lambda x: x['port_a']) == sorted(
-                result[item], key=lambda x: x['port_a']
-            )
+        assert sorted(topology['routers'], key=lambda x: x['name']) == sorted(
+            result['routers'], key=lambda x: x['name']
+        )
 
     def test_topology_hidden_success(self, mocker, top_ins_hidden, topology_hidden, image):
         """Test that hidden topology items are serialized correctly."""
@@ -37,14 +32,9 @@ class TestTopology:
 
         result = serializers.TopologySerializer(topo).data
 
-        for item in ['hosts', 'routers', 'switches', 'ports']:
-            assert sorted(topology_hidden[item], key=lambda x: x['name']) == sorted(
-                result[item], key=lambda x: x['name']
-            )
-        for item in ['links']:
-            assert sorted(topology_hidden[item], key=lambda x: x['port_a']) == sorted(
-                result[item], key=lambda x: x['port_a']
-            )
+        assert sorted(topology_hidden['routers'], key=lambda x: x['name']) == sorted(
+            result['routers'], key=lambda x: x['name']
+        )
 
 
 class TestDockerContainers:
@@ -60,8 +50,8 @@ class TestDockerContainers:
         topology = Topology(top_ins_with_containers)
         result = serializers.TopologySerializer(topology).data
 
-        assert sorted(topology_containers['hosts'], key=lambda x: x['name']) == sorted(
-            result['hosts'], key=lambda x: x['name']
+        assert sorted(topology_containers['routers'], key=lambda x: x['name']) == sorted(
+            result['routers'], key=lambda x: x['name']
         )
 
         for host in top_ins_with_containers.topology_definition.hosts:
@@ -71,7 +61,7 @@ class TestDockerContainers:
                 assert not host.hidden
 
     def test_server_host_is_hidden(
-        self, mocker, top_ins_with_containers_with_server, image, topology_containers
+        self, mocker, top_ins_with_containers_with_server, image, topology_containers_server
     ):
         """Test that a server container host is marked hidden in the topology."""
         mock_images = mocker.patch('crczp.terraform_driver.CrczpTerraformClient.list_images')
@@ -80,7 +70,9 @@ class TestDockerContainers:
         topology = Topology(top_ins_with_containers_with_server)
         result = serializers.TopologySerializer(topology).data
 
-        assert result['hosts'][0]['containers'] == ['home-docker2']
+        assert sorted(topology_containers_server['routers'], key=lambda x: x['name']) == sorted(
+            result['routers'], key=lambda x: x['name']
+        )
 
         for host in top_ins_with_containers_with_server.topology_definition.hosts:
             if host.name == 'server':

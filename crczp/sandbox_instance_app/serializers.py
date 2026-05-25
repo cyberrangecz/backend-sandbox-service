@@ -387,7 +387,7 @@ class HostSerializer(serializers.Serializer[Any]):
     os_type = serializers.CharField()
     gui_access = serializers.BooleanField()
     is_accessible = serializers.BooleanField()
-    ip = serializers.CharField()
+    ip = serializers.CharField(allow_null=True)
 
 
 class SubnetSerializer(serializers.Serializer[Any]):
@@ -405,7 +405,7 @@ class RouterSerializer(serializers.Serializer[Any]):
     os_type = serializers.CharField()
     gui_access = serializers.BooleanField()
     is_accessible = serializers.BooleanField()
-    ip = serializers.CharField()
+    ip = serializers.CharField(allow_null=True)
     subnets = SubnetSerializer(many=True)
 
 
