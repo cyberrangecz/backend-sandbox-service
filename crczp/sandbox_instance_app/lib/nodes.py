@@ -167,7 +167,9 @@ def get_node_available_protocols(node: Node) -> list[Protocol]:
 
 def get_node_image_has_gui_access(image: Image) -> bool:
     """Return True if the image has GUI access enabled."""
-    return image.owner_specified.get('owner_specified.openstack.gui_access') == 'true'  # type: ignore[no-any-return]
+    return (  # type: ignore[no-any-return]
+        image.owner_specified.get('owner_specified.openstack.gui_access') == 'true'
+    )
 
 
 def _get_node_ip(topology_instance: TopologyInstance, node: Node) -> str:

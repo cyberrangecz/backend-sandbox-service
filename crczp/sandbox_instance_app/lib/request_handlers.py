@@ -133,7 +133,9 @@ class RequestHandler(abc.ABC):
         #   which is required by Queue.enqueue method.
         # This is a known bug since September 2018.
         finalizing_stage_function = partial(func, *args, **kwargs)
-        finalizing_stage_function.__name__ = 'finalizing_stage_function'  # type: ignore[attr-defined]
+        finalizing_stage_function.__name__ = (  # type: ignore[attr-defined]
+            'finalizing_stage_function'
+        )
         finalizing_stage_function.__module__ = func.__module__
         return finalizing_stage_function
 
@@ -253,7 +255,11 @@ class AllocationRequestHandler(RequestHandler):
             repo_url=self.request.allocation_unit.pool.definition.url,
             rev=self.request.allocation_unit.pool.rev_sha,
         )
-        user_stage_handler = AllocationAnsibleStageHandler(user_stage, sandbox, request_group=group)  # type: ignore[arg-type]
+        user_stage_handler = AllocationAnsibleStageHandler(
+            user_stage,  # type: ignore[arg-type]
+            sandbox,
+            request_group=group,
+        )
 
         return [stack_stage_handler, networking_stage_handler, user_stage_handler]
 
@@ -285,7 +291,9 @@ class AllocationRequestHandler(RequestHandler):
                 repo_url=settings.CRCZP_CONFIG.ansible_networking_url,
                 rev=settings.CRCZP_CONFIG.ansible_networking_rev,
             )
-            stage_handlers.append(AllocationAnsibleStageHandler(networking_stage, sandbox))  # type: ignore[arg-type]
+            stage_handlers.append(
+                AllocationAnsibleStageHandler(networking_stage, sandbox)  # type: ignore[arg-type]
+            )
 
         self.request.useransibleallocationstage.delete()
         user_stage = self._create_db_stage(
@@ -293,7 +301,9 @@ class AllocationRequestHandler(RequestHandler):
             repo_url=self.request.allocation_unit.pool.definition.url,
             rev=self.request.allocation_unit.pool.rev_sha,
         )
-        stage_handlers.append(AllocationAnsibleStageHandler(user_stage, sandbox))  # type: ignore[arg-type]
+        stage_handlers.append(
+            AllocationAnsibleStageHandler(user_stage, sandbox)  # type: ignore[arg-type]
+        )
 
         return stage_handlers
 
@@ -383,7 +393,9 @@ class CleanupRequestHandler(RequestHandler):
         if hasattr(self.request, 'networkingansiblecleanupstage'):
             self.request.networkingansiblecleanupstage.delete()
         networking_stage = self._create_db_stage(NetworkingAnsibleCleanupStage)
-        networking_stage_handler = CleanupAnsibleStageHandler(networking_stage)  # type: ignore[arg-type]
+        networking_stage_handler = CleanupAnsibleStageHandler(
+            networking_stage  # type: ignore[arg-type]
+        )
 
         if hasattr(self.request, 'stackcleanupstage'):
             self.request.stackcleanupstage.delete()

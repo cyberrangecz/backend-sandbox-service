@@ -8,6 +8,8 @@ Validators validate single fields or entire objects.
 Swagger can utilise type hints to determine type, so use them in your own methods.
 """
 
+from __future__ import annotations
+
 from typing import Any, override
 
 from django.db import transaction

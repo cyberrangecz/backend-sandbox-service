@@ -146,7 +146,9 @@ class GitHubProvider(DefinitionProvider):
         Get the plain text content of the file.
         """
         try:
-            contents: ContentFile = self.repo.get_contents(path, ref=rev)  # type: ignore[assignment]
+            contents: ContentFile = self.repo.get_contents(  # type: ignore[assignment]
+                path, ref=rev
+            )
         except (UnknownObjectException, GithubException) as exc:
             raise exceptions.GitError(
                 f"Cannot find '{path}' in {self.repo.name} [rev: '{rev}']"

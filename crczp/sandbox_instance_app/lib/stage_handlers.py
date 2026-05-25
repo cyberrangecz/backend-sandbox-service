@@ -4,7 +4,7 @@ import abc
 import contextlib
 import os
 import signal
-from subprocess import Popen
+from subprocess import Popen  # nosec B404
 from typing import Any, override
 
 import docker.errors
@@ -95,9 +95,13 @@ class StageHandler(abc.ABC):
         :param job_id: The ID of enqueues Job that will execute this stage.
         """
         if hasattr(self._job_class, 'allocation_stage'):
-            self._job_class.objects.create(allocation_stage=self.stage, job_id=job_id)  # type: ignore[attr-defined]
+            self._job_class.objects.create(  # type: ignore[attr-defined]
+                allocation_stage=self.stage, job_id=job_id
+            )
         elif hasattr(self._job_class, 'cleanup_stage'):
-            self._job_class.objects.create(cleanup_stage=self.stage, job_id=job_id)  # type: ignore[attr-defined]
+            self._job_class.objects.create(  # type: ignore[attr-defined]
+                cleanup_stage=self.stage, job_id=job_id
+            )
         else:
             LOG.warning(f"Unknown Job class '{self._job_class}'. Job ID '{job_id}' was not set")
 

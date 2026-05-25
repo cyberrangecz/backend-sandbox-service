@@ -315,6 +315,7 @@ class KubernetesContainer(BaseContainer):
         Run Ansible in Kubernetes job.
         """
         kuber_container = self._create_container()
+        pvc_name = settings.CRCZP_CONFIG.ansible_runner_settings.persistent_volume_claim_name
 
         job = client.V1Job(
             metadata=client.V1ObjectMeta(name=self.job_name, namespace=self.KUBERNETES_NAMESPACE),
@@ -331,9 +332,7 @@ class KubernetesContainer(BaseContainer):
                             client.V1Volume(
                                 name=ANSIBLE_FILE_VOLUME_NAME,
                                 persistent_volume_claim=V1PersistentVolumeClaimVolumeSource(
-                                    claim_name=(
-                                        settings.CRCZP_CONFIG.ansible_runner_settings.persistent_volume_claim_name
-                                    ),
+                                    claim_name=pvc_name,
                                 ),
                             )
                         ],

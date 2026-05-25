@@ -53,7 +53,9 @@ def load_private_key(key_path: str) -> PKey:
     key_classes = [paramiko.RSAKey, paramiko.ECDSAKey, paramiko.Ed25519Key]
     for key_class in key_classes:
         try:
-            return key_class.from_private_key_file(key_path)  # type: ignore[attr-defined, no-any-return]
+            return key_class.from_private_key_file(  # type: ignore[attr-defined, no-any-return]
+                key_path
+            )
         except (OSError, paramiko.SSHException):
             continue
     raise ValueError('Could not load private key. Unsupported key type or file not found.')

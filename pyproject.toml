@@ -18,7 +18,7 @@ dependencies = [
     # https://github.com/snguyenthanh/better_profanity/issues/19
     "better-profanity ==0.6.1",
     "django ~=5.0",
-    "djangorestframework <3.15.0",
+    "djangorestframework ==3.15.2",
     "coreapi",
     "structlog",
     "colorama",
