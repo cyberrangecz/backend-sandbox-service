@@ -83,7 +83,7 @@ def create_self_signed_certificate(private_key_pem: str) -> str:
         .public_key(key.public_key())  # type: ignore[arg-type]
         .serial_number(x509.random_serial_number())
         .not_valid_before(datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=48))
-        .not_valid_after(datetime.datetime.max)
+        .not_valid_after(datetime.datetime(9999, 12, 31, tzinfo=datetime.UTC))
         .add_extension(
             x509.ExtendedKeyUsage(
                 [ExtendedKeyUsageOID.CLIENT_AUTH],

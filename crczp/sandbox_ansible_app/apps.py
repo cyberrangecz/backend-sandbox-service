@@ -14,5 +14,5 @@ class CrczpSandboxAnsibleAppConfig(AppConfig):
 
     @override
     def ready(self) -> None:
-        """ "Perform initialization tasks (logging, registering roles to User and Group, …)."""
+        """Perform initialization tasks (logging, registering roles to User and Group, …)."""
         utils.configure_logging()

@@ -4,8 +4,6 @@ from typing import cast
 
 from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration, GitType
 
-from .exceptions import ImproperlyConfigured
-
 
 def get_rest_server(url: str) -> str:
     """
@@ -32,11 +30,8 @@ def get_git_type(rest_server: str) -> GitType:
     """
     if 'github.' in rest_server:
         return GitType.GITHUB
-    if 'gitlab.' in rest_server:
+    else:
         return GitType.GITLAB
-    raise ImproperlyConfigured(
-        f'Trying to use unsupported git type: {rest_server} Supported types: gitlab, github'
-    )
 
 
 def get_git_server(rest_server: str) -> str:

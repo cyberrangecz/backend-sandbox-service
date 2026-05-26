@@ -37,9 +37,6 @@ def get_or_create_user(request: Request, user_info: dict[str, Any]) -> AbstractB
     # noinspection PyPep8Naming
     bearer_token = authenticator_class.get_bearer_token(request)
 
-    user_info.get('given_name')
-    user_info.get('family_name')
-    user_info.get('email')
     sub = cast(str, user_info.get('sub', ''))
     iss = authenticator_class.extract_issuer(bearer_token)
 
@@ -83,10 +80,15 @@ def get_or_create_user(request: Request, user_info: dict[str, Any]) -> AbstractB
         try:
             group = Group.objects.get(name=group_name)
         except Group.DoesNotExist as ex:
-            raise AuthenticationFailed(
-                f'User {user.username} ({sub},{iss}) has role {group_name},'
-                f' that is not in database: {ex}'
-            ) from ex
+            LOG.warning(
+                'role not in database',
+                username=user.username,
+                sub=sub,
+                iss=iss,
+                role=group_name,
+                exc_info=ex,
+            )
+            raise AuthenticationFailed('Authentication failed.') from ex
         groups.append(group)
 
     user.groups.set(groups)
