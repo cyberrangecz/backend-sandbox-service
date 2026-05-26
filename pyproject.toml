@@ -1,10 +1,10 @@
 [project]
 name = "crczp-sandbox-service"
-version = "2.1.0"
+version = "2.2.0"
 description = "simplifies manipulation of OpenStack cloud platform for CyberRangeCZ Platform purposes"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 authors = [{ name = "cybersecurityhub.cz" }]
 dependencies = [
     "crczp-terraform-client ~=1.0.3",
