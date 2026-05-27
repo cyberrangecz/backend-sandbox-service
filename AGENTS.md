@@ -93,7 +93,12 @@ Agents must use **`uv`** for dependency management.
 uv sync
 ```
 
-There are **no separate development dependencies**.
+Development dependencies are defined in the `dev` dependency group (type stubs for mypy).
+Install them with:
+
+```bash
+uv sync --group dev
+```
 
 Python version must match the version specified in `pyproject.toml`.
 

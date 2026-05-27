@@ -158,10 +158,11 @@ class GitHubProvider(DefinitionProvider):
 
     @override
     def get_refs(self) -> list[Any]:
-        """
-        Not implemented as it is not needed.
-        """
-        raise NotImplementedError('get_refs is not supported for GitHub provider')
+        """Return a list of branches and tags for this repository."""
+        try:
+            return list(self.repo.get_branches()) + list(self.repo.get_tags())
+        except GithubException as exc:
+            raise exceptions.GitError('Failed to get refs from GitHub repository.') from exc
 
     @override
     def get_rev_sha(self, rev: str) -> str:

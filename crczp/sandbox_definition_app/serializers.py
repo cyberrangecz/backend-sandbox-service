@@ -33,7 +33,7 @@ class DefinitionSerializer(serializers.ModelSerializer['models.Definition']):
             UniqueTogetherValidator(queryset=models.Definition.objects.all(), fields=['url', 'rev'])
         ]
 
-    @extend_schema_field(field=serializers.BooleanField())
+    @extend_schema_field(field=UserSerializer())
     @staticmethod
     def get_created_by(obj: models.Definition) -> Any:
         """Return the serialized user who created this definition."""

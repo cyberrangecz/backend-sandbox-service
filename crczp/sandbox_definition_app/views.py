@@ -117,7 +117,7 @@ class DefinitionRefsListView(generics.ListAPIView[Any]):
 
 @extend_schema(
     methods=['GET'],
-    responses={200: instance_serializers.TopologySerializer(many=True), **COMMON_RESPONSE_PATTERNS},
+    responses={200: instance_serializers.TopologySerializer(), **COMMON_RESPONSE_PATTERNS},
 )
 class DefinitionTopologyView(generics.RetrieveAPIView[Any]):
     """
