@@ -54,6 +54,15 @@ class TestDockerContainers:
             result['routers'], key=lambda x: x['name']
         )
 
+        # Docker container hosts must not appear in any subnet's host list
+        all_subnet_host_names = [
+            host['name']
+            for router in result['routers']
+            for subnet in router['subnets']
+            for host in subnet['hosts']
+        ]
+        assert 'server' not in all_subnet_host_names
+
         for host in top_ins_with_containers.topology_definition.hosts:
             if host.name == 'server':
                 assert host.hidden
@@ -73,6 +82,15 @@ class TestDockerContainers:
         assert sorted(topology_containers_server['routers'], key=lambda x: x['name']) == sorted(
             result['routers'], key=lambda x: x['name']
         )
+
+        # Docker container hosts must not appear in any subnet's host list
+        all_subnet_host_names = [
+            host['name']
+            for router in result['routers']
+            for subnet in router['subnets']
+            for host in subnet['hosts']
+        ]
+        assert 'server' not in all_subnet_host_names
 
         for host in top_ins_with_containers_with_server.topology_definition.hosts:
             if host.name == 'server':

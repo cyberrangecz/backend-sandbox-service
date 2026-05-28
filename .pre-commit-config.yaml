@@ -21,7 +21,7 @@ repos:
       - id: mypy
         name: mypy
         language: system
-        entry: uv run --no-sync mypy
+        entry: uv run mypy
         args: [crczp/]
         types: [python]
         pass_filenames: false
