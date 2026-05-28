@@ -48,9 +48,9 @@ This Django project contains three apps and one common library.
 | `sandbox_ansible_app/tests/test_stages.py` | Unit | Ansible stage handling |
 | `sandbox_service_project/tests/test_integration.py` | **Integration** | Full service integration |
 
-Integration tests are marked with `@pytest.mark.integration` and excluded from the default `tox` run.
-Run them explicitly with `pytest -m integration`.
-
+ Integration tests are marked with `@pytest.mark.integration` and are included in the default `tox` run.
+ To run only the integration tests explicitly, use `pytest -m integration`.
+ 
 ## Wiki
 The wiki with documentation to this project: [Sandbox Service wiki](https://github.com/cyberrangecz/backend-sandbox-service/wiki)
 
