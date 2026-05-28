@@ -2,11 +2,12 @@
 
 import pytest
 import requests
+from github import GithubException
 from gitlab import GitlabError
 
 from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration
 from crczp.sandbox_common_lib.exceptions import GitError
-from crczp.sandbox_definition_app.lib.definition_providers import GitlabProvider
+from crczp.sandbox_definition_app.lib.definition_providers import GitHubProvider, GitlabProvider
 
 EXPECTED_RESULT_ARRAY = ['t', 'e', 's', 't']
 EXPECTED_RESULT_STR = 'test'
@@ -154,6 +155,43 @@ class TestGitlabProvider:
         )
         with pytest.raises(GitError):
             gitlab_provider.get_rev_sha('rev')
+
+
+class TestGitHubProvider:
+    """Tests for the GitHubProvider implementation."""
+
+    URL = 'https://github.com/crczp/sandbox-service.git'
+    CFG = CrczpConfiguration()
+
+    @pytest.fixture
+    def github_repo(self, mocker):
+        """Return a mocked GitHub repository."""
+        return mocker.MagicMock()
+
+    @pytest.fixture
+    def github_provider(self, mocker, github_repo):  # pylint: disable=redefined-outer-name
+        """Return a GitHubProvider with a mocked GitHub client."""
+        mock_github = mocker.MagicMock()
+        mock_github.get_repo.return_value = github_repo
+        mocker.patch(
+            'crczp.sandbox_definition_app.lib.definition_providers.Github',
+            return_value=mock_github,
+        )
+        return GitHubProvider(self.URL, self.CFG)
+
+    def test_get_refs_returns_branches_and_tags(self, github_provider, github_repo):
+        """Test that get_refs returns the combined list of branches and tags."""
+        branches = ['branch1', 'branch2']
+        tags = ['tag1']
+        github_repo.get_branches.return_value = branches
+        github_repo.get_tags.return_value = tags
+        assert github_provider.get_refs() == branches + tags
+
+    def test_get_refs_raises_git_error_on_github_exception(self, github_provider, github_repo):
+        """Test that a GithubException from get_refs raises GitError."""
+        github_repo.get_branches.side_effect = GithubException(status=404, data={})
+        with pytest.raises(GitError):
+            github_provider.get_refs()
 
 
 @pytest.mark.integration

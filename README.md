@@ -1,10 +1,11 @@
 # Content
 
-1. [Sandbox Service](#sandbox-service)
-    1. [Authors](#authors)
-    2. [Installation](#installation)
-    3. [Project Modules](#project-modules)
-    3. [Wiki](#wiki)
+- [Content](#content)
+- [Sandbox Service](#sandbox-service)
+  - [Project Modules](#project-modules)
+  - [Tests](#tests)
+  - [Wiki](#wiki)
+  - [Deployment](#deployment)
 
 # Sandbox Service
 
@@ -23,6 +24,32 @@ This Django project contains three apps and one common library.
 - __Sandbox Defintion App__ which handles the sandbox defintions
 - __Sandbox Ansible App__ which runs Asible on the sandbox
 - __Sandbox Instance App__ which manges the sanfboxes
+
+## Tests
+
+| File | Type | Covers |
+|------|------|--------|
+| `sandbox_common_lib/tests/test_utils.py` | Unit | Utility functions |
+| `sandbox_definition_app/tests/test_definitions.py` | Unit | Create/load/get definitions, topology validation |
+| `sandbox_definition_app/tests/test_definition_providers.py` | Unit | GitLab/GitHub provider URL parsing, ref fetching |
+| `sandbox_definition_app/tests/test_definition_providers.py` (`TestGitIntegration`) | **Integration** | Live Git operations |
+| `sandbox_instance_app/tests/test_topology.py` | Unit | Topology serialization, Docker container handling |
+| `sandbox_instance_app/tests/test_nodes.py` | Unit | Node actions, node retrieval |
+| `sandbox_instance_app/tests/test_projects.py` | Unit | Project management |
+| `sandbox_instance_app/tests/test_pools.py` | Unit | Sandbox pool operations |
+| `sandbox_instance_app/tests/test_sandboxes.py` | Unit | Sandbox lifecycle |
+| `sandbox_instance_app/tests/test_requests.py` | Unit | Request handling |
+| `sandbox_instance_app/tests/test_request_handlers.py` | Unit | Request handler logic |
+| `sandbox_instance_app/tests/test_stage_handlers.py` | Unit | Stage handler logic |
+| `sandbox_instance_app/tests/test_sshconfig.py` | Unit | SSH config generation |
+| `sandbox_instance_app/tests/test_flavor_mapping.py` | Unit | Flavor mapping |
+| `sandbox_ansible_app/tests/test_ansible.py` | Unit | Ansible execution |
+| `sandbox_ansible_app/tests/test_inventory.py` | Unit | Ansible inventory building |
+| `sandbox_ansible_app/tests/test_stages.py` | Unit | Ansible stage handling |
+| `sandbox_service_project/tests/test_integration.py` | **Integration** | Full service integration |
+
+Integration tests are marked with `@pytest.mark.integration` and excluded from the default `tox` run.
+Run them explicitly with `pytest -m integration`.
 
 ## Wiki
 The wiki with documentation to this project: [Sandbox Service wiki](https://github.com/cyberrangecz/backend-sandbox-service/wiki)
