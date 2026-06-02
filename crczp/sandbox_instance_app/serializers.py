@@ -107,7 +107,7 @@ class PoolSerializer(serializers.ModelSerializer[models.Pool]):
         """Return the pool lock id, or None if not locked."""
         return obj.lock.id if hasattr(obj, 'lock') else None
 
-    @extend_schema_field(field=serializers.BooleanField())
+    @extend_schema_field(UserSerializer())
     @staticmethod
     def get_created_by(obj: models.Pool) -> Any:
         """Return serialized created_by user data."""
@@ -120,7 +120,7 @@ class PoolSerializer(serializers.ModelSerializer[models.Pool]):
         hardware_usage = pools.get_hardware_usage_of_sandbox(obj)
         return HardwareUsageSerializer(hardware_usage).data
 
-    @extend_schema_field(field=serializers.BooleanField())
+    @extend_schema_field(DefinitionSerializer())
     @staticmethod
     def get_definition(obj: models.Pool) -> Any:
         """Return serialized definition data for the pool."""
@@ -154,9 +154,9 @@ class RequestSerializer(serializers.ModelSerializer[Any]):
 class AllocationRequestSerializer(RequestSerializer):
     """Serializer for AllocationRequest model."""
 
-    @extend_schema_field(field=serializers.BooleanField())
+    @extend_schema_field(field=serializers.ListField(child=serializers.CharField()))
     @staticmethod
-    def get_stages(obj: Any) -> Any:
+    def get_stages(obj: Any) -> list[str]:
         """Return the allocation request stages completion state."""
         return requests.get_allocation_request_stages_state(obj)
 
@@ -169,9 +169,9 @@ class AllocationRequestSerializer(RequestSerializer):
 class CleanupRequestSerializer(RequestSerializer):
     """Serializer for CleanupRequest model."""
 
-    @extend_schema_field(field=serializers.BooleanField())
+    @extend_schema_field(field=serializers.ListField(child=serializers.CharField()))
     @staticmethod
-    def get_stages(obj: Any) -> Any:
+    def get_stages(obj: Any) -> list[str]:
         """Return the cleanup request stages completion state."""
         return requests.get_cleanup_request_stages_state(obj)
 
@@ -237,7 +237,7 @@ class SandboxAllocationUnitSerializer(serializers.ModelSerializer[models.Sandbox
         instance.save()
         return instance
 
-    @extend_schema_field(field=serializers.BooleanField())
+    @extend_schema_field(UserSerializer())
     @staticmethod
     def get_created_by(obj: models.SandboxAllocationUnit) -> Any:
         """Return serialized created_by user data."""

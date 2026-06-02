@@ -22,6 +22,7 @@ __all__ = [
     'ExternalDependencyCleanup',
     'AnsibleAllocationStage',
     'AnsibleCleanupStage',
+    'AnsibleStage',
     'NetworkingAnsibleAllocationStage',
     'NetworkingAnsibleCleanupStage',
     'UserAnsibleAllocationStage',
@@ -80,6 +81,9 @@ class AnsibleCleanupStage(CleanupStage):
         """Meta options for AnsibleCleanupStage."""
 
         abstract = True
+
+
+AnsibleStage = AnsibleAllocationStage | AnsibleCleanupStage
 
 
 class NetworkingAnsibleCleanupStage(AnsibleCleanupStage):

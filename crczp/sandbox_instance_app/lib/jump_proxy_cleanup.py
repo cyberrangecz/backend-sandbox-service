@@ -14,13 +14,16 @@ def delete_jump_ssh_key(allocation_unit: SandboxAllocationUnit) -> None:
     """Delete the SSH key for the given allocation unit from the jump proxy."""
     name = allocation_unit.get_stack_name()
     ssh = connect_to_jump()
-    _stdin, stdout, stderr = ssh.exec_command(f'sudo rm -rf /home/{name}')  # nosec B601
+    try:
+        _stdin, stdout, stderr = ssh.exec_command(f'sudo rm -rf /home/{name}')  # nosec B601
 
-    # Wait for the command to finish
-    stdout.channel.recv_exit_status()
-    error = stderr.read().decode()
-    if error:
-        LOG.warning(f'Failed to delete key for {name} from proxy jump: {error}')
+        # Wait for the command to finish
+        stdout.channel.recv_exit_status()
+        error = stderr.read().decode()
+        if error:
+            LOG.warning(f'Failed to delete key for {name} from proxy jump: {error}')
+    finally:
+        ssh.close()
 
 
 def connect_to_jump() -> SSHClient:
@@ -50,12 +53,10 @@ def ssh_connect(hostname: str, port: int, username: str, key_file_path: str) -> 
 
 def load_private_key(key_path: str) -> PKey:
     """Load and return a Paramiko private key from the given file path."""
-    key_classes = [paramiko.RSAKey, paramiko.ECDSAKey, paramiko.Ed25519Key]
+    key_classes: list[type[PKey]] = [paramiko.RSAKey, paramiko.ECDSAKey, paramiko.Ed25519Key]
     for key_class in key_classes:
         try:
-            return key_class.from_private_key_file(  # type: ignore[attr-defined, no-any-return]
-                key_path
-            )
+            return key_class.from_private_key_file(key_path)
         except (OSError, paramiko.SSHException):
             continue
     raise ValueError('Could not load private key. Unsupported key type or file not found.')

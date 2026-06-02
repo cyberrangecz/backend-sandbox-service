@@ -28,7 +28,7 @@ class DefinitionSerializer(serializers.ModelSerializer['models.Definition']):
 
         model = models.Definition
         fields = ('id', 'name', 'url', 'rev', 'created_by')
-        read_only_fields = ('id', 'name', 'created_by')
+        read_only_fields: tuple[str, ...] = ('id', 'name', 'created_by')
         validators = [
             UniqueTogetherValidator(queryset=models.Definition.objects.all(), fields=['url', 'rev'])
         ]
@@ -46,7 +46,7 @@ class DefinitionSerializerCreate(DefinitionSerializer):
     class Meta(DefinitionSerializer.Meta):  # pylint: disable=too-few-public-methods
         """Meta options for DefinitionSerializerCreate."""
 
-        read_only_fields = ('id',)  # type: ignore[assignment]
+        read_only_fields: tuple[str, ...] = ('id',)
 
 
 class DefinitionRevSerializer(serializers.Serializer[Any]):

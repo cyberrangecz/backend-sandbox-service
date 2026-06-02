@@ -9,10 +9,14 @@ import structlog
 from django.conf import settings
 from docker.models.containers import Container
 from kubernetes import client, config, watch
-from kubernetes.client import V1PersistentVolumeClaimVolumeSource
+from kubernetes.client import V1JobStatus, V1PersistentVolumeClaimVolumeSource
 
 from crczp.cloud_commons import CrczpException
-from crczp.sandbox_ansible_app.models import AllocationAnsibleOutput, CleanupAnsibleOutput
+from crczp.sandbox_ansible_app.models import (
+    AllocationAnsibleOutput,
+    AnsibleStage,
+    CleanupAnsibleOutput,
+)
 from crczp.sandbox_common_lib import exceptions
 
 LOG = structlog.get_logger()
@@ -47,7 +51,7 @@ class BaseContainer(abc.ABC):  # pylint: disable=too-many-instance-attributes
         self,
         url: str,
         rev: str,
-        stage: Any,
+        stage: AnsibleStage,
         ssh_directory: str,
         inventory_path: str,
         containers_path: str,
@@ -105,7 +109,7 @@ class DockerContainer(BaseContainer):
         self,
         url: str,
         rev: str,
-        stage: Any,
+        stage: AnsibleStage,
         ssh_directory: str,
         inventory_path: str,
         containers_path: str,
@@ -212,7 +216,7 @@ class KubernetesContainer(BaseContainer):
         self,
         url: str,
         rev: str,
-        stage: Any,
+        stage: AnsibleStage,
         ssh_directory: str,
         inventory_path: str,
         containers_path: str,
@@ -249,7 +253,7 @@ class KubernetesContainer(BaseContainer):
         cls.CORE_API = client.CoreV1Api()
         cls.BATCH_API = client.BatchV1Api()
 
-    def _create_container(self) -> Any:
+    def _create_container(self) -> client.V1Container:
         """Create the container."""
         kuber_container = client.V1Container(
             name=self.job_name,
@@ -373,7 +377,7 @@ class KubernetesContainer(BaseContainer):
                 raise CrczpException('Pod was deleted before it was ready.')
         return None
 
-    def _wait_for_job_finish(self) -> Any:
+    def _wait_for_job_finish(self) -> V1JobStatus | None:
         """
         Wait for job to finish.
         """
@@ -409,7 +413,8 @@ class KubernetesContainer(BaseContainer):
         w = watch.Watch()
 
         pod_name = self._wait_for_pod_start()
-        assert pod_name is not None, 'Pod did not start in time'
+        if pod_name is None:
+            raise exceptions.AnsibleError('Pod did not start in time.')
         job_done = False
         while not job_done:
             for log in w.stream(
@@ -432,6 +437,10 @@ class KubernetesContainer(BaseContainer):
     def check_container_status(self) -> None:
         """Check the container status."""
         status = self._wait_for_job_finish()
+        if status is None:
+            raise exceptions.AnsibleError(
+                f'Ansible stage {self.stage.id} did not finish: job watch stream exhausted.'
+            )
         if status.failed or (status.conditions and status.conditions[0].type == 'Failed'):
             raise exceptions.AnsibleError(
                 f'Ansible stage {self.stage.id} failed. See Ansible outputs for details.'

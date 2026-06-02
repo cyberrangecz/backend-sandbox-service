@@ -193,7 +193,9 @@ class AllocationRequestHandler(RequestHandler):
             self._enqueue_stages(sandbox, stage_handlers)
 
     @override
-    def enqueue_request(self, units: Any, created_by: User | None) -> None:  # pylint: disable=arguments-differ
+    def enqueue_request(  # pylint: disable=arguments-differ
+        self, units: list[SandboxAllocationUnit], created_by: User | None
+    ) -> None:
         """Enqueue the allocation request creation job for the given units."""
         self.queue_default.enqueue(self._create_allocation_jobs, units, created_by)
 

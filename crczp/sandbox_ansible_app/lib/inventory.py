@@ -12,6 +12,7 @@ import yaml
 from django.conf import settings
 
 from crczp.cloud_commons import Link, TopologyInstance
+from crczp.sandbox_common_lib import exceptions
 from crczp.topology_definition.models import Network, Router
 
 PROXY_JUMP_NAME = 'proxy-jump'
@@ -354,10 +355,12 @@ class Inventory(BaseInventory):
         self._add_user_network_ip_to_user_defined_nodes()
 
         proxy_jump_host = self.get_host(PROXY_JUMP_NAME)
-        assert proxy_jump_host is not None
+        if proxy_jump_host is None:
+            raise exceptions.AnsibleError('Proxy jump host was not found in inventory.')
         proxy_jump_host.add_variables(user_access_present=True)
         winrm_nodes_group = self.get_group('winrm_nodes')
-        assert winrm_nodes_group is not None
+        if winrm_nodes_group is None:
+            raise exceptions.AnsibleError('winrm_nodes group was not found in inventory.')
         winrm_nodes_group.add_variables(
             **self._get_winrm_connection_variables(mgmt_private_key, mgmt_public_certificate)
         )

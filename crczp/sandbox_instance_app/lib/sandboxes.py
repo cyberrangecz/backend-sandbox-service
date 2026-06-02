@@ -58,9 +58,7 @@ def post_answers(user_id: int, access_token: str, generated_variables: Any) -> N
     try:
         post_data_json = get_post_data_json(user_id, access_token, generated_variables)
         answers_storage_endpoint = (
-            settings.CRCZP_CONFIG.answers_storage_api + 'sandboxes'
-            if settings.CRCZP_CONFIG.answers_storage_api[-1] == '/'
-            else '/sandboxes'
+            settings.CRCZP_CONFIG.answers_storage_api.rstrip('/') + '/sandboxes'
         )
         post_response = requests.post(
             answers_storage_endpoint, data=post_data_json, headers=HEADERS, timeout=30

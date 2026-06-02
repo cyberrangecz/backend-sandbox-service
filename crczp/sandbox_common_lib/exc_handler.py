@@ -36,7 +36,7 @@ def custom_exception_handler(exc: Exception, context: dict[str, Any]) -> Respons
         if exc_response is None:
             response = Response(
                 {
-                    'detail': str(exc),
+                    'detail': 'Internal server error. See pod logs for details.',
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

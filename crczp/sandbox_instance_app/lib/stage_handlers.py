@@ -270,7 +270,8 @@ class AllocationStackStageHandler(StackStageHandler):
                 key_pair_name_ssh=allocation_unit.pool.ssh_keypair_name,
                 key_pair_name_cert=allocation_unit.pool.certificate_keypair_name,
             )
-            assert self.process is not None
+            if self.process is None:
+                raise CrczpException('Process was not created.')
             TerraformStack.objects.create(allocation_stage=self.stage, stack_id=self.process.pid)
             self._log_process_output(
                 self.process, AllocationTerraformOutput, allocation_stage=self.stage

@@ -9,7 +9,8 @@ import gitlab
 import requests
 import structlog
 from github import Auth, Github, GithubException, UnknownObjectException
-from github.ContentFile import ContentFile
+from github.Branch import Branch
+from github.Tag import Tag
 
 from crczp.sandbox_common_lib import exceptions, git_config
 from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration
@@ -146,18 +147,19 @@ class GitHubProvider(DefinitionProvider):
         Get the plain text content of the file.
         """
         try:
-            contents: ContentFile = self.repo.get_contents(  # type: ignore[assignment]
-                path, ref=rev
-            )
+            contents = self.repo.get_contents(path, ref=rev)
         except (UnknownObjectException, GithubException) as exc:
             raise exceptions.GitError(
                 f"Cannot find '{path}' in {self.repo.name} [rev: '{rev}']"
             ) from exc
-
+        if isinstance(contents, list):
+            raise exceptions.GitError(
+                f"Path '{path}' is a directory in {self.repo.name} [rev: '{rev}']"
+            )
         return base64.b64decode(contents.content).decode()
 
     @override
-    def get_refs(self) -> list[Any]:
+    def get_refs(self) -> list[Branch | Tag]:
         """Return a list of branches and tags for this repository."""
         try:
             return list(self.repo.get_branches()) + list(self.repo.get_tags())

@@ -3,7 +3,6 @@
 import os
 import shutil
 from dataclasses import dataclass
-from typing import Any
 
 import structlog
 from django.conf import settings
@@ -16,6 +15,7 @@ from crczp.sandbox_ansible_app.lib.container import (
     KubernetesContainer,
 )
 from crczp.sandbox_ansible_app.lib.inventory import BaseInventory, Inventory
+from crczp.sandbox_ansible_app.models import AnsibleStage
 from crczp.sandbox_common_lib import exceptions
 from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration
 from crczp.sandbox_common_lib.git_config import get_git_server
@@ -85,7 +85,7 @@ class AnsibleRunner:  # pylint: disable=too-many-instance-attributes
         )
 
     def run_ansible_playbook(
-        self, url: str, rev: str, stage: Any, cleanup: bool = False
+        self, url: str, rev: str, stage: AnsibleStage, cleanup: bool = False
     ) -> BaseContainer:
         """
         Run Ansible playbook in container.

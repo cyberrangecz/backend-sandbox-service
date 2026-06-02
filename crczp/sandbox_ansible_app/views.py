@@ -1,6 +1,6 @@
 """REST API views for Ansible stage operations."""
 
-from typing import Any, override
+from typing import override
 
 import structlog
 from django.shortcuts import get_object_or_404
@@ -11,6 +11,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from crczp.sandbox_ansible_app import serializers
+from crczp.sandbox_ansible_app.models import (
+    NetworkingAnsibleAllocationStage,
+    NetworkingAnsibleCleanupStage,
+    UserAnsibleAllocationStage,
+    UserAnsibleCleanupStage,
+)
 from crczp.sandbox_common_lib import log_output_mixin
 from crczp.sandbox_instance_app.models import AllocationRequest, CleanupRequest
 
@@ -31,17 +37,19 @@ COMMON_RESPONSE_PATTERNS = {
         **COMMON_RESPONSE_PATTERNS,
     },
 )
-class NetworkingAnsibleAllocationStageDetailView(generics.RetrieveAPIView[Any]):
+class NetworkingAnsibleAllocationStageDetailView(
+    generics.RetrieveAPIView[NetworkingAnsibleAllocationStage]
+):
     """
     get: Retrieve a `Networking Ansible` Allocation stage.
     """
 
     serializer_class = serializers.NetworkingAnsibleAllocationStageSerializer
-    queryset = AllocationRequest.objects.all()
+    queryset = AllocationRequest.objects.all()  # type: ignore[assignment]
     lookup_url_kwarg = 'request_id'
 
     @override
-    def get_object(self) -> Any:
+    def get_object(self) -> NetworkingAnsibleAllocationStage:
         request = super().get_object()
         return request.networkingansibleallocationstage
 
@@ -53,17 +61,17 @@ class NetworkingAnsibleAllocationStageDetailView(generics.RetrieveAPIView[Any]):
         **COMMON_RESPONSE_PATTERNS,
     },
 )
-class UserAnsibleAllocationStageDetailView(generics.RetrieveAPIView[Any]):
+class UserAnsibleAllocationStageDetailView(generics.RetrieveAPIView[UserAnsibleAllocationStage]):
     """
     get: Retrieve a `User Ansible` Allocation stage.
     """
 
     serializer_class = serializers.UserAnsibleAllocationStageSerializer
-    queryset = AllocationRequest.objects.all()
+    queryset = AllocationRequest.objects.all()  # type: ignore[assignment]
     lookup_url_kwarg = 'request_id'
 
     @override
-    def get_object(self) -> Any:
+    def get_object(self) -> UserAnsibleAllocationStage:
         request = super().get_object()
         return request.useransibleallocationstage
 
@@ -75,17 +83,19 @@ class UserAnsibleAllocationStageDetailView(generics.RetrieveAPIView[Any]):
         **COMMON_RESPONSE_PATTERNS,
     },
 )
-class NetworkingAnsibleCleanupStageDetailView(generics.RetrieveAPIView[Any]):
+class NetworkingAnsibleCleanupStageDetailView(
+    generics.RetrieveAPIView[NetworkingAnsibleCleanupStage]
+):
     """
     get: Retrieve a `Networking Ansible` Cleanup stage.
     """
 
     serializer_class = serializers.NetworkingAnsibleCleanupStageSerializer
-    queryset = CleanupRequest.objects.all()
+    queryset = CleanupRequest.objects.all()  # type: ignore[assignment]
     lookup_url_kwarg = 'request_id'
 
     @override
-    def get_object(self) -> Any:
+    def get_object(self) -> NetworkingAnsibleCleanupStage:
         request = super().get_object()
         return request.networkingansiblecleanupstage
 
@@ -97,17 +107,17 @@ class NetworkingAnsibleCleanupStageDetailView(generics.RetrieveAPIView[Any]):
         **COMMON_RESPONSE_PATTERNS,
     },
 )
-class UserAnsibleCleanupStageDetailView(generics.RetrieveAPIView[Any]):
+class UserAnsibleCleanupStageDetailView(generics.RetrieveAPIView[UserAnsibleCleanupStage]):
     """
     get: Retrieve a `User Ansible` Cleanup stage.
     """
 
     serializer_class = serializers.UserAnsibleCleanupStageSerializer
-    queryset = CleanupRequest.objects.all()
+    queryset = CleanupRequest.objects.all()  # type: ignore[assignment]
     lookup_url_kwarg = 'request_id'
 
     @override
-    def get_object(self) -> Any:
+    def get_object(self) -> UserAnsibleCleanupStage:
         request = super().get_object()
         return request.useransiblecleanupstage
 

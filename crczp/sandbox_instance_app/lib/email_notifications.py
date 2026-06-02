@@ -4,6 +4,7 @@ import smtplib
 import ssl
 from email.message import EmailMessage
 from smtplib import SMTP, SMTP_SSL
+from types import TracebackType
 
 import structlog
 from django.conf import settings
@@ -67,11 +68,13 @@ class EmailManager:
             )
 
         if encryption == SMTPEncryption.TSL:
-            assert self.smtp is not None
+            if self.smtp is None:
+                raise EmailException('SMTP connection was not established.')
             self.smtp.starttls()
 
         if encryption != SMTPEncryption.INSECURE:
-            assert self.smtp is not None
+            if self.smtp is None:
+                raise EmailException('SMTP connection was not established.')
             self.smtp.login(
                 self.config.sender_email,
                 self.config.sender_email_password,
@@ -81,7 +84,8 @@ class EmailManager:
 
     def send_email(self, sender_email: str, receiver_email: str, message: EmailMessage) -> None:
         """Send the given email message via the active SMTP connection."""
-        assert self.smtp is not None
+        if self.smtp is None:
+            raise EmailException('SMTP connection was not established.')
         try:
             self.smtp.sendmail(sender_email, receiver_email, message.as_string())
             LOG.debug('Email sent successfully!')
@@ -98,6 +102,11 @@ class EmailManager:
             LOG.warning(f'Email notification failed to send for unknown reason. Detail: {exc}')
             raise exc
 
-    def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         if self.smtp:
             self.smtp.quit()

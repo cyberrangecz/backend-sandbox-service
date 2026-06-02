@@ -44,7 +44,7 @@ COMMON_RESPONSE_PATTERNS = {
         **{k: v for k, v in utils.ERROR_RESPONSES.items() if k in [401, 403, 500]},
     },
 )
-class DefinitionListCreateView(generics.ListCreateAPIView[Any]):
+class DefinitionListCreateView(generics.ListCreateAPIView[Definition]):
     """
     get: Retrieve a list of sandbox definitions.
     """
@@ -76,7 +76,7 @@ class DefinitionListCreateView(generics.ListCreateAPIView[Any]):
     methods=['GET'], responses={200: SandboxDefinitionSerializer, **COMMON_RESPONSE_PATTERNS}
 )
 @extend_schema(methods=['DELETE'], responses={**COMMON_RESPONSE_PATTERNS})
-class DefinitionDetailDeleteView(generics.RetrieveDestroyAPIView[Any]):
+class DefinitionDetailDeleteView(generics.RetrieveDestroyAPIView[Definition]):
     """
     get: Retrieve the definition.
     delete: Delete the definition.
