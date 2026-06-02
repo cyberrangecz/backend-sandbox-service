@@ -6,6 +6,7 @@ import os
 from typing import Any
 from unittest import mock
 
+import fakeredis
 import pytest
 import yaml
 from django.contrib.auth import get_user_model
@@ -596,3 +597,17 @@ def cleanup_request_finished(cleanup_stage_stack_started):
     """Fixture providing a CleanupRequest that has finished successfully."""
     set_stage_finished(cleanup_stage_stack_started)
     return cleanup_stage_stack_started.cleanup_request
+
+
+@pytest.fixture(autouse=True)
+def patch_fakeredis_client_list(monkeypatch):
+    """Work around fakeredis regression where client_list() omits the 'addr'
+    field required by rq 1.13.0 worker initialisation."""
+    original = fakeredis.FakeRedis.client_list
+
+    def _patched(self, *args, **kwargs):
+        return [
+            {**c, 'addr': c.get('addr', '127.0.0.1:0')} for c in original(self, *args, **kwargs)
+        ]
+
+    monkeypatch.setattr(fakeredis.FakeRedis, 'client_list', _patched)
