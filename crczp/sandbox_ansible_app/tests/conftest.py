@@ -25,6 +25,7 @@ TESTING_DEFINITION_MONITOR = 'definition-monitoring.yml'
 TESTING_DATABASE = 'database.yaml'
 TESTING_CONTAINERS = 'containers.yml'
 TESTING_INVENTORY_CONTAINERS = 'inventory_containers.yml'
+TESTING_DEFINITION_VPN = 'definition-vpn.yml'
 
 
 def data_path_join(file: str, data_dir: str = TESTING_DATA_DIR) -> str:
@@ -175,6 +176,27 @@ def containers() -> str:
     with open(data_path_join(TESTING_CONTAINERS), encoding='utf-8') as f:
         ruamel_yaml.dump(ruamel_yaml.load(f), stream)
         return stream.getvalue()
+
+
+@pytest.fixture
+def top_def_vpn():
+    """Creates example topology definition with vpn_entrypoints."""
+    with open(data_path_join(TESTING_DEFINITION_VPN), encoding='utf-8') as f:
+        return TopologyDefinition.load(f)
+
+
+@pytest.fixture
+def top_ins_vpn(top_def_vpn, trc_config, links):
+    """Creates example topology instance with vpn_entrypoints."""
+    topology_instance = TopologyInstance(top_def_vpn, trc_config)
+    topology_instance.name = 'stack-name'
+    topology_instance.ip = '10.10.10.10'
+
+    for link in topology_instance.get_links():
+        link.ip = links[link.name]['ip']
+        link.mac = links[link.name]['mac']
+
+    return topology_instance
 
 
 @pytest.fixture

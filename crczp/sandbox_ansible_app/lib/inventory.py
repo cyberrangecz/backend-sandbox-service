@@ -65,6 +65,7 @@ class DefaultAnsibleHostsGroups(Enum):
     MONITORED_HOSTS_TCP = 'monitored_hosts_tcp'
     MONITORED_HOSTS_ICMP = 'monitored_hosts_icmp'
     WINDOWS_HOSTS = 'windows_hosts'
+    VPN_ENTRYPOINTS = 'vpn_entrypoints'
 
 
 class Base(abc.ABC):
@@ -326,6 +327,7 @@ class Inventory(BaseInventory):
     The inventory `vars` section contains by default following attributes:
     - `global_sandbox_name`
     - `global_sandbox_ip`
+    - `global_sandbox_man_cidr`
     If you need any extra data in the vars section, pass them as the
     `extra_vars` dictionary to constructor.
     """
@@ -367,6 +369,7 @@ class Inventory(BaseInventory):
         self.add_variables(
             global_sandbox_name=self.topology_instance.name,
             global_sandbox_ip=self.topology_instance.ip,
+            global_sandbox_man_cidr=str(self.topology_instance.man_network.cidr),
             global_ssh_public_user_key=user_public_key,
             global_ssh_public_mgmt_key=mgmt_public_key,
         )

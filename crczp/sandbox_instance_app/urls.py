@@ -161,4 +161,9 @@ urlpatterns = [
         views.SandboxConsolesView.as_view(),
         name='consoles',
     ),
+    path(
+        'sandboxes/<str:sandbox_uuid>/vpn',
+        views.SandboxVpnView.as_view(),
+        name='sandbox-vpn',
+    ),
 ]

@@ -1,5 +1,6 @@
 """REST API views for sandbox instance management."""
 
+import shlex
 from typing import Any, override
 from wsgiref.util import FileWrapper
 
@@ -15,6 +16,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from crczp.sandbox_common_lib import exceptions, log_output_mixin, utils
+from crczp.sandbox_common_lib.netbird_client import get_client_management_url
 from crczp.sandbox_common_lib.swagger_typing import (
     PoolRequestSerializer,
     PoolResponseSerializer,
@@ -34,6 +36,7 @@ from crczp.sandbox_instance_app.models import (
     Sandbox,
     SandboxAllocationUnit,
     SandboxLock,
+    SandboxNetbirdAccess,
 )
 from crczp.sandbox_uag.permissions import AdminPermission, OrganizerPermission
 
@@ -1117,3 +1120,56 @@ class TopologyNodeConnectionData(APIView):
                 nodes.get_node_access_data(topology_instance, node)
             ).data
         )
+
+
+class SandboxVpnView(APIView):
+    """
+    Returns the Netbird VPN client configuration for this sandbox.
+
+    A single shared access setup key grants a client access to every VPN
+    entrypoint of the sandbox; ``routes`` is the union of the CIDRs reachable
+    through those entrypoints. ``setup_key`` is null while the access resources
+    are still being provisioned (or when the sandbox has no VPN entrypoints).
+
+    ``command`` is the ready-to-run NetBird CLI line a client pastes to connect
+    (it embeds ``management_url`` and ``setup_key``); it is null whenever
+    ``setup_key`` is null, so the frontend can key its connect button off either
+    field. The structured ``management_url``/``setup_key``/``routes`` fields are
+    retained so callers can also consume the configuration programmatically or
+    render the reachable ``routes``.
+
+    Uses the default permission classes (like the sibling sandbox read views),
+    so it is accessible to any authenticated user who can read the sandbox,
+    including trainees.
+    """
+
+    queryset = Sandbox.objects.none()
+
+    # noinspection PyMethodMayBeStatic
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """Returns the Netbird VPN client configuration for this sandbox."""
+        sandbox = sandboxes.get_sandbox(self.kwargs['sandbox_uuid'])
+        access = SandboxNetbirdAccess.objects.filter(sandbox=sandbox).first()
+        setup_key = access.access_setup_key_value if access else None
+        management_url = get_client_management_url()
+
+        routes: list[str] = []
+        command: str | None = None
+        if setup_key:
+            for nbr in sandbox.netbird_resources.all():
+                routes.extend(nbr.get_route_cidr_list())
+            routes = list(dict.fromkeys(routes))
+            # Build the command server-side so the NetBird CLI syntax lives in
+            # one place; shlex.quote keeps a key/URL with shell-special
+            # characters from breaking when pasted into a shell.
+            command = (
+                f'netbird up --management-url {shlex.quote(management_url)}'
+                f' --setup-key {shlex.quote(setup_key)}'
+            )
+
+        return Response({
+            'management_url': management_url,
+            'setup_key': setup_key,
+            'routes': routes,
+            'command': command,
+        })

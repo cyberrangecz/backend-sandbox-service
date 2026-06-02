@@ -91,11 +91,13 @@ all:
         ansible_psrp_proxy: socks5://localhost:12345
   vars:
     global_head_ip: 0.0.0.0
+    global_netbird_management_url: ''
     global_openstack_stack_id: terraformstack-stack-id
     global_pool_id: 1
     global_sandbox_allocation_unit_id: 1
     global_sandbox_id: '1'
     global_sandbox_ip: 10.10.10.10
+    global_sandbox_man_cidr: 192.168.128.0/17
     global_sandbox_name: stack-name
     global_ssh_public_mgmt_key: /root/.ssh/pool_mng_key.pub
     global_ssh_public_user_key: /root/.ssh/user_key.pub

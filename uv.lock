@@ -357,7 +357,7 @@ wheels = [
 
 [[package]]
 name = "crczp-openstack-lib"
-version = "1.0.3"
+version = "1.0.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "crczp-python-commons" },
@@ -374,7 +374,7 @@ dependencies = [
     { name = "yamlize" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9c/14/81f6ccc60373b12c370201b5f833904ea65cc428131a7d96e92d62efa85d/crczp_openstack_lib-1.0.3-py3-none-any.whl", hash = "sha256:70b08d93f6d1145ea8bdef2cf5b3ac216a07bbb8522547f970dcf4003447330e", size = 12657, upload-time = "2026-04-20T11:27:50.344Z" },
+    { url = "https://files.pythonhosted.org/packages/8e/45/62de29b8029500513c0950b242bb37fb2c65d96f39ea6073ff3457f95ffc/crczp_openstack_lib-1.0.5-py3-none-any.whl", hash = "sha256:c53c8c2a7092321948c89d54eabe176c94530088dd12aae09bfee101c461ec7e", size = 13176, upload-time = "2026-06-25T10:31:36.004Z" },
 ]
 
 [[package]]
@@ -449,10 +449,10 @@ requires-dist = [
     { name = "coreapi" },
     { name = "crczp-automated-problem-generation-lib", specifier = "~=1.0.0" },
     { name = "crczp-aws-lib", specifier = "~=1.0.3" },
-    { name = "crczp-openstack-lib", specifier = "~=1.0.3" },
+    { name = "crczp-openstack-lib", specifier = "~=1.0.5" },
     { name = "crczp-python-commons", specifier = "~=2.0.1" },
     { name = "crczp-terraform-client", specifier = "~=1.0.3" },
-    { name = "crczp-topology-definition", specifier = "~=2.0.0" },
+    { name = "crczp-topology-definition", specifier = "~=2.1.0" },
     { name = "cryptography" },
     { name = "django", specifier = "~=5.0" },
     { name = "django-cors-headers" },
@@ -509,7 +509,7 @@ wheels = [
 
 [[package]]
 name = "crczp-topology-definition"
-version = "2.0.0"
+version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "netaddr" },
@@ -517,7 +517,7 @@ dependencies = [
     { name = "yamlize" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4e/66/0f572c00ed7f12c9bc1c0bb5bcb99b4b0d283298505d83fa0891f4de57c2/crczp_topology_definition-2.0.0-py3-none-any.whl", hash = "sha256:7224f056635f66592ad069ce22e440a11ae919a9b6380ed16362881d8bec5e1b", size = 9015, upload-time = "2026-04-17T18:15:29.565Z" },
+    { url = "https://files.pythonhosted.org/packages/82/f0/3bfebe14a244d64cd8af70db5563b47a5ce2cc4521aa0ae63b82eed5b941/crczp_topology_definition-2.1.0-py3-none-any.whl", hash = "sha256:d249265213988cb5bdf0e383a6eaaac7443049ce5e2dab2081bf1f1f25ddd54d", size = 10509, upload-time = "2026-06-26T14:22:05.085Z" },
 ]
 
 [[package]]

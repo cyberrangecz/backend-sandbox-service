@@ -14,14 +14,24 @@ from crczp.sandbox_ansible_app.lib.container import (
     DockerContainer,
     KubernetesContainer,
 )
-from crczp.sandbox_ansible_app.lib.inventory import BaseInventory, Inventory
+from crczp.sandbox_ansible_app.lib.inventory import (
+    BaseInventory,
+    DefaultAnsibleHostsGroups,
+    Inventory,
+)
 from crczp.sandbox_ansible_app.models import AnsibleStage
 from crczp.sandbox_common_lib import exceptions
 from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration
 from crczp.sandbox_common_lib.git_config import get_git_server
+from crczp.sandbox_common_lib.netbird_client import get_client_management_url
 from crczp.sandbox_definition_app.lib import definitions
 from crczp.sandbox_instance_app.lib import sandboxes, sshconfig
-from crczp.sandbox_instance_app.models import Pool, Sandbox, SandboxAllocationUnit
+from crczp.sandbox_instance_app.models import (
+    Pool,
+    Sandbox,
+    SandboxAllocationUnit,
+    SandboxNetbirdResources,
+)
 
 LOG = structlog.get_logger()
 
@@ -268,7 +278,9 @@ class AllocationAnsibleRunner(AnsibleRunner):
             'global_head_ip': settings.CRCZP_CONFIG.head_host,
             'global_syslog_destination_port': settings.CRCZP_CONFIG.syslog_destination_port,
         }
-        return Inventory(
+        extra_vars['global_netbird_management_url'] = get_client_management_url()
+
+        inventory = Inventory(
             sau.pool.get_pool_prefix(),
             sau.get_stack_name(),
             top_ins,
@@ -278,6 +290,20 @@ class AllocationAnsibleRunner(AnsibleRunner):
             user_public_key,
             extra_vars,
         )
+
+        # Attach each entrypoint's NetBird setup key as a host variable on the
+        # vpn_entrypoints group. Group membership itself is built from the
+        # topology definition by the inventory group builder; the setup key is
+        # runtime state that only exists once the entrypoint has been provisioned.
+        vpn_group = inventory.get_group(DefaultAnsibleHostsGroups.VPN_ENTRYPOINTS.value)
+        if vpn_group:
+            for nbr in SandboxNetbirdResources.objects.filter(sandbox=sau.sandbox):
+                if nbr.host_setup_key_value and nbr.entrypoint_host_name in vpn_group.hosts:
+                    vpn_group.hosts_vars[nbr.entrypoint_host_name] = {
+                        'netbird_setup_key': nbr.host_setup_key_value,
+                    }
+
+        return inventory
 
 
 class CleanupAnsibleRunner(AnsibleRunner):

@@ -11,7 +11,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 
 from crczp.sandbox_common_lib import exceptions
-from crczp.sandbox_instance_app.lib import request_handlers, sandboxes
+from crczp.sandbox_instance_app.lib import netbird, request_handlers, sandboxes
 from crczp.sandbox_instance_app.models import (
     AllocationRequest,
     CleanupRequest,
@@ -97,6 +97,7 @@ def create_cleanup_request_force(allocation_unit: SandboxAllocationUnit, delete_
 
     if sandbox:
         sandboxes.clear_cache(sandbox)
+        netbird.destroy_netbird_for_sandbox(sandbox)
         sandbox.delete()
 
     request_handlers.CleanupRequestHandler(delete_pool=delete_pool).enqueue_request(allocation_unit)
@@ -139,6 +140,7 @@ def create_cleanup_request(allocation_unit: SandboxAllocationUnit) -> None:
 
     if sandbox:
         sandboxes.clear_cache(sandbox)
+        netbird.destroy_netbird_for_sandbox(sandbox)
         sandbox.delete()
 
     request_handlers.CleanupRequestHandler().enqueue_request(allocation_unit)
