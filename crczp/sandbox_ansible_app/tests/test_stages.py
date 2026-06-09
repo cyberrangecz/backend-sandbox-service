@@ -1,3 +1,5 @@
+"""Tests for Ansible stage API views."""
+
 import pytest
 from rest_framework.reverse import reverse
 from rest_framework.test import APIRequestFactory
@@ -10,15 +12,20 @@ ALLOCATION_REQUEST_ID = 1
 
 
 class TestStages:
+    """Tests for Ansible stage views."""
 
     @pytest.fixture
     def arf(self):
+        """Return an APIRequestFactory instance."""
         return APIRequestFactory()
 
     def test_networking_stage_views(self, arf):
+        """Verify the networking Ansible allocation stage view returns expected data."""
         request_kwargs = {'request_id': ALLOCATION_REQUEST_ID}
         request = arf.get(reverse('networking-ansible-allocation-stage', kwargs=request_kwargs))
-        response = NetworkingAnsibleAllocationStageDetailView.as_view()(request, request_id=ALLOCATION_REQUEST_ID)
+        response = NetworkingAnsibleAllocationStageDetailView.as_view()(
+            request, request_id=ALLOCATION_REQUEST_ID
+        )
 
         assert response.data['id'] == 2
         assert response.data['rev'] == '04e97bb05456b37a74cd28732547b65f213e1b99'

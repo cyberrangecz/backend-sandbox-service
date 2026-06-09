@@ -14,8 +14,14 @@ repos:
 
   # swithc to ty after release
   # https://github.com/astral-sh/ty/issues/269
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.19.1
+  # Use a local hook so mypy runs in the project venv (django-stubs plugin needs
+  # all project deps, e.g. yamlize, to be importable when Django settings load).
+  - repo: local
     hooks:
       - id: mypy
         name: mypy
+        language: system
+        entry: uv run mypy
+        args: [crczp/]
+        types: [python]
+        pass_filenames: false

@@ -1,29 +1,32 @@
 """
 Definition Service module for Definition management.
 """
+
 import io
 import os
+from typing import TextIO
 
 import structlog
 import yaml
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import caches
-from crczp.topology_definition.models import TopologyDefinition, DockerContainers
-from crczp.topology_definition.image_naming import image_name_replace
-from yamlize import YamlizingError
-from typing import Optional, TextIO
-
 from generator.var_object import Variable
+from yamlize import YamlizingError
 
-from crczp.sandbox_common_lib import utils, exceptions
+from crczp.sandbox_ansible_app.lib.inventory import DefaultAnsibleHostsGroups
+from crczp.sandbox_common_lib import exceptions, git_config, utils
 from crczp.sandbox_common_lib.common_cloud import list_images
 from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration, GitType
 from crczp.sandbox_definition_app import serializers
-from crczp.sandbox_definition_app.lib.definition_providers import GitHubProvider, GitlabProvider, DefinitionProvider
+from crczp.sandbox_definition_app.lib.definition_providers import (
+    DefinitionProvider,
+    GitHubProvider,
+    GitlabProvider,
+)
 from crczp.sandbox_definition_app.models import Definition
-from crczp.sandbox_ansible_app.lib.inventory import DefaultAnsibleHostsGroups
-from crczp.sandbox_common_lib import git_config
+from crczp.topology_definition.image_naming import image_name_replace
+from crczp.topology_definition.models import DockerContainers, TopologyDefinition
 
 LOG = structlog.get_logger()
 
@@ -33,7 +36,7 @@ DOCKERFILE_FILENAME = 'Dockerfile'
 VARIABLES_FILENAME = 'variables.yml'
 
 
-def create_definition(url: str, created_by: Optional[User], rev: str = None) -> Definition:
+def create_definition(url: str, created_by: User | None, rev: str = 'master') -> Definition:
     """Validates and creates a new definition in database.
 
     :param url: URL of sandbox definition Git repository
@@ -49,12 +52,13 @@ def create_definition(url: str, created_by: Optional[User], rev: str = None) -> 
     client.validate_topology_definition(top_def)
 
     serializer = serializers.DefinitionSerializerCreate(
-        data=dict(name=top_def.name, url=url, rev=rev))
+        data={'name': top_def.name, 'url': url, 'rev': rev}
+    )
     if not serializer.is_valid():
         if str(serializer.errors).find("code='unique'") != -1:
-            error_message = "Error: Definition with these parameters already exists"
+            error_message = 'Error: Definition with these parameters already exists'
         else:
-            error_message = f"Unknown error: {serializer.errors}"
+            error_message = f'Unknown error: {serializer.errors}'
 
         raise exceptions.ValidationError(error_message)
     return serializer.save(created_by=created_by)
@@ -69,13 +73,13 @@ def load_definition(stream: TextIO) -> TopologyDefinition:
     try:
         topology_definition = TopologyDefinition.load(stream)
     except YamlizingError as ex:
-        raise exceptions.ValidationError(ex)
+        raise exceptions.ValidationError(ex) from ex
 
     image_naming_strategy = settings.CRCZP_CONFIG.image_naming_strategy
     if image_naming_strategy:
-        topology_definition = image_name_replace(image_naming_strategy.pattern,
-                                                 image_naming_strategy.replace,
-                                                 topology_definition)
+        topology_definition = image_name_replace(
+            image_naming_strategy.pattern, image_naming_strategy.replace, topology_definition
+        )
 
     flavor_mapping = settings.CRCZP_CONFIG.flavor_mapping
     if flavor_mapping:
@@ -98,7 +102,7 @@ def load_docker_containers(stream: TextIO) -> DockerContainers:
     try:
         containers = DockerContainers.load(stream)
     except YamlizingError as ex:
-        raise exceptions.ValidationError(ex)
+        raise exceptions.ValidationError(ex) from ex
     return containers
 
 
@@ -122,8 +126,9 @@ def get_definition(url: str, rev: str, config: CrczpConfiguration) -> TopologyDe
     try:
         definition = provider.get_file(SANDBOX_DEFINITION_FILENAME, rev_sha)
     except exceptions.GitError as ex:
-        raise exceptions.GitError("Failed to get sandbox definition file {}.\n"
-                                  .format(SANDBOX_DEFINITION_FILENAME) + str(ex))
+        raise exceptions.GitError(
+            f'Failed to get sandbox definition file {SANDBOX_DEFINITION_FILENAME}.\n' + str(ex)
+        ) from ex
 
     top_def = load_definition(io.StringIO(definition))
     validate_topology_definition(top_def)
@@ -142,7 +147,7 @@ def get_containers(url: str, rev: str, config: CrczpConfiguration) -> DockerCont
     try:
         provider = get_def_provider(url, config)
         containers = provider.get_file(DOCKER_CONTAINERS_FILENAME, rev)
-    except exceptions.GitError as ex:
+    except exceptions.GitError:
         return None
 
     return load_docker_containers(io.StringIO(containers))
@@ -162,7 +167,7 @@ def get_dockerfile(url: str, rev: str, config: CrczpConfiguration, path: str) ->
     return provider.get_file(os.path.join(path, DOCKERFILE_FILENAME), rev)
 
 
-def get_variables(url: str, rev: str, config: CrczpConfiguration) -> list:
+def get_variables(url: str, rev: str, config: CrczpConfiguration) -> list[Variable]:
     """Get APG variables file contents as an array of Variable object.
 
     :param url: URL of sandbox definition Git repository
@@ -175,18 +180,19 @@ def get_variables(url: str, rev: str, config: CrczpConfiguration) -> list:
         provider = get_def_provider(url, config)
         variables_file = provider.get_file(VARIABLES_FILENAME, rev)
     except exceptions.GitError as ex:
-        raise exceptions.GitError("Unable to retrieve {} file from repository.\n"
-                                  .format(VARIABLES_FILENAME) + str(ex))
-    var_list = yaml.load(variables_file, Loader=yaml.FullLoader)
+        raise exceptions.GitError(
+            f'Unable to retrieve {VARIABLES_FILENAME} file from repository.\n' + str(ex)
+        ) from ex
+    var_list = yaml.safe_load(variables_file)
 
     variables = []
-    for var in var_list.keys():
+    for var in var_list:
         v_name = var
-        v_type = var_list[var]["type"]
-        v_min = var_list[var].get("min")
-        v_max = var_list[var].get("max")
-        v_length = var_list[var].get("length")
-        v_prohibited = var_list[var].get("prohibited")
+        v_type = var_list[var]['type']
+        v_min = var_list[var].get('min')
+        v_max = var_list[var].get('max')
+        v_length = var_list[var].get('length')
+        v_prohibited = var_list[var].get('prohibited')
         if v_prohibited is None:
             v_prohibited = []
         variables.append(Variable(v_name, v_type, v_min, v_max, v_prohibited, v_length))
@@ -198,10 +204,12 @@ def get_def_provider(url: str, config: CrczpConfiguration) -> DefinitionProvider
     git_type = git_config.get_git_type(url)
     if git_type == GitType.GITLAB:
         return GitlabProvider(url, config)
-    elif git_type == GitType.GITHUB:
+    if git_type == GitType.GITHUB:
         return GitHubProvider(url, config)
-    raise exceptions.ImproperlyConfigured(f"Cannot determine provider type: {git_config.get_rest_server(url)} "
-                                          f"Supported types: gitlab, github")
+    raise exceptions.ImproperlyConfigured(
+        f'Cannot determine provider type: {git_config.get_rest_server(url)} '
+        f'Supported types: gitlab, github'
+    )
 
 
 def validate_topology_definition(topology_definition: TopologyDefinition) -> None:
@@ -216,35 +224,42 @@ def validate_topology_definition(topology_definition: TopologyDefinition) -> Non
 
     for group in user_defined_hosts_groups:
         if group.name in default_hosts_groups:
-            raise exceptions.ValidationError(f"Cannot redefine default CRCZP ansible hosts groups."
-                                             f" Colliding hosts group in topology definition:"
-                                             f" '{group.name}'.")
+            raise exceptions.ValidationError(
+                f'Cannot redefine default CRCZP ansible hosts groups.'
+                f' Colliding hosts group in topology definition:'
+                f" '{group.name}'."
+            )
 
     client = utils.get_terraform_client()
     terraform_flavors = client.get_flavors_dict()
     terraform_images = [image.name for image in list_images()]
 
-    used_flavors = [host.flavor for host in topology_definition.hosts] +\
-                   [router.flavor for router in topology_definition.routers]
+    used_flavors = [host.flavor for host in topology_definition.hosts] + [
+        router.flavor for router in topology_definition.routers
+    ]
 
-    used_images = [host.base_box.image for host in topology_definition.hosts] +\
-                  [router.base_box.image for router in topology_definition.routers]
+    used_images = [host.base_box.image for host in topology_definition.hosts] + [
+        router.base_box.image for router in topology_definition.routers
+    ]
 
     for flavor in used_flavors:
         if flavor not in terraform_flavors:
-            raise exceptions.ValidationError(f"Flavor {flavor} was not found on the terraform "
-                                             f"backend.")
+            raise exceptions.ValidationError(
+                f'Flavor {flavor} was not found on the terraform backend.'
+            )
 
     for image in used_images:
         if image not in terraform_images:
-            raise exceptions.ValidationError(f"Image {image} was not found on the terraform backend.")
+            raise exceptions.ValidationError(
+                f'Image {image} was not found on the terraform backend.'
+            )
 
 
 def validate_docker_containers(url: str, rev: str, config: CrczpConfiguration) -> None:
     """
     Validates docker containers in relation to themselves and the topology definition (ensures that
-    container_mappings contains existing containers and hosts) and that each container has either an image
-    or dockerfile path
+    container_mappings contains existing containers and hosts) and that each container has either
+    an image or dockerfile path
 
     :param url: URL of sandbox definition Git repository
     :param rev: Revision of the repository
@@ -256,17 +271,20 @@ def validate_docker_containers(url: str, rev: str, config: CrczpConfiguration) -
     if not containers:
         return
     for container in containers.containers:
-        if (not container.image and not container.dockerfile) or \
-                (container.image and container.dockerfile):
-            raise exceptions.ValidationError(f"Container {container.name} must have either image"
-                                             f" or dockerfile specified.")
+        if (not container.image and not container.dockerfile) or (
+            container.image and container.dockerfile
+        ):
+            raise exceptions.ValidationError(
+                f'Container {container.name} must have either image or dockerfile specified.'
+            )
         if container.dockerfile:
             try:
                 get_dockerfile(url, rev, config, container.dockerfile)
             except exceptions.GitError as ex:
                 raise exceptions.ValidationError(
-                    f"Container {container.name} contains invalid Dockerfile path. Error: {ex}")
-        # TODO add check for the existence of the image
+                    f'Container {container.name} contains invalid Dockerfile path. Error: {ex}'
+                ) from ex
+        # Note: image existence check not yet implemented
         # client = utils.get_terraform_client()
         # images = client.list_images()
     topdef_host_names = [host.name for host in topology_definition.hosts]
@@ -274,10 +292,13 @@ def validate_docker_containers(url: str, rev: str, config: CrczpConfiguration) -
 
     for container_mapping in containers.container_mappings:
         if container_mapping.container not in container_names:
-            raise exceptions.ValidationError(f"Invalid docker container mappings in containers.yml."
-                                             f" Container {container_mapping.container} is not"
-                                             f" defined in containers section.")
+            raise exceptions.ValidationError(
+                f'Invalid docker container mappings in containers.yml.'
+                f' Container {container_mapping.container} is not'
+                f' defined in containers section.'
+            )
         if container_mapping.host not in topdef_host_names:
-            raise exceptions.ValidationError(f"Invalid docker container mappings in containers.yml."
-                                             f" Host {container_mapping.host} does not exist.")
-
+            raise exceptions.ValidationError(
+                f'Invalid docker container mappings in containers.yml.'
+                f' Host {container_mapping.host} does not exist.'
+            )

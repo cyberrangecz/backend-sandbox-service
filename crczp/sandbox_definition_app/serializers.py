@@ -7,44 +7,57 @@ Validators validate single fields or entire objects.
 
 Swagger can utilise type hints to determine type, so use them in your own methods.
 """
-from rest_framework import serializers
+
+from typing import Any
+
 from drf_spectacular.utils import extend_schema_field
+from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
 from crczp.sandbox_common_lib.serializers import UserSerializer
 from crczp.sandbox_definition_app import models
 
 
-class DefinitionSerializer(serializers.ModelSerializer):
+class DefinitionSerializer(serializers.ModelSerializer['models.Definition']):
+    """Serializer for the Definition model."""
+
     created_by = serializers.SerializerMethodField()
 
-    class Meta:
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for DefinitionSerializer."""
+
         model = models.Definition
         fields = ('id', 'name', 'url', 'rev', 'created_by')
-        read_only_fields = ('id', 'name', 'created_by')
+        read_only_fields: tuple[str, ...] = ('id', 'name', 'created_by')
         validators = [
-            UniqueTogetherValidator(
-                queryset=models.Definition.objects.all(),
-                fields=['url', 'rev']
-            )
+            UniqueTogetherValidator(queryset=models.Definition.objects.all(), fields=['url', 'rev'])
         ]
-    @extend_schema_field(field=serializers.BooleanField())
+
+    @extend_schema_field(field=UserSerializer())
     @staticmethod
-    def get_created_by(obj: models.Definition) -> bool:
+    def get_created_by(obj: models.Definition) -> Any:
+        """Return the serialized user who created this definition."""
         return UserSerializer(obj.created_by).data
 
 
 class DefinitionSerializerCreate(DefinitionSerializer):
     """The name needs to be a readable field, otherwise it is ignored."""
-    class Meta(DefinitionSerializer.Meta):
-        read_only_fields = ('id',)
+
+    class Meta(DefinitionSerializer.Meta):  # pylint: disable=too-few-public-methods
+        """Meta options for DefinitionSerializerCreate."""
+
+        read_only_fields: tuple[str, ...] = ('id',)
 
 
-class DefinitionRevSerializer(serializers.Serializer):
+class DefinitionRevSerializer(serializers.Serializer[Any]):
+    """Serializer for a definition rev (name)."""
+
     name = serializers.CharField()
 
 
-class LocalVariableSerializer(serializers.Serializer):
+class LocalVariableSerializer(serializers.Serializer[Any]):
+    """Serializer for a local sandbox variable definition."""
+
     name = serializers.CharField()
     type = serializers.CharField()
     generated_value = serializers.CharField(read_only=True)
@@ -54,6 +67,8 @@ class LocalVariableSerializer(serializers.Serializer):
     prohibited = serializers.ListField()
 
 
-class LocalSandboxVariablesSerializer(serializers.Serializer):
+class LocalSandboxVariablesSerializer(serializers.Serializer[Any]):
+    """Serializer for local sandbox variable access credentials."""
+
     user_id = serializers.IntegerField()
     access_token = serializers.CharField()

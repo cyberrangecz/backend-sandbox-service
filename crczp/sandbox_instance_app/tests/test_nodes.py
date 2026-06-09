@@ -1,16 +1,24 @@
+"""Tests for VM node actions and retrieval."""
+
 import pytest
 
-from crczp.sandbox_instance_app.lib import nodes
 from crczp.sandbox_common_lib import exceptions
+from crczp.sandbox_instance_app.lib import nodes
 
 
 class TestNodeAction:
-    @pytest.mark.parametrize("action", [
-        "resume",
-        "reboot",
-    ])
+    """Tests for node_action function."""
+
+    @pytest.mark.parametrize(
+        'action',
+        [
+            'resume',
+            'reboot',
+        ],
+    )
     def test_node_action_success(self, mocker, action):
-        mock_client = mocker.patch("crczp.sandbox_common_lib.utils.get_terraform_client")
+        """Test that a valid node action calls the correct client method."""
+        mock_client = mocker.patch('crczp.sandbox_common_lib.utils.get_terraform_client')
         mock_instance = mock_client.return_value
         action_dict = {
             'resume': mock_instance.resume_node,
@@ -18,20 +26,25 @@ class TestNodeAction:
         }
 
         sb_mock = mocker.MagicMock()
-        node_name = "node_name"
+        node_name = 'node_name'
         nodes.node_action(sb_mock, node_name, action)
 
         action_dict[action].assert_called_once_with(
-            sb_mock.allocation_unit.get_stack_name.return_value, node_name)
+            sb_mock.allocation_unit.get_stack_name.return_value, node_name
+        )
 
     def test_node_action_unknown_action(self, mocker):
-        mocker.patch("crczp.sandbox_common_lib.utils.get_terraform_client")
+        """Test that an unknown action raises ValidationError."""
+        mocker.patch('crczp.sandbox_common_lib.utils.get_terraform_client')
         with pytest.raises(exceptions.ValidationError):
-            nodes.node_action(mocker.MagicMock(), "node_name", "non-action")
+            nodes.node_action(mocker.MagicMock(), 'node_name', 'non-action')
 
 
-class TestGetNode:
+class TestGetNode:  # pylint: disable=too-few-public-methods
+    """Tests for get_node function."""
+
     def test_get_node(self, mocker):
-        mock_client = mocker.patch("crczp.terraform_driver.CrczpTerraformClient.get_node")
-        result = nodes.get_node(mocker.MagicMock(), "node_name")
+        """Test that get_node returns the client's get_node result."""
+        mock_client = mocker.patch('crczp.terraform_driver.CrczpTerraformClient.get_node')
+        result = nodes.get_node(mocker.MagicMock(), 'node_name')
         assert result == mock_client.return_value

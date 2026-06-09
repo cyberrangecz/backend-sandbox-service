@@ -1,19 +1,23 @@
+"""Custom DRF exception handler for the sandbox service."""
+
+from typing import Any
+
 import structlog
 from django.conf import settings
 from django.http import Http404
-from crczp.cloud_commons import CrczpException
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import exception_handler
 
+from crczp.cloud_commons import CrczpException
 from crczp.sandbox_common_lib.exceptions import ApiException
 
 # Create logger
 LOG = structlog.get_logger()
 
 
-def custom_exception_handler(exc, context):
+def custom_exception_handler(exc: Exception, context: dict[str, Any]) -> Response:
     """Log all exceptions and handle CRCZP exceptions in a special way."""
 
     if isinstance(exc, PermissionDenied):
@@ -27,48 +31,67 @@ def custom_exception_handler(exc, context):
     else:
         # Call REST framework's default exception handler, to get the standard error response.
         # Handles only Django Errors.
-        response = exception_handler(exc, context)
+        exc_response = exception_handler(exc, context)
 
-        if response is None:
-            response = Response({
-                'detail': str(exc),
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        if exc_response is None:
+            response = Response(
+                {
+                    'detail': 'Internal server error. See pod logs for details.',
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        else:
+            response = exc_response
 
-    exc_info = settings.DEBUG or not isinstance(exc, (Http404,
-                                                      PermissionDenied,
-                                                      ValidationError,))
+    exc_info = settings.DEBUG or not isinstance(
+        exc,
+        (
+            Http404,
+            PermissionDenied,
+            ValidationError,
+        ),
+    )
     LOG.error(repr(exc), data=response.data if response else None, exc_info=exc_info)
     return response
 
 
-def handle_crczp_exception(exc, context):
+def handle_crczp_exception(exc: Exception, _context: dict[str, Any]) -> Response:
     """Handle OpenStack lib and this project exceptions."""
-    return Response({
-        'detail': str(exc),
-    }, status=status.HTTP_400_BAD_REQUEST)
+    return Response(
+        {
+            'detail': str(exc),
+        },
+        status=status.HTTP_400_BAD_REQUEST,
+    )
 
 
-def handle_permission_denied(exc, context):
+def handle_permission_denied(exc: PermissionDenied, context: dict[str, Any]) -> Response:
     """Add user-role list to Permission denied error."""
     try:
         user = context['request'].user
         user_groups = [g.name for g in user.groups.all()] if user else user
     except KeyError:
         user_groups = None
-    return Response({
-        'detail': f'{str(exc)} User roles: {str(user_groups)}'
-    }, status=status.HTTP_403_FORBIDDEN)
+    return Response(
+        {'detail': f'{str(exc)} User roles: {str(user_groups)}'}, status=status.HTTP_403_FORBIDDEN
+    )
 
 
-def handle_model_validation_error(exc, context):
+def handle_model_validation_error(exc: ValidationError, _context: dict[str, Any]) -> Response:
     """Fix error message in model validation error."""
-    return Response({
-        'detail': str(exc.detail),
-    }, status=status.HTTP_400_BAD_REQUEST)
+    return Response(
+        {
+            'detail': str(exc.detail),
+        },
+        status=status.HTTP_400_BAD_REQUEST,
+    )
 
 
-def handle_not_found(exc, context):
+def handle_not_found(exc: Http404, _context: dict[str, Any]) -> Response:
     """Fix error message in 404 not found."""
-    return Response({
-        'detail': str(exc),
-    }, status=status.HTTP_404_NOT_FOUND)
+    return Response(
+        {
+            'detail': str(exc),
+        },
+        status=status.HTTP_404_NOT_FOUND,
+    )

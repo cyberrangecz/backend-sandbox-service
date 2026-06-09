@@ -1,18 +1,19 @@
+"""OIDC JWT authentication utilities for sandbox UAG."""
+
+import base64
+from typing import Any, cast
+from urllib.parse import urlparse
+
 import requests
 import structlog
-import base64
-
-from urllib.parse import urlparse
 from django.conf import settings
 from django.core.cache import caches
 from django.utils.translation import gettext as _
 from jwkest.jwt import JWT
-from rest_framework.exceptions import AuthenticationFailed
-
 from oidc_auth.authentication import BearerTokenAuthentication
 from oidc_auth.settings import api_settings as oidc_auth_settings
 from oidc_auth.util import cache
-
+from rest_framework.exceptions import AuthenticationFailed
 
 LOG = structlog.get_logger()
 WELL_KNOWN_CONFIG_CACHE_TTL = oidc_auth_settings.OIDC_BEARER_TOKEN_EXPIRATION_TIME
@@ -20,28 +21,32 @@ CACHE = caches['default']
 OIDC_SUB_PREFIX = 'oidc-sub-'
 
 
-class JWTAccessTokenAuthentication(BearerTokenAuthentication):
+class JWTAccessTokenAuthentication(BearerTokenAuthentication):  # type: ignore[misc]
     """Use for Bearer token in JWT format. It allows multiple OIDC providers support."""
 
     @staticmethod
-    def extract_issuer(token):
+    def extract_issuer(token: str | bytes) -> str:
+        """Extract the issuer from a JWT token payload."""
         data = JWT().unpack(token).payload()
-        return data.get('iss').rstrip('/')
+        return cast(str, data.get('iss', '')).rstrip('/')
 
-    @cache(ttl=WELL_KNOWN_CONFIG_CACHE_TTL)
-    def get_well_known_config(self, provider):
+    @cache(ttl=WELL_KNOWN_CONFIG_CACHE_TTL)  # type: ignore[untyped-decorator]
+    def get_well_known_config(self, provider: dict[str, str]) -> dict[str, Any]:
+        """Fetch and cache the OpenID Connect well-known configuration for the given provider."""
         well_known_config_url = provider.get('well_known_config')
         if not well_known_config_url:
             well_known_config_url = provider['issuer'] + '/.well-known/openid-configuration'
-        response = requests.get(well_known_config_url)
+        response = requests.get(well_known_config_url, timeout=30)
         response.raise_for_status()
-        return response.json()
+        return cast(dict[str, Any], response.json())
 
-    def _get_userinfo(self, token):
+    def _get_userinfo(self, token: bytes) -> dict[str, Any]:
         issuer = self.extract_issuer(token)
-        LOG.debug("Issuer extracted from token.", issuer=issuer)
-        allowed_issuers = {provider['issuer']: provider
-                           for provider in settings.SANDBOX_UAG['ALLOWED_OIDC_PROVIDERS']}
+        LOG.debug('Issuer extracted from token.', issuer=issuer)
+        allowed_issuers = {
+            provider['issuer']: provider
+            for provider in settings.SANDBOX_UAG['ALLOWED_OIDC_PROVIDERS']
+        }
         if issuer not in allowed_issuers:
             msg = _('Issuer of the token is not listed in ALLOWED_OIDC_PROVIDERS.')
             raise AuthenticationFailed(msg)
@@ -55,37 +60,42 @@ class JWTAccessTokenAuthentication(BearerTokenAuthentication):
         userinfo_endpoint = provider.get('userinfo_endpoint')
         if not userinfo_endpoint:
             userinfo_endpoint = well_known_config['userinfo_endpoint']
-        http_headers = {'Authorization': 'Bearer {0}'.format(token.decode('ascii'))}
+        http_headers = {'Authorization': f'Bearer {token.decode("ascii")}'}
 
-        response = requests.get(userinfo_endpoint, headers=http_headers)
+        response = requests.get(userinfo_endpoint, headers=http_headers, timeout=30)
         response.raise_for_status()
 
-        return response.json()
+        return cast(dict[str, Any], response.json())
 
-    def get_userinfo(self, token):
-        sub = ""
+    def get_userinfo(self, token: bytes) -> dict[str, Any]:
+        sub = ''
         userinfo = None
         try:
             token_decoded = token.decode('ascii')
-            payload = token_decoded.split(".")[1]
-            payload_bytes = payload.encode("ascii")
+            payload = token_decoded.split('.')[1]
+            payload_bytes = payload.encode('ascii')
             payload_bytes_decoded = base64.b64decode(payload_bytes + b'==')
-            payload_string = payload_bytes_decoded.decode("ascii")
+            payload_string = payload_bytes_decoded.decode('ascii')
 
             sub_pos = payload_string.find('"sub":"')
             if sub_pos != -1:
-                payload_decoded_trim = payload_string[sub_pos + len('"sub":"'):]
-                sub = payload_decoded_trim[:payload_decoded_trim.find('"')]
+                payload_decoded_trim = payload_string[sub_pos + len('"sub":"') :]
+                sub = payload_decoded_trim[: payload_decoded_trim.find('"')]
                 userinfo = CACHE.get(OIDC_SUB_PREFIX + sub)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             LOG.warn(f'An exception occurred during parsing of the token: {e}')
 
         if not userinfo:
             userinfo = self._get_userinfo(token)
             if sub:
-                CACHE.set(OIDC_SUB_PREFIX + sub, userinfo,
-                          oidc_auth_settings.OIDC_BEARER_TOKEN_EXPIRATION_TIME)
+                CACHE.set(
+                    OIDC_SUB_PREFIX + sub,
+                    userinfo,
+                    oidc_auth_settings.OIDC_BEARER_TOKEN_EXPIRATION_TIME,
+                )
             else:
                 LOG.warn(
-                    'Sub was not found in the token, the result of this authentication will not be cached')
+                    'Sub was not found in the token, the result of this authentication'
+                    ' will not be cached'
+                )
         return userinfo

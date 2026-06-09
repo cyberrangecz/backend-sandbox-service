@@ -1,8 +1,9 @@
 """Project Quota App urls."""
 
 from django.urls import path
-from crczp.sandbox_cloud_app import views
 from django.views.decorators.cache import cache_page
+
+from crczp.sandbox_cloud_app import views
 
 urlpatterns = [
     path('info', views.ProjectInfoView.as_view(), name='project-info'),

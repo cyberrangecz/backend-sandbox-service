@@ -1,7 +1,8 @@
-from typing import List
+"""Topology representation classes for sandbox visualization."""
+
+from typing import Any
 
 import structlog
-from crczp.cloud_commons import TopologyInstance
 
 from crczp.sandbox_common_lib.common_cloud import list_images
 from crczp.sandbox_instance_app.lib.nodes import find_image_for_node, get_node_image_has_gui_access
@@ -9,11 +10,15 @@ from crczp.sandbox_instance_app.lib.nodes import find_image_for_node, get_node_i
 LOG = structlog.getLogger()
 
 
-class Topology(object):
+class Topology:  # pylint: disable=too-few-public-methods
     """Represents a topology of a sandbox."""
 
-    class HostNode(object):
-        def __init__(self, name, os_type, gui_access, is_accessible, ip):
+    class HostNode:  # pylint: disable=too-few-public-methods
+        """Represents a host node in the topology."""
+
+        def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+            self, name: str, os_type: str, gui_access: bool, is_accessible: Any, ip: Any
+        ) -> None:
             """
             Initialize a HostNode instance.
 
@@ -28,8 +33,18 @@ class Topology(object):
             self.is_accessible = is_accessible
             self.ip = ip
 
-    class RouterNode(HostNode):
-        def __init__(self, name, os_type, gui_access, subnets, is_accessible, ip):
+    class RouterNode(HostNode):  # pylint: disable=too-few-public-methods
+        """Represents a router node in the topology."""
+
+        def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+            self,
+            name: str,
+            os_type: str,
+            gui_access: bool,
+            subnets: list['Topology.Subnet'],
+            is_accessible: Any,
+            ip: Any,
+        ) -> None:
             """
             Initialize a RouterNode instance.
 
@@ -40,11 +55,13 @@ class Topology(object):
             :type subnets: List[Topology.Subnet]
             :param str ip: The IP address of the router
             """
-            super().__init__(name, os_type, gui_access,is_accessible, ip)
+            super().__init__(name, os_type, gui_access, is_accessible, ip)
             self.subnets = subnets
 
-    class Subnet(object):
-        def __init__(self, name, cidr, hosts):
+    class Subnet:  # pylint: disable=too-few-public-methods
+        """Represents a subnet in the topology."""
+
+        def __init__(self, name: str, cidr: str, hosts: list['Topology.HostNode']) -> None:
             """
             Initialize a Subnet instance.
 
@@ -57,16 +74,16 @@ class Topology(object):
             self.cidr = cidr
             self.hosts = hosts
 
-    def __init__(self, top_inst):
+    def __init__(self, top_inst: Any) -> None:
         """
         Initialize a Topology instance.
 
         :param TopologyInstance top_inst: The topology instance to build from
         """
-        self.routers = []
+        self.routers: list[Topology.RouterNode] = []
         self._build_topology(top_inst)
 
-    def _build_topology(self, top_inst):
+    def _build_topology(self, top_inst: Any) -> None:
         """
         Build the complete topology structure from TopologyInstance.
 
@@ -76,7 +93,9 @@ class Topology(object):
         subnets_dict = self._create_subnets_with_hosts(top_inst, images)
         self._create_routers_with_subnets(top_inst, images, subnets_dict)
 
-    def _create_subnets_with_hosts(self, top_inst, images):
+    def _create_subnets_with_hosts(
+        self, top_inst: Any, images: Any
+    ) -> dict[str, 'Topology.Subnet']:
         """
         Create all subnets and populate them with hosts.
 
@@ -93,16 +112,14 @@ class Topology(object):
                 continue
 
             hosts_in_network = self._get_hosts_for_network(network, top_inst, images)
-            subnet = self.Subnet(
-                name=network.name,
-                cidr=network.cidr,
-                hosts=hosts_in_network
-            )
+            subnet = self.Subnet(name=network.name, cidr=network.cidr, hosts=hosts_in_network)
             subnets_dict[network.name] = subnet
 
         return subnets_dict
 
-    def _create_routers_with_subnets(self, top_inst, images, subnets_dict):
+    def _create_routers_with_subnets(
+        self, top_inst: Any, images: Any, subnets_dict: dict[str, 'Topology.Subnet']
+    ) -> None:
         """
         Create routers and assign their connected subnets.
 
@@ -128,11 +145,11 @@ class Topology(object):
                 gui_access=get_node_image_has_gui_access(router_image),
                 subnets=router_subnets,
                 is_accessible=True,
-                ip=wan_ip
+                ip=wan_ip,
             )
             self.routers.append(router)
 
-    def _is_wan_network(self, network):
+    def _is_wan_network(self, network: Any) -> bool:
         """
         Check if network is a WAN network that should be ignored.
 
@@ -140,9 +157,11 @@ class Topology(object):
         :return: True if network is WAN, False otherwise
         :rtype: bool
         """
-        return network.name.lower() == 'wan'
+        return network.name.lower() == 'wan'  # type: ignore[no-any-return]
 
-    def _get_hosts_for_network(self, network, top_inst, images):
+    def _get_hosts_for_network(
+        self, network: Any, top_inst: Any, images: Any
+    ) -> list['Topology.HostNode']:
         """
         Get all hosts connected to a specific network.
 
@@ -167,13 +186,15 @@ class Topology(object):
                 os_type=host_image.os_type,
                 gui_access=get_node_image_has_gui_access(host_image),
                 is_accessible=network.accessible_by_user,
-                ip=link.ip
+                ip=link.ip,
             )
             hosts_in_network.append(host)
 
         return hosts_in_network
 
-    def _get_subnets_for_router(self, router_node, top_inst, subnets_dict):
+    def _get_subnets_for_router(
+        self, router_node: Any, top_inst: Any, subnets_dict: dict[str, 'Topology.Subnet']
+    ) -> list['Topology.Subnet']:
         """
         Get all subnets connected to a specific router.
 
@@ -195,7 +216,7 @@ class Topology(object):
 
         return router_subnets
 
-    def get_hosts(self):
+    def get_hosts(self) -> list['Topology.HostNode']:
         """
         Get all hosts from all routers' subnets.
 

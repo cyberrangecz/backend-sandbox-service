@@ -7,53 +7,102 @@ Validators validate single fields or entire objects.
 
 Swagger can utilise type hints to determine type, so use them in your own methods.
 """
+
 from rest_framework import serializers
 
 from crczp.sandbox_ansible_app import models
 
 
-class NetworkingAnsibleAllocationStageSerializer(serializers.ModelSerializer):
-    request_id = serializers.PrimaryKeyRelatedField(source='allocation_request', read_only=True)
+class NetworkingAnsibleAllocationStageSerializer(
+    serializers.ModelSerializer[models.NetworkingAnsibleAllocationStage]
+):
+    """Serializer for NetworkingAnsibleAllocationStage."""
 
-    class Meta:
+    request_id: serializers.PrimaryKeyRelatedField[models.NetworkingAnsibleAllocationStage] = (
+        serializers.PrimaryKeyRelatedField(source='allocation_request', read_only=True)
+    )
+
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for NetworkingAnsibleAllocationStageSerializer."""
+
         model = models.NetworkingAnsibleAllocationStage
-        fields = ('id', 'request_id', 'start', 'end', 'failed', 'error_message',
-                  'repo_url', 'rev')
+        fields = ('id', 'request_id', 'start', 'end', 'failed', 'error_message', 'repo_url', 'rev')
         read_only_fields = fields
 
 
-class UserAnsibleAllocationStageSerializer(serializers.ModelSerializer):
-    request_id = serializers.PrimaryKeyRelatedField(source='allocation_request', read_only=True)
+class UserAnsibleAllocationStageSerializer(
+    serializers.ModelSerializer[models.UserAnsibleAllocationStage]
+):
+    """Serializer for UserAnsibleAllocationStage."""
 
-    class Meta:
+    request_id: serializers.PrimaryKeyRelatedField[models.UserAnsibleAllocationStage] = (
+        serializers.PrimaryKeyRelatedField(source='allocation_request', read_only=True)
+    )
+
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for UserAnsibleAllocationStageSerializer."""
+
         model = models.UserAnsibleAllocationStage
-        fields = ('id', 'request_id', 'start', 'end', 'failed', 'error_message',
-                  'repo_url', 'rev')
+        fields = ('id', 'request_id', 'start', 'end', 'failed', 'error_message', 'repo_url', 'rev')
         read_only_fields = fields
 
 
-class NetworkingAnsibleCleanupStageSerializer(serializers.ModelSerializer):
-    request_id = serializers.PrimaryKeyRelatedField(source='cleanup_request', read_only=True)
+class NetworkingAnsibleCleanupStageSerializer(
+    serializers.ModelSerializer[models.NetworkingAnsibleCleanupStage]
+):
+    """Serializer for NetworkingAnsibleCleanupStage."""
 
-    class Meta:
+    request_id: serializers.PrimaryKeyRelatedField[models.NetworkingAnsibleCleanupStage] = (
+        serializers.PrimaryKeyRelatedField(source='cleanup_request', read_only=True)
+    )
+
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for NetworkingAnsibleCleanupStageSerializer."""
+
         model = models.NetworkingAnsibleCleanupStage
-        fields = ('id', 'request_id', 'start', 'end', 'failed', 'error_message',
-                  )
+        fields = (
+            'id',
+            'request_id',
+            'start',
+            'end',
+            'failed',
+            'error_message',
+        )
         read_only_fields = fields
 
 
-class UserAnsibleCleanupStageSerializer(serializers.ModelSerializer):
-    request_id = serializers.PrimaryKeyRelatedField(source='cleanup_request', read_only=True)
+class UserAnsibleCleanupStageSerializer(
+    serializers.ModelSerializer[models.UserAnsibleCleanupStage]
+):
+    """Serializer for UserAnsibleCleanupStage."""
 
-    class Meta:
+    request_id: serializers.PrimaryKeyRelatedField[models.UserAnsibleCleanupStage] = (
+        serializers.PrimaryKeyRelatedField(source='cleanup_request', read_only=True)
+    )
+
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for UserAnsibleCleanupStageSerializer."""
+
         model = models.UserAnsibleCleanupStage
-        fields = ('id', 'request_id', 'start', 'end', 'failed', 'error_message',
-                  )
+        fields = (
+            'id',
+            'request_id',
+            'start',
+            'end',
+            'failed',
+            'error_message',
+        )
         read_only_fields = fields
 
 
-class AllocationAnsibleOutputSerializer(serializers.ModelSerializer):
-    class Meta:
+class AllocationAnsibleOutputSerializer(
+    serializers.ModelSerializer[models.AllocationAnsibleOutput]
+):
+    """Serializer for AllocationAnsibleOutput."""
+
+    class Meta:  # pylint: disable=too-few-public-methods
+        """Meta options for AllocationAnsibleOutputSerializer."""
+
         model = models.AllocationAnsibleOutput
         fields = ('content',)
         read_only_fields = fields

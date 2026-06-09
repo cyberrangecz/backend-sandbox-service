@@ -1,8 +1,11 @@
-from rest_framework.permissions import DjangoModelPermissions, BasePermission
+"""Django REST Framework permission classes for sandbox API access."""
+
+from rest_framework.permissions import DjangoModelPermissions
 
 
 class ModelPermissions(DjangoModelPermissions):
     """Model permission which requires *view_<model_name>* permission for GET request."""
+
     perms_map = {
         'GET': ['%(app_label)s.view_%(model_name)s'],
         'OPTIONS': [],

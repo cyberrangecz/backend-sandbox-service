@@ -3,7 +3,7 @@ routers:
   os_type: debian
   gui_access: false
   is_accessible: true
-  ip: '100.100.100.2'
+  ip: null
   subnets:
   - name: server-switch
     cidr: 10.10.20.0/24
@@ -12,7 +12,7 @@ routers:
   os_type: debian
   gui_access: false
   is_accessible: true
-  ip: '100.100.100.3'
+  ip: null
   subnets:
   - name: home-switch
     cidr: 10.10.30.0/24

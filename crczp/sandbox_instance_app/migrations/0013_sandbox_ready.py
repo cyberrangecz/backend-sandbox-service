@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('sandbox_instance_app', '0012_poollock_training_access_token'),
     ]
@@ -13,6 +12,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='sandbox',
             name='ready',
-            field=models.BooleanField(default=False, help_text='Is the sandbox ready to use for trainings.'),
+            field=models.BooleanField(
+                default=False, help_text='Is the sandbox ready to use for trainings.'
+            ),
         ),
     ]

@@ -1,10 +1,10 @@
 [project]
 name = "crczp-sandbox-service"
-version = "2.1.0"
+version = "2.2.0"
 description = "simplifies manipulation of OpenStack cloud platform for CyberRangeCZ Platform purposes"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 authors = [{ name = "cybersecurityhub.cz" }]
 dependencies = [
     "crczp-terraform-client ~=1.0.3",
@@ -18,12 +18,13 @@ dependencies = [
     # https://github.com/snguyenthanh/better_profanity/issues/19
     "better-profanity ==0.6.1",
     "django ~=5.0",
-    "djangorestframework",
+    "djangorestframework ==3.15.2",
     "coreapi",
     "structlog",
     "colorama",
     "djangorestframework-yaml",
     "pyyaml",
+    "ruamel.yaml <0.18.0",
     "gitpython",
     "requests",
     "django-model-utils",
@@ -42,20 +43,11 @@ dependencies = [
     "six",
     "drf-spectacular",
     "cryptography",
-    "git-url-parse",
     "pyparsing",
     "kubernetes",
     "paramiko",
     "pygithub",
     "gunicorn"
-]
-
-[project.optional-dependencies]
-dev = [
-    "tox",
-    "pytest",
-    "pytest-mock",
-    "pytest-django"
 ]
 
 [project.urls]
@@ -66,6 +58,14 @@ GitHub = "https://github.com/cyberrangecz/backend-sandbox-service"
 #   https://github.com/astral-sh/uv/issues/3957
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "django-stubs[compatible-mypy]",
+    "djangorestframework-stubs[compatible-mypy]",
+    "types-requests",
+    "types-paramiko",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["crczp"]
@@ -78,8 +78,9 @@ exclude-packages = [
 ]
 
 [tool.ruff]
-line-length = 127
+line-length = 100
 preview = true
+src = ["crczp"]
 
 [tool.ruff.lint]
 select = [
@@ -97,9 +98,12 @@ select = [
     "I",
 ]
 
+[tool.ruff.lint.isort]
+known-first-party = ["crczp"]
+
 [tool.ruff.format]
 quote-style = "single"
-indent-style = "tab"
+indent-style = "space"
 docstring-code-format = true
 
 [tool.mypy]
@@ -110,9 +114,26 @@ pretty = true
 show_error_codes = true
 enable_error_code = ["deprecated", "explicit-override"]
 explicit_package_bases = true
+plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
+exclude = ["crczp/.*/migrations/.*\\.py$"]
 
-[tool.pylint]
-# You can add pylint configs here or in .pylintrc
+[tool.django-stubs]
+django_settings_module = "crczp.sandbox_service_project.settings"
+
+[[tool.mypy.overrides]]
+module = ["crczp.*.tests.*", "crczp.*.tests"]
+disallow_untyped_defs = false
+disallow_untyped_decorators = false
+disable_error_code = ["method-assign", "attr-defined"]
+
+[tool.pylint.main]
+ignore-paths = [".*/migrations/.*"]
+
+[tool.pylint.messages_control]
+disable = [
+    "duplicate-code",
+    "abstract-method",
+]
 
 [tool.bandit]
 skips = ["B101"]
@@ -120,6 +141,9 @@ skips = ["B101"]
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra -q"
+markers = [
+    "integration: mark test as integration test requiring external services (e.g. Redis)",
+]
 testpaths = [
     "crczp/sandbox_ansible_app/tests",
     "crczp/sandbox_common_lib/tests",

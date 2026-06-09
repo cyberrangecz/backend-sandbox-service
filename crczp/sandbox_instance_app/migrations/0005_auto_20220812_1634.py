@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('sandbox_instance_app', '0004_allocationterraformoutput_cleanupterraformoutput'),
     ]
@@ -13,6 +12,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='sandbox',
             name='id',
-            field=models.CharField(default='1', editable=False, max_length=36, primary_key=True, serialize=False),
+            field=models.CharField(
+                default='1', editable=False, max_length=36, primary_key=True, serialize=False
+            ),
         ),
     ]

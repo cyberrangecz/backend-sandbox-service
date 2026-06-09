@@ -1,6 +1,13 @@
+"""Serializer type stubs used for Swagger/OpenAPI schema generation."""
+
+from typing import Any
+
 from rest_framework import serializers
 
-class UserSerializer(serializers.Serializer):
+
+class UserSerializer(serializers.Serializer[Any]):
+    """Swagger stub serializer for a user."""
+
     id = serializers.IntegerField()
     sub = serializers.CharField()
     full_name = serializers.CharField()
@@ -9,7 +16,9 @@ class UserSerializer(serializers.Serializer):
     mail = serializers.CharField()
 
 
-class HardwareUsageSerializer(serializers.Serializer):
+class HardwareUsageSerializer(serializers.Serializer[Any]):
+    """Swagger stub serializer for hardware usage."""
+
     vcpu = serializers.CharField()
     ram = serializers.CharField()
     instances = serializers.CharField()
@@ -18,7 +27,9 @@ class HardwareUsageSerializer(serializers.Serializer):
     port = serializers.CharField()
 
 
-class SandboxDefinitionSerializer(serializers.Serializer):
+class SandboxDefinitionSerializer(serializers.Serializer[Any]):
+    """Swagger stub serializer for a sandbox definition."""
+
     id = serializers.IntegerField()
     name = serializers.CharField()
     url = serializers.CharField(help_text='SSH git URL of the definition')
@@ -26,48 +37,49 @@ class SandboxDefinitionSerializer(serializers.Serializer):
     created_by = UserSerializer()
 
 
-class DefinitionRequestSerializer(serializers.Serializer):
+class DefinitionRequestSerializer(serializers.Serializer[Any]):
+    """Swagger stub serializer for a sandbox definition request."""
+
     url = serializers.CharField(help_text='SSH git URL of the definition')
     rev = serializers.CharField(help_text='Git revision used')
 
 
-class PoolResponseSerializer(serializers.Serializer):
+class PoolResponseSerializer(serializers.Serializer[Any]):
+    """Swagger stub serializer for a pool response."""
+
     id = serializers.IntegerField(read_only=True)
     definition_id = serializers.IntegerField(help_text='Sandbox definition ID')
     size = serializers.IntegerField(
-        read_only=True,
-        default=0,
-        help_text='Current number of SandboxAllocationUnits'
+        read_only=True, default=0, help_text='Current number of SandboxAllocationUnits'
     )
-    max_size = serializers.IntegerField(
-        help_text='Maximum number of SandboxAllocationUnits'
-    )
+    max_size = serializers.IntegerField(help_text='Maximum number of SandboxAllocationUnits')
     lock_id = serializers.IntegerField(read_only=True)
-    rev = serializers.CharField(
-        read_only=True,
-        help_text='Name of used git branch'
-    )
-    rev_sha = serializers.CharField(
-        read_only=True,
-        help_text='SHA of used git branch'
-    )
+    rev = serializers.CharField(read_only=True, help_text='Name of used git branch')
+    rev_sha = serializers.CharField(read_only=True, help_text='SHA of used git branch')
     created_by = UserSerializer()
     hardware_usage = HardwareUsageSerializer()
     definition = SandboxDefinitionSerializer()
 
 
-class PoolRequestSerializer(serializers.Serializer):
+class PoolRequestSerializer(serializers.Serializer[Any]):
+    """Swagger stub serializer for a pool creation request."""
+
     definition_id = serializers.IntegerField(help_text='Sandbox definition ID')
     max_size = serializers.IntegerField(help_text='Maximum number of SandboxAllocationUnits')
     send_emails = serializers.BooleanField(
-        help_text='Send email notifications of allocation progress.',
-        required=False
+        help_text='Send email notifications of allocation progress.', required=False
     )
 
 
 # Optional: paginated list response serializer
-def get_paginated_response_serializer(item_serializer_class):
-    class PaginatedSerializer(serializers.Serializer):
+def get_paginated_response_serializer(
+    item_serializer_class: type[serializers.Serializer[Any]],
+) -> type[serializers.Serializer[Any]]:
+    """Return a dynamically generated paginated response serializer class."""
+
+    class PaginatedSerializer(serializers.Serializer[Any]):
+        """Inner paginated serializer with count/page metadata."""
+
         page = serializers.IntegerField()
         page_size = serializers.IntegerField()
         page_count = serializers.IntegerField()

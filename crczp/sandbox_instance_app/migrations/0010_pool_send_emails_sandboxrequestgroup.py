@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('sandbox_instance_app', '0009_pool_comment_pool_visible_and_more'),
     ]
@@ -19,12 +18,22 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='SandboxRequestGroup',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                (
+                    'id',
+                    models.AutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name='ID'
+                    ),
+                ),
                 ('unit_count', models.IntegerField()),
                 ('email', models.EmailField(max_length=254)),
                 ('failed_count', models.IntegerField(default=0)),
                 ('finished_count', models.IntegerField(default=0)),
-                ('pool', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='sandbox_instance_app.pool')),
+                (
+                    'pool',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT, to='sandbox_instance_app.pool'
+                    ),
+                ),
             ],
         ),
     ]

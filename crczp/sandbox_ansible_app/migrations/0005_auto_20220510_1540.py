@@ -4,7 +4,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('sandbox_instance_app', '0004_allocationterraformoutput_cleanupterraformoutput'),
         ('sandbox_ansible_app', '0004_auto_20210507_1234'),

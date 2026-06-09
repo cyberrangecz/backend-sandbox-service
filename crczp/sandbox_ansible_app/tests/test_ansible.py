@@ -1,35 +1,41 @@
+"""Tests for the Ansible runner utilities."""
+
 import pytest
 
 from crczp.sandbox_ansible_app.lib.ansible import AllocationAnsibleRunner
-from crczp.sandbox_instance_app.models import Sandbox
 from crczp.sandbox_instance_app.lib import sandboxes
+from crczp.sandbox_instance_app.models import Sandbox
 
 pytestmark = pytest.mark.django_db
 
 
 class TestPrepareInventoryFile:
+    """Tests for Ansible inventory file preparation."""
+
     @pytest.fixture(autouse=True)
-    def set_up(self, mocker, top_ins):
+    def set_up(self, mocker, top_ins):  # pylint: disable=attribute-defined-outside-init
+        """Set up mocks for each test."""
         self.client = mocker.patch('crczp.sandbox_common_lib.utils.get_terraform_client')
         self.client.get_sandbox.return_value = top_ins
         self.save_file = mocker.patch(
-            'crczp.sandbox_ansible_app.lib.ansible.AnsibleRunner.save_file')
+            'crczp.sandbox_ansible_app.lib.ansible.AnsibleRunner.save_file'
+        )
         yield
 
-    def test_prepare_inventory_file_success(self, mocker, top_ins):
+    def test_prepare_inventory_file_success(self, mocker, top_ins):  # pylint: disable=unused-argument
+        """Test that the inventory file is saved when preparing a successful allocation."""
         mock_inventory = mocker.patch('crczp.sandbox_ansible_app.lib.ansible.Inventory')
-        mocker.patch('crczp.sandbox_ansible_app.lib.ansible.docker.from_env')
-        sandboxes.get_topology_instance = mocker.MagicMock()
-        sandboxes.get_topology_instance.return_value = top_ins
+        mocker.patch.object(sandboxes, 'get_topology_instance', return_value=top_ins)
 
-        dir_path = '/tmp'
+        dir_path = '/tmp'  # nosec B108
         sandbox = Sandbox.objects.get(pk=1)
         AllocationAnsibleRunner(dir_path).prepare_inventory_file(sandbox)
 
         mock_inventory.assert_called_once()
 
     def test_prepare_inventory_object(self, mocker, top_ins, inventory):
-        mocker.patch('crczp.sandbox_ansible_app.lib.ansible.docker.from_env')
+        """Test that create_inventory returns a correctly structured inventory dict."""
+        mocker.patch.object(sandboxes, 'get_topology_instance', return_value=top_ins)
         dir_path = mocker.MagicMock()
         sandbox = Sandbox.objects.get(pk=1)
         sandbox.allocation_unit.pool.get_pool_prefix = mocker.MagicMock()

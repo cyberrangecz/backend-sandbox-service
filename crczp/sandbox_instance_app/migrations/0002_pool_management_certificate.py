@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('sandbox_instance_app', '0001_initial'),
     ]
@@ -13,7 +12,9 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='pool',
             name='management_certificate',
-            field=models.TextField(default='certificate', help_text='Certificate for windows management access.'),
+            field=models.TextField(
+                default='certificate', help_text='Certificate for windows management access.'
+            ),
             preserve_default=False,
         ),
     ]
