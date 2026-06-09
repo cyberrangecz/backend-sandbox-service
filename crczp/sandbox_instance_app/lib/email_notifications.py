@@ -54,31 +54,36 @@ class EmailManager:
     def __enter__(self) -> 'EmailManager':
         encryption = self.config.smtp_encryption
 
-        if encryption in (SMTPEncryption.INSECURE, SMTPEncryption.TSL):
-            self.smtp = smtplib.SMTP(
-                self.config.smtp_server,
-                self.config.smtp_port,
-            )
-        elif encryption == SMTPEncryption.SSL:
-            context = ssl.create_default_context()
-            self.smtp = smtplib.SMTP_SSL(
-                self.config.smtp_server,
-                self.config.smtp_port,
-                context=context,
-            )
+        try:
+            if encryption in (SMTPEncryption.INSECURE, SMTPEncryption.TSL):
+                self.smtp = smtplib.SMTP(
+                    self.config.smtp_server,
+                    self.config.smtp_port,
+                )
+            elif encryption == SMTPEncryption.SSL:
+                context = ssl.create_default_context()
+                self.smtp = smtplib.SMTP_SSL(
+                    self.config.smtp_server,
+                    self.config.smtp_port,
+                    context=context,
+                )
 
-        if encryption == SMTPEncryption.TSL:
-            if self.smtp is None:
-                raise EmailException('SMTP connection was not established.')
-            self.smtp.starttls()
+            if encryption == SMTPEncryption.TSL:
+                if self.smtp is None:
+                    raise EmailException('SMTP connection was not established.')
+                self.smtp.starttls()
 
-        if encryption != SMTPEncryption.INSECURE:
-            if self.smtp is None:
-                raise EmailException('SMTP connection was not established.')
-            self.smtp.login(
-                self.config.sender_email,
-                self.config.sender_email_password,
-            )
+            if encryption != SMTPEncryption.INSECURE:
+                if self.smtp is None:
+                    raise EmailException('SMTP connection was not established.')
+                self.smtp.login(
+                    self.config.sender_email,
+                    self.config.sender_email_password,
+                )
+        except Exception:
+            if self.smtp:
+                self.smtp.quit()
+            raise
 
         return self
 
