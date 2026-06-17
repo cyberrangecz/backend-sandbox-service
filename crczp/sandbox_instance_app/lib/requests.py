@@ -46,10 +46,19 @@ def create_allocations_requests(
     """Batch version of create_allocation_request. Create count Sandbox Requests."""
 
     with transaction.atomic():
-        units = [
-            SandboxAllocationUnit.objects.create(pool=pool, created_by=created_by)
-            for _ in range(count)
-        ]
+        units = []
+        for _ in range(count):
+            unit = SandboxAllocationUnit.objects.create(pool=pool, created_by=created_by)
+            # Create the AllocationRequest row synchronously, in the request thread,
+            # so the allocation-units listing never returns a freshly created unit
+            # with allocation_request=null (the frontend renders that null as
+            # "Unknown error / Unknown stage In Queue"). The expensive work — SSH
+            # keygen, Sandbox creation and stage enqueuing — still happens later on
+            # the default worker via enqueue_request. Until the worker creates the
+            # stage rows, get_allocation_request_stages_state reports all stages as
+            # IN_QUEUE, which is the correct state for a just-queued request.
+            AllocationRequest.objects.create(allocation_unit=unit)
+            units.append(unit)
 
         transaction.on_commit(
             partial(request_handlers.AllocationRequestHandler().enqueue_request, units, created_by)

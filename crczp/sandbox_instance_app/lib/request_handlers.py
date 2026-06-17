@@ -239,7 +239,12 @@ class AllocationRequestHandler(RequestHandler):
 
         for unit in units:
             LOG.info('Creating sandbox for allocation unit: %s', unit.id)
-            self.request = AllocationRequest.objects.create(allocation_unit=unit)
+            # The AllocationRequest is normally pre-created synchronously in the
+            # request thread (see requests.create_allocations_requests) so the
+            # listing endpoint never serves a unit with allocation_request=null;
+            # reuse it here. get_or_create keeps callers that enqueue without
+            # pre-creating the request (e.g. tests, restart) working unchanged.
+            self.request, _ = AllocationRequest.objects.get_or_create(allocation_unit=unit)
             pri_key, pub_key = utils.generate_ssh_keypair()
             sandbox = Sandbox(
                 id=sandboxes.generate_new_sandbox_uuid(),
