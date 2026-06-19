@@ -14,7 +14,7 @@ from rest_framework.response import Response
 from crczp.sandbox_cloud_app import serializers
 from crczp.sandbox_cloud_app.lib import projects
 from crczp.sandbox_common_lib import utils
-from crczp.sandbox_common_lib.common_cloud import list_images
+from crczp.sandbox_common_lib.common_cloud import list_flavors, list_images
 from crczp.sandbox_instance_app.models import Pool
 
 LOG = structlog.get_logger()
@@ -153,6 +153,74 @@ class ProjectImagesView(generics.ListAPIView[Any]):
         if page is not None:
             return self.get_paginated_response(page)
         return Response({'image_set': serialized_image_set.data})
+
+
+class ProjectFlavorsView(generics.ListAPIView[Any]):
+    """View to retrieve and filter available OpenStack flavors."""
+
+    queryset = Pool.objects.none()
+    serializer_class = serializers.FlavorSerializer
+
+    @override
+    @property
+    def paginator(self) -> BasePagination | None:
+        _paginator = super().paginator
+        _paginator.sort_by_default_param = 'name'  # type: ignore[union-attr]
+        _paginator.sorting_default_values = {  # type: ignore[union-attr]
+            # values replace None during sorting
+            'ram': float('-inf'),
+            'disk': float('-inf'),
+            'ephemeral': float('-inf'),
+            'vcpus': float('-inf'),
+            'is_public': False,
+        }
+        return _paginator
+
+    @extend_schema(
+        tags=['cloud'],
+        parameters=[
+            OpenApiParameter(name='name', location=OpenApiParameter.QUERY, type=OpenApiTypes.STR),
+            OpenApiParameter(
+                name='cached',
+                location=OpenApiParameter.QUERY,
+                type=OpenApiTypes.BOOL,
+                description='Performs the faster version of this endpoint.',
+                default=False,
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=serializers.FlavorSerializer(many=True), description='List of flavors'
+            ),
+            **{k: v for k, v in utils.ERROR_RESPONSES.items() if k in [401, 403, 500]},
+        },
+    )
+    @override
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """
+        Get list of flavors.
+        """
+        cached_request = request.GET.get('cached', 'false').lower() == 'true'
+        flavor_set = list_flavors(cached=cached_request)
+
+        if flavor_set:
+            flavor_attributes = [
+                attribute for attribute in dir(flavor_set[0]) if not attribute.startswith('__')
+            ]
+            for attribute in flavor_attributes:
+                attribute_filter = request.GET.get(attribute)
+                if attribute_filter:
+                    flavor_set = [
+                        flavor
+                        for flavor in flavor_set
+                        if getattr(flavor, attribute)
+                        and attribute_filter in str(getattr(flavor, attribute))
+                    ]
+        serialized_flavor_set = serializers.FlavorSerializer(flavor_set, many=True)
+        page = self.paginate_queryset(serialized_flavor_set.data)  # type: ignore[arg-type]
+        if page is not None:
+            return self.get_paginated_response(page)
+        return Response({'flavor_set': serialized_flavor_set.data})
 
 
 class ProjectLimitsView(generics.RetrieveAPIView[Any]):
