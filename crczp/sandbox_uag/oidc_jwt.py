@@ -60,7 +60,7 @@ class JWTAccessTokenAuthentication(BearerTokenAuthentication):  # type: ignore[m
         userinfo_endpoint = provider.get('userinfo_endpoint')
         if not userinfo_endpoint:
             userinfo_endpoint = well_known_config['userinfo_endpoint']
-        http_headers = {'Authorization': f'Bearer {token.decode("ascii")}'}
+        http_headers = {'Authorization': f'Bearer {token.decode("utf-8")}'}
 
         response = requests.get(userinfo_endpoint, headers=http_headers, timeout=30)
         response.raise_for_status()
@@ -71,11 +71,14 @@ class JWTAccessTokenAuthentication(BearerTokenAuthentication):  # type: ignore[m
         sub = ''
         userinfo = None
         try:
-            token_decoded = token.decode('ascii')
+            token_decoded = token.decode('utf-8')
             payload = token_decoded.split('.')[1]
-            payload_bytes = payload.encode('ascii')
-            payload_bytes_decoded = base64.b64decode(payload_bytes + b'==')
-            payload_string = payload_bytes_decoded.decode('ascii')
+            payload_bytes = payload.encode('utf-8')
+            padding = '=' * (-len(payload) % 4)
+            payload_bytes_decoded = base64.urlsafe_b64decode(
+                payload_bytes + padding.encode('utf-8')
+            )
+            payload_string = payload_bytes_decoded.decode('utf-8')
 
             sub_pos = payload_string.find('"sub":"')
             if sub_pos != -1:
