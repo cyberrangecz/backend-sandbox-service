@@ -18,6 +18,15 @@ repos:
   # all project deps, e.g. yamlize, to be importable when Django settings load).
   - repo: local
     hooks:
+      - id: check-version-bump
+        name: check version bump
+        language: system
+        entry: 'bash -c ''current=$(git show :pyproject.toml 2>/dev/null | grep -m1 "^version" | grep -oE "[0-9]+\.[0-9]+\.[0-9]+"); latest_tag=$(git tag --sort=-version:refname | grep -E "^v?[0-9]+\.[0-9]+\.[0-9]+$" | head -1 | sed "s/^v//"); [ -z "$latest_tag" ] && exit 0; [ "$current" = "$latest_tag" ] && { echo "Version not bumped (still $current, latest tag $latest_tag)" >&2; exit 1; }; echo "Version OK $latest_tag -> $current"'''
+        pass_filenames: false
+        always_run: true
+
+  - repo: local
+    hooks:
       - id: mypy
         name: mypy
         language: system
