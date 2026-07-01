@@ -176,7 +176,9 @@ class NetbirdConfiguration(Object):  # type: ignore[misc]
     # every Netbird client creation so a rotated secret (e.g. a volume-mounted
     # Kubernetes Secret) is picked up without restarting the service.
     service_user_pat_file = Attribute(type=str)
-    key_expiry_seconds = Attribute(type=int, default=1209600)
+    key_expiry_seconds = Attribute(
+        type=int, default=1209600, validator=crczp_config_validation.validate_netbird_key_expiry
+    )
     # Upper bound (seconds) on the time spent tearing down a single sandbox's
     # Netbird resources during cleanup. Teardown runs synchronously in the
     # request thread, so a slow or unreachable Netbird endpoint must not block
