@@ -5,10 +5,24 @@ from typing import Any
 import requests as http_requests
 from django.conf import settings
 
-# DNS nameserver wire defaults for nameserver-group entries. NetBird identifies a
-# plain DNS-over-UDP resolver as ns_type "udp" on the standard port 53.
+# Wire defaults applied to each nameserver entry: a plain DNS-over-UDP resolver
+# on the standard DNS port.
 _DNS_NS_TYPE = 'udp'
 _DNS_NS_PORT = 53
+
+# Routing metric assigned to every sandbox route.
+_ROUTE_METRIC = 9999
+
+# The not-found status, tolerated as success by the delete and lookup operations.
+_NOT_FOUND: frozenset[int] = frozenset({404})
+
+# Management API collection paths; item operations append the resource id.
+_GROUPS_PATH = '/api/groups'
+_SETUP_KEYS_PATH = '/api/setup-keys'
+_ROUTES_PATH = '/api/routes'
+_POLICIES_PATH = '/api/policies'
+_NAMESERVERS_PATH = '/api/dns/nameservers'
+_PEERS_PATH = '/api/peers'
 
 
 class NetbirdConfigError(Exception):
@@ -38,47 +52,49 @@ class NetbirdClient:
             'Content-Type': 'application/json',
             'Accept': 'application/json',
         })
-        # An empty/falsy value must not silently disable TLS verification:
-        # `requests` treats a falsy `verify` as "do not verify", so fall back to
-        # `True` (use the default CA store) rather than turning verification off
-        # on traffic carrying the PAT and setup keys.
+        # A falsy value must never disable TLS verification on PAT-bearing traffic:
+        # `requests` treats a falsy `verify` as "off", so fall back to True.
         self._session.verify = settings.CRCZP_CONFIG.ssl_ca_certificate_verify or True
 
-    def _url(self, path: str) -> str:
-        return f'{self._base_url}{path}'
-
-    def _raise_for_status(self, method: str, url: str, response: http_requests.Response) -> None:
-        if response.status_code >= 400:
-            raise NetbirdApiError(method, url, response.status_code, response.text)
-
-    def _request(self, method: str, path: str, **kwargs: Any) -> http_requests.Response:
-        url = self._url(path)
+    def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        accept_statuses: frozenset[int] = frozenset(),
+        **kwargs: Any,
+    ) -> http_requests.Response:
+        url = f'{self._base_url}{path}'
         try:
             response = self._session.request(method, url, timeout=self._timeout, **kwargs)
         except http_requests.RequestException as exc:
-            # Catch the full requests exception hierarchy (ConnectionError,
-            # Timeout, SSLError, ChunkedEncodingError, RetryError, …) so a
-            # misbehaving Netbird endpoint cannot leak an uncaught exception
-            # out of the client and kill the worker mid-cleanup.
+            # Normalise the entire requests exception hierarchy to NetbirdApiError
+            # so a misbehaving endpoint cannot kill the worker mid-cleanup.
             raise NetbirdApiError(method, url, 0, str(exc)) from exc
+        if response.status_code >= 400 and response.status_code not in accept_statuses:
+            raise NetbirdApiError(method, url, response.status_code, response.text)
         return response
+
+    def _create_and_get_id(self, path: str, payload: dict[str, Any]) -> str:
+        """POST ``payload`` to ``path`` and return the created resource's ID."""
+        response = self._request('POST', path, json=payload)
+        return str(response.json()['id'])
+
+    def _delete_if_present(self, path: str) -> None:
+        """DELETE ``path``, tolerating a 404 if the resource is already gone."""
+        self._request('DELETE', path, accept_statuses=_NOT_FOUND)
 
     # ---- Groups ----
 
     def create_group(self, name: str) -> str:
         """Create a group and return its ID."""
-        path = '/api/groups'
-        response = self._request('POST', path, json={'name': name, 'peers': [], 'resources': []})
-        self._raise_for_status('POST', self._url(path), response)
-        return str(response.json()['id'])
+        return self._create_and_get_id(
+            _GROUPS_PATH, {'name': name, 'peers': [], 'resources': []}
+        )
 
     def delete_group(self, group_id: str) -> None:
         """Delete a group, tolerating a 404 if it is already gone."""
-        path = f'/api/groups/{group_id}'
-        response = self._request('DELETE', path)
-        if response.status_code == 404:
-            return
-        self._raise_for_status('DELETE', self._url(path), response)
+        self._delete_if_present(f'{_GROUPS_PATH}/{group_id}')
 
     # ---- Setup Keys ----
 
@@ -89,7 +105,6 @@ class NetbirdClient:
         expires_in_seconds: int,
     ) -> tuple[str, str]:
         """Create a reusable setup key and return its (id, key) pair."""
-        path = '/api/setup-keys'
         payload = {
             'name': name,
             'type': 'reusable',
@@ -99,18 +114,13 @@ class NetbirdClient:
             'ephemeral': False,
             'allow_extra_dns_labels': False,
         }
-        response = self._request('POST', path, json=payload)
-        self._raise_for_status('POST', self._url(path), response)
+        response = self._request('POST', _SETUP_KEYS_PATH, json=payload)
         data = response.json()
         return str(data['id']), str(data['key'])
 
     def delete_setup_key(self, key_id: str) -> None:
         """Delete a setup key, tolerating a 404 if it is already gone."""
-        path = f'/api/setup-keys/{key_id}'
-        response = self._request('DELETE', path)
-        if response.status_code == 404:
-            return
-        self._raise_for_status('DELETE', self._url(path), response)
+        self._delete_if_present(f'{_SETUP_KEYS_PATH}/{key_id}')
 
     # ---- Routes ----
 
@@ -124,29 +134,21 @@ class NetbirdClient:
     ) -> str:
         # pylint: disable=too-many-arguments,too-many-positional-arguments
         """Create a network route and return its ID."""
-        path = '/api/routes'
-        payload = {
+        return self._create_and_get_id(_ROUTES_PATH, {
             'description': description,
             'network_id': network_id,
             'enabled': True,
-            'metric': 9999,
+            'metric': _ROUTE_METRIC,
             'masquerade': True,
             'keep_route': False,
             'peer_groups': peer_group_ids,
             'network': cidr,
             'groups': client_group_ids,
-        }
-        response = self._request('POST', path, json=payload)
-        self._raise_for_status('POST', self._url(path), response)
-        return str(response.json()['id'])
+        })
 
     def delete_route(self, route_id: str) -> None:
         """Delete a route, tolerating a 404 if it is already gone."""
-        path = f'/api/routes/{route_id}'
-        response = self._request('DELETE', path)
-        if response.status_code == 404:
-            return
-        self._raise_for_status('DELETE', self._url(path), response)
+        self._delete_if_present(f'{_ROUTES_PATH}/{route_id}')
 
     # ---- Policies ----
 
@@ -157,8 +159,7 @@ class NetbirdClient:
         destination_group_ids: list[str],
     ) -> str:
         """Create an access policy and return its ID."""
-        path = '/api/policies'
-        payload = {
+        return self._create_and_get_id(_POLICIES_PATH, {
             'name': name,
             'description': '',
             'enabled': True,
@@ -174,18 +175,11 @@ class NetbirdClient:
                     'destinations': destination_group_ids,
                 }
             ],
-        }
-        response = self._request('POST', path, json=payload)
-        self._raise_for_status('POST', self._url(path), response)
-        return str(response.json()['id'])
+        })
 
     def delete_policy(self, policy_id: str) -> None:
         """Delete a policy, tolerating a 404 if it is already gone."""
-        path = f'/api/policies/{policy_id}'
-        response = self._request('DELETE', path)
-        if response.status_code == 404:
-            return
-        self._raise_for_status('DELETE', self._url(path), response)
+        self._delete_if_present(f'{_POLICIES_PATH}/{policy_id}')
 
     # ---- DNS ----
 
@@ -207,8 +201,7 @@ class NetbirdClient:
         all queries and ``domains`` must be empty; when false they resolve only
         the listed ``domains``.
         """
-        path = '/api/dns/nameservers'
-        payload = {
+        return self._create_and_get_id(_NAMESERVERS_PATH, {
             'name': name,
             'description': description,
             'nameservers': [
@@ -219,63 +212,43 @@ class NetbirdClient:
             'primary': primary,
             'domains': domains,
             'search_domains_enabled': search_domains_enabled,
-        }
-        response = self._request('POST', path, json=payload)
-        self._raise_for_status('POST', self._url(path), response)
-        return str(response.json()['id'])
+        })
 
     def delete_nameserver_group(self, nameserver_group_id: str) -> None:
         """Delete a nameserver group, tolerating a 404 if it is already gone."""
-        path = f'/api/dns/nameservers/{nameserver_group_id}'
-        response = self._request('DELETE', path)
-        if response.status_code == 404:
-            return
-        self._raise_for_status('DELETE', self._url(path), response)
+        self._delete_if_present(f'{_NAMESERVERS_PATH}/{nameserver_group_id}')
 
     # ---- Peers ----
 
     def list_group_peer_ids(self, group_id: str) -> list[str]:
         """Return the peer IDs that are members of the given group.
 
-        Used at teardown to find every agent (entrypoint host or trainee client)
-        that registered into a sandbox group via its setup key, so the peers can
-        be deleted from the control plane. A 404 (group already gone) yields [].
+        A 404 (group already gone) yields an empty list. Used at teardown to find
+        the peers registered into a sandbox group so they can be removed.
         """
-        path = f'/api/groups/{group_id}'
-        response = self._request('GET', path)
+        response = self._request('GET', f'{_GROUPS_PATH}/{group_id}', accept_statuses=_NOT_FOUND)
         if response.status_code == 404:
             return []
-        self._raise_for_status('GET', self._url(path), response)
-        # GET /api/groups/{id} returns peers as a list of {id, name} objects;
-        # tolerate plain-string ids defensively.
+        # Peers come back as {id, name} objects; tolerate plain-string ids too.
         peers = response.json().get('peers') or []
-        ids: list[str] = []
-        for p in peers:
-            if isinstance(p, dict) and p.get('id'):
-                ids.append(p['id'])
-            elif isinstance(p, str):
-                ids.append(p)
-        return ids
+        return [
+            peer['id'] if isinstance(peer, dict) else peer
+            for peer in peers
+            if (isinstance(peer, dict) and peer.get('id')) or isinstance(peer, str)
+        ]
 
     def delete_peer(self, peer_id: str) -> None:
         """Delete a peer, tolerating a 404 if it is already gone."""
-        path = f'/api/peers/{peer_id}'
-        response = self._request('DELETE', path)
-        if response.status_code == 404:
-            return
-        self._raise_for_status('DELETE', self._url(path), response)
+        self._delete_if_present(f'{_PEERS_PATH}/{peer_id}')
 
 
 def _read_service_user_pat(path: str) -> str:
-    # Read fresh on every call so a rotated secret (volume-mounted Kubernetes
-    # Secret) is picked up without restarting the service. Any failure to read
-    # or decode the file (missing file, permission denied, non-UTF-8 contents,
-    # …) is normalised to NetbirdConfigError so callers only have to guard a
-    # single exception type. UnicodeDecodeError is a ValueError, not an OSError,
-    # so it must be caught explicitly.
+    # Read fresh each call so a rotated secret is picked up without a restart.
+    # UnicodeDecodeError is a ValueError, not an OSError, so it must be caught
+    # explicitly alongside OSError.
     try:
-        with open(path, encoding='utf-8') as f:
-            pat = f.read().strip()
+        with open(path, encoding='utf-8') as pat_file:
+            pat = pat_file.read().strip()
     except (OSError, UnicodeDecodeError) as exc:
         raise NetbirdConfigError(
             f'Cannot read Netbird service user PAT file {path}: {exc}'
