@@ -421,6 +421,48 @@ class TestProvision:
         client.delete_group.assert_any_call('host-grp')
         client.delete_group.assert_any_call('access-grp')
 
+    def test_end_guard_tears_down_access_group_when_row_deleted_mid_provision(
+        self, mocker, sandbox, netbird_cfg
+    ):
+        """Regression: the access group is torn down even if its DB row is gone.
+
+        If the sandbox is cascade-deleted mid-provision, the SandboxNetbirdAccess
+        row disappears while a Netbird object already exists. The error path must
+        keep the in-memory handle (not re-read the deleted row as None) so the end
+        guard can still delete the created access group rather than orphan it.
+        """
+        client = MagicMock()
+        client.create_group.side_effect = ['access-grp', 'host-grp']
+        client.list_group_peer_ids.return_value = []
+
+        def _delete_row_then_fail(*_args, **_kwargs):
+            # The access group already exists in Netbird; now simulate the
+            # sandbox's cascade-delete removing the access row mid-provision.
+            SandboxNetbirdAccess.objects.filter(sandbox=sandbox).delete()
+            raise NetbirdApiError('POST', 'url', 500, 'fail')
+
+        client.create_setup_key.side_effect = _delete_row_then_fail
+        mocker.patch(f'{NETBIRD_MODULE}.get_netbird_client', return_value=client)
+        mocker.patch(
+            f'{NETBIRD_MODULE}._get_vpn_entrypoints',
+            return_value=[FakeEntrypoint('server', ['10.0.0.0/24'])],
+        )
+
+        # Start guard sees the sandbox (True); end guard sees it gone (False).
+        exists_results = iter([True, False])
+        mocker.patch(
+            f'{NETBIRD_MODULE}.Sandbox.objects.filter',
+            side_effect=lambda **_kw: type(
+                '_QS', (), {'exists': lambda self: next(exists_results)}
+            )(),
+        )
+
+        netbird.provision_netbird_for_sandbox(sandbox)
+
+        # The created access group is torn down from the retained handle even
+        # though its DB row was deleted before the error handler ran.
+        client.delete_group.assert_any_call('access-grp')
+
     def test_creates_dns_primary_nameserver_group(self, mocker, sandbox, netbird_cfg):
         """vpn.dns without search domains creates a primary nameserver group."""
         client = MagicMock()

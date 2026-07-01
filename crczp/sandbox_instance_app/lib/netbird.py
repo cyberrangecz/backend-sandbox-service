@@ -97,18 +97,16 @@ def _make_network_id(stack_name: str, host_name: str, cidr: str) -> str:
 
 def _provision_access(
     client: NetbirdClient,
-    sandbox: Sandbox,
+    access: SandboxNetbirdAccess,
     stack_name: str,
     key_expiry_seconds: int,
-) -> SandboxNetbirdAccess:
-    """Create the single shared access group and setup key for the sandbox.
+) -> None:
+    """Populate the sandbox's shared access group and setup key onto ``access``.
 
     Every entrypoint's policy uses this one access group as its source and every
     route uses it as the access-control group; the setup key is the single key
     exposed to clients via the VPN API endpoint.
     """
-    access, _ = SandboxNetbirdAccess.objects.get_or_create(sandbox=sandbox)
-
     access_group_id = client.create_group(f'{stack_name}-access')
     access.access_group_id = access_group_id
     access.save()
@@ -121,8 +119,6 @@ def _provision_access(
     access.access_setup_key_id = access_key_id
     access.access_setup_key_value = access_key_value
     access.save()
-
-    return access
 
 
 def _provision_dns(
@@ -327,9 +323,10 @@ def _provision_netbird_for_sandbox(sandbox: Sandbox) -> None:
     # like a per-entrypoint failure: the partial row is left for the end guard
     # (or a later teardown) to clean up, and the loop is skipped because no
     # entrypoint can be provisioned without an access group.
-    access = None
+    access: SandboxNetbirdAccess | None = None
     try:
-        access = _provision_access(client, sandbox, stack_name, key_expiry_seconds)
+        access, _ = SandboxNetbirdAccess.objects.get_or_create(sandbox=sandbox)
+        _provision_access(client, access, stack_name, key_expiry_seconds)
         LOG.info(
             'netbird_access_provisioned',
             sandbox_id=sandbox.id,
@@ -342,7 +339,6 @@ def _provision_netbird_for_sandbox(sandbox: Sandbox) -> None:
             else 'netbird_provision_access_error'
         )
         LOG.warning(event, sandbox_id=sandbox.id, error=str(exc))
-        access = SandboxNetbirdAccess.objects.filter(sandbox=sandbox).first()
 
     if access is not None and access.access_group_id:
         # Provision the shared DNS nameserver group (best-effort) before the
