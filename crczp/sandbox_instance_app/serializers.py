@@ -482,3 +482,12 @@ class NodeAccessDataSerializer(serializers.Serializer[Any]):
     man_port = serializers.IntegerField(max_value=65535)
     host_ip = serializers.CharField()
     protocols = ProtocolSerializer(many=True)
+
+
+class SandboxVpnConfigSerializer(serializers.Serializer[Any]):
+    """Serializer for a sandbox's Netbird VPN client configuration."""
+
+    management_url = serializers.CharField()
+    setup_key = serializers.CharField(allow_null=True)
+    routes = serializers.ListField(child=serializers.CharField())
+    command = serializers.CharField(allow_null=True)

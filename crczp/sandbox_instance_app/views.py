@@ -1122,6 +1122,15 @@ class TopologyNodeConnectionData(APIView):
         )
 
 
+@extend_schema(
+    responses={
+        200: OpenApiResponse(
+            response=serializers.SandboxVpnConfigSerializer,
+            description='Netbird VPN client configuration for this sandbox.',
+        ),
+        **SANDBOX_RESPONSES,
+    }
+)
 class SandboxVpnView(APIView):
     """
     Returns the Netbird VPN client configuration for this sandbox.
@@ -1144,6 +1153,7 @@ class SandboxVpnView(APIView):
     """
 
     queryset = Sandbox.objects.none()
+    serializer_class = serializers.SandboxVpnConfigSerializer
 
     # noinspection PyMethodMayBeStatic
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
