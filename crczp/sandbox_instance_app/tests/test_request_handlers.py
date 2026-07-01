@@ -17,6 +17,7 @@ from crczp.sandbox_common_lib import exceptions as api_exceptions
 from crczp.sandbox_instance_app.lib import request_handlers
 from crczp.sandbox_instance_app.models import (
     AllocationRequest,
+    Pool,
     SandboxAllocationUnit,
     SandboxRequestGroup,
     StackAllocationStage,
@@ -103,6 +104,11 @@ class TestAllocationRequestHandlerUnit:
             'crczp.sandbox_instance_app.lib.request_handlers.settings.CRCZP_CONFIG',
             new=fake_crczp_config,
         )
+        # CRCZP_CONFIG is fully mocked above, so the netbird config looks
+        # "present"; neutralise the external provisioning side-effect.
+        mocker.patch(
+            'crczp.sandbox_instance_app.lib.request_handlers.netbird.provision_netbird_for_sandbox'
+        )
         self.handler = request_handlers.AllocationRequestHandler()
         self.fake_gen_ssh = mocker.patch(
             'crczp.sandbox_instance_app.lib.request_handlers.utils.generate_ssh_keypair'
@@ -133,7 +139,10 @@ class TestAllocationRequestHandlerUnit:
 
         self.handler._enqueue_stages(sandbox, 'stage_handlers')  # type: ignore[arg-type]
         fake_partial.assert_called_once_with(
-            self.handler._enqueue_request, 'stage_handlers', 'fake_finalization_fn'
+            self.handler._enqueue_allocation_request,
+            sandbox,
+            'stage_handlers',
+            'fake_finalization_fn',
         )
         fake_transaction.on_commit.assert_called_once_with(
             'fake_partial'
@@ -178,12 +187,19 @@ class TestAllocationRequestHandlerUnit:
         fake_sandbox_class = mocker.patch(
             'crczp.sandbox_instance_app.lib.request_handlers.Sandbox', return_value=fake_sandbox
         )
+        fake_destroy = mocker.patch(
+            'crczp.sandbox_instance_app.lib.request_handlers.netbird.destroy_netbird_for_sandbox'
+        )
         self.handler._restart_stage_handlers = MagicMock()
         self.handler._enqueue_stages = MagicMock()
 
         self.handler._create_restart_jobs(allocation_unit)
 
         assert self.handler.request == allocation_request
+        # The old sandbox's NetBird resources are torn down before it is deleted.
+        old_sandbox = fake_sandbox_class.objects.get.return_value
+        fake_destroy.assert_called_once_with(old_sandbox)
+        old_sandbox.delete.assert_called_once()
         fake_sandbox_class.assert_called_once_with(
             id='123',
             allocation_unit=allocation_unit,
@@ -481,6 +497,81 @@ class TestAllocationRequestHandler:
         assert job_stack.is_finished
         assert job_networking.is_finished
         assert job_user.is_finished
+
+    @pytest.mark.django_db(transaction=True)
+    def test_netbird_provisioning_does_not_starve_other_pools(
+        self, pool, definition, created_by, mocker
+    ):
+        """Allocation orchestration no longer blocks on NetBird.
+
+        NetBird provisioning is enqueued as a SEPARATE job on the ansible queue,
+        so running only the ``default``-queue worker creates BOTH pools'
+        AllocationRequests (no cross-pool starvation) while provisioning waits on
+        its own queue. The user-ansible stage depends on the provisioning job.
+        """
+        mocker.patch(
+            'crczp.sandbox_instance_app.lib.request_handlers.netbird.is_netbird_configured',
+            return_value=True,
+        )
+        pool_b = Pool.objects.create(
+            definition=definition,
+            max_size=3,
+            private_management_key='-----RSA PRIVATE KEY-----',
+            public_management_key='ssh-rsa',
+            uuid='0fb3160e',
+            created_by=created_by,
+        )
+        unit_a = SandboxAllocationUnit.objects.create(pool=pool, created_by=created_by)
+        unit_b = SandboxAllocationUnit.objects.create(pool=pool_b, created_by=created_by)
+
+        request_handlers.AllocationRequestHandler().enqueue_request([unit_a], None)
+        request_handlers.AllocationRequestHandler().enqueue_request([unit_b], None)
+
+        # Run ONLY the default queue: both pools' AllocationRequests must be created
+        # even though provisioning (on the ansible queue) has not run.
+        get_worker('default').work(burst=True)
+
+        assert AllocationRequest.objects.filter(allocation_unit=unit_a).exists()
+        assert AllocationRequest.objects.filter(allocation_unit=unit_b).exists()
+
+        # Provisioning was scheduled off the default queue: one job per sandbox,
+        # sitting ready on the ansible queue (not run by the default worker).
+        provision_jobs = [
+            job
+            for job in get_queue('ansible').jobs
+            if job.func_name.endswith('provision_netbird_for_sandbox')
+        ]
+        assert len(provision_jobs) == 2
+
+        # The user-ansible stage of pool A depends on its provisioning job.
+        request_a = AllocationRequest.objects.get(allocation_unit=unit_a)
+        user_job = get_queue('ansible').fetch_job(
+            request_a.useransibleallocationstage.rq_job.job_id
+        )
+        dependency_ids = {
+            d.decode() for d in user_job.connection.smembers(user_job.dependencies_key)
+        }
+        assert any(job.id in dependency_ids for job in provision_jobs)
+
+    @pytest.mark.django_db(transaction=True)
+    def test_no_netbird_provision_job_when_unconfigured(self, allocation_unit, mocker):
+        """With NetBird unconfigured, no provisioning job is enqueued and the
+        stage chain is unchanged (user-ansible depends only on networking)."""
+        mocker.patch(
+            'crczp.sandbox_instance_app.lib.request_handlers.netbird.is_netbird_configured',
+            return_value=False,
+        )
+
+        request_handlers.AllocationRequestHandler().enqueue_request([allocation_unit], None)
+        get_worker('default').work(burst=True)
+
+        assert AllocationRequest.objects.filter(allocation_unit=allocation_unit).exists()
+        provision_jobs = [
+            job
+            for job in get_queue('ansible').jobs
+            if job.func_name.endswith('provision_netbird_for_sandbox')
+        ]
+        assert provision_jobs == []
 
     def test_cancel_request(self, allocation_request_started):
         handler = request_handlers.AllocationRequestHandler()

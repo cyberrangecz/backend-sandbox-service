@@ -1,6 +1,6 @@
 [project]
 name = "crczp-sandbox-service"
-version = "2.2.1"
+version = "2.3.0"
 description = "simplifies manipulation of OpenStack cloud platform for CyberRangeCZ Platform purposes"
 readme = "README.md"
 license = "MIT"
@@ -9,9 +9,9 @@ authors = [{ name = "cybersecurityhub.cz" }]
 dependencies = [
     "crczp-terraform-client ~=1.0.3",
     "crczp-python-commons ~=2.0.1",
-    "crczp-openstack-lib ~=1.0.3",
+    "crczp-openstack-lib ~=1.0.5",
     "crczp-aws-lib ~=1.0.3",
-    "crczp-topology-definition ~=2.0.0",
+    "crczp-topology-definition ~=2.1.0",
     "drf-oidc-auth",
     "pyjwkest",
     "crczp-automated-problem-generation-lib ~=1.0.0",

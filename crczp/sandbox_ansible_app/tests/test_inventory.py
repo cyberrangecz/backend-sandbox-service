@@ -17,6 +17,7 @@ class TestCreateInventory:
         all_vars = {
             'global_sandbox_name': top_ins.name,
             'global_sandbox_ip': top_ins.ip,
+            'global_sandbox_man_cidr': str(top_ins.man_network.cidr),
             'global_ssh_public_mgmt_key': ssh_public_mgmt_key,
             'global_ssh_public_user_key': ssh_public_user_key,
         }
@@ -45,6 +46,7 @@ class TestCreateInventory:
         all_vars = {
             'global_sandbox_name': top_ins_monitoring.name,
             'global_sandbox_ip': top_ins_monitoring.ip,
+            'global_sandbox_man_cidr': str(top_ins_monitoring.man_network.cidr),
             'global_ssh_public_mgmt_key': ssh_public_mgmt_key,
             'global_ssh_public_user_key': ssh_public_user_key,
             'monitoring_http_targets': [
@@ -88,6 +90,7 @@ class TestContainersInInventory:  # pylint: disable=too-few-public-methods
         all_vars = {
             'global_sandbox_name': top_ins_with_containers.name,
             'global_sandbox_ip': top_ins_with_containers.ip,
+            'global_sandbox_man_cidr': str(top_ins_with_containers.man_network.cidr),
             'global_ssh_public_mgmt_key': ssh_public_mgmt_key,
             'global_ssh_public_user_key': ssh_public_user_key,
         }
@@ -165,3 +168,44 @@ class TestWindowsHostsGroup:
 
         # Check that windows_hosts group does not exist
         assert 'windows_hosts' not in result.to_dict()['all']['children']
+
+
+class TestVpnEntrypointsGroup:
+    """Tests for the vpn_entrypoints inventory group."""
+
+    def test_vpn_entrypoints_group_created(self, top_ins_vpn):
+        """Test that vpn_entrypoints group is created with the correct hosts and routers."""
+        ssh_public_mgmt_key = '/root/.ssh/pool_mng_key.pub'
+        ssh_public_user_key = '/root/.ssh/user_key.pub'
+
+        result = Inventory(
+            'pool-prefix',
+            'stack-name',
+            top_ins_vpn,
+            '/root/.ssh/pool_mng_key',
+            '/root/.ssh/pool_mng_cert',
+            ssh_public_mgmt_key,
+            ssh_public_user_key,
+        )
+
+        children = result.to_dict()['all']['children']
+        assert 'vpn_entrypoints' in children
+        vpn_hosts = children['vpn_entrypoints']['hosts']
+        assert set(vpn_hosts.keys()) == {'server', 'server-router'}
+
+    def test_vpn_entrypoints_group_absent_when_none_defined(self, top_ins):
+        """Test vpn_entrypoints group is absent when the topology defines none."""
+        ssh_public_mgmt_key = '/root/.ssh/pool_mng_key.pub'
+        ssh_public_user_key = '/root/.ssh/user_key.pub'
+
+        result = Inventory(
+            'pool-prefix',
+            'stack-name',
+            top_ins,
+            '/root/.ssh/pool_mng_key',
+            '/root/.ssh/pool_mng_cert',
+            ssh_public_mgmt_key,
+            ssh_public_user_key,
+        )
+
+        assert 'vpn_entrypoints' not in result.to_dict()['all']['children']

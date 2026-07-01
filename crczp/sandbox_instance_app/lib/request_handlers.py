@@ -21,7 +21,7 @@ from crczp.sandbox_ansible_app.models import (
     UserAnsibleCleanupStage,
 )
 from crczp.sandbox_common_lib import exceptions, utils
-from crczp.sandbox_instance_app.lib import pools, requests, sandboxes
+from crczp.sandbox_instance_app.lib import netbird, pools, requests, sandboxes
 from crczp.sandbox_instance_app.lib.stage_handlers import (
     AllocationAnsibleStageHandler,
     AllocationStackStageHandler,
@@ -100,13 +100,22 @@ class RequestHandler(abc.ABC):
         """
 
     def _enqueue_request(
-        self, stage_handlers: list[StageHandler], finalizing_stage: Callable[[], None]
+        self,
+        stage_handlers: list[StageHandler],
+        finalizing_stage: Callable[[], None],
+        user_ansible_extra_depends: Job | None = None,
     ) -> None:
         """
         Enqueue methods of the given stage handlers.
 
         The order of stage handlers is important.
           Every subsequent stage depends on the previous one, and it is enqueued as such.
+
+        ``user_ansible_extra_depends`` is an optional extra job that the
+        user-ansible stage must additionally wait for — the NetBird provisioning
+        job, which writes the setup key that the user-ansible inventory consumes.
+        Stage sets without a user-ansible allocation stage (e.g. cleanup) never
+        match, so the parameter is harmless there.
         """
         previous_job = None
         for stage_handler in stage_handlers:
@@ -116,7 +125,14 @@ class RequestHandler(abc.ABC):
                 queue = self.queue_ansible
             else:
                 queue = self.queue_default
-            previous_job = queue.enqueue(stage_handler.execute, depends_on=previous_job)
+            depends_on: Job | list[Job] | None = previous_job
+            if user_ansible_extra_depends is not None and isinstance(
+                stage_handler.stage, UserAnsibleAllocationStage
+            ):
+                depends_on = [
+                    job for job in (previous_job, user_ansible_extra_depends) if job is not None
+                ]
+            previous_job = queue.enqueue(stage_handler.execute, depends_on=depends_on)
             stage_handler.set_job_id(previous_job.id)
 
         self.queue_default.enqueue(finalizing_stage, depends_on=previous_job)
@@ -165,14 +181,57 @@ class AllocationRequestHandler(RequestHandler):
         finalizing_stage_function = self._get_finalizing_stage_function(
             self._mark_sandbox_as_ready, sandbox
         )
-        on_commit_method = partial(self._enqueue_request, stage_handlers, finalizing_stage_function)
+        on_commit_method = partial(
+            self._enqueue_allocation_request, sandbox, stage_handlers, finalizing_stage_function
+        )
 
         transaction.on_commit(on_commit_method)
+
+    def _enqueue_allocation_request(
+        self,
+        sandbox: Sandbox,
+        stage_handlers: list[StageHandler],
+        finalizing_stage: Callable[[], None],
+    ) -> None:
+        """
+        Enqueue the NetBird provisioning job (when configured) and the stage chain.
+
+        Runs from the post-commit hook so the committed Sandbox row is visible to
+        the provisioning worker. NetBird provisioning is a SEPARATE job on the
+        ansible queue — never inline on the default queue — so a slow NetBird
+        endpoint can no longer block this orchestration job and starve other
+        pools' allocation requests. The user-ansible stage depends on the job so
+        the setup key exists before that stage runs.
+        """
+        netbird_job = self._enqueue_netbird_provision(sandbox)
+        self._enqueue_request(
+            stage_handlers, finalizing_stage, user_ansible_extra_depends=netbird_job
+        )
+
+    def _enqueue_netbird_provision(self, sandbox: Sandbox) -> Job | None:
+        """Enqueue NetBird provisioning for the sandbox, or None when unconfigured.
+
+        Gated only on the cheap in-memory config check: the per-sandbox
+        "has VPN entrypoints?" decision needs a git definition fetch and stays
+        inside the job, off the default queue. When NetBird is not configured no
+        job is enqueued and no dependency is added, so non-NetBird deployments are
+        unaffected. The job and its dependency are added together, so the
+        user-ansible stage never waits on a job that was never enqueued.
+        """
+        if not netbird.is_netbird_configured():
+            return None
+        return self.queue_ansible.enqueue(netbird.provision_netbird_for_sandbox, sandbox)
 
     def _create_allocation_jobs(
         self, units: list[SandboxAllocationUnit], created_by: User | None
     ) -> None:
-        """Create allocation requests and enqueue stage jobs for each unit."""
+        """Create allocation requests and enqueue stage jobs for each unit.
+
+        Runs on the ``default`` queue and is DB-only + enqueue (no external I/O),
+        so it returns quickly and never starves other pools' allocation jobs
+        waiting on the same queue. NetBird provisioning is dispatched as a
+        separate job from _enqueue_stages, off the default queue.
+        """
         if units[0].pool.send_emails and created_by is not None and created_by.email:
             allocation_group = self.create_request_group(units)
         else:
@@ -180,7 +239,12 @@ class AllocationRequestHandler(RequestHandler):
 
         for unit in units:
             LOG.info('Creating sandbox for allocation unit: %s', unit.id)
-            self.request = AllocationRequest.objects.create(allocation_unit=unit)
+            # The AllocationRequest is normally pre-created synchronously in the
+            # request thread (see requests.create_allocations_requests) so the
+            # listing endpoint never serves a unit with allocation_request=null;
+            # reuse it here. get_or_create keeps callers that enqueue without
+            # pre-creating the request (e.g. tests, restart) working unchanged.
+            self.request, _ = AllocationRequest.objects.get_or_create(allocation_unit=unit)
             pri_key, pub_key = utils.generate_ssh_keypair()
             sandbox = Sandbox(
                 id=sandboxes.generate_new_sandbox_uuid(),
@@ -202,7 +266,13 @@ class AllocationRequestHandler(RequestHandler):
     def _create_restart_jobs(self, unit: SandboxAllocationUnit) -> None:
         LOG.info('Restarting sandbox allocation unit: %s', unit.id)
         self.request = unit.allocation_request
-        Sandbox.objects.get(allocation_unit=unit).delete()
+        old_sandbox = Sandbox.objects.get(allocation_unit=unit)
+        # Tear down the old sandbox's NetBird resources before the cascade delete
+        # removes their DB rows; otherwise the cloud-side objects are orphaned
+        # (cleanup would never find them again). Re-provisioning for the new
+        # sandbox is handled by _enqueue_stages below.
+        netbird.destroy_netbird_for_sandbox(old_sandbox)
+        old_sandbox.delete()
         pri_key, pub_key = utils.generate_ssh_keypair()
         sandbox = Sandbox(
             id=sandboxes.generate_new_sandbox_uuid(),

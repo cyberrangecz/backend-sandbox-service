@@ -179,6 +179,27 @@ def _add_windows_hosts_group(inventory: 'Inventory', topology: TopologyInstance)
         inventory.add_group(windows_group)
 
 
+def _add_vpn_entrypoints_group(inventory: 'Inventory', topology: TopologyInstance) -> None:
+    """
+    Add a group containing the topology hosts or routers that act as NetBird VPN entrypoints.
+
+    Membership comes from the topology definition's ``vpn.entrypoints``. The
+    per-node setup keys are runtime state and are attached to this group as the
+    ``netbird_setup_key`` host variable later, in
+    sandbox_ansible_app.lib.ansible.AllocationAnsibleRunner.create_inventory.
+    """
+    vpn = topology.topology_definition.vpn
+    vpn_entrypoints = vpn.entrypoints if vpn else None
+    if not vpn_entrypoints:
+        return
+    hosts = [
+        inventory.hosts[entrypoint.name]
+        for entrypoint in vpn_entrypoints
+        if entrypoint.name in inventory.hosts
+    ]
+    inventory.add_group(Group(DefaultAnsibleHostsGroups.VPN_ENTRYPOINTS.value, hosts))
+
+
 def _get_windows_hosts(inventory: 'Inventory', topology: TopologyInstance) -> list['Host']:
     """
     Return hosts that use Windows images based on the os_type parameter.
@@ -219,4 +240,5 @@ GROUP_BUILDERS: list[_Builder] = [
     _add_monitored_hosts_icmp_group,
     _add_monitored_hosts_http_vars,
     _add_windows_hosts_group,
+    _add_vpn_entrypoints_group,
 ]

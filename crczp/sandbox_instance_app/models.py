@@ -442,6 +442,127 @@ class SystemProcess(ExternalDependency):
         return f'STAGE: {self.allocation_stage.id}, PROCESS: {self.process_id}'
 
 
+class SandboxNetbirdAccess(models.Model):
+    """
+    Stores the single shared Netbird "access" group and setup key created for a
+    sandbox. One row per sandbox: every VPN entrypoint's policy and routes use
+    this one access group as their source/access-control group, and the access
+    setup key is the single key exposed to clients via the VPN API endpoint.
+
+    All fields are nullable so that a partial-failure state can be persisted:
+    the cleanup path tolerates nulls and issues 404-tolerant deletes.
+    """
+
+    sandbox = models.OneToOneField(
+        Sandbox,
+        on_delete=models.CASCADE,
+        related_name='netbird_access',
+        help_text='Sandbox these access resources belong to.',
+    )
+    access_group_id = models.CharField(
+        max_length=255,
+        null=True,
+        default=None,
+        help_text='Netbird group ID shared by all client peers of the sandbox.',
+    )
+    access_setup_key_id = models.CharField(
+        max_length=255,
+        null=True,
+        default=None,
+        help_text='Netbird setup key ID for the shared access group.',
+    )
+    access_setup_key_value = models.TextField(
+        null=True,
+        default=None,
+        help_text='Plaintext setup key for the shared access group.',
+    )
+    dns_nameserver_group_id = models.CharField(
+        max_length=255,
+        null=True,
+        default=None,
+        help_text='Netbird DNS nameserver group ID distributed to the access group.',
+    )
+
+    class Meta:
+        ordering = ['id']
+        verbose_name_plural = 'sandbox netbird access'
+
+
+class SandboxNetbirdResources(models.Model):
+    """
+    Stores IDs of Netbird control-plane objects created for one VPN entrypoint
+    within a sandbox. One row per entrypoint.
+
+    All fields are nullable so that a partial-failure state can be persisted:
+    the cleanup path tolerates nulls and issues 404-tolerant deletes.
+    """
+
+    sandbox = models.ForeignKey(
+        Sandbox,
+        on_delete=models.CASCADE,
+        related_name='netbird_resources',
+        help_text='Sandbox these resources belong to.',
+    )
+    entrypoint_host_name = models.CharField(
+        max_length=255,
+        help_text='Name of the topology host configured as VPN entrypoint.',
+    )
+    host_group_id = models.CharField(
+        max_length=255,
+        null=True,
+        default=None,
+        help_text='Netbird group ID for the entrypoint peer.',
+    )
+    host_setup_key_id = models.CharField(
+        max_length=255,
+        null=True,
+        default=None,
+        help_text='Netbird setup key ID used by the agent on the entrypoint VM.',
+    )
+    host_setup_key_value = models.TextField(
+        null=True,
+        default=None,
+        help_text='Plaintext setup key for the entrypoint host agent.',
+    )
+    route_ids = models.TextField(
+        null=True,
+        default=None,
+        help_text='Comma-separated Netbird route IDs for this entrypoint.',
+    )
+    route_cidrs = models.TextField(
+        null=True,
+        default=None,
+        help_text='Comma-separated CIDR strings for the routes of this entrypoint.',
+    )
+    policy_id = models.CharField(
+        max_length=255,
+        null=True,
+        default=None,
+        help_text='Netbird access policy ID permitting client-to-host traffic.',
+    )
+
+    class Meta:
+        ordering = ['id']
+        unique_together = [('sandbox', 'entrypoint_host_name')]
+        verbose_name_plural = 'sandbox netbird resources'
+
+    def get_route_id_list(self) -> list[str]:
+        if not self.route_ids:
+            return []
+        return [r for r in self.route_ids.split(',') if r]
+
+    def set_route_id_list(self, ids: list[str]) -> None:
+        self.route_ids = ','.join(ids)
+
+    def get_route_cidr_list(self) -> list[str]:
+        if not self.route_cidrs:
+            return []
+        return [r for r in self.route_cidrs.split(',') if r]
+
+    def set_route_cidr_list(self, cidrs: list[str]) -> None:
+        self.route_cidrs = ','.join(cidrs)
+
+
 class SandboxRequestGroup(models.Model):
     """
     Represents allocation/cleanup requests created at the same time.

@@ -10,7 +10,12 @@ from django.utils import timezone
 
 from crczp.sandbox_common_lib import exceptions as api_exceptions
 from crczp.sandbox_instance_app.lib import requests
-from crczp.sandbox_instance_app.models import CleanupRequest, Sandbox, SandboxAllocationUnit
+from crczp.sandbox_instance_app.models import (
+    AllocationRequest,
+    CleanupRequest,
+    Sandbox,
+    SandboxAllocationUnit,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -40,6 +45,20 @@ class TestAllocationRequest:
         assert expected_partial.func == actual_partial.func
         assert expected_partial.args == actual_partial.args
         assert expected_partial.keywords == actual_partial.keywords
+
+    def test_create_allocation_requests_creates_request_synchronously(
+        self, pool, created_by, mocker
+    ):
+        """The AllocationRequest must exist as soon as create_allocations_requests
+        returns — before the worker runs — so the listing endpoint never serves a
+        unit with allocation_request=null (which the frontend shows as an error)."""
+        mocker.patch('django.db.transaction.on_commit')
+
+        units = requests.create_allocations_requests(pool, 3, created_by)
+
+        assert len(units) == 3
+        for unit in units:
+            assert AllocationRequest.objects.filter(allocation_unit=unit).exists()
 
     def test_cancel_allocation_request_success(self, allocation_request_started):
         """Test that cancellation delegates to the handler correctly."""

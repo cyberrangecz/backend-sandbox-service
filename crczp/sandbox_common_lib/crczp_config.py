@@ -167,6 +167,26 @@ class SMTPEncryption(Enum):
     INSECURE = 3
 
 
+class NetbirdConfiguration(Object):  # type: ignore[misc]
+    """NetBird VPN management configuration."""
+
+    management_url = Attribute(type=str)
+    client_management_url = Attribute(type=str, default=None)
+    # Path to a file containing the service user PAT. The file is read fresh on
+    # every Netbird client creation so a rotated secret (e.g. a volume-mounted
+    # Kubernetes Secret) is picked up without restarting the service.
+    service_user_pat_file = Attribute(type=str)
+    key_expiry_seconds = Attribute(
+        type=int, default=1209600, validator=crczp_config_validation.validate_netbird_key_expiry
+    )
+    # Upper bound (seconds) on the time spent tearing down a single sandbox's
+    # Netbird resources during cleanup. Teardown runs synchronously in the
+    # request thread, so a slow or unreachable Netbird endpoint must not block
+    # the cleanup path indefinitely; once the budget is exceeded the remaining
+    # resources are left behind (best-effort teardown).
+    teardown_budget_seconds = Attribute(type=int, default=60)
+
+
 class CrczpConfiguration(Object):  # type: ignore[misc]
     """Top-level CRCZP application configuration loaded from a YAML file."""
 
@@ -258,6 +278,8 @@ class CrczpConfiguration(Object):  # type: ignore[misc]
 
     sender_email = Attribute(type=str, default='sandbox.service@cyberrange.cz')
     sender_email_password = Attribute(type=str, default=None)
+
+    netbird = Attribute(type=NetbirdConfiguration, default=None)
 
     def __init__(self, **kwargs: Any) -> None:
         for key, val in kwargs.items():
