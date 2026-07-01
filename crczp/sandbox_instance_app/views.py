@@ -998,7 +998,10 @@ class SandboxUserSSHAccessView(APIView):
         sandbox = sandboxes.get_sandbox(kwargs['sandbox_uuid'])
         in_memory_zip_file = sandboxes.get_user_ssh_access(sandbox)
         response = HttpResponse(FileWrapper(in_memory_zip_file), content_type='application/zip')
-        response['Content-Disposition'] = 'attachment; filename=ssh-access.zip'
+        response['Content-Disposition'] = (
+            f'attachment; filename=user-ssh-access-pool-{sandbox.allocation_unit.pool.id}'
+            f'-sandbox-{sandbox.allocation_unit.id}.zip'
+        )
         return response
 
 
