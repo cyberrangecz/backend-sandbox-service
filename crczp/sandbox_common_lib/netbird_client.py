@@ -88,9 +88,7 @@ class NetbirdClient:
 
     def create_group(self, name: str) -> str:
         """Create a group and return its ID."""
-        return self._create_and_get_id(
-            _GROUPS_PATH, {'name': name, 'peers': [], 'resources': []}
-        )
+        return self._create_and_get_id(_GROUPS_PATH, {'name': name, 'peers': [], 'resources': []})
 
     def delete_group(self, group_id: str) -> None:
         """Delete a group, tolerating a 404 if it is already gone."""
@@ -134,17 +132,20 @@ class NetbirdClient:
     ) -> str:
         # pylint: disable=too-many-arguments,too-many-positional-arguments
         """Create a network route and return its ID."""
-        return self._create_and_get_id(_ROUTES_PATH, {
-            'description': description,
-            'network_id': network_id,
-            'enabled': True,
-            'metric': _ROUTE_METRIC,
-            'masquerade': True,
-            'keep_route': False,
-            'peer_groups': peer_group_ids,
-            'network': cidr,
-            'groups': client_group_ids,
-        })
+        return self._create_and_get_id(
+            _ROUTES_PATH,
+            {
+                'description': description,
+                'network_id': network_id,
+                'enabled': True,
+                'metric': _ROUTE_METRIC,
+                'masquerade': True,
+                'keep_route': False,
+                'peer_groups': peer_group_ids,
+                'network': cidr,
+                'groups': client_group_ids,
+            },
+        )
 
     def delete_route(self, route_id: str) -> None:
         """Delete a route, tolerating a 404 if it is already gone."""
@@ -159,23 +160,26 @@ class NetbirdClient:
         destination_group_ids: list[str],
     ) -> str:
         """Create an access policy and return its ID."""
-        return self._create_and_get_id(_POLICIES_PATH, {
-            'name': name,
-            'description': '',
-            'enabled': True,
-            'rules': [
-                {
-                    'name': 'allow-all',
-                    'description': '',
-                    'enabled': True,
-                    'bidirectional': False,
-                    'action': 'accept',
-                    'protocol': 'all',
-                    'sources': source_group_ids,
-                    'destinations': destination_group_ids,
-                }
-            ],
-        })
+        return self._create_and_get_id(
+            _POLICIES_PATH,
+            {
+                'name': name,
+                'description': '',
+                'enabled': True,
+                'rules': [
+                    {
+                        'name': 'allow-all',
+                        'description': '',
+                        'enabled': True,
+                        'bidirectional': False,
+                        'action': 'accept',
+                        'protocol': 'all',
+                        'sources': source_group_ids,
+                        'destinations': destination_group_ids,
+                    }
+                ],
+            },
+        )
 
     def delete_policy(self, policy_id: str) -> None:
         """Delete a policy, tolerating a 404 if it is already gone."""
@@ -201,18 +205,21 @@ class NetbirdClient:
         all queries and ``domains`` must be empty; when false they resolve only
         the listed ``domains``.
         """
-        return self._create_and_get_id(_NAMESERVERS_PATH, {
-            'name': name,
-            'description': description,
-            'nameservers': [
-                {'ip': ip, 'ns_type': _DNS_NS_TYPE, 'port': _DNS_NS_PORT} for ip in servers
-            ],
-            'enabled': True,
-            'groups': distribution_group_ids,
-            'primary': primary,
-            'domains': domains,
-            'search_domains_enabled': search_domains_enabled,
-        })
+        return self._create_and_get_id(
+            _NAMESERVERS_PATH,
+            {
+                'name': name,
+                'description': description,
+                'nameservers': [
+                    {'ip': ip, 'ns_type': _DNS_NS_TYPE, 'port': _DNS_NS_PORT} for ip in servers
+                ],
+                'enabled': True,
+                'groups': distribution_group_ids,
+                'primary': primary,
+                'domains': domains,
+                'search_domains_enabled': search_domains_enabled,
+            },
+        )
 
     def delete_nameserver_group(self, nameserver_group_id: str) -> None:
         """Delete a nameserver group, tolerating a 404 if it is already gone."""

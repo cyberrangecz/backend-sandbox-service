@@ -17,9 +17,7 @@ class TestValidateNetbirdKeyExpiry:
         ],
     )
     def test_accepts_values_within_range(self, key_expiry_seconds):
-        assert crczp_config_validation.validate_netbird_key_expiry(
-            object(), key_expiry_seconds
-        )
+        assert crczp_config_validation.validate_netbird_key_expiry(object(), key_expiry_seconds)
 
     @pytest.mark.parametrize(
         'key_expiry_seconds',
