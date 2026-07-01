@@ -21,6 +21,11 @@ LOG = structlog.get_logger()
 # Fallback teardown budget used when the Netbird config does not specify one.
 _DEFAULT_TEARDOWN_BUDGET_SECONDS = 60
 
+# Netbird's route `network_id` accepts at most 40 characters.
+_NETBIRD_NETWORK_ID_MAX_LEN = 40
+# Number of leading characters of the entrypoint host name kept in a network id.
+_HOST_NAME_ID_PREFIX_LEN = 8
+
 
 def _teardown_budget_seconds() -> int:
     """Return the per-sandbox teardown time budget, with a safe fallback.
@@ -91,8 +96,8 @@ def _short_stack_name(stack_name: str) -> str:
 
 def _make_network_id(stack_name: str, host_name: str, cidr: str) -> str:
     sanitised = cidr.replace('/', '-').replace('.', '-').replace(':', '-')
-    raw = f'{stack_name}-{host_name[:8]}-{sanitised}'
-    return raw[:40]
+    raw = f'{stack_name}-{host_name[:_HOST_NAME_ID_PREFIX_LEN]}-{sanitised}'
+    return raw[:_NETBIRD_NETWORK_ID_MAX_LEN]
 
 
 def _provision_access(

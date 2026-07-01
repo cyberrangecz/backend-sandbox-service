@@ -96,10 +96,18 @@ class TestMakeNetworkId:
         result = netbird._make_network_id('stack', 'host', 'fd00::/8')
         assert ':' not in result
 
-    def test_truncated_to_40_chars(self):
-        """The id is truncated to at most 40 characters."""
+    def test_truncated_to_max_len(self):
+        """The id is truncated to Netbird's network_id character limit."""
         result = netbird._make_network_id('a' * 30, 'b' * 30, '10.0.0.0/24')
-        assert len(result) <= 40
+        assert len(result) <= netbird._NETBIRD_NETWORK_ID_MAX_LEN
+
+    def test_host_name_truncated_to_prefix_len(self):
+        """Only the configured prefix length of the host name is kept."""
+        host_name = 'c' * 30
+        result = netbird._make_network_id('stack', host_name, '10.0.0.0/24')
+        kept_prefix = host_name[: netbird._HOST_NAME_ID_PREFIX_LEN]
+        assert kept_prefix in result
+        assert host_name not in result
 
 
 class TestRouteListHelpers:
