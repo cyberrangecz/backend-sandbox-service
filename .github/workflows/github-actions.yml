@@ -49,7 +49,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           # Install a specific version of uv.
-          version: "0.7.12"
+          version: "0.11.24"
 
       - name: Install tox
         run: |
@@ -103,7 +103,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           # Install a specific version of uv.
-          version: "0.7.12"
+          version: "0.11.24"
 
       - name: Generate and Push Swagger Docs
         run: |

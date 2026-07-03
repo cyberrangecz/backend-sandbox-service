@@ -12,6 +12,13 @@ repos:
         args:
           - --check
 
+  # Check if the lockfile is up to date with the current dependencies.
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    # uv version.
+    rev: 0.11.24
+    hooks:
+      - id: uv-lock
+
   # swithc to ty after release
   # https://github.com/astral-sh/ty/issues/269
   # Use a local hook so mypy runs in the project venv (django-stubs plugin needs
