@@ -1000,7 +1000,7 @@ class SandboxUserSSHAccessView(APIView):
         response = HttpResponse(FileWrapper(in_memory_zip_file), content_type='application/zip')
         response['Content-Disposition'] = (
             f'attachment; filename=user-ssh-access-pool-{sandbox.allocation_unit.pool.id}'
-            f'-sandbox-{sandbox.allocation_unit.id}.zip'
+            f'-sandbox-{sandbox.id}.zip'
         )
         return response
 

@@ -1,16 +1,20 @@
 """Tests for sandbox management functions."""
 
+import io
 import zipfile
 from unittest import mock
 
 import pytest
+from django.contrib.auth.models import AnonymousUser
 from django.db import IntegrityError
 from django.http import Http404
+from rest_framework.test import APIRequestFactory
 
 from crczp.sandbox_common_lib import exceptions
 from crczp.sandbox_instance_app import serializers
 from crczp.sandbox_instance_app.lib import sandboxes, sshconfig
 from crczp.sandbox_instance_app.models import Sandbox, SandboxAllocationUnit
+from crczp.sandbox_instance_app.views import SandboxUserSSHAccessView
 
 pytestmark = pytest.mark.django_db
 
@@ -150,3 +154,32 @@ class TestSandboxesManipulation:
             mocker.Mock(), mng_key='/root/.ssh/pool_mng_key', proxy_key='/root/.ssh/id_rsa'
         )
         assert ssh_conf.asdict() == ansible_ssh_config.asdict()
+
+
+class TestSandboxUserSSHAccessView:
+    """Tests for the sandbox user SSH access API view."""
+
+    @pytest.fixture(autouse=True)
+    def set_up(self):
+        """Create the request factory used by the view tests."""
+        self.factory = APIRequestFactory()
+
+    def test_sets_content_disposition_filename_to_sandbox_id(self, mocker, sandbox):
+        """Test that the downloaded filename uses the sandbox identifier."""
+        sandbox.id = 'sandbox-uuid'
+        mocker.patch('crczp.sandbox_instance_app.views.sandboxes.get_sandbox', return_value=sandbox)
+        mocker.patch(
+            'crczp.sandbox_instance_app.views.sandboxes.get_user_ssh_access',
+            return_value=io.BytesIO(b'zip-content'),
+        )
+
+        request = self.factory.get(f'/sandboxes/{sandbox.id}/user-ssh-access')
+        request.user = AnonymousUser()
+
+        response = SandboxUserSSHAccessView.as_view()(request, sandbox_uuid=sandbox.id)
+
+        assert response.status_code == 200
+        assert response['Content-Disposition'] == (
+            f'attachment; filename=user-ssh-access-pool-{sandbox.allocation_unit.pool.id}'
+            f'-sandbox-{sandbox.id}.zip'
+        )
