@@ -68,6 +68,17 @@ class ImageSerializer(serializers.Serializer[Any]):
         }
 
 
+class FlavorSerializer(serializers.Serializer[Any]):
+    """Serializer for an OpenStack flavor."""
+
+    name = serializers.CharField(allow_null=True)
+    ram = serializers.IntegerField(allow_null=True)
+    disk = serializers.IntegerField(allow_null=True)
+    ephemeral = serializers.IntegerField(allow_null=True)
+    vcpus = serializers.IntegerField(allow_null=True)
+    is_public = serializers.BooleanField(allow_null=True)
+
+
 class ProjectLimitsSerializer(serializers.Serializer[Any]):
     """Serializer for OpenStack project absolute limits."""
 
