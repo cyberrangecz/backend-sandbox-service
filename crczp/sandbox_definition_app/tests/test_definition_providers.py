@@ -2,10 +2,10 @@
 
 import pytest
 import requests
-from github import GithubException
+from github import GithubException, UnknownObjectException
 from gitlab import GitlabError
 
-from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration
+from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration, TopologyCacheMode
 from crczp.sandbox_common_lib.exceptions import GitError
 from crczp.sandbox_definition_app.lib.definition_providers import GitHubProvider, GitlabProvider
 
@@ -161,7 +161,6 @@ class TestGitHubProvider:
     """Tests for the GitHubProvider implementation."""
 
     URL = 'https://github.com/crczp/sandbox-service.git'
-    CFG = CrczpConfiguration()
 
     @pytest.fixture
     def github_repo(self, mocker):
@@ -169,15 +168,24 @@ class TestGitHubProvider:
         return mocker.MagicMock()
 
     @pytest.fixture
-    def github_provider(self, mocker, github_repo):  # pylint: disable=redefined-outer-name
-        """Return a GitHubProvider with a mocked GitHub client."""
+    def make_github_provider(self, mocker, github_repo):  # pylint: disable=redefined-outer-name
+        """Return a factory building a GitHubProvider in a given topology cache mode."""
         mock_github = mocker.MagicMock()
         mock_github.get_repo.return_value = github_repo
         mocker.patch(
             'crczp.sandbox_definition_app.lib.definition_providers.Github',
             return_value=mock_github,
         )
-        return GitHubProvider(self.URL, self.CFG)
+
+        def _make(mode: TopologyCacheMode = TopologyCacheMode.AGGRESSIVE) -> GitHubProvider:
+            return GitHubProvider(self.URL, CrczpConfiguration(topology_cache_mode=mode))
+
+        return _make
+
+    @pytest.fixture
+    def github_provider(self, make_github_provider):  # pylint: disable=redefined-outer-name
+        """Return a GitHubProvider in the default (AGGRESSIVE) topology cache mode."""
+        return make_github_provider()
 
     def test_get_refs_returns_branches_and_tags(self, github_provider, github_repo):
         """Test that get_refs returns the combined list of branches and tags."""
@@ -192,6 +200,48 @@ class TestGitHubProvider:
         github_repo.get_branches.side_effect = GithubException(status=404, data={})
         with pytest.raises(GitError):
             github_provider.get_refs()
+
+    def test_get_rev_sha_fresh_resolves_ref_to_commit_sha(self, make_github_provider, github_repo):
+        """Test that FRESH mode resolves a branch/tag name to its commit SHA."""
+        provider = make_github_provider(TopologyCacheMode.FRESH)
+        expected_sha = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'
+        github_repo.get_commit.return_value.sha = expected_sha
+        assert provider.get_rev_sha('main') == expected_sha
+        github_repo.get_commit.assert_called_once_with('main')
+
+    def test_get_rev_sha_fresh_idempotent_for_full_sha(self, make_github_provider, github_repo):
+        """Test that FRESH mode returns an already-resolved SHA unchanged."""
+        provider = make_github_provider(TopologyCacheMode.FRESH)
+        full_sha = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'
+        github_repo.get_commit.return_value.sha = full_sha
+        assert provider.get_rev_sha(full_sha) == full_sha
+
+    def test_get_rev_sha_fresh_raises_git_error_when_ref_not_found(
+        self, make_github_provider, github_repo
+    ):
+        """Test that an UnknownObjectException in FRESH mode raises GitError."""
+        provider = make_github_provider(TopologyCacheMode.FRESH)
+        github_repo.get_commit.side_effect = UnknownObjectException(status=404, data={})
+        with pytest.raises(GitError):
+            provider.get_rev_sha('nonexistent')
+
+    def test_get_rev_sha_fresh_raises_git_error_on_github_exception(
+        self, make_github_provider, github_repo
+    ):
+        """Test that a GithubException in FRESH mode raises GitError."""
+        provider = make_github_provider(TopologyCacheMode.FRESH)
+        github_repo.get_commit.side_effect = GithubException(status=500, data={})
+        with pytest.raises(GitError):
+            provider.get_rev_sha('main')
+
+    @pytest.mark.parametrize('mode', [TopologyCacheMode.AGGRESSIVE, TopologyCacheMode.FRESH_IMPORT])
+    def test_get_rev_sha_branch_keyed_returns_rev_unchanged(
+        self, make_github_provider, github_repo, mode
+    ):
+        """Test that AGGRESSIVE/FRESH_IMPORT return the rev unchanged with no GitHub call."""
+        provider = make_github_provider(mode)
+        assert provider.get_rev_sha('main') == 'main'
+        github_repo.get_commit.assert_not_called()
 
 
 @pytest.mark.integration

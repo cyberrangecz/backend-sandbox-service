@@ -97,6 +97,14 @@ application_configuration:
     # Environment variable for Git SSL verification
     git_skip_ssl_verification: false
 
+    # How GitHub sandbox-definition topology is cached. GitHub provider only (GitLab unaffected).
+    # One of:
+    #   AGGRESSIVE (default): cache key stable per branch, topology served until the cache TTL expires
+    #   FRESH_IMPORT: branch-keyed cache, but (re)importing a definition bypasses the cache and
+    #                 refreshes it, so new pools use the freshly imported topology
+    #   FRESH: resolve the branch HEAD to a commit SHA, so pushes are picked up everywhere
+    #topology_cache_mode: AGGRESSIVE
+
     # The URL of Ansible networking Git repository.
     ansible_networking_url: ""
 
