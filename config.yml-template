@@ -97,6 +97,13 @@ application_configuration:
     # Environment variable for Git SSL verification
     git_skip_ssl_verification: false
 
+    # Whether network traffic forwarding (port mirroring) is available on this deployment.
+    # When False (default), a sandbox definition that declares `network_forwarding` is
+    # rejected at import time. Enable only when the target cloud supports it:
+    #   * OpenStack: the Neutron TaaS extension with the OVN driver
+    #   * AWS: VPC Traffic Mirroring (source instances must be Nitro-based)
+    #network_forwarding_enabled: False
+
     # How GitHub sandbox-definition topology is cached. GitHub provider only (GitLab unaffected).
     # One of:
     #   AGGRESSIVE (default): cache key stable per branch, topology served until the cache TTL expires
@@ -192,6 +199,13 @@ application_configuration:
     sandbox_configuration:
         # The name or ID of network in OpenStack where all sandboxes will be deployed.
         #base_network: base_network
+
+        # Optional (OpenStack, network_forwarding only): the name of the router that
+        # base_network is attached to, used to allocate floating IPs for tap_mirror targets.
+        # When unset, the router (and its external network) is auto-discovered from
+        # base_network. Set this only for DVR/HA or multi-router deployments where
+        # auto-discovery is ambiguous.
+        #external_router: ""
 
         # The name of the image in OpenStack that will be used for MAN. A dedicated debian image is recommended.
         man_image: ""

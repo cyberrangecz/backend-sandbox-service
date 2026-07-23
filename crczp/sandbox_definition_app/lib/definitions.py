@@ -238,6 +238,16 @@ def validate_topology_definition(topology_definition: TopologyDefinition) -> Non
                 f" '{group.name}'."
             )
 
+    if getattr(topology_definition, 'network_forwarding', None) and not getattr(
+        settings.CRCZP_CONFIG, 'network_forwarding_enabled', False
+    ):
+        raise exceptions.ValidationError(
+            'This sandbox definition declares network_forwarding (traffic mirroring), but the '
+            'feature is not enabled on this deployment. Set '
+            'application_configuration.network_forwarding_enabled to True (requires OVN/TaaS on '
+            'OpenStack or VPC Traffic Mirroring on AWS).'
+        )
+
     client = utils.get_terraform_client()
     terraform_flavors = client.get_flavors_dict()
     terraform_images = [image.name for image in list_images()]

@@ -34,7 +34,10 @@ class TestCreatePool:
         """Set up mocks for pool creation tests."""
         self.client = mocker.patch('crczp.sandbox_common_lib.utils.get_terraform_client')
         mocker.patch('crczp.sandbox_cloud_app.lib.projects.list_images', return_value=[image])
-        mocker.patch('crczp.sandbox_definition_app.lib.definitions.get_definition')
+        topology_definition = mocker.patch(
+            'crczp.sandbox_definition_app.lib.definitions.get_definition'
+        ).return_value
+        topology_definition.network_forwarding = []
         mocker.patch('crczp.sandbox_definition_app.lib.definitions.get_containers')
         mock_repo = mocker.patch('crczp.sandbox_definition_app.lib.definitions.get_def_provider')
         mock_repo.return_value.get_rev_sha = mocker.MagicMock(return_value='sha')

@@ -291,6 +291,12 @@ class CrczpConfiguration(Object):  # type: ignore[misc]
 
     ssl_ca_certificate_verify = Attribute(type=str, default=SSL_CA_CERTIFICATE_VERIFY)
 
+    # Whether network traffic forwarding (port mirroring) is available on this deployment.
+    # When False, a definition that declares `network_forwarding` is rejected at import time
+    # with a clear error instead of a cryptic Terraform apply failure. Requires OVN + TaaS
+    # (OpenStack) or VPC Traffic Mirroring support (AWS) in the target cloud.
+    network_forwarding_enabled = Attribute(type=bool, default=False)
+
     trc = Attribute(type=TransformationConfiguration, key='sandbox_configuration')
 
     # Email allocation notifications

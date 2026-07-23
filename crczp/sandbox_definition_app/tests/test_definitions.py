@@ -65,6 +65,14 @@ class TestCreateDefinition:
         with pytest.raises(exceptions.ValidationError):
             definitions.create_definition(url=self.URL, rev=self.REV, created_by=created_by)
 
+    def test_create_definition_forwarding_disabled(self, mocker, topology_definition, created_by):
+        """A definition declaring network_forwarding is rejected when the feature is off."""
+        topology_definition.groups = []
+        topology_definition.network_forwarding = [mocker.Mock()]
+        mocker.patch.object(settings.CRCZP_CONFIG, 'network_forwarding_enabled', False)
+        with pytest.raises(exceptions.ValidationError):
+            definitions.create_definition(url=self.URL, rev=self.REV, created_by=created_by)
+
     def test_create_definition_fresh_import_forces_refresh(
         self, mocker, topology_definition, created_by
     ):  # pylint: disable=unused-argument
