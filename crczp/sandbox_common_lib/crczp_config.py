@@ -138,6 +138,39 @@ class AwsConfiguration(Object):  # type: ignore[misc]
     base_subnet = Attribute(type=str, default='Base Subnet')
 
 
+class OpenStackConfiguration(Object):  # type: ignore[misc]
+    """OpenStack cloud provider configuration."""
+
+    auth_url = Attribute(type=str, default=None)
+    application_credential_id = Attribute(type=str, default=None)
+    application_credential_secret = Attribute(type=str, default=None)
+    console_type = Attribute(
+        type=Typed(
+            OpenStackConsoleType,
+            from_yaml=(
+                lambda loader, node, _: OpenStackConsoleType.create(loader.construct_object(node))
+            ),
+            to_yaml=(lambda dumper, data, rtd: dumper.represent_data(data.name)),
+        ),
+        default=OpenStackConsoleType.SPICE_HTML5,
+    )
+
+    # The CIDR the hypervisors send mirrored traffic from. Network forwarding exposes each mirror
+    # destination on a floating IP, and this is the only source allowed to reach it: the destination
+    # port gets a dedicated security group built from this value instead of the topology one, which
+    # admits everything. Also exported to Ansible as `global_hypervisor_cidr`. Required when
+    # network_forwarding_enabled is True on OpenStack.
+    hypervisor_cidr = Attribute(
+        type=str, default=None, validator=crczp_config_validation.validate_hypervisor_cidr
+    )
+
+    # The Neutron TaaS tunnel encapsulation used for network-forwarding tap mirrors: gre or
+    # erspanv1. Deployment-wide (a topology no longer selects it); ignored on AWS.
+    mirror_type = Attribute(
+        type=str, default='gre', validator=crczp_config_validation.validate_mirror_type
+    )
+
+
 class NamingStrategy(Object):  # type: ignore[misc]
     """Naming strategy for OpenStack resource names."""
 
@@ -212,20 +245,7 @@ class CrczpConfiguration(Object):  # type: ignore[misc]
     head_host = Attribute(type=str, default=HEAD_IP)
     syslog_destination_port = Attribute(type=int, default=515)
 
-    os_auth_url = Attribute(type=str, default=None)
-    os_application_credential_id = Attribute(type=str, default=None)
-    os_application_credential_secret = Attribute(type=str, default=None)
-    os_console_type = Attribute(
-        type=Typed(
-            OpenStackConsoleType,
-            from_yaml=(
-                lambda loader, node, _: OpenStackConsoleType.create(loader.construct_object(node))
-            ),
-            to_yaml=(lambda dumper, data, rtd: dumper.represent_data(data.name)),
-        ),
-        default=OpenStackConsoleType.SPICE_HTML5,
-    )
-
+    openstack = Attribute(type=OpenStackConfiguration, default=OpenStackConfiguration())
     aws = Attribute(type=AwsConfiguration, default=None)
 
     log_file = Attribute(type=str, default=LOG_FILE)
@@ -290,6 +310,12 @@ class CrczpConfiguration(Object):  # type: ignore[misc]
     answers_storage_api = Attribute(type=str, default=ANSWERS_STORAGE_API)
 
     ssl_ca_certificate_verify = Attribute(type=str, default=SSL_CA_CERTIFICATE_VERIFY)
+
+    # Whether network traffic forwarding (port mirroring) is available on this deployment.
+    # When False, a definition that declares `network_forwarding` is rejected at import time
+    # with a clear error instead of a cryptic Terraform apply failure. Requires OVN + TaaS
+    # (OpenStack) or VPC Traffic Mirroring support (AWS) in the target cloud.
+    network_forwarding_enabled = Attribute(type=bool, default=False)
 
     trc = Attribute(type=TransformationConfiguration, key='sandbox_configuration')
 

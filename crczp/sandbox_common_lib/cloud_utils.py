@@ -24,10 +24,11 @@ def get_database_settings(crczp_config: CrczpConfiguration) -> dict[str, Any]:
 
 def get_ostack_client(crczp_config: CrczpConfiguration) -> CrczpTerraformClient:
     """Abstracts creation and authentication to CRCZP lib client."""
+    openstack = crczp_config.openstack
     if None in [
-        crczp_config.os_auth_url,
-        crczp_config.os_application_credential_id,
-        crczp_config.os_application_credential_secret,
+        openstack.auth_url,
+        openstack.application_credential_id,
+        openstack.application_credential_secret,
     ]:
         raise ValidationError(
             'Missing OpenStack configuration options. '
@@ -35,10 +36,12 @@ def get_ostack_client(crczp_config: CrczpConfiguration) -> CrczpTerraformClient:
         )
 
     return CrczpTerraformClient(
-        auth_url=crczp_config.os_auth_url,
-        application_credential_id=crczp_config.os_application_credential_id,
-        application_credential_secret=crczp_config.os_application_credential_secret,
+        auth_url=openstack.auth_url,
+        application_credential_id=openstack.application_credential_id,
+        application_credential_secret=openstack.application_credential_secret,
         trc=crczp_config.trc,
+        hypervisor_cidr=openstack.hypervisor_cidr,
+        mirror_type=openstack.mirror_type,
         cloud_client=AvailableCloudLibraries.OPENSTACK,
         backend_type=CrczpTerraformBackendType(crczp_config.terraform_configuration.backend_type),
         db_configuration=get_database_settings(crczp_config),

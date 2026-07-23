@@ -45,17 +45,37 @@ application_configuration:
     # The destination port for syslog messages.
     #syslog_destination_port: 515
 
-    # The URL of OpenStack Identity service API.
-    os_auth_url: ""
+    # OpenStack cloud provider configuration.
+    # MIGRATION: these settings were previously flat top-level keys (os_auth_url,
+    # os_application_credential_id, os_application_credential_secret, os_console_type,
+    # hypervisor_cidr). They now live under this `openstack:` map and the old top-level
+    # keys are no longer accepted — a config file that still uses them fails to load.
+    openstack:
+        # The URL of OpenStack Identity service API.
+        auth_url: ""
 
-    # The ID of application credentials to authenticate at OpenStack cloud platform.
-    os_application_credential_id: ""
+        # The ID of application credentials to authenticate at OpenStack cloud platform.
+        application_credential_id: ""
 
-    # The secret string of APPLICATION_CREDENTIAL_ID.
-    os_application_credential_secret: ""
+        # The secret string of application_credential_id.
+        application_credential_secret: ""
 
-    # The OpenStack console type. One of: novnc, xvpvnc, spice-html5, rdp-html5, serial, webmks.
-    #os_console_type: spice-html5
+        # The OpenStack console type. One of: novnc, xvpvnc, spice-html5, rdp-html5, serial, webmks.
+        #console_type: spice-html5
+
+        # OpenStack only, required when network_forwarding_enabled is True. The CIDR the
+        # hypervisors send the mirrored traffic from, e.g. the management network of the compute
+        # nodes. Network forwarding exposes the mirror destination on a floating IP, and this is
+        # the only source allowed to reach it: the destination port gets a dedicated security group
+        # built from this value instead of sandbox-internal-sg, which admits 0.0.0.0/0. The value is
+        # also exported to Ansible as the `global_hypervisor_cidr` inventory variable, which the
+        # networking playbook turns into the destination host's return route to the hypervisors.
+        #hypervisor_cidr: "10.99.0.0/16"
+
+        # OpenStack only. The Neutron TaaS tunnel encapsulation used for network-forwarding tap
+        # mirrors: gre (default) or erspanv1. Deployment-wide (a topology no longer selects it);
+        # ignored on AWS.
+        #mirror_type: gre
 
     # AWS specific configuration.
     # Keeps configuration file backwards compatible.
@@ -96,6 +116,13 @@ application_configuration:
 
     # Environment variable for Git SSL verification
     git_skip_ssl_verification: false
+
+    # Whether network traffic forwarding (port mirroring) is available on this deployment.
+    # When False (default), a sandbox definition that declares `network_forwarding` is
+    # rejected at import time. Enable only when the target cloud supports it:
+    #   * OpenStack: the Neutron TaaS extension with the OVN driver
+    #   * AWS: VPC Traffic Mirroring (source instances must be Nitro-based)
+    #network_forwarding_enabled: False
 
     # How GitHub sandbox-definition topology is cached. GitHub provider only (GitLab unaffected).
     # One of:

@@ -52,6 +52,7 @@ else:
     class _CrczpConfig:  # pylint: disable=too-few-public-methods
         ssl_ca_certificate_verify = ''
         aws = None
+        openstack = None
         log_level = 'WARNING'
         log_file = '/dev/null'
         redis = _RedisConfig()

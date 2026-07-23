@@ -1,7 +1,11 @@
 """Tests for Ansible inventory generation."""
 
-import pytest
+from typing import Any
 
+import pytest
+from django.conf import settings
+
+from crczp.cloud_commons import TopologyInstance
 from crczp.sandbox_ansible_app.lib.inventory import Inventory, Routing
 
 pytestmark = pytest.mark.django_db
@@ -209,3 +213,51 @@ class TestVpnEntrypointsGroup:
         )
 
         assert 'vpn_entrypoints' not in result.to_dict()['all']['children']
+
+
+class TestForwardingDestinationVars:
+    """Tests for the return-route variables on the network-forwarding destination host."""
+
+    @staticmethod
+    def _hosts(topology_instance: TopologyInstance) -> dict[str, Any]:
+        inventory = Inventory(
+            'pool-prefix',
+            'stack-name',
+            topology_instance,
+            '/root/.ssh/pool_mng_key',
+            '/root/.ssh/pool_mng_cert',
+            '/root/.ssh/pool_mng_key.pub',
+            '/root/.ssh/user_key.pub',
+        ).to_dict()
+        hosts: dict[str, Any] = inventory['all']['hosts']
+        return hosts
+
+    def test_destination_host_gets_router_ip_and_mac(self, top_ins_forwarding):
+        """The destination host carries the pinned router address and its own interface mac."""
+        hosts = self._hosts(top_ins_forwarding)
+
+        assert hosts['monitoring']['forwarding_router_ip'] == '10.10.40.3'
+        # The mac of monitoring's interface on monitoring-switch, not its first interface.
+        assert hosts['monitoring']['forwarding_destination_mac'] == '00:00:00:00:00:12'
+
+    def test_other_hosts_are_untouched(self, top_ins_forwarding):
+        """Only the destination gets the variables; the mirrored source does not."""
+        hosts = self._hosts(top_ins_forwarding)
+
+        for name in ('server', 'server-router', 'man'):
+            assert 'forwarding_router_ip' not in hosts[name]
+            assert 'forwarding_destination_mac' not in hosts[name]
+
+    def test_absent_without_forwarding(self, top_ins):
+        """A topology without a forwarding rule gets no return-route variables."""
+        hosts = self._hosts(top_ins)
+
+        assert all('forwarding_router_ip' not in host for host in hosts.values())
+
+    def test_absent_on_aws(self, mocker, top_ins_forwarding):
+        """The return route is an OpenStack concern; AWS mirrors to an ENI with no router."""
+        mocker.patch.object(settings, 'AWS_PROVIDER_CONFIGURED', True)
+
+        hosts = self._hosts(top_ins_forwarding)
+
+        assert 'forwarding_router_ip' not in hosts['monitoring']

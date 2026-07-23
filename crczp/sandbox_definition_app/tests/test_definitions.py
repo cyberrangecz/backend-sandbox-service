@@ -1,6 +1,8 @@
 """Tests for sandbox definition management."""
 
+import copy
 import io
+from typing import Any
 
 import pytest
 from django.conf import settings
@@ -64,6 +66,59 @@ class TestCreateDefinition:
         topology_definition.groups = [hosts_group]
         with pytest.raises(exceptions.ValidationError):
             definitions.create_definition(url=self.URL, rev=self.REV, created_by=created_by)
+
+    def test_create_definition_forwarding_disabled(self, mocker, topology_definition, created_by):
+        """A definition declaring network_forwarding is rejected when the feature is off."""
+        topology_definition.groups = []
+        topology_definition.network_forwarding = mocker.Mock()
+        mocker.patch.object(settings.CRCZP_CONFIG, 'network_forwarding_enabled', False)
+        with pytest.raises(exceptions.ValidationError):
+            definitions.create_definition(url=self.URL, rev=self.REV, created_by=created_by)
+
+    def _forwarding_config(self, mocker: Any, hypervisor_cidr: str | None) -> None:
+        """Swap in a copy of the app config with network forwarding enabled.
+
+        A copy, because patching the CRCZP_CONFIG singleton in place does not survive
+        teardown: its attributes are yamlize descriptors, so mock restores them by deleting
+        the instance value and the class default leaks into the following tests. The nested
+        ``openstack`` object is copied too — a shallow copy shares it with the singleton, so
+        mutating hypervisor_cidr on it would otherwise leak across tests.
+        """
+        config = copy.copy(settings.CRCZP_CONFIG)
+        config.network_forwarding_enabled = True
+        config.openstack = copy.copy(settings.CRCZP_CONFIG.openstack)
+        config.openstack.hypervisor_cidr = hypervisor_cidr
+        mocker.patch.object(settings, 'CRCZP_CONFIG', config)
+        mocker.patch.object(settings, 'AWS_PROVIDER_CONFIGURED', False)
+
+    def test_create_definition_forwarding_without_hypervisor_cidr(
+        self, mocker, topology_definition, created_by
+    ):
+        """Network forwarding on OpenStack is rejected without the hypervisor CIDR."""
+        topology_definition.groups = []
+        topology_definition.network_forwarding = mocker.Mock()
+        self._forwarding_config(mocker, None)
+
+        with pytest.raises(exceptions.ValidationError, match='hypervisor_cidr'):
+            definitions.create_definition(url=self.URL, rev=self.REV, created_by=created_by)
+
+    def test_create_definition_forwarding_accepted_when_configured(
+        self, mocker, topology_definition, created_by
+    ):
+        """With the feature enabled and the hypervisor CIDR set, the definition passes."""
+        topology_definition.groups = []
+        topology_definition.network_forwarding = mocker.Mock()
+        topology_definition.hosts = []
+        topology_definition.routers = []
+        # No networks, so the reserved-address check has nothing to resolve the rule against.
+        topology_definition.networks = []
+        self._forwarding_config(mocker, '10.99.0.0/16')
+        mocker.patch('crczp.sandbox_definition_app.lib.definitions.utils.get_terraform_client')
+        mocker.patch('crczp.sandbox_definition_app.lib.definitions.list_images', return_value=[])
+
+        definitions.create_definition(url=self.URL, rev=self.REV, created_by=created_by)
+
+        assert Definition.objects.get(name=self.NAME).url == self.URL
 
     def test_create_definition_fresh_import_forces_refresh(
         self, mocker, topology_definition, created_by
@@ -320,3 +375,85 @@ class TestTopologyDefinitionValidation:
 
         with pytest.raises(exceptions.ValidationError):
             definitions.validate_topology_definition(topology_definition)
+
+
+class TestForwardingReservedAddresses:
+    """Tests for the address the OpenStack driver reserves on a mirror-destination network."""
+
+    @pytest.fixture(autouse=True)
+    def forwarding_enabled(self, mocker):
+        """Enable network forwarding on a copy of the app config, as OpenStack."""
+        config = copy.copy(settings.CRCZP_CONFIG)
+        config.network_forwarding_enabled = True
+        config.openstack = copy.copy(settings.CRCZP_CONFIG.openstack)
+        config.openstack.hypervisor_cidr = '10.99.0.0/16'
+        mocker.patch.object(settings, 'CRCZP_CONFIG', config)
+        mocker.patch.object(settings, 'AWS_PROVIDER_CONFIGURED', False)
+
+    def test_shipped_definition_passes(
+        self,
+        get_terraform_client,  # pylint: disable=unused-argument
+        topology_definition_forwarding,
+    ):
+        """The example definition leaves the reserved address free."""
+        definitions.validate_topology_definition(topology_definition_forwarding)
+
+    @pytest.mark.parametrize('mapping_kind', ['net_mappings', 'router_mappings'])
+    def test_reserved_address_rejected(self, topology_definition_forwarding, mapping_kind):
+        """A host or a router mapped to the reserved address is rejected, naming the node."""
+        (mapping,) = [
+            mapping
+            for mapping in getattr(topology_definition_forwarding, mapping_kind)
+            if mapping.network == 'monitoring-switch'
+        ]
+        mapping.ip = '10.10.40.3'
+
+        with pytest.raises(exceptions.ValidationError) as exc_info:
+            definitions.validate_topology_definition(topology_definition_forwarding)
+
+        assert '10.10.40.3' in str(exc_info.value)
+        assert 'monitoring-switch' in str(exc_info.value)
+
+    def test_reserved_address_on_another_network_is_ignored(
+        self,
+        get_terraform_client,  # pylint: disable=unused-argument
+        topology_definition_forwarding,
+    ):
+        """Only a mirror-destination network reserves the third address."""
+        (mapping,) = [
+            mapping
+            for mapping in topology_definition_forwarding.net_mappings
+            if mapping.host == 'server'
+        ]
+        mapping.ip = '10.10.20.3'
+
+        definitions.validate_topology_definition(topology_definition_forwarding)
+
+    def test_destination_network_too_small(self, topology_definition_forwarding):
+        """A destination network with no address to spare is rejected."""
+        (network,) = [
+            network
+            for network in topology_definition_forwarding.networks
+            if network.name == 'monitoring-switch'
+        ]
+        network.cidr = '10.10.40.0/30'
+
+        with pytest.raises(exceptions.ValidationError, match='/29'):
+            definitions.validate_topology_definition(topology_definition_forwarding)
+
+    def test_not_applied_on_aws(
+        self,
+        mocker,
+        get_terraform_client,  # pylint: disable=unused-argument
+        topology_definition_forwarding,
+    ):
+        """The reservation is an OpenStack one and must not constrain AWS topologies."""
+        mocker.patch.object(settings, 'AWS_PROVIDER_CONFIGURED', True)
+        (mapping,) = [
+            mapping
+            for mapping in topology_definition_forwarding.net_mappings
+            if mapping.network == 'monitoring-switch'
+        ]
+        mapping.ip = '10.10.40.3'
+
+        definitions.validate_topology_definition(topology_definition_forwarding)

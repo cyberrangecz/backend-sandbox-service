@@ -8,10 +8,12 @@ from django.contrib.auth.models import User
 from ruamel.yaml import YAML
 
 from crczp.cloud_commons import Image
+from crczp.topology_definition.models import TopologyDefinition
 
 TESTING_DATA_DIR = 'assets'
 
 TESTING_DEFINITION = 'definition.yml'
+TESTING_DEFINITION_FORWARDING = 'definition-forwarding.yml'
 TESTING_CORRECT_TOPOLOGY = 'correct_topology.yml'
 
 
@@ -36,6 +38,13 @@ def topology_definition_stream():
     """Creates example topology definition for a sandbox."""
     with open(data_path_join(TESTING_DEFINITION), encoding='utf-8') as f:
         return io.StringIO(f.read())
+
+
+@pytest.fixture
+def topology_definition_forwarding():
+    """Creates a topology definition that uses network forwarding (traffic mirroring)."""
+    with open(data_path_join(TESTING_DEFINITION_FORWARDING), encoding='utf-8') as f:
+        return TopologyDefinition.load(f)
 
 
 @pytest.fixture

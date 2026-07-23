@@ -1,0 +1,61 @@
+name: forwarding-definition
+hosts:
+  - name: server
+    base_box:
+      image: debian-12-x86_64
+      mgmt_user: debian
+    flavor: standard.small
+
+  - name: monitoring
+    base_box:
+      image: debian-12-x86_64
+      mgmt_user: debian
+    flavor: standard.small
+
+routers:
+  - name: server-router
+    base_box:
+      image: debian-12-x86_64
+      mgmt_user: debian
+    flavor: standard.small
+
+networks:
+  - name: server-switch
+    cidr: 10.10.20.0/24
+
+  - name: monitoring-switch
+    cidr: 10.10.40.0/24
+
+net_mappings:
+  - host: server
+    network: server-switch
+    ip: 10.10.20.5
+
+  # The first interface of a host carries its default route, so the mirror destination
+  # below has to be a second, dedicated one.
+  - host: monitoring
+    network: server-switch
+    ip: 10.10.20.6
+
+  # On a mirror-destination network the third address is reserved too, for the router
+  # interface that exposes the destination on a floating IP.
+  - host: monitoring
+    network: monitoring-switch
+    ip: 10.10.40.5
+
+router_mappings:
+  - router: server-router
+    network: server-switch
+    ip: 10.10.20.1
+
+  - router: server-router
+    network: monitoring-switch
+    ip: 10.10.40.1
+
+groups: []
+
+network_forwarding:
+  sources:
+    - { host: server, network: server-switch }
+  destination: { host: monitoring, network: monitoring-switch }
+  direction: both

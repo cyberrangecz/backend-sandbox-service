@@ -277,6 +277,7 @@ class AllocationAnsibleRunner(AnsibleRunner):
             'global_pool_id': sau.pool.id,
             'global_head_ip': settings.CRCZP_CONFIG.head_host,
             'global_syslog_destination_port': settings.CRCZP_CONFIG.syslog_destination_port,
+            'global_hypervisor_cidr': settings.CRCZP_CONFIG.openstack.hypervisor_cidr,
         }
         extra_vars['global_netbird_management_url'] = get_client_management_url()
 

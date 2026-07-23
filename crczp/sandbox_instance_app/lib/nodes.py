@@ -111,7 +111,7 @@ def get_console_url(sandbox: Sandbox, node_name: str) -> str:
             get_console_url_job,
             sandbox.allocation_unit.get_stack_name(),
             node_name,
-            settings.CRCZP_CONFIG.os_console_type.value,
+            settings.CRCZP_CONFIG.openstack.console_type.value,
             console_cache_name,
             job_cache_id_running,
         )

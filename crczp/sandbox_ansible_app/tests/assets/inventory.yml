@@ -91,6 +91,7 @@ all:
         ansible_psrp_proxy: socks5://localhost:12345
   vars:
     global_head_ip: 0.0.0.0
+    global_hypervisor_cidr: 10.99.0.0/16
     global_netbird_management_url: ''
     global_openstack_stack_id: terraformstack-stack-id
     global_pool_id: 1

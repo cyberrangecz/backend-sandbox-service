@@ -66,9 +66,10 @@ class TestIntegration:
     #  sandbox-service/crczp/sandbox_service_project/tests/config.yml file. Namely, this
     #  concerns:
     #      application_configuration:
-    #          os_auth_url
-    #          os_application_credential_id
-    #          os_application_credential_secret
+    #          openstack:
+    #              auth_url
+    #              application_credential_id
+    #              application_credential_secret
     #          proxy_jump_to_man:
     #               Host, User, IdentityFile
     #      sandbox_configuration:
@@ -85,8 +86,8 @@ class TestIntegration:
     #  Finally, run the INTERNAL git server - by going to the crczp-it-folder and running
     #  ./build-images.sh, docker-compose up, ./populate-git.sh in this order
     @pytest.mark.skipif(
-        not settings.CRCZP_CONFIG.os_auth_url,
-        reason='OpenStack credentials not configured (os_auth_url is empty in config.yml)',
+        not settings.CRCZP_CONFIG.openstack.auth_url,
+        reason='OpenStack credentials not configured (openstack.auth_url is empty in config.yml)',
     )
     def test_build_sandbox_full(self, client):
         """Test full sandbox build: definition → pool → alloc unit → lock → cleanup → delete."""

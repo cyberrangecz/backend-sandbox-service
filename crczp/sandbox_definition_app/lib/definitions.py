@@ -4,6 +4,7 @@ Definition Service module for Definition management.
 
 import io
 import os
+from ipaddress import ip_address
 from typing import TextIO
 
 import structlog
@@ -14,6 +15,8 @@ from django.core.cache import caches
 from generator.var_object import Variable
 from yamlize import YamlizingError
 
+from crczp.cloud_commons import CrczpException
+from crczp.openstack_driver.network_forwarding import router_interface_ip
 from crczp.sandbox_ansible_app.lib.inventory import DefaultAnsibleHostsGroups
 from crczp.sandbox_common_lib import exceptions, git_config, utils
 from crczp.sandbox_common_lib.common_cloud import list_images
@@ -238,6 +241,27 @@ def validate_topology_definition(topology_definition: TopologyDefinition) -> Non
                 f" '{group.name}'."
             )
 
+    if getattr(topology_definition, 'network_forwarding', None):
+        if not getattr(settings.CRCZP_CONFIG, 'network_forwarding_enabled', False):
+            raise exceptions.ValidationError(
+                'This sandbox definition declares network_forwarding (traffic mirroring), but the '
+                'feature is not enabled on this deployment. Set '
+                'application_configuration.network_forwarding_enabled to True (requires OVN/TaaS '
+                'on OpenStack or VPC Traffic Mirroring on AWS).'
+            )
+        if not settings.AWS_PROVIDER_CONFIGURED and not getattr(
+            getattr(settings.CRCZP_CONFIG, 'openstack', None), 'hypervisor_cidr', None
+        ):
+            raise exceptions.ValidationError(
+                'This sandbox definition declares network_forwarding (traffic mirroring), which '
+                'exposes each mirror destination on a floating IP. Set '
+                'application_configuration.openstack.hypervisor_cidr to the CIDR the hypervisors '
+                'send the mirrored traffic from; it is the only source allowed to reach that '
+                'floating IP.'
+            )
+        if not settings.AWS_PROVIDER_CONFIGURED:
+            _validate_forwarding_reserved_addresses(topology_definition)
+
     client = utils.get_terraform_client()
     terraform_flavors = client.get_flavors_dict()
     terraform_images = [image.name for image in list_images()]
@@ -260,6 +284,47 @@ def validate_topology_definition(topology_definition: TopologyDefinition) -> Non
         if image not in terraform_images:
             raise exceptions.ValidationError(
                 f'Image {image} was not found on the terraform backend.'
+            )
+
+
+def _validate_forwarding_reserved_addresses(topology_definition: TopologyDefinition) -> None:
+    """
+    Validates no mapping claims an address OpenStack reserves on the mirror-destination network.
+
+    The OpenStack driver pins the router interface that exposes the mirror destination to a fixed
+    address of the destination network. Nothing in the topology schema reserves it, so this check
+    reports the clash while the definition is being registered rather than letting it surface as a
+    Neutron error part-way through a sandbox build.
+
+    :param topology_definition: Topology definition
+    :raise: ValidationError if a mapping claims the reserved address, or the destination network is
+        too small to spare one
+    """
+    networks = {network.name: network.cidr for network in topology_definition.networks}
+    network_name = topology_definition.network_forwarding.destination.network
+    cidr = networks.get(network_name)
+    if cidr is None:
+        return  # An unknown network is already reported by the schema validators.
+    try:
+        reserved = ip_address(router_interface_ip(network_name, cidr))
+    except CrczpException as exc:
+        raise exceptions.ValidationError(str(exc)) from exc
+
+    mappings = [
+        (mapping.host, mapping.network, mapping.ip) for mapping in topology_definition.net_mappings
+    ] + [
+        (mapping.router, mapping.network, mapping.ip)
+        for mapping in topology_definition.router_mappings
+    ]
+
+    for node_name, mapped_network, mapped_ip in mappings:
+        if mapped_network == network_name and ip_address(mapped_ip) == reserved:
+            raise exceptions.ValidationError(
+                f'Network "{network_name}" ({cidr}) is the network_forwarding destination, so '
+                f'{reserved} is reserved for the router interface that exposes the mirror '
+                f'destination on a floating IP, but "{node_name}" is mapped to it. The first '
+                'three addresses of such a network belong to the platform: the network '
+                f'address, the router, and DHCP. Assign "{node_name}" a higher address.'
             )
 
 

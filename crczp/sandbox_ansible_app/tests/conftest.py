@@ -26,6 +26,8 @@ TESTING_DATABASE = 'database.yaml'
 TESTING_CONTAINERS = 'containers.yml'
 TESTING_INVENTORY_CONTAINERS = 'inventory_containers.yml'
 TESTING_DEFINITION_VPN = 'definition-vpn.yml'
+TESTING_DEFINITION_FORWARDING = 'definition-forwarding.yml'
+TESTING_LINKS_FORWARDING = 'links-forwarding.yml'
 
 
 def data_path_join(file: str, data_dir: str = TESTING_DATA_DIR) -> str:
@@ -195,6 +197,29 @@ def top_ins_vpn(top_def_vpn, trc_config, links):
     for link in topology_instance.get_links():
         link.ip = links[link.name]['ip']
         link.mac = links[link.name]['mac']
+
+    return topology_instance
+
+
+@pytest.fixture
+def links_forwarding():
+    """Creates example links definition for the network forwarding topology."""
+    with open(data_path_join(TESTING_LINKS_FORWARDING), encoding='utf-8') as f:
+        return yaml.full_load(f)
+
+
+@pytest.fixture
+def top_ins_forwarding(trc_config, links_forwarding):
+    """Creates example topology instance with a network_forwarding rule."""
+    with open(data_path_join(TESTING_DEFINITION_FORWARDING), encoding='utf-8') as f:
+        top_def_forwarding = TopologyDefinition.load(f)
+    topology_instance = TopologyInstance(top_def_forwarding, trc_config)
+    topology_instance.name = 'stack-name'
+    topology_instance.ip = '10.10.10.10'
+
+    for link in topology_instance.get_links():
+        link.ip = links_forwarding[link.name]['ip']
+        link.mac = links_forwarding[link.name]['mac']
 
     return topology_instance
 

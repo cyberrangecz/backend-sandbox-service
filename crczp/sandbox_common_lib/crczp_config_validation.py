@@ -1,5 +1,7 @@
 """Validation helpers for CrczpConfiguration attributes."""
 
+from ipaddress import IPv4Network
+
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator, validate_ipv4_address
 
@@ -8,6 +10,9 @@ ALLOWED_SCHEMES = ['http', 'https']
 # Netbird's setup-key `expires_in` accepts 1 to 365 days, in seconds.
 NETBIRD_KEY_EXPIRY_MIN_SECONDS = 86400
 NETBIRD_KEY_EXPIRY_MAX_SECONDS = 31536000
+
+# OpenStack Neutron TaaS tunnel encapsulations supported for network-forwarding tap mirrors.
+VALID_MIRROR_TYPES = ('gre', 'erspanv1')
 
 
 def validate_git_rest_url(obj: object, git_rest_server: str) -> bool:
@@ -32,6 +37,29 @@ def validate_head_ip(obj: object, head_ip: str) -> bool:
     except ValidationError:
         _msg = 'Cannot set {}.head_ip to "{}". Invalid IP address.'
         raise ValueError(_msg.format(obj.__class__.__name__, head_ip)) from None
+
+    return True
+
+
+def validate_hypervisor_cidr(obj: object, hypervisor_cidr: str | None) -> bool:
+    """Validate that the hypervisor CIDR, when set, is a valid IPv4 network."""
+    if hypervisor_cidr is None:
+        return True
+
+    try:
+        IPv4Network(hypervisor_cidr, strict=False)
+    except ValueError:
+        _msg = 'Cannot set {}.hypervisor_cidr to "{}". Not a valid IPv4 CIDR.'
+        raise ValueError(_msg.format(obj.__class__.__name__, hypervisor_cidr)) from None
+
+    return True
+
+
+def validate_mirror_type(obj: object, mirror_type: str) -> bool:
+    """Validate that the network-forwarding mirror_type is a supported TaaS encapsulation."""
+    if mirror_type not in VALID_MIRROR_TYPES:
+        _msg = 'Cannot set {}.mirror_type to "{}". Must be one of {}.'
+        raise ValueError(_msg.format(obj.__class__.__name__, mirror_type, list(VALID_MIRROR_TYPES)))
 
     return True
 
