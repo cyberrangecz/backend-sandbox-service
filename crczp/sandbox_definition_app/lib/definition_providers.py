@@ -136,7 +136,7 @@ class GitHubProvider(DefinitionProvider):
         repo_name = self._get_repo_name(url)
         try:
             self.repo = github_client.get_repo(repo_name)
-        except GithubException as exc:
+        except (GithubException, requests.exceptions.RequestException) as exc:
             raise exceptions.GitError(f'Cannot find the GitHub repository [url: {url}]') from exc
 
     def _get_repo_name(self, url: str) -> str:
@@ -149,7 +149,11 @@ class GitHubProvider(DefinitionProvider):
         """
         try:
             contents = self.repo.get_contents(path, ref=rev)
-        except (UnknownObjectException, GithubException) as exc:
+        except (
+            UnknownObjectException,
+            GithubException,
+            requests.exceptions.RequestException,
+        ) as exc:
             raise exceptions.GitError(
                 f"Cannot find '{path}' in {self.repo.name} [rev: '{rev}']"
             ) from exc
@@ -164,7 +168,7 @@ class GitHubProvider(DefinitionProvider):
         """Return a list of branches and tags for this repository."""
         try:
             return list(self.repo.get_branches()) + list(self.repo.get_tags())
-        except GithubException as exc:
+        except (GithubException, requests.exceptions.RequestException) as exc:
             raise exceptions.GitError('Failed to get refs from GitHub repository.') from exc
 
     @override
@@ -181,5 +185,9 @@ class GitHubProvider(DefinitionProvider):
             return rev
         try:
             return self.repo.get_commit(rev).sha
-        except (UnknownObjectException, GithubException) as exc:
+        except (
+            UnknownObjectException,
+            GithubException,
+            requests.exceptions.RequestException,
+        ) as exc:
             raise exceptions.GitError('Failed to get sha of the GIT rev.', exc) from exc

@@ -201,6 +201,18 @@ class TestGitHubProvider:
         with pytest.raises(GitError):
             github_provider.get_refs()
 
+    def test_get_refs_raises_git_error_on_request_exception(self, github_provider, github_repo):
+        """Test that a network error from get_refs raises GitError."""
+        github_repo.get_branches.side_effect = requests.exceptions.ConnectionError()
+        with pytest.raises(GitError):
+            github_provider.get_refs()
+
+    def test_get_file_raises_git_error_on_request_exception(self, github_provider, github_repo):
+        """Test that a network error from get_file raises GitError."""
+        github_repo.get_contents.side_effect = requests.exceptions.ConnectionError()
+        with pytest.raises(GitError):
+            github_provider.get_file('topology.yml', 'main')
+
     def test_get_rev_sha_fresh_resolves_ref_to_commit_sha(self, make_github_provider, github_repo):
         """Test that FRESH mode resolves a branch/tag name to its commit SHA."""
         provider = make_github_provider(TopologyCacheMode.FRESH)
@@ -231,6 +243,15 @@ class TestGitHubProvider:
         """Test that a GithubException in FRESH mode raises GitError."""
         provider = make_github_provider(TopologyCacheMode.FRESH)
         github_repo.get_commit.side_effect = GithubException(status=500, data={})
+        with pytest.raises(GitError):
+            provider.get_rev_sha('main')
+
+    def test_get_rev_sha_fresh_raises_git_error_on_request_exception(
+        self, make_github_provider, github_repo
+    ):
+        """Test that a network error in FRESH mode raises GitError."""
+        provider = make_github_provider(TopologyCacheMode.FRESH)
+        github_repo.get_commit.side_effect = requests.exceptions.ConnectionError()
         with pytest.raises(GitError):
             provider.get_rev_sha('main')
 
