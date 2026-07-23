@@ -1,6 +1,7 @@
 """Tests for the Ansible runner utilities."""
 
 import pytest
+from django.conf import settings
 
 from crczp.sandbox_ansible_app.lib.ansible import AllocationAnsibleRunner
 from crczp.sandbox_instance_app.lib import sandboxes
@@ -68,3 +69,37 @@ class TestPrepareInventoryFile:
         vpn_group = result.get_group('vpn_entrypoints')
         assert vpn_group is not None
         assert vpn_group.hosts_vars['server'] == {'netbird_setup_key': 'SK-TEST-123'}
+
+
+class TestGenerateDockerfiles:
+    """Tests for Dockerfile generation."""
+
+    def test_dockerfile_fetched_from_pinned_rev_sha(self, mocker):
+        """Dockerfiles are fetched from the pool's pinned rev_sha, not the branch rev."""
+        mocker.patch('crczp.sandbox_ansible_app.lib.ansible.AnsibleRunner.make_dir')
+        mocker.patch('crczp.sandbox_ansible_app.lib.ansible.AnsibleRunner.save_file')
+
+        container_def = mocker.Mock(image=None, dockerfile='docker2/')
+        container_def.name = 'docker2'
+        mapping = mocker.Mock(host='home', container='docker2')
+        top_ins = mocker.Mock()
+        top_ins.containers.container_mappings = [mapping]
+        top_ins.containers.containers = [container_def]
+        mocker.patch.object(sandboxes, 'get_topology_instance', return_value=top_ins)
+
+        mock_get_dockerfile = mocker.patch(
+            'crczp.sandbox_ansible_app.lib.ansible.definitions.get_dockerfile',
+            return_value='FROM debian',
+        )
+
+        sandbox = mocker.Mock()
+        sandbox.allocation_unit.pool.definition.url = 'test-def-url'
+        sandbox.allocation_unit.pool.definition.rev = 'branch-name'
+        sandbox.allocation_unit.pool.rev_sha = 'resolved-sha-123'
+
+        runner = AllocationAnsibleRunner('/tmp')  # nosec B108
+        runner._generate_dockerfiles(sandbox)  # pylint: disable=protected-access
+
+        mock_get_dockerfile.assert_called_once_with(
+            'test-def-url', 'resolved-sha-123', settings.CRCZP_CONFIG, 'docker2/'
+        )
