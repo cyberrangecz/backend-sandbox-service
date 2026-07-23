@@ -44,7 +44,10 @@ def create_definition(url: str, created_by: User | None, rev: str = 'master') ->
     :param rev: Revision of the repository
     :return: New definition instance
     """
-    force_refresh = settings.CRCZP_CONFIG.topology_cache_mode is TopologyCacheMode.FRESH_IMPORT
+    force_refresh = (
+        git_config.get_git_type(url) == GitType.GITHUB
+        and settings.CRCZP_CONFIG.topology_cache_mode is TopologyCacheMode.FRESH_IMPORT
+    )
     top_def = get_definition(url, rev, settings.CRCZP_CONFIG, force_refresh=force_refresh)
     validate_topology_definition(top_def)
     validate_docker_containers(url, rev, settings.CRCZP_CONFIG)
