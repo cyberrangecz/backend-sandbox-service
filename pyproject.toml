@@ -1,17 +1,17 @@
 [project]
 name = "crczp-sandbox-service"
-version = "2.4.0"
+version = "2.5.0"
 description = "simplifies manipulation of OpenStack cloud platform for CyberRangeCZ Platform purposes"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.12"
 authors = [{ name = "cybersecurityhub.cz" }]
 dependencies = [
-    "crczp-terraform-client ~=1.0.3",
-    "crczp-python-commons ~=2.0.1",
-    "crczp-openstack-lib ~=1.0.5",
-    "crczp-aws-lib ~=1.0.3",
-    "crczp-topology-definition ~=2.1.0",
+    "crczp-terraform-client ~=1.0.4",
+    "crczp-python-commons ~=2.1.0",
+    "crczp-openstack-lib ~=1.1.0",
+    "crczp-aws-lib ~=1.1.0",
+    "crczp-topology-definition ~=2.2.0",
     "drf-oidc-auth",
     "pyjwkest",
     "crczp-automated-problem-generation-lib ~=1.0.0",
@@ -53,6 +53,15 @@ dependencies = [
 [project.urls]
 GitHub = "https://github.com/cyberrangecz/backend-sandbox-service"
 
+# DEV ONLY — consume the in-development sibling libs from their feature branches.
+# Remove before the master release (see the release runbook). uv strips this from built wheels.
+[tool.uv.sources]
+crczp-python-commons = { git = "https://github.com/cyberrangecz/backend-python-commons", branch = "feature/network-forwarding" }
+crczp-topology-definition = { git = "https://github.com/cyberrangecz/backend-topology-definition", branch = "feature/network-forwarding" }
+crczp-aws-lib = { git = "https://github.com/cyberrangecz/backend-aws-lib", branch = "feature/network-forwarding" }
+crczp-openstack-lib = { git = "https://github.com/cyberrangecz/backend-openstack-lib", branch = "feature/network-forwarding" }
+crczp-terraform-client = { git = "https://github.com/cyberrangecz/backend-terraform-client", branch = "feature/network-forwarding" }
+
 [build-system]
 # TODO: Replace this with uv_build when it is it released for GA.
 #   https://github.com/astral-sh/uv/issues/3957
@@ -65,6 +74,20 @@ dev = [
     "djangorestframework-stubs[compatible-mypy]",
     "types-requests",
     "types-paramiko",
+]
+test = [
+    "pytest",
+    "pytest-django",
+    "pytest-mock",
+    "pytest-structlog",
+    "fakeredis[lua]",
+]
+lint = [
+    "pylint",
+    "pylint-django",
+]
+audit = [
+    "pip-audit",
 ]
 
 [tool.hatch.build.targets.wheel]
