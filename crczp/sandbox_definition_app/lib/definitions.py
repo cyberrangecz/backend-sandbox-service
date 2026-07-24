@@ -17,7 +17,7 @@ from yamlize import YamlizingError
 from crczp.sandbox_ansible_app.lib.inventory import DefaultAnsibleHostsGroups
 from crczp.sandbox_common_lib import exceptions, git_config, utils
 from crczp.sandbox_common_lib.common_cloud import list_images
-from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration, GitType
+from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration, GitType, TopologyCacheMode
 from crczp.sandbox_definition_app import serializers
 from crczp.sandbox_definition_app.lib.definition_providers import (
     DefinitionProvider,
@@ -44,7 +44,11 @@ def create_definition(url: str, created_by: User | None, rev: str = 'master') ->
     :param rev: Revision of the repository
     :return: New definition instance
     """
-    top_def = get_definition(url, rev, settings.CRCZP_CONFIG)
+    force_refresh = (
+        git_config.get_git_type(url) == GitType.GITHUB
+        and settings.CRCZP_CONFIG.topology_cache_mode is TopologyCacheMode.FRESH_IMPORT
+    )
+    top_def = get_definition(url, rev, settings.CRCZP_CONFIG, force_refresh=force_refresh)
     validate_topology_definition(top_def)
     validate_docker_containers(url, rev, settings.CRCZP_CONFIG)
 
@@ -106,12 +110,15 @@ def load_docker_containers(stream: TextIO) -> DockerContainers:
     return containers
 
 
-def get_definition(url: str, rev: str, config: CrczpConfiguration) -> TopologyDefinition:
+def get_definition(
+    url: str, rev: str, config: CrczpConfiguration, *, force_refresh: bool = False
+) -> TopologyDefinition:
     """Get sandbox definition file content as TopologyDefinition.
 
     :param url: URL of sandbox definition Git repository
     :param rev: Revision of the repository
     :param config: CrczpConfiguration
+    :param force_refresh: Skip the cache read and fetch fresh, still refreshing the cache entry
     :return: Topology definition
     :raise: GitError if GIT error occurs, ValidationError if definition is incorrect
     """
@@ -119,9 +126,10 @@ def get_definition(url: str, rev: str, config: CrczpConfiguration) -> TopologyDe
     provider = get_def_provider(url, config)
     rev_sha = provider.get_rev_sha(rev)
     cache_key = f'definition-{url}-rev-sha-{rev_sha}-topology'
-    top_def = cache.get(cache_key, None)
-    if top_def is not None:
-        return top_def
+    if not force_refresh:
+        top_def = cache.get(cache_key, None)
+        if top_def is not None:
+            return top_def
 
     try:
         definition = provider.get_file(SANDBOX_DEFINITION_FILENAME, rev_sha)

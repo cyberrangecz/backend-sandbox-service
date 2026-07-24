@@ -3,10 +3,12 @@
 import io
 
 import pytest
+from django.conf import settings
+from django.core.cache import caches
 from yamlize import YamlizingError
 
 from crczp.sandbox_common_lib import exceptions
-from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration
+from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration, TopologyCacheMode
 from crczp.sandbox_definition_app.lib import definitions
 from crczp.sandbox_definition_app.lib.definition_providers import GitlabProvider
 from crczp.sandbox_definition_app.models import Definition
@@ -18,6 +20,7 @@ class TestCreateDefinition:
     """Tests for creating sandbox definitions."""
 
     URL = 'https://gitlab.example.com/my-repo.git'
+    GITHUB_URL = 'https://github.com/org/my-repo.git'
     REV = 'def-rev'
     NAME = 'def-name'
 
@@ -62,6 +65,45 @@ class TestCreateDefinition:
         with pytest.raises(exceptions.ValidationError):
             definitions.create_definition(url=self.URL, rev=self.REV, created_by=created_by)
 
+    def test_create_definition_fresh_import_forces_refresh(
+        self, mocker, topology_definition, created_by
+    ):  # pylint: disable=unused-argument
+        """Test that FRESH_IMPORT mode imports a GitHub definition with force_refresh=True."""
+        mocker.patch('crczp.sandbox_definition_app.lib.definitions.validate_topology_definition')
+        mocker.patch.object(
+            settings.CRCZP_CONFIG, 'topology_cache_mode', TopologyCacheMode.FRESH_IMPORT
+        )
+        definitions.create_definition(url=self.GITHUB_URL, rev=self.REV, created_by=created_by)
+        definitions.get_definition.assert_any_call(
+            self.GITHUB_URL, self.REV, settings.CRCZP_CONFIG, force_refresh=True
+        )
+
+    def test_create_definition_fresh_import_gitlab_does_not_force_refresh(
+        self, mocker, topology_definition, created_by
+    ):  # pylint: disable=unused-argument
+        """Test that FRESH_IMPORT mode does not force refresh for GitLab (GitHub provider only)."""
+        mocker.patch('crczp.sandbox_definition_app.lib.definitions.validate_topology_definition')
+        mocker.patch.object(
+            settings.CRCZP_CONFIG, 'topology_cache_mode', TopologyCacheMode.FRESH_IMPORT
+        )
+        definitions.create_definition(url=self.URL, rev=self.REV, created_by=created_by)
+        definitions.get_definition.assert_any_call(
+            self.URL, self.REV, settings.CRCZP_CONFIG, force_refresh=False
+        )
+
+    def test_create_definition_aggressive_does_not_force_refresh(
+        self, mocker, topology_definition, created_by
+    ):  # pylint: disable=unused-argument
+        """Test that AGGRESSIVE mode imports with force_refresh=False."""
+        mocker.patch('crczp.sandbox_definition_app.lib.definitions.validate_topology_definition')
+        mocker.patch.object(
+            settings.CRCZP_CONFIG, 'topology_cache_mode', TopologyCacheMode.AGGRESSIVE
+        )
+        definitions.create_definition(url=self.URL, rev=self.REV, created_by=created_by)
+        definitions.get_definition.assert_any_call(
+            self.URL, self.REV, settings.CRCZP_CONFIG, force_refresh=False
+        )
+
 
 class TestLoadDefinition:
     """Tests for loading a topology definition from a stream."""
@@ -94,6 +136,13 @@ class TestGetDefinition:
 
     CFG = CrczpConfiguration()
 
+    @pytest.fixture(autouse=True)
+    def clear_topology_cache(self):
+        """Isolate the process-global LocMem topology cache between tests."""
+        caches['topology_cache'].clear()
+        yield
+        caches['topology_cache'].clear()
+
     def test_get_definition(self, mocker):
         """Test that get_definition fetches the file, loads and returns the definition."""
         topology_provider = mocker.MagicMock()
@@ -125,6 +174,43 @@ class TestGetDefinition:
         )
         with pytest.raises(exceptions.GitError):
             definitions.get_definition('url', 'rev', self.CFG)
+
+    def test_get_definition_uses_cache_when_not_forced(self, mocker):
+        """Test that a cached topology is returned without fetching when not forced."""
+        provider = mocker.MagicMock()
+        provider.get_rev_sha.return_value = 'stable-sha'
+        mocker.patch(
+            'crczp.sandbox_definition_app.lib.definitions.get_def_provider',
+            return_value=provider,
+        )
+        caches['topology_cache'].set('definition-url-rev-sha-stable-sha-topology', 'cached-def')
+
+        assert definitions.get_definition('url', 'rev', self.CFG) == 'cached-def'
+        provider.get_file.assert_not_called()
+
+    def test_get_definition_force_refresh_bypasses_cache(self, mocker):
+        """Test that force_refresh ignores the cached value, fetches fresh, and refreshes it."""
+        provider = mocker.MagicMock()
+        provider.get_rev_sha.return_value = 'stable-sha'
+        provider.get_file.return_value = 'fresh-file'
+        mocker.patch(
+            'crczp.sandbox_definition_app.lib.definitions.get_def_provider',
+            return_value=provider,
+        )
+        mocker.patch(
+            'crczp.sandbox_definition_app.lib.definitions.load_definition',
+            return_value='fresh-def',
+        )
+        mocker.patch('crczp.sandbox_definition_app.lib.definitions.validate_topology_definition')
+        cache = caches['topology_cache']
+        cache_key = 'definition-url-rev-sha-stable-sha-topology'
+        cache.set(cache_key, 'stale-def')
+
+        result = definitions.get_definition('url', 'rev', self.CFG, force_refresh=True)
+
+        assert result == 'fresh-def'
+        provider.get_file.assert_called_once()
+        assert cache.get(cache_key) == 'fresh-def'
 
 
 class TestGetDefProvider:  # pylint: disable=too-few-public-methods

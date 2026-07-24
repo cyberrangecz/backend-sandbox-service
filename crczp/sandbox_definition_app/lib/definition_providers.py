@@ -13,7 +13,7 @@ from github.Branch import Branch
 from github.Tag import Tag
 
 from crczp.sandbox_common_lib import exceptions, git_config
-from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration
+from crczp.sandbox_common_lib.crczp_config import CrczpConfiguration, TopologyCacheMode
 
 LOG = structlog.get_logger()
 CRCZP_GIT_PREFIX = 'repos'
@@ -127,6 +127,7 @@ class GitHubProvider(DefinitionProvider):
 
     def __init__(self, url: str, config: CrczpConfiguration) -> None:
         super().__init__(url, config)
+        self.topology_cache_mode = config.topology_cache_mode
         if self.git_access_token:
             github_client = Github(auth=Auth.Token(self.git_access_token))
         else:
@@ -135,7 +136,7 @@ class GitHubProvider(DefinitionProvider):
         repo_name = self._get_repo_name(url)
         try:
             self.repo = github_client.get_repo(repo_name)
-        except GithubException as exc:
+        except (GithubException, requests.exceptions.RequestException) as exc:
             raise exceptions.GitError(f'Cannot find the GitHub repository [url: {url}]') from exc
 
     def _get_repo_name(self, url: str) -> str:
@@ -148,7 +149,11 @@ class GitHubProvider(DefinitionProvider):
         """
         try:
             contents = self.repo.get_contents(path, ref=rev)
-        except (UnknownObjectException, GithubException) as exc:
+        except (
+            UnknownObjectException,
+            GithubException,
+            requests.exceptions.RequestException,
+        ) as exc:
             raise exceptions.GitError(
                 f"Cannot find '{path}' in {self.repo.name} [rev: '{rev}']"
             ) from exc
@@ -163,13 +168,26 @@ class GitHubProvider(DefinitionProvider):
         """Return a list of branches and tags for this repository."""
         try:
             return list(self.repo.get_branches()) + list(self.repo.get_tags())
-        except GithubException as exc:
+        except (GithubException, requests.exceptions.RequestException) as exc:
             raise exceptions.GitError('Failed to get refs from GitHub repository.') from exc
 
     @override
     def get_rev_sha(self, rev: str) -> str:
         """
-        Return revision specified on the input. This method is created
-        only for the compatibility reasons with GitLab client.
+        Resolve a rev to the value used in the topology cache key.
+
+        In FRESH mode, resolve the branch/tag/rev to its commit SHA via GitHub, so a
+        moved branch yields a new cache key and pushes are picked up. In AGGRESSIVE and
+        FRESH_IMPORT modes, return the rev unchanged (branch name) for a cache key that
+        is stable per branch.
         """
-        return rev
+        if self.topology_cache_mode is not TopologyCacheMode.FRESH:
+            return rev
+        try:
+            return self.repo.get_commit(rev).sha
+        except (
+            UnknownObjectException,
+            GithubException,
+            requests.exceptions.RequestException,
+        ) as exc:
+            raise exceptions.GitError('Failed to get sha of the GIT rev.', exc) from exc

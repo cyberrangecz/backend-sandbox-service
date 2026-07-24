@@ -241,7 +241,7 @@ class AllocationAnsibleRunner(AnsibleRunner):
             else:
                 dockerfile_path = container_definition.dockerfile
                 url = sandbox.allocation_unit.pool.definition.url
-                rev = sandbox.allocation_unit.pool.definition.rev
+                rev = sandbox.allocation_unit.pool.rev_sha
                 dockerfile = definitions.get_dockerfile(
                     url, rev, settings.CRCZP_CONFIG, dockerfile_path
                 )

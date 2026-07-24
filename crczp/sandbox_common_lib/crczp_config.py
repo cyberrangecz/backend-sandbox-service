@@ -187,6 +187,25 @@ class NetbirdConfiguration(Object):  # type: ignore[misc]
     teardown_budget_seconds = Attribute(type=int, default=60)
 
 
+class TopologyCacheMode(Enum):
+    """How GitHub sandbox-definition topology is cached (GitHub provider only)."""
+
+    AGGRESSIVE = 1  # cache key stable per branch; topology served until TTL expires
+    FRESH = 2  # resolve branch HEAD to commit SHA; cache key tracks the branch
+    FRESH_IMPORT = 3  # branch-keyed cache, but (re)import bypasses the cache and refreshes it
+
+    @classmethod
+    def create(cls, value: str) -> 'TopologyCacheMode':
+        """Create a TopologyCacheMode from a string value."""
+        try:
+            return cls[value.upper().replace('-', '_')]
+        except KeyError:
+            valid = ', '.join(mode.name for mode in cls)
+            raise ValueError(
+                f'Invalid value for topology_cache_mode: {value}. Expected one of: {valid}.'
+            ) from None
+
+
 class CrczpConfiguration(Object):  # type: ignore[misc]
     """Top-level CRCZP application configuration loaded from a YAML file."""
 
@@ -236,6 +255,17 @@ class CrczpConfiguration(Object):  # type: ignore[misc]
     )
 
     git_skip_ssl_verification = Attribute(type=bool, default=False)
+
+    topology_cache_mode = Attribute(
+        type=Typed(
+            TopologyCacheMode,
+            from_yaml=(
+                lambda loader, node, rtd: TopologyCacheMode.create(loader.construct_object(node))
+            ),
+            to_yaml=(lambda dumper, data, rtd: dumper.represent_data(data.name)),
+        ),
+        default=TopologyCacheMode.AGGRESSIVE,
+    )
 
     ansible_networking_url = Attribute(type=str)
     ansible_networking_rev = Attribute(type=str, default=ANSIBLE_NETWORKING_REV)
