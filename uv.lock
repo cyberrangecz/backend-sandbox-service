@@ -390,7 +390,11 @@ wheels = [
 
 [[package]]
 name = "crczp-sandbox-service"
+<<<<<<< HEAD
 version = "2.4.0"
+=======
+version = "2.4.1"
+>>>>>>> 21b301b (cohre: Refactor AGENTS.md. Reduse redundant text.)
 source = { editable = "." }
 dependencies = [
     { name = "better-profanity" },
