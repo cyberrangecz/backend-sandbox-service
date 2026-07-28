@@ -16,14 +16,9 @@ OpenStack cloud platform for the CyberRangeCZ Platform. It manages sandbox defin
 pools of sandboxes, sandbox instances, and Ansible playbook execution on sandbox machines.
 The REST API is documented via OpenAPI (drf-spectacular).
 
-Core tooling:
-
-* **Package Manager:** `uv`
-* **Project configuration:** `pyproject.toml`
-* **Task orchestration:** `tox`
-* **Code quality:** `pre-commit`, `ruff`, `mypy`, `pylint`
-* **Security:** `bandit`, dependency `audit`
-* **Testing:** `pytest` (with Django test settings)
+  Core tooling: `uv` (packages), `pyproject.toml` (config), `tox` (task orchestration),
+  `pre-commit` / `ruff` / `mypy` / `pylint` (quality), `bandit` + dependency audit (security),
+  `pytest` with Django test settings (testing).
 
 ---
 
@@ -37,48 +32,17 @@ Agents **must not** push directly to `master`.
 
 ---
 
-## Project Structure — Key Directories
+## Project Structure
 
-```
-/
-├── .github/                          # CI workflows & automated checks
-│   └── workflows/
-├── bin/                              # Service startup scripts
-├── crczp/
-│   ├── sandbox_common_lib/           # Shared utilities: config, exceptions, permissions
-│   ├── sandbox_uag/                  # User & group auth: OIDC/JWT, permissions
-│   ├── sandbox_ansible_app/          # Django app: Ansible playbook execution on sandboxes
-│   │   ├── lib/                      # Core logic
-│   │   ├── migrations/               # Django DB migrations
-│   │   └── tests/                    # App-level tests
-│   ├── sandbox_cloud_app/            # Django app: cloud provider abstraction
-│   │   ├── lib/                      # Core logic
-│   │   └── migrations/               # Django DB migrations
-│   ├── sandbox_definition_app/       # Django app: sandbox definition management
-│   │   ├── lib/                      # Core logic
-│   │   ├── migrations/               # Django DB migrations
-│   │   └── tests/                    # App-level tests
-│   ├── sandbox_instance_app/         # Django app: sandbox instance & pool management
-│   │   ├── lib/                      # Core logic
-│   │   ├── management/               # Django management commands
-│   │   ├── migrations/               # Django DB migrations
-│   │   └── tests/                    # App-level tests
-│   └── sandbox_service_project/      # Django project: settings, root URLs, WSGI
-│       └── tests/                    # Test-specific settings
-├── tofu/                             # OpenTofu/Terraform infrastructure definitions
-├── docs/                             # Project documentation
-├── AGENTS.md                         # This file
-├── config.yml-template               # Service runtime configuration template
-├── Dockerfile
-├── manage.py                         # Django management entrypoint
-├── pyproject.toml                    # Python project config
-├── tox.ini                           # Test & quality orchestrator
-└── uv.lock                           # Locked dependency versions
-```
+Shared code lives in `crczp/sandbox_common_lib` (config, exceptions, permissions) and
+`crczp/sandbox_uag` (auth: OIDC/JWT, permissions).
 
-* **`crczp/sandbox_common_lib`** contains shared utilities used across all apps
-* **`crczp/sandbox_service_project`** contains Django project settings
-* **`.github/workflows/`** defines CI behaviour
+Each of `sandbox_ansible_app`, `sandbox_cloud_app`, `sandbox_definition_app`, and
+`sandbox_instance_app` is a self-contained Django app with its own `lib/`, `migrations/`,
+and `tests/`. `sandbox_service_project` holds project-wide settings, root URLs, and WSGI.
+
+`tofu/` contains OpenTofu/Terraform infrastructure definitions; these are not part of the
+Django app and are not covered by `tox`/`pytest`.
 
 Agents must respect this structure and must not introduce alternative layouts without
 explicit approval.
@@ -119,80 +83,33 @@ invoke tools using globally installed Python packages.
 
 ---
 
-## How Agents Must Run Code Quality Checks
+## Running Checks
 
-Code quality checks must be executed in a reproducible, CI-equivalent environment.
+Two different bars apply, and agents should not conflate them:
 
-### Authoritative Method
-
-The **only authoritative way** to run the full quality suite is:
+* **While iterating on a change:** run the specific checks relevant to what you touched —
+  e.g. `ruff check`, `ruff format`, `mypy`, and the specific test file(s) for the code you
+  changed (`tox -e pytest -- path/to/test_file.py` or `pytest` directly inside `uv run`).
+* **Before considering a change complete / ready to merge:** run the full suite via `tox`,
+  which runs `pre-commit` (ruff lint, ruff format, mypy), `pylint`, `bandit`, dependency
+  audit, `pytest`, and `python manage.py check`.
 
 ```bash
 tox
 ```
 
-This runs all tox environments: `pre-commit`, `pylint`, `bandit`, `audit`, `pytest`.
+This is the single authoritative, CI-equivalent way to validate a change before merge.
+All tox environments must pass.
 
----
+Notes:
 
-## Code Quality Requirements
-
-All changes **must pass the full quality suite** before merging.
-
-### Pre-commit
-
-Run all hooks locally:
-
-```bash
-pre-commit run --all-files
-```
-
-Configured hooks include:
-
-* `ruff` (linting)
-* `ruff format` (formatting)
-* `mypy` (static type checking)
-
-Agents must ensure all hooks pass.
-
----
-
-## Linting and Static Analysis
-
-### Ruff
-
-* Ruff is the authoritative linter and formatter
-* Rules are defined in `pyproject.toml`
-* Manual formatting outside Ruff is not allowed
-
-### MyPy
-
-* All new and modified code must be fully type-annotated
-* Avoid `Any` unless absolutely necessary
-
-### Pylint
-
-* Code must satisfy configured Pylint rules (minimum score: `9.5`)
-* Warnings should not be disabled without justification
-* Pylint runs against both `crczp` and `tests` directories
-
----
-
-## Security Checks
-
-### Bandit
-
-Bandit is used to detect common security issues. Configuration is in `pyproject.toml`.
-
-Agents must not introduce:
-
-* Unsafe `eval` or `exec` usage
-* Hard-coded secrets
-* Insecure cryptographic patterns
-
-### Dependency Audit
-
-Agents must not introduce dependencies with known vulnerabilities.
+* Ruff is the authoritative linter/formatter — rules are in `pyproject.toml`; no manual
+  formatting outside Ruff.
+* New/modified code must be type-annotated (`mypy`); avoid `Any` unless necessary.
+* Minimum Pylint score: `9.5`, run against both `crczp` and `tests`. Don't disable
+  warnings without justification.
+* Bandit: no `eval`/`exec` on untrusted input, no hard-coded secrets, no insecure crypto
+  patterns. No new dependencies with known vulnerabilities.
 
 ---
 
@@ -226,30 +143,6 @@ Test paths:
 
 ---
 
-## Tox
-
-`tox` is the authoritative CI entry point.
-
-Agents should prefer:
-
-```bash
-tox
-```
-
-All tox environments must pass before merging.
-
----
-
-## Coding Standards
-
-* Follow PEP 8 and project conventions
-* Prefer clarity over cleverness
-* Keep functions small and focused
-* Document public APIs with docstrings
-* Avoid breaking changes unless explicitly requested
-
----
-
 ## What Agents Must Not Do
 
 * Do not commit directly to `master`
@@ -264,21 +157,8 @@ All tox environments must pass before merging.
 
 1. Create a feature branch
 2. Make minimal, focused changes
-3. Run:
-
-   ```bash
-   tox
-   ```
-
-   This runs the full suite, including:
-
-   * `pre-commit` (ruff lint, ruff format, mypy)
-   * `pylint`
-   * `bandit`
-   * dependency audit
-   * `pytest` + `manage.py check`
-
-4. Ensure all checks pass
+3. Run the relevant fast checks while iterating (see "Running Checks")
+4. Before finishing, run `tox` and ensure all environments pass
 
 ---
 
