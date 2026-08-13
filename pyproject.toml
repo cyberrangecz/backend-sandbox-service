@@ -31,7 +31,7 @@ dependencies = [
     # https://github.com/rq/django-rq/issues/616#event-15494980339
     "rq ==1.13.0",
     "django-rq",
-    "redis",
+    "redis ==6.4.0",
     "hiredis",
     "docker",
     "ssh_config",
