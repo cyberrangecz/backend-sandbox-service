@@ -7,47 +7,49 @@ license = "MIT"
 requires-python = ">=3.12"
 authors = [{ name = "cybersecurityhub.cz" }]
 dependencies = [
-    "crczp-terraform-client ~=1.0.3",
+    "crczp-terraform-client ~=1.0.4",
     "crczp-python-commons ~=2.0.1",
-    "crczp-openstack-lib ~=1.0.5",
-    "crczp-aws-lib ~=1.0.3",
+    "crczp-openstack-lib ~=1.0.6",
+    "crczp-aws-lib ~=1.0.4",
     "crczp-topology-definition ~=2.1.0",
-    "drf-oidc-auth",
-    "pyjwkest",
-    "crczp-automated-problem-generation-lib ~=1.0.0",
+    "drf-oidc-auth ~=3.0.0",
+    "pyjwkest ~=1.4.4",
+    "crczp-automated-problem-generation-lib ~=1.0.3",
     # https://github.com/snguyenthanh/better_profanity/issues/19
     "better-profanity ==0.6.1",
     "django ~=5.0",
     "djangorestframework ==3.15.2",
-    "coreapi",
-    "structlog",
-    "colorama",
-    "djangorestframework-yaml",
-    "pyyaml",
+    "coreapi ~=2.3.3",
+    "structlog ~=26.1.0",
+    "colorama ~=0.4.6",
+    "djangorestframework-yaml ~=2.0.0",
+    "pyyaml ~=6.0.3",
     "ruamel.yaml <0.18.0",
-    "gitpython",
-    "requests",
-    "django-model-utils",
+    "gitpython ~=3.1.59",
+    "requests ~=2.34.2",
+    "django-model-utils ~=5.0.0",
     # https://github.com/rq/django-rq/issues/616#event-15494980339
     "rq ==1.13.0",
-    "django-rq",
+    "django-rq ~=2.8.0",
     "redis ==6.4.0",
-    "hiredis",
-    "docker",
-    "ssh_config",
-    "python-gitlab",
-    "jinja2",
-    "django-cors-headers",
-    "psycopg2-binary",
-    "packaging",
-    "six",
-    "drf-spectacular",
-    "cryptography",
-    "pyparsing",
-    "kubernetes",
-    "paramiko",
-    "pygithub",
-    "gunicorn"
+    "hiredis ~=3.4.1",
+    "docker ~=7.2.0",
+    "ssh_config ~=0.1.6",
+    "python-gitlab ~=8.5.0",
+    "jinja2 ~=3.1.6",
+    "django-cors-headers ~=4.9.0",
+    "psycopg2-binary ~=2.9.12",
+    "packaging ~=26.3",
+    "six ~=1.17.0",
+    "drf-spectacular ~=0.30.0",
+    # security-sensitive: pinned exactly rather than compatible-release
+    "cryptography ==50.0.0",
+    "pyparsing ~=3.3.2",
+    "kubernetes ~=36.0.3",
+    # security-sensitive: pinned exactly rather than compatible-release
+    "paramiko ==5.0.0",
+    "pygithub ~=2.9.1",
+    "gunicorn ~=26.0.0"
 ]
 
 [project.urls]
@@ -61,12 +63,12 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
-    "django-stubs[compatible-mypy]",
+    "django-stubs[compatible-mypy] ~=6.1.0",
     # 3.17.1 retyped Request.data as dict | list, which the views do not handle yet.
     # Keep the stubs aligned with the pinned djangorestframework version.
     "djangorestframework-stubs[compatible-mypy]==3.17.0",
-    "types-requests",
-    "types-paramiko",
+    "types-requests ~=2.33.0.20260712",
+    "types-paramiko ~=5.0.0.20260724",
 ]
 
 [tool.hatch.build.targets.wheel]
