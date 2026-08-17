@@ -1,6 +1,6 @@
 [project]
 name = "crczp-sandbox-service"
-version = "2.4.1"
+version = "2.4.2"
 description = "simplifies manipulation of OpenStack cloud platform for CyberRangeCZ Platform purposes"
 readme = "README.md"
 license = "MIT"
@@ -62,7 +62,9 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
     "django-stubs[compatible-mypy]",
-    "djangorestframework-stubs[compatible-mypy]",
+    # 3.17.1 retyped Request.data as dict | list, which the views do not handle yet.
+    # Keep the stubs aligned with the pinned djangorestframework version.
+    "djangorestframework-stubs[compatible-mypy]==3.17.0",
     "types-requests",
     "types-paramiko",
 ]
